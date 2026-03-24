@@ -1,0 +1,717 @@
+{
+    "name": "YFinancePulser",
+    "type": "attas.pulsers.yfinance_pulser.YFinancePulser",
+    "host": "127.0.0.1",
+    "port": 8020,
+    "plaza_url": "http://127.0.0.1:8011",
+    "role": "pulser",
+    "description": "StandbyAgent-based pulser that fetches market data through the yfinance module.",
+    "tags": [
+        "finance",
+        "yahoo",
+        "market-data",
+        "stocks"
+    ],
+    "supported_pulses": [
+        {
+            "name": "last_price",
+            "description": "Latest traded market price from Yahoo Finance.",
+            "tags": ["finance", "quote", "price"],
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string",
+                        "description": "Ticker symbol, for example AAPL."
+                    }
+                },
+                "required": ["symbol"]
+            },
+            "output_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {"type": "string"},
+                    "last_price": {"type": "number"},
+                    "currency": {"type": "string"},
+                    "source": {"type": "string"}
+                },
+                "required": ["symbol", "last_price"]
+            },
+            "mapping": {
+                "symbol": "symbol",
+                "last_price": "last_price",
+                "currency": "currency",
+                "source": {"value": "yfinance"}
+            },
+            "test_data": {"symbol": "AAPL"},
+            "cost": 0,
+            "party": "attas"
+        },
+        {
+            "name": "previous_close",
+            "description": "Previous close from Yahoo Finance.",
+            "tags": ["finance", "quote", "close"],
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string",
+                        "description": "Ticker symbol, for example AAPL."
+                    }
+                },
+                "required": ["symbol"]
+            },
+            "output_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {"type": "string"},
+                    "previous_close": {"type": "number"},
+                    "currency": {"type": "string"},
+                    "source": {"type": "string"}
+                },
+                "required": ["symbol", "previous_close"]
+            },
+            "mapping": {
+                "symbol": "symbol",
+                "previous_close": "previous_close",
+                "currency": "currency",
+                "source": {"value": "yfinance"}
+            },
+            "test_data": {"symbol": "AAPL"},
+            "cost": 0,
+            "party": "attas"
+        },
+        {
+            "name": "open_price",
+            "description": "Session open price from Yahoo Finance.",
+            "tags": ["finance", "quote", "open"],
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string",
+                        "description": "Ticker symbol, for example AAPL."
+                    }
+                },
+                "required": ["symbol"]
+            },
+            "output_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {"type": "string"},
+                    "open_price": {"type": "number"},
+                    "currency": {"type": "string"},
+                    "source": {"type": "string"}
+                },
+                "required": ["symbol", "open_price"]
+            },
+            "mapping": {
+                "symbol": "symbol",
+                "open_price": "open_price",
+                "currency": "currency",
+                "source": {"value": "yfinance"}
+            },
+            "test_data": {"symbol": "AAPL"},
+            "cost": 0,
+            "party": "attas"
+        },
+        {
+            "name": "day_high_low",
+            "description": "Intraday high and low from Yahoo Finance.",
+            "tags": ["finance", "quote", "range"],
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string",
+                        "description": "Ticker symbol, for example AAPL."
+                    }
+                },
+                "required": ["symbol"]
+            },
+            "output_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {"type": "string"},
+                    "day_high": {"type": "number"},
+                    "day_low": {"type": "number"},
+                    "currency": {"type": "string"},
+                    "source": {"type": "string"}
+                },
+                "required": ["symbol", "day_high", "day_low"]
+            },
+            "mapping": {
+                "symbol": "symbol",
+                "day_high": "day_high",
+                "day_low": "day_low",
+                "currency": "currency",
+                "source": {"value": "yfinance"}
+            },
+            "test_data": {"symbol": "AAPL"},
+            "cost": 0,
+            "party": "attas"
+        },
+        {
+            "name": "trade_volume",
+            "description": "Live and average volume snapshot from Yahoo Finance.",
+            "tags": ["finance", "quote", "volume", "liquidity"],
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string",
+                        "description": "Ticker symbol, for example AAPL."
+                    }
+                },
+                "required": ["symbol"]
+            },
+            "output_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {"type": "string"},
+                    "volume": {"type": "number"},
+                    "average_daily_volume_10d": {"type": "number"},
+                    "average_daily_volume_30d": {"type": "number"},
+                    "source": {"type": "string"}
+                },
+                "required": ["symbol", "volume"]
+            },
+            "mapping": {
+                "symbol": "symbol",
+                "volume": "volume",
+                "average_daily_volume_10d": "average_daily_volume_10d",
+                "average_daily_volume_30d": "average_daily_volume_30d",
+                "source": {"value": "yfinance"}
+            },
+            "test_data": {"symbol": "AAPL"},
+            "cost": 0,
+            "party": "attas"
+        },
+        {
+            "name": "bid_ask",
+            "description": "Bid, ask, and spread snapshot for trading and execution views.",
+            "tags": ["finance", "quote", "market-microstructure"],
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string",
+                        "description": "Ticker symbol, for example AAPL."
+                    }
+                },
+                "required": ["symbol"]
+            },
+            "output_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {"type": "string"},
+                    "bid": {"type": "number"},
+                    "ask": {"type": "number"},
+                    "bid_size": {"type": "number"},
+                    "ask_size": {"type": "number"},
+                    "currency": {"type": "string"},
+                    "source": {"type": "string"}
+                },
+                "required": ["symbol"]
+            },
+            "mapping": {
+                "symbol": "symbol",
+                "bid": "bid",
+                "ask": "ask",
+                "bid_size": "bid_size",
+                "ask_size": "ask_size",
+                "currency": "currency",
+                "source": {"value": "yfinance"}
+            },
+            "test_data": {"symbol": "AAPL"},
+            "cost": 0,
+            "party": "attas"
+        },
+        {
+            "name": "market_cap",
+            "description": "Company market capitalization and share count indicators.",
+            "tags": ["finance", "valuation", "size"],
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string",
+                        "description": "Ticker symbol, for example AAPL."
+                    }
+                },
+                "required": ["symbol"]
+            },
+            "output_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {"type": "string"},
+                    "market_cap": {"type": "number"},
+                    "shares_outstanding": {"type": "number"},
+                    "float_shares": {"type": "number"},
+                    "source": {"type": "string"}
+                },
+                "required": ["symbol", "market_cap"]
+            },
+            "mapping": {
+                "symbol": "symbol",
+                "market_cap": "market_cap",
+                "shares_outstanding": "shares_outstanding",
+                "float_shares": "float_shares",
+                "source": {"value": "yfinance"}
+            },
+            "test_data": {"symbol": "AAPL"},
+            "cost": 0,
+            "party": "attas"
+        },
+        {
+            "name": "valuation_multiples",
+            "description": "Common public market valuation multiples for equity analysis.",
+            "tags": ["finance", "valuation", "fundamentals"],
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string",
+                        "description": "Ticker symbol, for example AAPL."
+                    }
+                },
+                "required": ["symbol"]
+            },
+            "output_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {"type": "string"},
+                    "trailing_pe": {"type": "number"},
+                    "forward_pe": {"type": "number"},
+                    "peg_ratio": {"type": "number"},
+                    "price_to_sales": {"type": "number"},
+                    "price_to_book": {"type": "number"},
+                    "enterprise_to_revenue": {"type": "number"},
+                    "enterprise_to_ebitda": {"type": "number"},
+                    "source": {"type": "string"}
+                },
+                "required": ["symbol"]
+            },
+            "mapping": {
+                "symbol": "symbol",
+                "trailing_pe": "trailing_pe",
+                "forward_pe": "forward_pe",
+                "peg_ratio": "peg_ratio",
+                "price_to_sales": "price_to_sales",
+                "price_to_book": "price_to_book",
+                "enterprise_to_revenue": "enterprise_to_revenue",
+                "enterprise_to_ebitda": "enterprise_to_ebitda",
+                "source": {"value": "yfinance"}
+            },
+            "test_data": {"symbol": "AAPL"},
+            "cost": 0,
+            "party": "attas"
+        },
+        {
+            "name": "profitability_metrics",
+            "description": "Margins and return metrics for financial quality analysis.",
+            "tags": ["finance", "fundamentals", "profitability"],
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string",
+                        "description": "Ticker symbol, for example AAPL."
+                    }
+                },
+                "required": ["symbol"]
+            },
+            "output_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {"type": "string"},
+                    "gross_margin": {"type": "number"},
+                    "operating_margin": {"type": "number"},
+                    "ebitda_margin": {"type": "number"},
+                    "profit_margin": {"type": "number"},
+                    "return_on_assets": {"type": "number"},
+                    "return_on_equity": {"type": "number"},
+                    "source": {"type": "string"}
+                },
+                "required": ["symbol"]
+            },
+            "mapping": {
+                "symbol": "symbol",
+                "gross_margin": "gross_margin",
+                "operating_margin": "operating_margin",
+                "ebitda_margin": "ebitda_margin",
+                "profit_margin": "profit_margin",
+                "return_on_assets": "return_on_assets",
+                "return_on_equity": "return_on_equity",
+                "source": {"value": "yfinance"}
+            },
+            "test_data": {"symbol": "AAPL"},
+            "cost": 0,
+            "party": "attas"
+        },
+        {
+            "name": "balance_sheet_strength",
+            "description": "Liquidity and leverage indicators from Yahoo Finance fundamentals.",
+            "tags": ["finance", "fundamentals", "balance-sheet", "risk"],
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string",
+                        "description": "Ticker symbol, for example AAPL."
+                    }
+                },
+                "required": ["symbol"]
+            },
+            "output_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {"type": "string"},
+                    "current_ratio": {"type": "number"},
+                    "quick_ratio": {"type": "number"},
+                    "debt_to_equity": {"type": "number"},
+                    "total_cash": {"type": "number"},
+                    "total_debt": {"type": "number"},
+                    "source": {"type": "string"}
+                },
+                "required": ["symbol"]
+            },
+            "mapping": {
+                "symbol": "symbol",
+                "current_ratio": "current_ratio",
+                "quick_ratio": "quick_ratio",
+                "debt_to_equity": "debt_to_equity",
+                "total_cash": "total_cash",
+                "total_debt": "total_debt",
+                "source": {"value": "yfinance"}
+            },
+            "test_data": {"symbol": "AAPL"},
+            "cost": 0,
+            "party": "attas"
+        },
+        {
+            "name": "cashflow_snapshot",
+            "description": "Cash flow and free cash flow metrics for funding analysis.",
+            "tags": ["finance", "fundamentals", "cash-flow"],
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string",
+                        "description": "Ticker symbol, for example AAPL."
+                    }
+                },
+                "required": ["symbol"]
+            },
+            "output_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {"type": "string"},
+                    "operating_cashflow": {"type": "number"},
+                    "free_cashflow": {"type": "number"},
+                    "ebitda": {"type": "number"},
+                    "enterprise_value": {"type": "number"},
+                    "source": {"type": "string"}
+                },
+                "required": ["symbol"]
+            },
+            "mapping": {
+                "symbol": "symbol",
+                "operating_cashflow": "operating_cashflow",
+                "free_cashflow": "free_cashflow",
+                "ebitda": "ebitda",
+                "enterprise_value": "enterprise_value",
+                "source": {"value": "yfinance"}
+            },
+            "test_data": {"symbol": "AAPL"},
+            "cost": 0,
+            "party": "attas"
+        },
+        {
+            "name": "revenue_and_growth",
+            "description": "Revenue scale and growth expectations for top-line analysis.",
+            "tags": ["finance", "fundamentals", "growth"],
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string",
+                        "description": "Ticker symbol, for example AAPL."
+                    }
+                },
+                "required": ["symbol"]
+            },
+            "output_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {"type": "string"},
+                    "total_revenue": {"type": "number"},
+                    "revenue_growth": {"type": "number"},
+                    "earnings_growth": {"type": "number"},
+                    "earnings_quarterly_growth": {"type": "number"},
+                    "source": {"type": "string"}
+                },
+                "required": ["symbol"]
+            },
+            "mapping": {
+                "symbol": "symbol",
+                "total_revenue": "total_revenue",
+                "revenue_growth": "revenue_growth",
+                "earnings_growth": "earnings_growth",
+                "earnings_quarterly_growth": "earnings_quarterly_growth",
+                "source": {"value": "yfinance"}
+            },
+            "test_data": {"symbol": "AAPL"},
+            "cost": 0,
+            "party": "attas"
+        },
+        {
+            "name": "eps_metrics",
+            "description": "EPS, analyst expectations, and earnings surprise inputs.",
+            "tags": ["finance", "earnings", "fundamentals"],
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string",
+                        "description": "Ticker symbol, for example AAPL."
+                    }
+                },
+                "required": ["symbol"]
+            },
+            "output_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {"type": "string"},
+                    "trailing_eps": {"type": "number"},
+                    "forward_eps": {"type": "number"},
+                    "target_mean_price": {"type": "number"},
+                    "target_median_price": {"type": "number"},
+                    "recommendation_mean": {"type": "number"},
+                    "source": {"type": "string"}
+                },
+                "required": ["symbol"]
+            },
+            "mapping": {
+                "symbol": "symbol",
+                "trailing_eps": "trailing_eps",
+                "forward_eps": "forward_eps",
+                "target_mean_price": "target_mean_price",
+                "target_median_price": "target_median_price",
+                "recommendation_mean": "recommendation_mean",
+                "source": {"value": "yfinance"}
+            },
+            "test_data": {"symbol": "AAPL"},
+            "cost": 0,
+            "party": "attas"
+        },
+        {
+            "name": "dividend_profile",
+            "description": "Dividend and payout metrics for income-oriented workflows.",
+            "tags": ["finance", "dividend", "income"],
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string",
+                        "description": "Ticker symbol, for example AAPL."
+                    }
+                },
+                "required": ["symbol"]
+            },
+            "output_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {"type": "string"},
+                    "dividend_rate": {"type": "number"},
+                    "dividend_yield": {"type": "number"},
+                    "payout_ratio": {"type": "number"},
+                    "five_year_avg_dividend_yield": {"type": "number"},
+                    "ex_dividend_date": {"type": "number"},
+                    "source": {"type": "string"}
+                },
+                "required": ["symbol"]
+            },
+            "mapping": {
+                "symbol": "symbol",
+                "dividend_rate": "dividend_rate",
+                "dividend_yield": "dividend_yield",
+                "payout_ratio": "payout_ratio",
+                "five_year_avg_dividend_yield": "five_year_avg_dividend_yield",
+                "ex_dividend_date": "ex_dividend_date",
+                "source": {"value": "yfinance"}
+            },
+            "test_data": {"symbol": "AAPL"},
+            "cost": 0,
+            "party": "attas"
+        },
+        {
+            "name": "fifty_two_week_range",
+            "description": "52-week trading range and relative positioning.",
+            "tags": ["finance", "technical", "range"],
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string",
+                        "description": "Ticker symbol, for example AAPL."
+                    }
+                },
+                "required": ["symbol"]
+            },
+            "output_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {"type": "string"},
+                    "fifty_two_week_low": {"type": "number"},
+                    "fifty_two_week_high": {"type": "number"},
+                    "fifty_day_average": {"type": "number"},
+                    "two_hundred_day_average": {"type": "number"},
+                    "source": {"type": "string"}
+                },
+                "required": ["symbol"]
+            },
+            "mapping": {
+                "symbol": "symbol",
+                "fifty_two_week_low": "fifty_two_week_low",
+                "fifty_two_week_high": "fifty_two_week_high",
+                "fifty_day_average": "fifty_day_average",
+                "two_hundred_day_average": "two_hundred_day_average",
+                "source": {"value": "yfinance"}
+            },
+            "test_data": {"symbol": "AAPL"},
+            "cost": 0,
+            "party": "attas"
+        },
+        {
+            "name": "beta_and_volatility",
+            "description": "Systematic risk and implied movement indicators.",
+            "tags": ["finance", "risk", "volatility"],
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string",
+                        "description": "Ticker symbol, for example AAPL."
+                    }
+                },
+                "required": ["symbol"]
+            },
+            "output_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {"type": "string"},
+                    "beta": {"type": "number"},
+                    "52_week_change": {"type": "number"},
+                    "sandp_52_week_change": {"type": "number"},
+                    "source": {"type": "string"}
+                },
+                "required": ["symbol"]
+            },
+            "mapping": {
+                "symbol": "symbol",
+                "beta": "beta",
+                "52_week_change": "52_week_change",
+                "sandp_52_week_change": "sandp_52_week_change",
+                "source": {"value": "yfinance"}
+            },
+            "test_data": {"symbol": "AAPL"},
+            "cost": 0,
+            "party": "attas"
+        },
+        {
+            "name": "analyst_sentiment",
+            "description": "Analyst recommendation counts and consensus summary.",
+            "tags": ["finance", "analyst", "sentiment"],
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string",
+                        "description": "Ticker symbol, for example AAPL."
+                    }
+                },
+                "required": ["symbol"]
+            },
+            "output_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {"type": "string"},
+                    "recommendation_key": {"type": "string"},
+                    "number_of_analyst_opinions": {"type": "number"},
+                    "target_high_price": {"type": "number"},
+                    "target_low_price": {"type": "number"},
+                    "target_mean_price": {"type": "number"},
+                    "source": {"type": "string"}
+                },
+                "required": ["symbol"]
+            },
+            "mapping": {
+                "symbol": "symbol",
+                "recommendation_key": "recommendation_key",
+                "number_of_analyst_opinions": "number_of_analyst_opinions",
+                "target_high_price": "target_high_price",
+                "target_low_price": "target_low_price",
+                "target_mean_price": "target_mean_price",
+                "source": {"value": "yfinance"}
+            },
+            "test_data": {"symbol": "AAPL"},
+            "cost": 0,
+            "party": "attas"
+        },
+        {
+            "name": "company_profile",
+            "description": "Operational identity data useful for screening and reporting.",
+            "tags": ["finance", "profile", "company"],
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string",
+                        "description": "Ticker symbol, for example AAPL."
+                    }
+                },
+                "required": ["symbol"]
+            },
+            "output_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {"type": "string"},
+                    "short_name": {"type": "string"},
+                    "long_name": {"type": "string"},
+                    "sector": {"type": "string"},
+                    "industry": {"type": "string"},
+                    "country": {"type": "string"},
+                    "website": {"type": "string"},
+                    "exchange": {"type": "string"},
+                    "currency": {"type": "string"},
+                    "source": {"type": "string"}
+                },
+                "required": ["symbol"]
+            },
+            "mapping": {
+                "symbol": "symbol",
+                "short_name": "short_name",
+                "long_name": "long_name",
+                "sector": "sector",
+                "industry": "industry",
+                "country": "country",
+                "website": "website",
+                "exchange": "exchange",
+                "currency": "currency",
+                "source": {"value": "yfinance"}
+            },
+            "test_data": {"symbol": "AAPL"},
+            "cost": 0,
+            "party": "attas"
+        }
+    ],
+    "pools": [
+        {
+            "type": "FileSystemPool",
+            "name": "yfinance_pool",
+            "description": "YFinance local pool",
+            "root_path": "tests/storage/yfinance"
+        }
+    ]
+}

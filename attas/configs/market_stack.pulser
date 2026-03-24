@@ -1,0 +1,488 @@
+{
+    "name": "MarketstackApiPulser",
+    "type": "phemacast.pulsers.api_pulser.ApiPulser",
+    "host": "127.0.0.1",
+    "port": 8024,
+    "plaza_url": "http://127.0.0.1:8011",
+    "role": "pulser",
+    "description": "Maps Marketstack V2 end-of-day, intraday, dividend, split, and ticker data onto shared Plaza pulse definitions.",
+    "tags": [
+        "finance",
+        "market-data",
+        "marketstack",
+        "stocks",
+        "corporate-actions"
+    ],
+    "api_keys": [
+        {
+            "id": "marketstack",
+            "env": "MARKETSTACK_API_KEY",
+            "param": "access_key"
+        }
+    ],
+    "supported_pulses": [
+        {
+            "name": "last_price",
+            "pulse_address": "2cc630e2-895f-5ced-a4df-6293a9c7b2d6",
+            "description": "Latest available end-of-day close from Marketstack.",
+            "tags": [
+                "stock-prices",
+                "eod",
+                "quote"
+            ],
+            "api": {
+                "url": "https://api.marketstack.com/v2/eod/latest?symbols={symbol}",
+                "method": "GET",
+                "root_path": "data.0",
+                "api_key_id": "marketstack"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "symbol"
+                ]
+            },
+            "mapping": {
+                "symbol": "symbol",
+                "last_price": "close",
+                "currency": "price_currency",
+                "timestamp": "date",
+                "exchange": "exchange",
+                "source": {
+                    "value": "marketstack"
+                }
+            },
+            "test_data": {
+                "symbol": "AAPL"
+            },
+            "cost": 0,
+            "party": "attas"
+        },
+        {
+            "name": "previous_close",
+            "pulse_address": "e0ff71d7-e235-5027-9f74-94791fddf293",
+            "description": "Previous official close from the second-most recent Marketstack EOD bar.",
+            "tags": [
+                "stock-prices",
+                "eod",
+                "quote"
+            ],
+            "api": {
+                "url": "https://api.marketstack.com/v2/eod?symbols={symbol}&limit=2&sort=DESC",
+                "method": "GET",
+                "api_key_id": "marketstack"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "symbol"
+                ]
+            },
+            "mapping": {
+                "symbol": "data.1.symbol",
+                "previous_close": "data.1.close",
+                "trade_date": "data.1.date",
+                "currency": "data.1.price_currency",
+                "exchange": "data.1.exchange",
+                "source": {
+                    "value": "marketstack"
+                }
+            },
+            "test_data": {
+                "symbol": "AAPL"
+            },
+            "cost": 0,
+            "party": "attas"
+        },
+        {
+            "name": "open_price",
+            "pulse_address": "aefa2c29-36db-50e0-b37f-e2e79f3252f5",
+            "description": "Latest available end-of-day open from Marketstack.",
+            "tags": [
+                "stock-prices",
+                "eod",
+                "quote"
+            ],
+            "api": {
+                "url": "https://api.marketstack.com/v2/eod/latest?symbols={symbol}",
+                "method": "GET",
+                "root_path": "data.0",
+                "api_key_id": "marketstack"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "symbol"
+                ]
+            },
+            "mapping": {
+                "symbol": "symbol",
+                "open_price": "open",
+                "trade_date": "date",
+                "currency": "price_currency",
+                "source": {
+                    "value": "marketstack"
+                }
+            },
+            "test_data": {
+                "symbol": "AAPL"
+            },
+            "cost": 0,
+            "party": "attas"
+        },
+        {
+            "name": "day_high_low",
+            "pulse_address": "0dd30cc2-975c-5136-a708-8a6b37633444",
+            "description": "Latest available end-of-day high and low from Marketstack.",
+            "tags": [
+                "stock-prices",
+                "eod",
+                "quote"
+            ],
+            "api": {
+                "url": "https://api.marketstack.com/v2/eod/latest?symbols={symbol}",
+                "method": "GET",
+                "root_path": "data.0",
+                "api_key_id": "marketstack"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "symbol"
+                ]
+            },
+            "mapping": {
+                "symbol": "symbol",
+                "day_high": "high",
+                "day_low": "low",
+                "trade_date": "date",
+                "currency": "price_currency",
+                "timestamp": "date",
+                "source": {
+                    "value": "marketstack"
+                }
+            },
+            "test_data": {
+                "symbol": "AAPL"
+            },
+            "cost": 0,
+            "party": "attas"
+        },
+        {
+            "name": "trade_volume",
+            "pulse_address": "5e414533-c54d-5419-b99e-454fd77c018d",
+            "description": "Latest available end-of-day trading volume from Marketstack.",
+            "tags": [
+                "stock-prices",
+                "eod",
+                "volume"
+            ],
+            "api": {
+                "url": "https://api.marketstack.com/v2/eod/latest?symbols={symbol}",
+                "method": "GET",
+                "root_path": "data.0",
+                "api_key_id": "marketstack"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "symbol"
+                ]
+            },
+            "mapping": {
+                "symbol": "symbol",
+                "volume": "volume",
+                "trade_date": "date",
+                "session_type": {
+                    "value": "eod"
+                },
+                "timestamp": "date",
+                "source": {
+                    "value": "marketstack"
+                }
+            },
+            "test_data": {
+                "symbol": "AAPL"
+            },
+            "cost": 0,
+            "party": "attas"
+        },
+        {
+            "name": "daily_ohlcv_bar",
+            "pulse_address": "013ddac1-46e1-58b6-a2fc-7373c1d21ca0",
+            "description": "Single dated EOD OHLCV bar from Marketstack.",
+            "tags": [
+                "historical-prices",
+                "daily",
+                "ohlcv"
+            ],
+            "api": {
+                "url": "https://api.marketstack.com/v2/eod/{trade_date}?symbols={symbol}",
+                "method": "GET",
+                "root_path": "data.0",
+                "api_key_id": "marketstack"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    },
+                    "trade_date": {
+                        "type": "string",
+                        "description": "EOD bar date in YYYY-MM-DD format."
+                    }
+                },
+                "required": [
+                    "symbol",
+                    "trade_date"
+                ]
+            },
+            "mapping": {
+                "symbol": "symbol",
+                "trade_date": "date",
+                "open": "open",
+                "high": "high",
+                "low": "low",
+                "close": "close",
+                "adjusted_close": "adj_close",
+                "volume": "volume",
+                "source": {
+                    "value": "marketstack"
+                }
+            },
+            "test_data": {
+                "symbol": "AAPL",
+                "trade_date": "2024-09-27"
+            },
+            "cost": 0,
+            "party": "attas"
+        },
+        {
+            "name": "intraday_ohlcv_bar",
+            "pulse_address": "fed365ca-9ac2-5545-bb67-9568a39158c0",
+            "description": "Latest intraday OHLCV bar from Marketstack for a given date and interval.",
+            "tags": [
+                "historical-prices",
+                "intraday",
+                "ohlcv"
+            ],
+            "api": {
+                "url": "https://api.marketstack.com/v2/intraday/{trade_date}?symbols={symbol}&interval={interval}&limit=1&sort=DESC&after_hours={after_hours}",
+                "method": "GET",
+                "root_path": "data.0",
+                "api_key_id": "marketstack"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    },
+                    "trade_date": {
+                        "type": "string",
+                        "description": "Intraday trade date in YYYY-MM-DD format."
+                    },
+                    "interval": {
+                        "type": "string",
+                        "enum": [
+                            "1min",
+                            "5min",
+                            "10min",
+                            "15min",
+                            "30min",
+                            "1hour",
+                            "3hour",
+                            "6hour",
+                            "12hour",
+                            "24hour"
+                        ],
+                        "default": "5min"
+                    },
+                    "after_hours": {
+                        "type": "boolean",
+                        "default": false
+                    }
+                },
+                "required": [
+                    "symbol",
+                    "trade_date",
+                    "interval"
+                ]
+            },
+            "mapping": {
+                "symbol": "symbol",
+                "interval": "_input.interval",
+                "bar_start": "date",
+                "open": "open",
+                "high": "high",
+                "low": "low",
+                "close": "marketstack_last",
+                "volume": "volume",
+                "source": {
+                    "value": "marketstack"
+                }
+            },
+            "test_data": {
+                "symbol": "AAPL",
+                "trade_date": "2024-09-27",
+                "interval": "5min",
+                "after_hours": false
+            },
+            "cost": 0,
+            "party": "attas"
+        },
+        {
+            "name": "dividend_info",
+            "pulse_address": "d259d4d0-c905-5961-803f-dadd396df483",
+            "description": "Latest dividend record from Marketstack.",
+            "tags": [
+                "corporate-actions",
+                "dividends"
+            ],
+            "api": {
+                "url": "https://api.marketstack.com/v2/dividends?symbols={symbol}&limit=1&sort=DESC",
+                "method": "GET",
+                "root_path": "data.0",
+                "api_key_id": "marketstack"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "symbol"
+                ]
+            },
+            "mapping": {
+                "symbol": "symbol",
+                "cash_amount": "dividend",
+                "declaration_date": "declaration_date",
+                "ex_date": "date",
+                "record_date": "record_date",
+                "payment_date": "payment_date"
+            },
+            "test_data": {
+                "symbol": "AAPL"
+            },
+            "cost": 0,
+            "party": "attas"
+        },
+        {
+            "name": "corporate_action_event",
+            "pulse_address": "644d7642-3e46-5aea-8b46-5f95df8ffa34",
+            "description": "Latest stock split record from Marketstack.",
+            "tags": [
+                "corporate-actions",
+                "splits"
+            ],
+            "api": {
+                "url": "https://api.marketstack.com/v2/splits?symbols={symbol}&limit=1&sort=DESC",
+                "method": "GET",
+                "root_path": "data.0",
+                "api_key_id": "marketstack"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "symbol"
+                ]
+            },
+            "mapping": {
+                "symbol": "symbol",
+                "event_type": {
+                    "value": "stock_split"
+                },
+                "effective_date": "date",
+                "details": "stock_split",
+                "status": {
+                    "value": "completed"
+                }
+            },
+            "test_data": {
+                "symbol": "AAPL"
+            },
+            "cost": 0,
+            "party": "attas"
+        },
+        {
+            "name": "company_profile",
+            "pulse_address": "5adbfd9a-c59f-5b85-a19f-565525d5712d",
+            "description": "Ticker metadata profile from Marketstack tickerinfo.",
+            "tags": [
+                "fundamentals",
+                "company-profile"
+            ],
+            "api": {
+                "url": "https://api.marketstack.com/v2/tickerinfo?ticker={symbol}",
+                "method": "GET",
+                "root_path": "data",
+                "api_key_id": "marketstack"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "symbol"
+                ]
+            },
+            "mapping": {
+                "symbol": "ticker",
+                "company_name": "name",
+                "sector": "sector",
+                "industry": "industry",
+                "website": "website"
+            },
+            "test_data": {
+                "symbol": "AAPL"
+            },
+            "cost": 0,
+            "party": "attas"
+        }
+    ],
+    "pools": [
+        {
+            "type": "FileSystemPool",
+            "name": "marketstack_pool",
+            "description": "Marketstack local pool",
+            "root_path": "tests/storage/marketstack"
+        }
+    ]
+}

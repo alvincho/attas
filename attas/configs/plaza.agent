@@ -1,0 +1,30 @@
+{
+    "name": "plaza",
+    "role": "coordinator",
+    "tags": ["mediator"],
+    "host": "127.0.0.1",
+    "port": 8011,
+    "pools": [
+        {
+            "type": "SupabasePool",
+            "name": "plaza_pool",
+            "description": "Plaza Supabase pool",
+            "url": "https://shwjdbugjabdgybzdhws.supabase.co",
+            "key": {
+                "env": "SUPABASE_PUBLISHABLE_KEY"
+            }
+        }
+    ],
+    "type": "prompits.core.plaza.PlazaAgent",
+    "plaza": {
+        "init_files":[
+            "attas/init_pits/init_pulse.json"
+        ]
+    },
+    "practices": [
+        {
+            "type": "prompits.practices.plaza.PlazaPractice",
+            "params": {}
+        }
+    ]
+}

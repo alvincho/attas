@@ -1,0 +1,40 @@
+{
+  "id": "alice:pool-query",
+  "agent_name": "alice",
+  "practice_id": "pool-query",
+  "practice_name": "Pool Query",
+  "practice_description": "Execute a query against the filesystem pool adapter.",
+  "practice_data": {
+    "name": "Pool Query",
+    "description": "Execute a query against the filesystem pool adapter.",
+    "id": "pool-query",
+    "cost": 0,
+    "tags": [
+      "pool",
+      "filesystem",
+      "storage",
+      "query"
+    ],
+    "examples": [],
+    "inputModes": [
+      "http-post",
+      "json"
+    ],
+    "outputModes": [
+      "json"
+    ],
+    "parameters": {
+      "query": {
+        "type": "string",
+        "description": "Query or operation name."
+      },
+      "params": {
+        "type": "object",
+        "description": "Optional query parameters."
+      }
+    },
+    "path": "/pool_query"
+  },
+  "is_deleted": false,
+  "updated_at": "2026-03-23T11:14:50.779893+00:00"
+}

@@ -1,0 +1,55 @@
+{
+    "name": "OpenAIPulser",
+    "type": "attas.pulsers.openai_pulser.OpenAIPulser",
+    "host": "127.0.0.1",
+    "port": 8029,
+    "plaza_url": "http://127.0.0.1:8011",
+    "role": "pulser",
+    "description": "OpenAI Cloud pulser for chat completions and embeddings.",
+    "tags": [
+        "llm",
+        "openai",
+        "chat",
+        "cloud"
+    ],
+    "pools": [
+        {
+            "type": "FileSystemPool",
+            "name": "openai_pool",
+            "description": "OpenAI cloud pool",
+            "root_path": "tests/storage/openai"
+        }
+    ],
+    "model": "gpt-4o",
+    "base_url": "https://api.openai.com/v1/chat/completions",
+    "supported_pulses": [
+        {
+            "name": "llm_chat",
+            "description": "Chat completion pulse via OpenAI Cloud.",
+            "tags": [
+                "llm",
+                "chat"
+            ],
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "prompt": {
+                        "type": "string"
+                    },
+                    "model": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "prompt"
+                ]
+            },
+            "mapping": {
+                "response": "response",
+                "model": "model",
+                "provider": "provider"
+            },
+            "party": "System"
+        }
+    ]
+}

@@ -1,0 +1,189 @@
+import json
+import os
+import sys
+
+from fastapi.testclient import TestClient
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+
+from prompits.tests.test_support import build_agent_from_config
+
+
+class FakeHttpResponse:
+    def raise_for_status(self):
+        return None
+
+    def json(self):
+        return {"data": {"quote": {"price": 214.37}}}
+
+
+class FakeHttpClient:
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        return False
+
+    def request(self, method, url, headers=None):
+        return FakeHttpResponse()
+
+
+def test_api_pulser_has_dedicated_ui_and_saves_config_file(tmp_path, monkeypatch):
+    pool_dir = tmp_path / "storage"
+    config_path = tmp_path / "demo_api_pulser.config"
+    monkeypatch.setattr(
+        "phemacast.pulsers.api_pulser.httpx.Client",
+        lambda timeout=10.0: FakeHttpClient(),
+    )
+    config_path.write_text(
+        json.dumps(
+            {
+                "name": "DemoApiPulser",
+                "type": "phemacast.pulsers.api_pulser.ApiPulser",
+                "host": "127.0.0.1",
+                "port": 8124,
+                "description": "Demo pulser",
+                "tags": ["finance", "market-data"],
+                "api_key": {"env": "DEMO_API_KEY"},
+                "api_keys": [
+                    {"id": "market", "env": "MARKET_API_KEY", "header": "x-api-key"},
+                    {"id": "news", "value": "news-secret", "prefix": "Token "},
+                ],
+                "supported_pulses": [
+                    {
+                        "name": "last_price",
+                        "description": "Latest traded price",
+                        "pulse_address": "plaza://pulse/last_price",
+                        "api": {
+                            "url": "https://example.test/quote/{symbol}",
+                            "method": "GET",
+                            "root_path": "data.quote",
+                            "headers": {"x-api-key": "demo"},
+                            "api_key": {"env": "PULSE_LEVEL_KEY"},
+                            "api_key_header": "x-api-key",
+                            "api_key_id": "market",
+                            "api_key_param": "apikey",
+                        },
+                        "input_schema": {
+                            "type": "object",
+                            "properties": {"symbol": {"type": "string"}},
+                            "required": ["symbol"],
+                        },
+                        "output_schema": {
+                            "type": "object",
+                            "properties": {"last_price": {"type": "number"}},
+                        },
+                        "mapping": {"last_price": "price"},
+                        "test_data": {"symbol": "AAPL"},
+                    }
+                ],
+                "pools": [
+                    {
+                        "type": "FileSystemPool",
+                        "name": "demo_pool",
+                        "description": "test pool",
+                        "root_path": str(pool_dir),
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    agent = build_agent_from_config(str(config_path))
+    assert agent.config_path == config_path.resolve()
+    assert agent.supported_pulses[0]["name"] == "last_price"
+
+    with TestClient(agent.app) as client:
+        root = client.get("/")
+        assert root.status_code == 200
+        assert "DemoApiPulser Config" in root.text
+        assert "Search Supported Pulses" in root.text
+        assert "Filter" in root.text
+        assert "Sort" in root.text
+        assert "Name A-Z" in root.text
+        assert "Has Test Data" in root.text
+        assert "APIPulser Details" in root.text
+        assert "Pulse Details" in root.text
+        assert "Test Data" in root.text
+        assert '<div id="test-runner-modal-root"></div>' in root.text
+        assert '<div id="config-preview" class="json-tree-shell"></div>' in root.text
+        assert "Pulse Test Data JSON" in root.text
+        assert "API Key Query Param" in root.text
+        assert 'id="pulser-details-content" class="collapsible-content collapsed"' in root.text
+        assert 'id="pulse-details-content" class="collapsible-content collapsed"' in root.text
+        assert '<div id="test-runner-result" class="json-tree-shell result"></div>' in root.text
+        assert '<div id="test-last-params" class="json-tree-shell compact"></div>' in root.text
+
+        current = client.get("/api/config")
+        assert current.status_code == 200
+        payload = current.json()["config"]
+        assert payload["name"] == "DemoApiPulser"
+        assert payload["api_key"]["env"] == "DEMO_API_KEY"
+        assert payload["api_keys"][0]["id"] == "market"
+        assert payload["supported_pulses"][0]["test_data"]["symbol"] == "AAPL"
+
+        payload["description"] = "Updated pulser"
+        payload["api_key"] = "literal-top-level-key"
+        payload["api_keys"][0]["env"] = "UPDATED_MARKET_KEY"
+        payload["api_keys"][0]["param"] = "apikey"
+        payload["supported_pulses"][0]["test_data"] = {"symbol": "MSFT", "window": "1d"}
+        payload["supported_pulses"][0]["api"]["api_key"] = {"env": "UPDATED_PULSE_KEY"}
+        payload["supported_pulses"][0]["api"]["api_key_id"] = "market"
+        payload["supported_pulses"][0]["api"]["api_key_param"] = "apikey"
+        payload["supported_pulses"].append(
+            {
+                "name": "trade_volume",
+                "description": "Share volume",
+                "pulse_address": "plaza://pulse/trade_volume",
+                "api": {
+                    "url": "https://example.test/volume/{symbol}",
+                    "method": "GET",
+                    "root_path": "data",
+                    "headers": {},
+                    "api_key_id": "news",
+                },
+                "input_schema": {"type": "object", "properties": {"symbol": {"type": "string"}}},
+                "output_schema": {"type": "object", "properties": {"volume": {"type": "number"}}},
+                "mapping": {"volume": "volume"},
+                "test_data": {"symbol": "NVDA"},
+            }
+        )
+
+        saved = client.post("/api/config", json={"config": payload})
+        assert saved.status_code == 200
+        saved_payload = saved.json()["config"]
+        assert saved_payload["description"] == "Updated pulser"
+        assert saved_payload["api_key"] == "literal-top-level-key"
+        assert saved_payload["api_keys"][0]["env"] == "UPDATED_MARKET_KEY"
+        assert len(saved_payload["supported_pulses"]) == 2
+
+        tested = client.post(
+            "/api/test-pulse",
+            json={
+                "config": payload,
+                "pulse_name": "last_price",
+                "params": {"symbol": "AAPL"},
+                "debug": True,
+            },
+        )
+        assert tested.status_code == 200
+        tested_payload = tested.json()
+        assert tested_payload["status"] == "success"
+        assert tested_payload["result"]["last_price"] == 214.37
+        assert tested_payload["debug"]["pulse_definition"]["name"] == "last_price"
+        assert tested_payload["debug"]["fetch"]["request"]["method"] == "GET"
+        assert tested_payload["debug"]["raw_payload"]["price"] == 214.37
+
+    written = json.loads(config_path.read_text(encoding="utf-8"))
+    assert written["description"] == "Updated pulser"
+    assert written["api_key"] == "literal-top-level-key"
+    assert written["api_keys"][0]["env"] == "UPDATED_MARKET_KEY"
+    assert written["api_keys"][0]["param"] == "apikey"
+    assert written["supported_pulses"][0]["api"]["api_key"]["env"] == "UPDATED_PULSE_KEY"
+    assert written["supported_pulses"][0]["api"]["api_key_id"] == "market"
+    assert written["supported_pulses"][0]["api"]["api_key_param"] == "apikey"
+    assert written["supported_pulses"][0]["test_data"]["symbol"] == "MSFT"
+    assert written["supported_pulses"][1]["name"] == "trade_volume"
+    assert written["supported_pulses"][1]["api"]["api_key_id"] == "news"
+    assert agent.supported_pulses[1]["test_data"]["symbol"] == "NVDA"

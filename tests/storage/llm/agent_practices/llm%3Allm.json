@@ -1,0 +1,42 @@
+{
+  "id": "llm:llm",
+  "agent_name": "llm",
+  "practice_id": "llm",
+  "practice_name": "LLMPractice",
+  "practice_description": "Routes prompts to the configured ollama backend.",
+  "practice_data": {
+    "name": "LLMPractice",
+    "description": "Routes prompts to the configured ollama backend.",
+    "id": "llm",
+    "cost": 0,
+    "tags": [
+      "llm",
+      "generation",
+      "ollama"
+    ],
+    "examples": [
+      "POST /llm {'prompt': 'Summarize NVDA earnings'}"
+    ],
+    "inputModes": [
+      "http-post",
+      "json"
+    ],
+    "outputModes": [
+      "json"
+    ],
+    "parameters": {
+      "prompt": {
+        "type": "text",
+        "description": "Prompt to send to the configured LLM backend.",
+        "placeholder": "Explain retrieval-augmented generation in 3 bullets."
+      },
+      "model": {
+        "type": "string",
+        "description": "Optional model override for this request."
+      }
+    },
+    "path": "/llm"
+  },
+  "is_deleted": false,
+  "updated_at": "2026-03-08T07:08:39.165030+00:00"
+}

@@ -1,0 +1,56 @@
+{
+  "id": "YFinanceApiPulser:pool-store-memory",
+  "agent_name": "YFinanceApiPulser",
+  "practice_id": "pool-store-memory",
+  "practice_name": "Pool Store Memory",
+  "practice_description": "Store one memory record in the filesystem pool.",
+  "practice_data": {
+    "name": "Pool Store Memory",
+    "description": "Store one memory record in the filesystem pool.",
+    "id": "pool-store-memory",
+    "cost": 0,
+    "tags": [
+      "pool",
+      "filesystem",
+      "memory",
+      "store"
+    ],
+    "examples": [],
+    "inputModes": [
+      "http-post",
+      "json"
+    ],
+    "outputModes": [
+      "json"
+    ],
+    "parameters": {
+      "content": {
+        "type": "string",
+        "description": "Memory content."
+      },
+      "memory_id": {
+        "type": "string",
+        "description": "Optional stable memory id."
+      },
+      "metadata": {
+        "type": "object",
+        "description": "Optional metadata payload."
+      },
+      "tags": {
+        "type": "array",
+        "description": "Optional string tags."
+      },
+      "memory_type": {
+        "type": "string",
+        "description": "Memory category."
+      },
+      "table_name": {
+        "type": "string",
+        "description": "Optional override table name."
+      }
+    },
+    "path": "/pool_store_memory"
+  },
+  "is_deleted": false,
+  "updated_at": "2026-03-19T11:07:26.619639+00:00"
+}

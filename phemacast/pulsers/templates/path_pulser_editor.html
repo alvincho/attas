@@ -1,0 +1,254 @@
+{% extends "phemacast/pulsers/templates/pulser_editor_base.html" %}
+
+{% block subtitle %}Compose selected Plaza pulses with a step-by-step path editor. Each step receives the previous step’s output, and the final step must satisfy the selected pulse’s output schema before the pulser is considered complete.{% endblock %}
+
+{% block extension_bootstrap %}
+window.pulserEditorExtension = {
+    defaultPulse({ index }) {
+        return {
+            name: `path_pulse_${index}`,
+            description: '',
+            pulse_address: '',
+            tags: [],
+            cost: 0,
+            api: {
+                url: '',
+                method: 'POST',
+                root_path: '',
+                headers: {},
+            },
+            input_schema: {},
+            output_schema: {},
+            mapping: {},
+            steps: [],
+            result_path: '',
+            test_data: {},
+            is_complete: false,
+            completion_status: 'unfinished',
+            completion_errors: ['Add steps and test data, then make the final step match the pulse output schema.'],
+        };
+    },
+    hydratePulseFromPlaza({ plazaPulse, pulse }) {
+        return {
+            ...pulse,
+            pulse_address: plazaPulse.pit_address || pulse.pulse_address,
+            name: plazaPulse.name || pulse.name,
+            pulse_name: plazaPulse.name || pulse.name,
+            description: plazaPulse.description || pulse.description,
+            tags: Array.isArray(plazaPulse.tags) ? plazaPulse.tags : [],
+            output_schema: plazaPulse.output_schema || {},
+            steps: [],
+            result_path: '',
+            test_data: {},
+            is_complete: false,
+            completion_status: 'unfinished',
+            completion_errors: ['Add at least one step and test data.'],
+        };
+    },
+    normalizePulseDraft({ pulse, draft }) {
+        const next = { ...draft };
+        next.path_steps_json = JSON.stringify(pulse.steps || [], null, 2);
+        next.path_result_path = pulse.result_path || '';
+        next.path_completion_status = pulse.completion_status || (pulse.is_complete ? 'complete' : 'unfinished');
+        next.path_completion_errors_json = JSON.stringify(pulse.completion_errors || [], null, 2);
+        return next;
+    },
+    compilePulse({ draft, compiledPulse }) {
+        let steps = [];
+        if ((draft.path_steps_json || '').trim()) {
+            steps = JSON.parse(draft.path_steps_json);
+        }
+        const normalizedSteps = Array.isArray(steps) ? steps : [];
+        const fallbackResultPath = normalizedSteps.length ? `steps.${normalizedSteps[normalizedSteps.length - 1].name || `step_${normalizedSteps.length}`}` : '';
+        return {
+            ...compiledPulse,
+            steps: normalizedSteps,
+            result_path: (draft.path_result_path || fallbackResultPath || '').trim(),
+        };
+    },
+    renderPulseEditorExtension({ root, pulse, draft }) {
+        const anchor = root.querySelector('[data-pulse-field="test_data_json"]')?.closest('.field');
+        if (!anchor) return;
+
+        const stepEditor = document.createElement('div');
+        stepEditor.className = 'field full-span';
+        stepEditor.innerHTML = `
+            <label>Path Editor</label>
+            <div class="muted">Each step receives the prior step’s output as <code>previous_output</code> in Python or <code>{{ "{{_previous.*}}" }}</code> in source params.</div>
+            <div data-path-step-editor="1"></div>
+        `;
+        anchor.insertAdjacentElement('afterend', stepEditor);
+
+        const completionBlock = document.createElement('div');
+        completionBlock.className = 'field full-span';
+        completionBlock.innerHTML = `
+            <label>Completion Status</label>
+            <input type="text" value="${escapeAttribute(draft.path_completion_status || 'unfinished')}" readonly>
+            <div class="muted">Unfinished path pulses are indexed in Plaza but are not available for other agents to use.</div>
+            <label style="margin-top:10px;">Completion Errors</label>
+            <textarea readonly>${escapeHtml(draft.path_completion_errors_json || '[]')}</textarea>
+        `;
+        stepEditor.insertAdjacentElement('afterend', completionBlock);
+
+        const resultPathField = document.createElement('div');
+        resultPathField.className = 'field full-span';
+        resultPathField.innerHTML = `
+            <label>Final Result Path</label>
+            <input type="text" data-pulse-field="path_result_path" value="${escapeAttribute(draft.path_result_path || '')}" placeholder="steps.final_step">
+            <div class="muted">This should normally point at the last step, for example <code>steps.compose_snapshot</code>.</div>
+        `;
+        completionBlock.insertAdjacentElement('afterend', resultPathField);
+
+        const renderPathSteps = () => {
+            const host = stepEditor.querySelector('[data-path-step-editor]');
+            let steps = [];
+            try {
+                steps = JSON.parse(draft.path_steps_json || '[]');
+                if (!Array.isArray(steps)) steps = [];
+            } catch (error) {
+                host.innerHTML = `<div class="status error">Step editor has invalid JSON: ${escapeHtml(error.message)}</div>`;
+                return;
+            }
+
+            const cards = steps.map((step, index) => {
+                const stepName = step.name || `step_${index + 1}`;
+                const stepType = step.type || 'source';
+                return `
+                    <section style="border:1px solid var(--line);border-radius:18px;padding:14px;background:rgba(255,255,255,0.82);margin-top:12px;">
+                        <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;">
+                            <strong>Step ${index + 1}</strong>
+                            <button type="button" class="ghost-btn" data-path-delete-step="${index}">Delete</button>
+                        </div>
+                        <div class="editor-grid" style="margin-top:12px;">
+                            <div class="field">
+                                <label>Step Name</label>
+                                <input type="text" data-path-step-field="${index}" data-path-step-key="name" value="${escapeAttribute(stepName)}">
+                            </div>
+                            <div class="field">
+                                <label>Step Type</label>
+                                <select data-path-step-field="${index}" data-path-step-key="type">
+                                    ${['source', 'python'].map((option) => `<option value="${option}" ${stepType === option ? 'selected' : ''}>${option}</option>`).join('')}
+                                </select>
+                            </div>
+                            <div class="field full-span">
+                                <label>Previous Output</label>
+                                <textarea readonly>${escapeHtml(index === 0 ? JSON.stringify(pulse.input_schema || {}, null, 2) : JSON.stringify(steps[index - 1]?.output_schema || { note: 'Uses previous step runtime result' }, null, 2))}</textarea>
+                            </div>
+                            <div class="field full-span" style="${stepType === 'source' ? '' : 'display:none;'}">
+                                <label>Source Pulser URL</label>
+                                <input type="text" data-path-step-field="${index}" data-path-step-key="pulser_url" value="${escapeAttribute(step.pulser_url || '')}" placeholder="http://127.0.0.1:8020">
+                            </div>
+                            <div class="field full-span" style="${stepType === 'source' ? '' : 'display:none;'}">
+                                <label>Source Pulse Name</label>
+                                <input type="text" data-path-step-field="${index}" data-path-step-key="pulse_name" value="${escapeAttribute(step.pulse_name || '')}" placeholder="last_price">
+                            </div>
+                            <div class="field full-span" style="${stepType === 'source' ? '' : 'display:none;'}">
+                                <label>Source Params JSON</label>
+                                <textarea data-path-step-json="${index}" data-path-step-key="params">${escapeHtml(JSON.stringify(step.params || {}, null, 2))}</textarea>
+                                <div class="muted">Leave empty to pass the previous step output through as params.</div>
+                            </div>
+                            <div class="field full-span" style="${stepType === 'python' ? '' : 'display:none;'}">
+                                <label>Python Script</label>
+                                <textarea data-path-step-field="${index}" data-path-step-key="script">${escapeHtml(step.script || '')}</textarea>
+                                <div class="muted">Use <code>previous_output</code>, <code>input_data</code>, <code>steps</code>, and set <code>result</code>.</div>
+                            </div>
+                            <div class="field full-span">
+                                <label>Step Output Schema JSON</label>
+                                <textarea data-path-step-json="${index}" data-path-step-key="output_schema">${escapeHtml(JSON.stringify(step.output_schema || {}, null, 2))}</textarea>
+                                <div class="muted">The final step output should match the selected pulse output schema.</div>
+                            </div>
+                        </div>
+                    </section>
+                `;
+            }).join('');
+
+            host.innerHTML = `
+                <div class="toolbar" style="margin-top:10px;">
+                    <button type="button" class="primary-btn" data-path-add-step="source">Add Source Step</button>
+                    <button type="button" class="ghost-btn" data-path-add-step="python">Add Python Step</button>
+                </div>
+                <div class="field full-span" style="margin-top:12px;">
+                    <label>Pulse Input Schema</label>
+                    <textarea readonly>${escapeHtml(draft.input_schema_json || '{}')}</textarea>
+                </div>
+                <div class="field full-span">
+                    <label>Pulse Output Schema</label>
+                    <textarea readonly>${escapeHtml(draft.output_schema_json || '{}')}</textarea>
+                </div>
+                ${cards || '<div class="muted" style="margin-top:12px;">No steps yet. Add a source or Python step to begin the path.</div>'}
+            `;
+
+            const updateJson = (nextSteps) => {
+                draft.path_steps_json = JSON.stringify(nextSteps, null, 2);
+                if (!draft.path_result_path && nextSteps.length) {
+                    const lastName = nextSteps[nextSteps.length - 1].name || `step_${nextSteps.length}`;
+                    draft.path_result_path = `steps.${lastName}`;
+                    const resultPathInput = resultPathField.querySelector('[data-pulse-field="path_result_path"]');
+                    if (resultPathInput) resultPathInput.value = draft.path_result_path;
+                }
+                renderPathSteps();
+                renderPreview();
+            };
+
+            host.querySelectorAll('[data-path-add-step]').forEach((node) => {
+                node.addEventListener('click', () => {
+                    const current = Array.isArray(steps) ? [...steps] : [];
+                    const stepType = node.dataset.pathAddStep || 'source';
+                    const nextIndex = current.length + 1;
+                    current.push(
+                        stepType === 'python'
+                            ? { name: `step_${nextIndex}`, type: 'python', script: '', output_schema: {} }
+                            : { name: `step_${nextIndex}`, type: 'source', pulser_url: '', pulse_name: '', params: {}, output_schema: {} }
+                    );
+                    updateJson(current);
+                });
+            });
+
+            host.querySelectorAll('[data-path-delete-step]').forEach((node) => {
+                node.addEventListener('click', () => {
+                    const index = Number(node.dataset.pathDeleteStep || 0);
+                    const current = Array.isArray(steps) ? [...steps] : [];
+                    current.splice(index, 1);
+                    updateJson(current);
+                });
+            });
+
+            host.querySelectorAll('[data-path-step-field]').forEach((node) => {
+                node.addEventListener('input', (event) => {
+                    const index = Number(event.target.dataset.pathStepField || 0);
+                    const key = event.target.dataset.pathStepKey;
+                    const current = Array.isArray(steps) ? [...steps] : [];
+                    current[index] = { ...(current[index] || {}), [key]: event.target.value };
+                    if (key === 'type' && event.target.value === 'source') {
+                        current[index].script = '';
+                    }
+                    updateJson(current);
+                });
+            });
+
+            host.querySelectorAll('[data-path-step-json]').forEach((node) => {
+                node.addEventListener('input', (event) => {
+                    const index = Number(event.target.dataset.pathStepJson || 0);
+                    const key = event.target.dataset.pathStepKey;
+                    const current = Array.isArray(steps) ? [...steps] : [];
+                    try {
+                        current[index] = { ...(current[index] || {}), [key]: JSON.parse(event.target.value || '{}') };
+                        updateJson(current);
+                    } catch (error) {
+                        draft.path_steps_json = draft.path_steps_json;
+                    }
+                });
+            });
+        };
+
+        renderPathSteps();
+
+        resultPathField.querySelectorAll('[data-pulse-field]').forEach((node) => {
+            node.addEventListener('input', (event) => {
+                draft[event.target.dataset.pulseField] = event.target.value;
+                renderPreview();
+            });
+        });
+    },
+};
+{% endblock %}

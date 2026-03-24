@@ -1,0 +1,58 @@
+{
+  "id": "OpenAIPulser:get_pulse_data",
+  "agent_name": "OpenAIPulser",
+  "practice_id": "get_pulse_data",
+  "practice_name": "Get Pulse Data",
+  "practice_description": "Fetch or transform pulse payloads for the agent's supported pulses.",
+  "practice_data": {
+    "name": "Get Pulse Data",
+    "description": "Fetch or transform pulse payloads for the agent's supported pulses.",
+    "id": "get_pulse_data",
+    "cost": 0,
+    "tags": [
+      "pulser",
+      "pulse",
+      "data"
+    ],
+    "examples": [
+      "POST /get_pulse_data {'pulse_name': 'last_price', 'params': {'symbol': 'AAPL'}}"
+    ],
+    "inputModes": [
+      "http-post",
+      "json"
+    ],
+    "outputModes": [
+      "json"
+    ],
+    "parameters": {
+      "pulse_name": {
+        "type": "string",
+        "description": "Optional pulse identifier. Defaults to the pulser's primary pulse.",
+        "enum": [
+          "llm_chat"
+        ]
+      },
+      "pulse_address": {
+        "type": "string",
+        "description": "Optional pulse address override."
+      },
+      "params": {
+        "type": "object",
+        "properties": {
+          "prompt": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "prompt"
+        ]
+      }
+    },
+    "path": "/get_pulse_data"
+  },
+  "is_deleted": false,
+  "updated_at": "2026-03-23T13:20:49.263931+00:00"
+}

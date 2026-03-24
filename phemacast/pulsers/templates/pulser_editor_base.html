@@ -1,0 +1,2152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ agent_name }} Config</title>
+    <style>
+        :root {
+            color-scheme: light;
+            --bg: #eef4f8;
+            --panel: rgba(255, 255, 255, 0.86);
+            --panel-strong: rgba(255, 255, 255, 0.96);
+            --line: rgba(11, 61, 145, 0.14);
+            --line-strong: rgba(11, 61, 145, 0.26);
+            --text: #132033;
+            --muted: #607089;
+            --accent: #0b61d1;
+            --accent-soft: rgba(11, 97, 209, 0.08);
+            --success: #12805c;
+            --danger: #bf3656;
+            --shadow: 0 18px 48px rgba(14, 35, 67, 0.10);
+            --mono: "SFMono-Regular", "SF Mono", "IBM Plex Mono", monospace;
+            --sans: "Segoe UI", "Helvetica Neue", sans-serif;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            font-family: var(--sans);
+            color: var(--text);
+            background:
+                radial-gradient(circle at top left, rgba(11, 97, 209, 0.16), transparent 30%),
+                linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+            min-height: 100vh;
+        }
+
+        body.modal-open {
+            overflow: hidden;
+        }
+
+        .shell {
+            max-width: 1480px;
+            margin: 0 auto;
+            padding: 32px 24px 40px;
+        }
+
+        .hero,
+        .panel {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 24px;
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(18px);
+        }
+
+        .hero {
+            padding: 28px;
+            margin-bottom: 20px;
+        }
+
+        .hero h1 {
+            margin: 0 0 8px;
+            font-size: clamp(2rem, 4vw, 3rem);
+            line-height: 1;
+        }
+
+        .subtitle,
+        .muted {
+            color: var(--muted);
+            line-height: 1.5;
+        }
+
+        .hero-meta {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 16px;
+        }
+
+        .chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            padding: 8px 12px;
+            font-size: 0.8rem;
+            background: rgba(255, 255, 255, 0.72);
+        }
+
+        .layout {
+            display: grid;
+            grid-template-columns: minmax(320px, 360px) minmax(0, 1fr);
+            gap: 20px;
+        }
+
+        .panel {
+            padding: 20px;
+        }
+
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            z-index: 40;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            background: rgba(16, 28, 48, 0.44);
+            backdrop-filter: blur(10px);
+        }
+
+        .modal-card {
+            width: min(960px, 100%);
+            max-height: min(88vh, 960px);
+            overflow: auto;
+            background: var(--panel-strong);
+            border: 1px solid var(--line);
+            border-radius: 28px;
+            box-shadow: 0 32px 72px rgba(14, 35, 67, 0.26);
+            padding: 22px;
+        }
+
+        .panel-head {
+            display: flex;
+            align-items: start;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .panel-head.compact {
+            margin-bottom: 0;
+        }
+
+        .panel-head h2,
+        .panel-head h3 {
+            margin: 0;
+        }
+
+        .panel-head-main {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 0;
+        }
+
+        .collapse-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border: 1px solid var(--line);
+            background: rgba(255, 255, 255, 0.88);
+            color: var(--text);
+            font-weight: 700;
+        }
+
+        .collapse-toggle::before {
+            content: "▸";
+            font-size: 0.86rem;
+            transition: transform 0.2s ease;
+        }
+
+        .collapse-toggle[aria-expanded="true"]::before {
+            transform: rotate(90deg);
+        }
+
+        .collapsible-content {
+            margin-top: 14px;
+        }
+
+        .collapsible-content.collapsed {
+            display: none;
+        }
+
+        .stack {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .field,
+        .pulse-card {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        label {
+            font-size: 0.82rem;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            color: var(--muted);
+            text-transform: uppercase;
+        }
+
+        input,
+        textarea,
+        select,
+        button {
+            font: inherit;
+        }
+
+        input,
+        textarea,
+        select {
+            width: 100%;
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            padding: 12px 14px;
+            background: var(--panel-strong);
+            color: var(--text);
+            outline: none;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        input:focus,
+        textarea:focus,
+        select:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 4px rgba(11, 97, 209, 0.12);
+        }
+
+        textarea {
+            min-height: 120px;
+            resize: vertical;
+            font-family: var(--mono);
+            font-size: 0.9rem;
+            line-height: 1.45;
+        }
+
+        .toolbar {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            border: 0;
+            border-radius: 999px;
+            padding: 11px 16px;
+            cursor: pointer;
+        }
+
+        .primary-btn {
+            background: linear-gradient(135deg, #0b61d1, #0e8cc8);
+            color: white;
+            box-shadow: 0 10px 28px rgba(11, 97, 209, 0.24);
+        }
+
+        .ghost-btn {
+            background: white;
+            color: var(--text);
+            border: 1px solid var(--line);
+        }
+
+        .status {
+            border-radius: 16px;
+            padding: 12px 14px;
+            font-size: 0.95rem;
+            border: 1px solid var(--line);
+            background: rgba(255, 255, 255, 0.72);
+        }
+
+        .status.success {
+            border-color: rgba(18, 128, 92, 0.24);
+            color: var(--success);
+            background: rgba(18, 128, 92, 0.08);
+        }
+
+        .status.error {
+            border-color: rgba(191, 54, 86, 0.24);
+            color: var(--danger);
+            background: rgba(191, 54, 86, 0.08);
+        }
+
+        .pulse-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            max-height: 720px;
+            overflow: auto;
+            padding-right: 4px;
+        }
+
+        .pulse-controls {
+            display: grid;
+            grid-template-columns: minmax(0, 1.2fr) minmax(120px, 0.8fr) minmax(140px, 0.9fr);
+            gap: 10px;
+        }
+
+        .pulse-card {
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            padding: 9px 12px;
+            background: rgba(255, 255, 255, 0.76);
+            cursor: pointer;
+            transition: border-color 0.2s ease, transform 0.2s ease, background 0.2s ease;
+            text-align: left;
+            min-width: 0;
+        }
+
+        .pulse-card.active {
+            border-color: var(--accent);
+            background: var(--accent-soft);
+            transform: translateY(-1px);
+        }
+
+        .pulse-card-line {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            min-width: 0;
+        }
+
+        .pulse-card-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            line-height: 1.15;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .pulse-card-subtitle {
+            margin-top: 4px;
+            font-size: 0.78rem;
+            color: var(--muted);
+            line-height: 1.2;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .pulse-method {
+            flex: 0 0 auto;
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            padding: 3px 8px;
+            font-size: 0.7rem;
+            color: var(--muted);
+            background: rgba(255, 255, 255, 0.82);
+            letter-spacing: 0.04em;
+        }
+
+        .pulse-count {
+            font-size: 0.78rem;
+            color: var(--muted);
+        }
+
+        .picker-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 160px;
+            gap: 12px;
+            margin-top: 12px;
+        }
+
+        .picker-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 16px;
+            max-height: 56vh;
+            overflow: auto;
+            padding-right: 4px;
+        }
+
+        .picker-item {
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            padding: 14px 16px;
+            background: rgba(255, 255, 255, 0.82);
+        }
+
+        .picker-item-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .picker-item-title {
+            font-weight: 700;
+            font-size: 0.96rem;
+        }
+
+        .picker-item-meta {
+            margin-top: 6px;
+            font-size: 0.82rem;
+            color: var(--muted);
+            line-height: 1.45;
+            word-break: break-word;
+        }
+
+        .picker-item-tags {
+            margin-top: 8px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .picker-chip {
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            padding: 3px 8px;
+            font-size: 0.72rem;
+            color: var(--muted);
+            background: rgba(255, 255, 255, 0.9);
+        }
+
+        .editor-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 14px;
+        }
+
+        .full-span {
+            grid-column: 1 / -1;
+        }
+
+        pre {
+            margin: 0;
+            border-radius: 18px;
+            padding: 16px;
+            background: #102033;
+            color: #e8f0f8;
+            overflow: auto;
+            font-family: var(--mono);
+            font-size: 0.87rem;
+            line-height: 1.5;
+            min-height: 280px;
+        }
+
+        pre.compact-pre {
+            min-height: 96px;
+            max-height: 180px;
+        }
+
+        pre.test-output-pre {
+            min-height: 180px;
+            max-height: 320px;
+        }
+
+        .json-tree-shell {
+            margin: 0;
+            border-radius: 18px;
+            padding: 16px;
+            background: #102033;
+            color: #e8f0f8;
+            overflow: auto;
+            resize: vertical;
+            font-family: var(--mono);
+            font-size: 0.87rem;
+            line-height: 1.5;
+            min-height: 280px;
+            height: 280px;
+        }
+
+        .json-tree-shell.compact {
+            min-height: 96px;
+            height: 140px;
+        }
+
+        .json-tree-shell.result {
+            min-height: 180px;
+            height: 220px;
+        }
+
+        .json-tree-root,
+        .json-tree-children {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .json-tree-children {
+            margin-left: 18px;
+            padding-left: 12px;
+            border-left: 1px solid rgba(255, 255, 255, 0.12);
+        }
+
+        .json-tree-row,
+        .json-tree-toggle {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .json-tree-toggle {
+            cursor: pointer;
+            list-style: none;
+        }
+
+        .json-tree-toggle::-webkit-details-marker {
+            display: none;
+        }
+
+        .json-tree-toggle::before {
+            content: "▾";
+            color: #7fb8ff;
+            font-size: 0.8rem;
+            line-height: 1.4;
+            margin-top: 1px;
+        }
+
+        details:not([open]) > .json-tree-toggle::before {
+            content: "▸";
+        }
+
+        .json-tree-key {
+            color: #7fb8ff;
+        }
+
+        .json-tree-string {
+            color: #9be9a8;
+        }
+
+        .json-tree-number {
+            color: #f6c177;
+        }
+
+        .json-tree-boolean {
+            color: #f38ba8;
+        }
+
+        .json-tree-null {
+            color: #a6adc8;
+            font-style: italic;
+        }
+
+        .json-tree-note {
+            color: #8ea4c0;
+        }
+
+        @media (max-width: 1080px) {
+            .layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 760px) {
+            .shell {
+                padding: 18px 14px 28px;
+            }
+
+            .pulse-controls {
+                grid-template-columns: 1fr;
+            }
+
+            .editor-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .modal-backdrop {
+                padding: 14px;
+            }
+
+            .modal-card {
+                max-height: 94vh;
+                padding: 18px;
+            }
+        }
+    {% block extra_styles %}{% endblock %}
+    </style>
+</head>
+<body>
+    <main class="shell">
+        <section class="hero">
+            <h1>{{ agent_name }} Config</h1>
+            <div class="subtitle">{% block subtitle %}Dedicated editor for supported pulses, API mappings, and test data. Saves directly back to this pulser’s config file.{% endblock %}</div>
+            <div class="hero-meta">
+                <span class="chip">{{ agent_name }}</span>
+                <span class="chip">{{ config_path or "No config file attached" }}</span>
+                {% block hero_meta_extra %}{% endblock %}
+            </div>
+        </section>
+
+        <div class="layout">
+            <aside class="panel">
+                <div class="panel-head">
+                    <div>
+                        <h2>Supported Pulses</h2>
+                        <div class="muted">Compact list with search, filter, and sort.</div>
+                    </div>
+                    <button id="add-pulse-btn" class="ghost-btn" type="button">Add Pulse</button>
+                </div>
+                <div class="stack">
+                    <div class="pulse-controls">
+                        <div class="field">
+                            <label for="pulse-search">Search</label>
+                            <input id="pulse-search" type="text" placeholder="Search Supported Pulses">
+                        </div>
+                        <div class="field">
+                            <label for="pulse-filter">Filter</label>
+                            <select id="pulse-filter">
+                                <option value="all">All</option>
+                                <option value="with-api">Has API URL</option>
+                                <option value="with-test-data">Has Test Data</option>
+                                <option value="missing-address">Missing Address</option>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label for="pulse-sort">Sort</label>
+                            <select id="pulse-sort">
+                                <option value="name-asc">Name A-Z</option>
+                                <option value="name-desc">Name Z-A</option>
+                                <option value="method-asc">Method A-Z</option>
+                                <option value="cost-asc">Cost Low-High</option>
+                                <option value="cost-desc">Cost High-Low</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="pulse-count" class="pulse-count"></div>
+                    <div id="pulse-list" class="pulse-list"></div>
+                </div>
+            </aside>
+
+            <section class="stack">
+                <section class="panel">
+                    <div class="panel-head compact">
+                        <div class="panel-head-main">
+                            <button id="pulser-details-toggle" class="collapse-toggle" type="button" aria-expanded="false" aria-controls="pulser-details-content">APIPulser Details</button>
+                            <div>
+                                <div class="muted">Top-level config fields are preserved and saved back to disk.</div>
+                            </div>
+                        </div>
+                        <div class="toolbar">
+                            <button id="reload-btn" class="ghost-btn" type="button">Reload</button>
+                            <button id="save-btn" class="primary-btn" type="button">Save Config</button>
+                        </div>
+                    </div>
+                    <div id="pulser-details-content" class="collapsible-content collapsed">
+                    <div id="status" class="status">Loading config…</div>
+                    <div class="editor-grid" style="margin-top:14px;">
+                        <div class="field">
+                            <label for="pulser-name">Name</label>
+                            <input id="pulser-name" type="text">
+                        </div>
+                        <div class="field">
+                            <label for="pulser-type">Type</label>
+                            <input id="pulser-type" type="text" readonly>
+                        </div>
+                        <div class="field">
+                            <label for="pulser-role">Role</label>
+                            <input id="pulser-role" type="text" readonly>
+                        </div>
+                        <div class="field">
+                            <label for="pulser-tags">Tags</label>
+                            <input id="pulser-tags" type="text" placeholder="finance, market-data">
+                        </div>
+                        <div class="field full-span">
+                            <label for="pulser-api-key">Default API Key JSON</label>
+                            <textarea id="pulser-api-key" placeholder='Either a JSON string like "secret-key" or {"env":"MY_API_KEY"}'></textarea>
+                        </div>
+                        <div class="field full-span">
+                            <label for="pulser-api-keys">API Keys JSON</label>
+                            <textarea id="pulser-api-keys" placeholder='[{"id":"market","env":"MARKET_API_KEY","header":"x-api-key"},{"id":"alpha","value":"secret","param":"apikey"}]'></textarea>
+                        </div>
+                        <div class="field full-span">
+                            <label for="pulser-description">Description</label>
+                            <textarea id="pulser-description" style="min-height:100px;font-family:var(--sans);"></textarea>
+                        </div>
+                    </div>
+                    <div id="pulser-extension-fields" class="editor-grid" style="margin-top:14px;"></div>
+                    </div>
+                </section>
+
+                <section class="panel">
+                    <div class="panel-head compact">
+                        <div class="panel-head-main">
+                            <button id="pulse-details-toggle" class="collapse-toggle" type="button" aria-expanded="false" aria-controls="pulse-details-content">Pulse Details</button>
+                            <div>
+                                <h3 id="pulse-editor-title">Pulse Editor</h3>
+                                <div class="muted">Edit API definition, schema, mapping, and Pulse Test Data JSON.</div>
+                            </div>
+                        </div>
+                        <div class="toolbar">
+                            <button id="test-pulse-btn" class="ghost-btn" type="button">Test Data</button>
+                            <button id="delete-pulse-btn" class="ghost-btn" type="button">Delete Pulse</button>
+                        </div>
+                    </div>
+                    <div id="pulse-details-content" class="collapsible-content collapsed">
+                        <div id="pulse-editor" class="editor-grid"></div>
+                    </div>
+                </section>
+
+                <section class="panel">
+                    <div class="panel-head">
+                        <div>
+                            <h3>Saved Preview</h3>
+                            <div class="muted">Current config payload that will be written to disk.</div>
+                        </div>
+                    </div>
+                    <div id="config-preview" class="json-tree-shell"></div>
+                </section>
+                <div id="pulser-extension-panels" class="stack"></div>
+            </section>
+        </div>
+    </main>
+
+    <div id="test-runner-modal-root"></div>
+    <div id="pulse-picker-modal-root"></div>
+
+    <script>
+        const state = {
+            config: null,
+            pulseSearch: '',
+            pulseFilter: 'all',
+            pulseSort: 'name-asc',
+            selectedPulseIndex: 0,
+            pulseDrafts: {},
+            testPanelOpen: false,
+            testDrafts: {},
+            collapsed: {
+                pulserDetails: true,
+                pulseDetails: true,
+            },
+            pulsePicker: {
+                open: false,
+                search: '',
+                loading: false,
+                items: [],
+                selected: {},
+                error: '',
+            },
+        };
+
+        const extensionHelpers = {
+            prettyJson,
+            splitTags,
+            escapeHtml,
+            escapeAttribute,
+            parseObjectField,
+            parseJsonValueField,
+            parseApiKeysField,
+            parseNumberField,
+            formatJsonValue,
+            setStatus,
+            toggleTestPanel,
+            renderJsonTreeInto,
+            parseDisplayJson,
+        };
+
+        function callExtension(name, payload = {}) {
+            const fn = window.pulserEditorExtension?.[name];
+            if (typeof fn !== 'function') return undefined;
+            return fn({ state, helpers: extensionHelpers, ...payload });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            bindEvents();
+            loadConfig();
+        });
+
+        function bindEvents() {
+            document.getElementById('reload-btn').addEventListener('click', loadConfig);
+            document.getElementById('save-btn').addEventListener('click', saveConfig);
+            document.getElementById('add-pulse-btn').addEventListener('click', addPulse);
+            document.getElementById('delete-pulse-btn').addEventListener('click', deletePulse);
+            document.getElementById('test-pulse-btn').addEventListener('click', toggleTestPanel);
+            document.getElementById('pulser-details-toggle').addEventListener('click', () => toggleSection('pulserDetails'));
+            document.getElementById('pulse-details-toggle').addEventListener('click', () => toggleSection('pulseDetails'));
+            document.getElementById('test-runner-modal-root').addEventListener('click', (event) => {
+                if (event.target.id === 'test-runner-modal' || event.target.dataset.modalClose === 'true') {
+                    toggleTestPanel(false);
+                }
+            });
+            document.getElementById('pulse-picker-modal-root').addEventListener('click', (event) => {
+                if (event.target.id === 'pulse-picker-modal' || event.target.dataset.pulsePickerClose === 'true') {
+                    closePulsePicker();
+                }
+            });
+            document.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape' && state.testPanelOpen) {
+                    toggleTestPanel(false);
+                }
+                if (event.key === 'Escape' && state.pulsePicker.open) {
+                    closePulsePicker();
+                }
+            });
+            document.getElementById('pulse-search').addEventListener('input', (event) => {
+                state.pulseSearch = event.target.value || '';
+                renderPulseList();
+            });
+            document.getElementById('pulse-filter').addEventListener('change', (event) => {
+                state.pulseFilter = event.target.value || 'all';
+                renderPulseList();
+            });
+            document.getElementById('pulse-sort').addEventListener('change', (event) => {
+                state.pulseSort = event.target.value || 'name-asc';
+                renderPulseList();
+            });
+            document.getElementById('pulser-name').addEventListener('input', (event) => {
+                if (state.config) state.config.name = event.target.value;
+                renderPreview();
+            });
+            document.getElementById('pulser-tags').addEventListener('input', (event) => {
+                if (state.config) state.config.tags = splitTags(event.target.value);
+                renderPulseList();
+                renderPreview();
+            });
+            document.getElementById('pulser-api-key').addEventListener('input', () => {
+                renderPreview();
+            });
+            document.getElementById('pulser-api-keys').addEventListener('input', () => {
+                renderPreview();
+            });
+            document.getElementById('pulser-description').addEventListener('input', (event) => {
+                if (state.config) state.config.description = event.target.value;
+                renderPulseList();
+                renderPreview();
+            });
+        }
+
+        async function loadConfig() {
+            setStatus('Loading config…');
+            try {
+                const response = await fetch('/api/config');
+                const data = await response.json();
+                if (!response.ok || !data || data.status !== 'success') {
+                    throw new Error(data.detail || data.message || 'Failed to load config');
+                }
+                state.config = data.config || {};
+                const normalizedConfig = callExtension('normalizeLoadedConfig', { config: state.config });
+                if (normalizedConfig && typeof normalizedConfig === 'object') {
+                    state.config = normalizedConfig;
+                }
+                state.pulseSearch = '';
+                state.pulseFilter = 'all';
+                state.pulseSort = 'name-asc';
+                state.selectedPulseIndex = 0;
+                state.pulseDrafts = {};
+                state.testDrafts = {};
+                state.testPanelOpen = false;
+                ensureConfigDefaults();
+                callExtension('afterLoadConfig', { config: state.config, response: data });
+                render();
+                setStatus(`Loaded ${state.config.supported_pulses.length} supported pulse${state.config.supported_pulses.length === 1 ? '' : 's'}.`, 'success');
+            } catch (error) {
+                setStatus(error.message, 'error');
+            }
+        }
+
+        async function saveConfig() {
+            if (!state.config) return;
+            try {
+                syncTopLevelInputs();
+                compilePulseDraftsIntoConfig();
+                const extensionPrepared = callExtension('prepareConfigForSave', { config: state.config });
+                if (extensionPrepared && typeof extensionPrepared === 'object') {
+                    state.config = extensionPrepared;
+                }
+                const response = await fetch('/api/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ config: state.config }),
+                });
+                const data = await response.json();
+                if (!response.ok || data.status !== 'success') {
+                    throw new Error(data.detail || data.message || 'Failed to save config');
+                }
+                state.config = data.config || state.config;
+                state.pulseDrafts = {};
+                state.testDrafts = {};
+                ensureConfigDefaults();
+                render();
+                setStatus(`Saved config to ${data.config_path || 'attached file'}.`, 'success');
+            } catch (error) {
+                setStatus(error.message, 'error');
+            }
+        }
+
+        function ensureConfigDefaults() {
+            if (!state.config) state.config = {};
+            if (!Array.isArray(state.config.tags)) state.config.tags = [];
+            if (!Array.isArray(state.config.supported_pulses)) state.config.supported_pulses = [];
+            if (!state.config.supported_pulses.length) {
+                state.config.supported_pulses.push(defaultPulse());
+            }
+            callExtension('ensureConfigDefaults', { config: state.config });
+            if (state.selectedPulseIndex >= state.config.supported_pulses.length) {
+                state.selectedPulseIndex = Math.max(0, state.config.supported_pulses.length - 1);
+            }
+        }
+
+        function render() {
+            renderCollapseStates();
+            renderTopLevel();
+            renderPulseList();
+            renderPulseEditor();
+            renderTestPanel();
+            renderPulsePicker();
+            renderPreview();
+            renderExtensionPanels();
+        }
+
+        function toggleSection(key) {
+            state.collapsed[key] = !state.collapsed[key];
+            renderCollapseStates();
+        }
+
+        function renderCollapseStates() {
+            const sections = [
+                {
+                    key: 'pulserDetails',
+                    toggleId: 'pulser-details-toggle',
+                    contentId: 'pulser-details-content',
+                    label: 'APIPulser Details',
+                },
+                {
+                    key: 'pulseDetails',
+                    toggleId: 'pulse-details-toggle',
+                    contentId: 'pulse-details-content',
+                    label: 'Pulse Details',
+                },
+            ];
+
+            sections.forEach(({ key, toggleId, contentId, label }) => {
+                const expanded = !state.collapsed[key];
+                const toggle = document.getElementById(toggleId);
+                const content = document.getElementById(contentId);
+                if (!toggle || !content) return;
+                toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+                toggle.textContent = `${label}${expanded ? '' : ' (Collapsed)'}`;
+                content.classList.toggle('collapsed', !expanded);
+            });
+        }
+
+        function renderTopLevel() {
+            document.getElementById('pulser-name').value = state.config?.name || '';
+            document.getElementById('pulser-type').value = state.config?.type || 'phemacast.pulsers.api_pulser.ApiPulser';
+            document.getElementById('pulser-role').value = state.config?.role || 'pulser';
+            document.getElementById('pulser-tags').value = (state.config?.tags || []).join(', ');
+            document.getElementById('pulser-api-key').value = formatJsonValue(state.config?.api_key);
+            document.getElementById('pulser-api-keys').value = formatJsonValue(state.config?.api_keys || []);
+            document.getElementById('pulser-description').value = state.config?.description || '';
+            document.getElementById('pulse-filter').value = state.pulseFilter || 'all';
+            document.getElementById('pulse-sort').value = state.pulseSort || 'name-asc';
+            const extensionRoot = document.getElementById('pulser-extension-fields');
+            if (extensionRoot) {
+                extensionRoot.innerHTML = '';
+                callExtension('renderTopLevelExtension', { root: extensionRoot, config: state.config });
+            }
+        }
+
+        function renderPulseList() {
+            const list = document.getElementById('pulse-list');
+            const count = document.getElementById('pulse-count');
+            const search = state.pulseSearch.trim().toLowerCase();
+            const visible = state.config.supported_pulses
+                .map((pulse, index) => ({ pulse, index, draft: ensurePulseDraft(index) }))
+                .filter(({ draft }) => {
+                    if (!search) return true;
+                    const haystack = [
+                        draft.name,
+                        draft.description,
+                        draft.pulse_address,
+                        draft.tags_text,
+                        draft.api_url,
+                    ].join(' ').toLowerCase();
+                    return haystack.includes(search);
+                })
+                .filter(({ draft }) => pulseMatchesFilter(draft))
+                .sort(comparePulseEntries);
+
+            count.textContent = `${visible.length} of ${state.config.supported_pulses.length} pulse${state.config.supported_pulses.length === 1 ? '' : 's'}`;
+
+            if (!visible.length) {
+                list.innerHTML = '<div class="muted">No supported pulses match the current search.</div>';
+                return;
+            }
+
+            list.innerHTML = visible.map(({ draft, index }) => `
+                <button class="pulse-card ${index === state.selectedPulseIndex ? 'active' : ''}" type="button" data-pulse-index="${index}">
+                    <div class="pulse-card-line">
+                        <div class="pulse-card-title">${escapeHtml(draft.name || 'Unnamed Pulse')}</div>
+                        <span class="pulse-method">${escapeHtml(draft.api_method || 'GET')}</span>
+                    </div>
+                    <div class="pulse-card-subtitle">${escapeHtml(compactPulseSubtitle(draft))}</div>
+                </button>
+            `).join('');
+
+            list.querySelectorAll('[data-pulse-index]').forEach((button) => {
+                button.addEventListener('click', () => {
+                    state.selectedPulseIndex = Number(button.dataset.pulseIndex || 0);
+                    renderPulseList();
+                    renderPulseEditor();
+                    renderTestPanel();
+                    renderPreview();
+                });
+            });
+        }
+
+        function pulseMatchesFilter(draft) {
+            switch (state.pulseFilter) {
+                case 'with-api':
+                    return Boolean(String(draft.api_url || '').trim());
+                case 'with-test-data':
+                    return hasMeaningfulJsonObject(draft.test_data_json);
+                case 'missing-address':
+                    return !String(draft.pulse_address || '').trim();
+                default:
+                    return true;
+            }
+        }
+
+        function comparePulseEntries(left, right) {
+            const leftDraft = left.draft || {};
+            const rightDraft = right.draft || {};
+            switch (state.pulseSort) {
+                case 'name-desc':
+                    return compareText(rightDraft.name, leftDraft.name);
+                case 'method-asc':
+                    return compareText(leftDraft.api_method, rightDraft.api_method) || compareText(leftDraft.name, rightDraft.name);
+                case 'cost-asc':
+                    return compareNumber(leftDraft.cost, rightDraft.cost) || compareText(leftDraft.name, rightDraft.name);
+                case 'cost-desc':
+                    return compareNumber(rightDraft.cost, leftDraft.cost) || compareText(leftDraft.name, rightDraft.name);
+                case 'name-asc':
+                default:
+                    return compareText(leftDraft.name, rightDraft.name);
+            }
+        }
+
+        function compareText(left, right) {
+            return String(left || '').localeCompare(String(right || ''));
+        }
+
+        function compareNumber(left, right) {
+            return Number(left || 0) - Number(right || 0);
+        }
+
+        function compactPulseSubtitle(draft) {
+            const detail = String(draft.description || draft.pulse_address || draft.api_url || 'No description').replace(/\s+/g, ' ').trim();
+            return detail || 'No description';
+        }
+
+        function hasMeaningfulJsonObject(rawValue) {
+            const trimmed = String(rawValue || '').trim();
+            if (!trimmed) return false;
+            try {
+                const parsed = JSON.parse(trimmed);
+                return Boolean(parsed) && typeof parsed === 'object' && !Array.isArray(parsed) && Object.keys(parsed).length > 0;
+            } catch (error) {
+                return false;
+            }
+        }
+
+        function renderPulseEditor() {
+            const pulse = state.config.supported_pulses[state.selectedPulseIndex];
+            const editor = document.getElementById('pulse-editor');
+            const title = document.getElementById('pulse-editor-title');
+            if (!pulse) {
+                editor.innerHTML = '<div class="muted">Select a pulse to edit it.</div>';
+                title.textContent = 'Pulse Editor';
+                return;
+            }
+
+            const draft = ensurePulseDraft(state.selectedPulseIndex);
+            title.textContent = draft.name || 'Pulse Editor';
+            editor.innerHTML = `
+                <div class="field">
+                    <label>Pulse Name</label>
+                    <input type="text" data-pulse-field="name" value="${escapeAttribute(draft.name)}">
+                </div>
+                <div class="field">
+                    <label>Cost</label>
+                    <input type="text" data-pulse-field="cost" value="${escapeAttribute(draft.cost)}">
+                </div>
+                <div class="field full-span">
+                    <label>Pulse Description</label>
+                    <textarea data-pulse-field="description" style="min-height:100px;font-family:var(--sans);">${escapeHtml(draft.description)}</textarea>
+                </div>
+                <div class="field full-span">
+                    <label>Pulse Address (PitAddress)</label>
+                    <input type="text" data-pulse-field="pulse_address" value="${escapeAttribute(draft.pulse_address)}" placeholder="pulse-uuid or pulse-uuid@http://other-plaza:8011">
+                </div>
+                <div class="field full-span">
+                    <label>Tags</label>
+                    <input type="text" data-pulse-field="tags_text" value="${escapeAttribute(draft.tags_text)}" placeholder="price, market-data">
+                </div>
+                <div class="field full-span">
+                    <label>API URL</label>
+                    <input type="text" data-pulse-field="api_url" value="${escapeAttribute(draft.api_url)}" placeholder="https://api.example.com/items/{symbol}">
+                </div>
+                <div class="field">
+                    <label>HTTP Method</label>
+                    <select data-pulse-field="api_method">
+                        ${['GET', 'POST', 'PUT', 'PATCH', 'DELETE'].map((method) => `<option value="${method}" ${draft.api_method === method ? 'selected' : ''}>${method}</option>`).join('')}
+                    </select>
+                </div>
+                <div class="field">
+                    <label>API Root Path</label>
+                    <input type="text" data-pulse-field="api_root_path" value="${escapeAttribute(draft.api_root_path)}" placeholder="chart.result.0.meta">
+                </div>
+                <div class="field full-span">
+                    <label>API Key ID</label>
+                    <input type="text" data-pulse-field="api_key_id" value="${escapeAttribute(draft.api_key_id)}" placeholder="market">
+                </div>
+                <div class="field full-span">
+                    <label>API Key JSON</label>
+                    <textarea data-pulse-field="api_key_json" placeholder='Either "secret-key" or {"env":"MY_API_KEY"}'>${escapeHtml(draft.api_key_json)}</textarea>
+                </div>
+                <div class="field">
+                    <label>API Key Header</label>
+                    <input type="text" data-pulse-field="api_key_header" value="${escapeAttribute(draft.api_key_header)}" placeholder="Authorization">
+                </div>
+                <div class="field">
+                    <label>API Key Prefix</label>
+                    <input type="text" data-pulse-field="api_key_prefix" value="${escapeAttribute(draft.api_key_prefix)}" placeholder="Bearer ">
+                </div>
+                <div class="field">
+                    <label>API Key Query Param</label>
+                    <input type="text" data-pulse-field="api_key_param" value="${escapeAttribute(draft.api_key_param)}" placeholder="apikey">
+                </div>
+                <div class="field full-span">
+                    <label>API Headers JSON</label>
+                    <textarea data-pulse-field="api_headers_json">${escapeHtml(draft.api_headers_json)}</textarea>
+                </div>
+                <div class="field full-span">
+                    <label>Input Schema JSON</label>
+                    <textarea data-pulse-field="input_schema_json">${escapeHtml(draft.input_schema_json)}</textarea>
+                </div>
+                <div class="field full-span">
+                    <label>Resolved Output Schema JSON</label>
+                    <textarea data-pulse-field="output_schema_json" readonly>${escapeHtml(draft.output_schema_json)}</textarea>
+                </div>
+                <div class="field full-span">
+                    <label>Mapping JSON</label>
+                    <textarea data-pulse-field="mapping_json">${escapeHtml(draft.mapping_json)}</textarea>
+                </div>
+                <div class="field full-span">
+                    <label>Pulse Test Data JSON</label>
+                    <textarea data-pulse-field="test_data_json">${escapeHtml(draft.test_data_json)}</textarea>
+                </div>
+                <div class="field full-span">
+                    <label>Extra Pulse JSON</label>
+                    <textarea data-pulse-field="extra_json">${escapeHtml(draft.extra_json)}</textarea>
+                </div>
+            `;
+
+            editor.querySelectorAll('[data-pulse-field]').forEach((node) => {
+                node.addEventListener('input', (event) => {
+                    draft[event.target.dataset.pulseField] = event.target.value;
+                    renderPulseList();
+                    renderPreview();
+                });
+            });
+
+            callExtension('renderPulseEditorExtension', {
+                root: editor,
+                pulse,
+                draft,
+                index: state.selectedPulseIndex,
+            });
+        }
+
+        function toggleTestPanel(forceOpen) {
+            state.testPanelOpen = typeof forceOpen === 'boolean' ? forceOpen : !state.testPanelOpen;
+            renderTestPanel();
+        }
+
+        function ensureTestDraft(index, pulse) {
+            if (state.testDrafts[index]) return state.testDrafts[index];
+
+            const schema = pulse?.input_schema || {};
+            const properties = schema.properties && typeof schema.properties === 'object' ? schema.properties : {};
+            const testData = pulse?.test_data && typeof pulse.test_data === 'object' ? pulse.test_data : {};
+            const fieldValues = {};
+            const extraParams = {};
+
+            Object.entries(testData).forEach(([key, value]) => {
+                if (Object.prototype.hasOwnProperty.call(properties, key)) {
+                    fieldValues[key] = formatSchemaFieldValue(value, properties[key]);
+                } else {
+                    extraParams[key] = value;
+                }
+            });
+
+            Object.keys(properties).forEach((key) => {
+                if (!Object.prototype.hasOwnProperty.call(fieldValues, key)) {
+                    fieldValues[key] = '';
+                }
+            });
+
+            state.testDrafts[index] = {
+                fieldValues,
+                extraParamsJson: prettyJson(extraParams),
+                resultJson: '{}',
+                debugJson: '{}',
+                showDebugger: false,
+                lastParamsJson: prettyJson(testData),
+                statusMessage: 'Ready to test.',
+                statusTone: '',
+            };
+            return state.testDrafts[index];
+        }
+
+        function renderTestPanel() {
+            const root = document.getElementById('test-runner-modal-root');
+            document.body.classList.toggle('modal-open', state.testPanelOpen);
+            if (!state.testPanelOpen) {
+                root.innerHTML = '';
+                return;
+            }
+
+            root.innerHTML = `
+                <div id="test-runner-modal" class="modal-backdrop">
+                    <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="test-runner-title">
+                        <div class="panel-head">
+                            <div>
+                                <h3 id="test-runner-title">Pulse Test Runner</h3>
+                                <div class="muted">Fill in parameters from the input schema, run the selected pulse, and review the API result below.</div>
+                            </div>
+                            <button class="ghost-btn" type="button" data-modal-close="true">Close</button>
+                        </div>
+                        <div id="test-runner-status" class="status">Ready to test.</div>
+                        <div id="test-runner-form" class="editor-grid" style="margin-top:14px;"></div>
+                        <div class="panel-head" style="margin-top:18px;">
+                            <div>
+                                <h3>Test Result</h3>
+                                <div class="muted">Rendered response from the current pulse definition.</div>
+                            </div>
+                        </div>
+                        <div id="test-runner-result" class="json-tree-shell result"></div>
+                    </section>
+                </div>
+            `;
+
+            const form = root.querySelector('#test-runner-form');
+            const result = root.querySelector('#test-runner-result');
+            const status = root.querySelector('#test-runner-status');
+
+            const pulse = state.config.supported_pulses[state.selectedPulseIndex];
+            if (!pulse) {
+                form.innerHTML = '<div class="muted">Select a pulse to test it.</div>';
+                renderJsonTreeInto(result, {});
+                status.textContent = 'No pulse selected.';
+                status.className = 'status';
+                return;
+            }
+
+            let compiledPulse;
+            try {
+                compiledPulse = compilePulse(state.selectedPulseIndex);
+            } catch (error) {
+                form.innerHTML = '<div class="muted">Fix the pulse editor JSON errors before running a test.</div>';
+                renderJsonTreeInto(result, { error: error.message });
+                status.textContent = 'Pulse config is invalid.';
+                status.className = 'status error';
+                return;
+            }
+
+            const draft = ensureTestDraft(state.selectedPulseIndex, compiledPulse);
+            const schema = compiledPulse.input_schema || {};
+            const properties = schema.properties && typeof schema.properties === 'object' ? schema.properties : {};
+            const required = new Set(Array.isArray(schema.required) ? schema.required : []);
+            const propertyEntries = Object.entries(properties);
+
+            const fieldMarkup = propertyEntries.length
+                ? propertyEntries.map(([name, fieldSchema]) => renderTestField(name, fieldSchema || {}, draft.fieldValues[name] ?? '', required.has(name))).join('')
+                : '<div class="field full-span"><label>Test Parameters JSON</label><div class="muted">This pulse does not define input schema properties. Use Extra Params JSON below to send test inputs.</div></div>';
+
+            form.innerHTML = `
+                ${fieldMarkup}
+                <div class="field full-span">
+                    <label>Extra Params JSON</label>
+                    <textarea id="test-extra-params">${escapeHtml(draft.extraParamsJson)}</textarea>
+                </div>
+                <div class="field full-span">
+                    <label>Resolved Test Params JSON</label>
+                    <div id="test-last-params" class="json-tree-shell compact"></div>
+                </div>
+                <div class="field full-span">
+                    <label style="text-transform:none;letter-spacing:0;font-size:0.95rem;color:var(--text);font-weight:600;">
+                        <input id="show-debugger-checkbox" type="checkbox" ${draft.showDebugger ? 'checked' : ''} style="width:auto;margin-right:10px;">
+                        Show Debugger
+                    </label>
+                    <div class="muted">Include resolved request, raw payload, mapping, and output details in the test result.</div>
+                </div>
+                <div class="field full-span">
+                    <button id="run-test-btn" class="primary-btn" type="button">Run Test</button>
+                </div>
+            `;
+
+            form.querySelectorAll('[data-test-field]').forEach((node) => {
+                node.addEventListener('input', (event) => {
+                    draft.fieldValues[event.target.dataset.testField] = event.target.value;
+                    try {
+                        draft.lastParamsJson = prettyJson(buildTestParams(state.selectedPulseIndex, compiledPulse));
+                    } catch (error) {
+                        draft.lastParamsJson = error.message;
+                    }
+                    renderJsonTreeInto(document.getElementById('test-last-params'), parseDisplayJson(draft.lastParamsJson));
+                });
+            });
+
+            const extraNode = document.getElementById('test-extra-params');
+            extraNode.addEventListener('input', (event) => {
+                draft.extraParamsJson = event.target.value;
+                try {
+                    draft.lastParamsJson = prettyJson(buildTestParams(state.selectedPulseIndex, compiledPulse));
+                } catch (error) {
+                    draft.lastParamsJson = error.message;
+                }
+                renderJsonTreeInto(document.getElementById('test-last-params'), parseDisplayJson(draft.lastParamsJson));
+            });
+
+            const debuggerToggle = document.getElementById('show-debugger-checkbox');
+            debuggerToggle.addEventListener('change', (event) => {
+                draft.showDebugger = Boolean(event.target.checked);
+                renderTestPanel();
+            });
+
+            document.getElementById('run-test-btn').addEventListener('click', runPulseTest);
+            renderJsonTreeInto(result, parseDisplayJson(draft.resultJson || '{}'));
+            status.textContent = draft.statusMessage || 'Ready to test.';
+            status.className = `status${draft.statusTone ? ` ${draft.statusTone}` : ''}`;
+            renderJsonTreeInto(document.getElementById('test-last-params'), parseDisplayJson(draft.lastParamsJson || '{}'));
+
+            const existingDebugNode = form.parentElement.querySelector('#test-debugger-block');
+            if (existingDebugNode) {
+                existingDebugNode.remove();
+            }
+            if (draft.showDebugger) {
+                form.insertAdjacentHTML(
+                    'afterend',
+                    `
+                        <div id="test-debugger-block">
+                            <div class="panel-head" style="margin-top:18px;">
+                                <div>
+                                    <h3>Debugger</h3>
+                                    <div class="muted">Detailed execution trace for the current pulse test.</div>
+                                </div>
+                            </div>
+                            <div id="test-debugger-result" class="json-tree-shell result"></div>
+                        </div>
+                    `
+                );
+            }
+
+            const debuggerNode = document.getElementById('test-debugger-result');
+            if (debuggerNode) {
+                renderJsonTreeInto(debuggerNode, parseDisplayJson(draft.debugJson || '{}'));
+            }
+
+            const firstField = form.querySelector('[data-test-field], #test-extra-params, #run-test-btn');
+            if (firstField && document.activeElement !== firstField) {
+                setTimeout(() => firstField.focus(), 0);
+            }
+        }
+
+        function renderTestField(name, schema, rawValue, required) {
+            const type = schema.type || 'string';
+            const label = escapeHtml(schema.title || name);
+            const description = schema.description ? `<div class="muted">${escapeHtml(schema.description)}</div>` : '';
+            const requiredLabel = required ? ' <span class="muted">(required)</span>' : '';
+
+            if (type === 'boolean') {
+                return `
+                    <div class="field">
+                        <label>${label}${requiredLabel}</label>
+                        <select data-test-field="${escapeAttribute(name)}" data-test-type="boolean">
+                            <option value="" ${rawValue === '' ? 'selected' : ''}>Unset</option>
+                            <option value="true" ${rawValue === 'true' ? 'selected' : ''}>true</option>
+                            <option value="false" ${rawValue === 'false' ? 'selected' : ''}>false</option>
+                        </select>
+                        ${description}
+                    </div>
+                `;
+            }
+
+            if (type === 'object' || type === 'array') {
+                return `
+                    <div class="field full-span">
+                        <label>${label}${requiredLabel}</label>
+                        <textarea data-test-field="${escapeAttribute(name)}" data-test-type="${escapeAttribute(type)}" placeholder='${type === 'object' ? '{"key":"value"}' : '["item"]'}'>${escapeHtml(rawValue)}</textarea>
+                        ${description}
+                    </div>
+                `;
+            }
+
+            const inputType = type === 'number' || type === 'integer' ? 'number' : 'text';
+            return `
+                <div class="field">
+                    <label>${label}${requiredLabel}</label>
+                    <input type="${inputType}" data-test-field="${escapeAttribute(name)}" data-test-type="${escapeAttribute(type)}" value="${escapeAttribute(rawValue)}">
+                    ${description}
+                </div>
+            `;
+        }
+
+        function formatSchemaFieldValue(value, schema) {
+            const type = schema?.type || 'string';
+            if (value === undefined || value === null) return '';
+            if (type === 'object' || type === 'array') return prettyJson(value);
+            if (type === 'boolean') return value ? 'true' : 'false';
+            return String(value);
+        }
+
+        function buildTestParams(index, compiledPulse) {
+            const draft = ensureTestDraft(index, compiledPulse);
+            const schema = compiledPulse.input_schema || {};
+            const properties = schema.properties && typeof schema.properties === 'object' ? schema.properties : {};
+            const required = new Set(Array.isArray(schema.required) ? schema.required : []);
+            const params = {};
+
+            Object.entries(properties).forEach(([name, fieldSchema]) => {
+                const rawValue = draft.fieldValues[name] ?? '';
+                const value = coerceSchemaFieldValue(name, rawValue, fieldSchema || {}, required.has(name));
+                if (value !== undefined) {
+                    params[name] = value;
+                }
+            });
+
+            return {
+                ...parseObjectField(draft.extraParamsJson, 'Extra Params JSON'),
+                ...params,
+            };
+        }
+
+        function coerceSchemaFieldValue(name, rawValue, schema, required) {
+            const type = schema.type || 'string';
+            const trimmed = String(rawValue ?? '').trim();
+            if (!trimmed) {
+                if (required) {
+                    throw new Error(`${name} is required for this test.`);
+                }
+                return undefined;
+            }
+
+            if (type === 'number' || type === 'integer') {
+                const value = Number(trimmed);
+                if (!Number.isFinite(value)) {
+                    throw new Error(`${name} must be numeric.`);
+                }
+                return type === 'integer' ? Math.trunc(value) : value;
+            }
+
+            if (type === 'boolean') {
+                if (trimmed === 'true') return true;
+                if (trimmed === 'false') return false;
+                throw new Error(`${name} must be true or false.`);
+            }
+
+            if (type === 'object' || type === 'array') {
+                try {
+                    const parsed = JSON.parse(trimmed);
+                    if (type === 'object' && (Array.isArray(parsed) || typeof parsed !== 'object' || parsed === null)) {
+                        throw new Error(`${name} must be a JSON object.`);
+                    }
+                    if (type === 'array' && !Array.isArray(parsed)) {
+                        throw new Error(`${name} must be a JSON array.`);
+                    }
+                    return parsed;
+                } catch (error) {
+                    throw new Error(error.message.includes(name) ? error.message : `${name} must be valid JSON.`);
+                }
+            }
+
+            return rawValue;
+        }
+
+        async function runPulseTest() {
+            if (!state.config) return;
+
+            let preview;
+            let pulse;
+            let params;
+            try {
+                preview = buildPreviewConfig();
+                pulse = preview.supported_pulses[state.selectedPulseIndex];
+                params = buildTestParams(state.selectedPulseIndex, pulse);
+            } catch (error) {
+                const draft = state.testDrafts[state.selectedPulseIndex] || {};
+                draft.statusMessage = error.message;
+                draft.statusTone = 'error';
+                draft.resultJson = error.message;
+                draft.lastParamsJson = error.message;
+                state.testDrafts[state.selectedPulseIndex] = draft;
+                renderTestPanel();
+                return;
+            }
+
+            const draft = ensureTestDraft(state.selectedPulseIndex, pulse);
+            draft.statusMessage = `Running ${pulse.name}…`;
+            draft.statusTone = '';
+            draft.lastParamsJson = prettyJson(params);
+            renderTestPanel();
+
+            try {
+                const requestConfig = callExtension('prepareTestRequest', {
+                    preview,
+                    pulse,
+                    params,
+                    draft,
+                }) || {
+                    endpoint: '/api/test-pulse',
+                    body: {
+                        config: preview,
+                        pulse_name: pulse.name,
+                        params,
+                        debug: Boolean(draft.showDebugger),
+                    },
+                };
+
+                const response = await fetch(requestConfig.endpoint || '/api/test-pulse', {
+                    method: requestConfig.method || 'POST',
+                    headers: { 'Content-Type': 'application/json', ...(requestConfig.headers || {}) },
+                    body: JSON.stringify(requestConfig.body),
+                });
+                const rawBody = await response.text();
+                let data = null;
+                try {
+                    data = rawBody ? JSON.parse(rawBody) : {};
+                } catch (parseError) {
+                    data = null;
+                }
+                if (!response.ok || data.status !== 'success') {
+                    const detail = (data && (data.detail || data.message)) || rawBody || response.statusText || 'Failed to run pulse test';
+                    draft.resultJson = prettyJson({
+                        error: detail,
+                        http_status: response.status,
+                        http_status_text: response.statusText,
+                    });
+                    draft.debugJson = prettyJson({
+                        request: {
+                            endpoint: '/api/test-pulse',
+                            pulse_name: pulse.name,
+                            params,
+                            debug: Boolean(draft.showDebugger),
+                        },
+                        response: {
+                            status: response.status,
+                            status_text: response.statusText,
+                            body: data || rawBody,
+                        },
+                        hint: response.status === 404 ? 'The running APIPulser may need to be restarted so /api/test-pulse is available.' : undefined,
+                    });
+                    draft.statusMessage = detail;
+                    draft.statusTone = 'error';
+                    renderTestPanel();
+                    scrollTestOutputIntoView();
+                    return;
+                }
+                draft.resultJson = prettyJson(data.result || {});
+                draft.debugJson = prettyJson(data.debug || {});
+                draft.statusMessage = `Test completed for ${pulse.name}.`;
+                draft.statusTone = data.result && data.result.error ? 'error' : 'success';
+            } catch (error) {
+                draft.resultJson = prettyJson({ error: error.message });
+                draft.debugJson = prettyJson({
+                    request: {
+                        endpoint: '/api/test-pulse',
+                        pulse_name: pulse.name,
+                        params,
+                        debug: Boolean(draft.showDebugger),
+                    },
+                    error: error.message,
+                });
+                draft.statusMessage = error.message;
+                draft.statusTone = 'error';
+            }
+
+            renderTestPanel();
+            scrollTestOutputIntoView();
+        }
+
+        function scrollTestOutputIntoView() {
+            const target = document.getElementById('test-debugger-result') || document.getElementById('test-runner-result');
+            if (target) {
+                setTimeout(() => target.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0);
+            }
+        }
+
+        function addPulse() {
+            if (!state.config) return;
+            openPulsePicker();
+        }
+
+        function closePulsePicker() {
+            state.pulsePicker.open = false;
+            renderPulsePicker();
+        }
+
+        async function openPulsePicker() {
+            state.pulsePicker.open = true;
+            state.pulsePicker.search = '';
+            state.pulsePicker.error = '';
+            state.pulsePicker.selected = {};
+            state.pulsePicker.items = [];
+            renderPulsePicker();
+            await searchPlazaPulses('');
+        }
+
+        async function searchPlazaPulses(search) {
+            state.pulsePicker.loading = true;
+            state.pulsePicker.error = '';
+            renderPulsePicker();
+            try {
+                const params = new URLSearchParams();
+                if (String(search || '').trim()) params.set('search', String(search || '').trim());
+                const response = await fetch(`/api/plaza/pulses${params.toString() ? `?${params.toString()}` : ''}`);
+                const data = await response.json();
+                if (!response.ok || data.status !== 'success') {
+                    const detail = data.detail || data.message || 'Failed to search Plaza pulses';
+                    throw new Error(response.status === 404 ? 'Plaza pulse search route is unavailable. Restart this pulser so it picks up the latest UI backend changes.' : detail);
+                }
+                state.pulsePicker.items = Array.isArray(data.pulses) ? data.pulses : [];
+            } catch (error) {
+                state.pulsePicker.items = [];
+                state.pulsePicker.error = error.message;
+            } finally {
+                state.pulsePicker.loading = false;
+                renderPulsePicker();
+            }
+        }
+
+        function togglePulsePickerSelection(index) {
+            if (state.pulsePicker.selected[index]) {
+                delete state.pulsePicker.selected[index];
+            } else {
+                state.pulsePicker.selected[index] = true;
+            }
+            renderPulsePicker();
+        }
+
+        function createPulseFromPlazaSelection(plazaPulse, nextIndex) {
+            const seed = defaultPulse(nextIndex);
+            const merged = {
+                ...seed,
+                name: plazaPulse.name || seed.name,
+                pulse_name: plazaPulse.name || seed.name,
+                pulse_address: plazaPulse.pit_address || plazaPulse.pulse_address || seed.pulse_address,
+                description: plazaPulse.description || seed.description,
+                tags: Array.isArray(plazaPulse.tags) ? plazaPulse.tags : seed.tags,
+                output_schema: plazaPulse.output_schema && typeof plazaPulse.output_schema === 'object' ? plazaPulse.output_schema : seed.output_schema,
+            };
+            return callExtension('hydratePulseFromPlaza', {
+                plazaPulse,
+                pulse: merged,
+                index: nextIndex - 1,
+            }) || merged;
+        }
+
+        function addSelectedPlazaPulses() {
+            if (!state.config) return;
+            compilePulseDraftsIntoConfig();
+            const selectedItems = state.pulsePicker.items.filter((_, index) => state.pulsePicker.selected[index]);
+            if (!selectedItems.length) {
+                state.pulsePicker.error = 'Select at least one Plaza pulse to add.';
+                renderPulsePicker();
+                return;
+            }
+
+            const existing = new Set(
+                state.config.supported_pulses.map((pulse) => `${String(pulse.pulse_address || '').trim().toLowerCase()}::${String(pulse.name || '').trim().toLowerCase()}`)
+            );
+            let added = 0;
+            selectedItems.forEach((plazaPulse) => {
+                const key = `${String(plazaPulse.pit_address || '').trim().toLowerCase()}::${String(plazaPulse.name || '').trim().toLowerCase()}`;
+                if (existing.has(key)) return;
+                const nextIndex = state.config.supported_pulses.length + 1;
+                state.config.supported_pulses.push(createPulseFromPlazaSelection(plazaPulse, nextIndex));
+                existing.add(key);
+                added += 1;
+            });
+
+            if (!added) {
+                state.pulsePicker.error = 'All selected Plaza pulses are already in supported pulses.';
+                renderPulsePicker();
+                return;
+            }
+
+            state.selectedPulseIndex = state.config.supported_pulses.length - added;
+            state.pulseDrafts = {};
+            closePulsePicker();
+            render();
+            setStatus(`Added ${added} Plaza pulse${added === 1 ? '' : 's'} to supported pulses.`, 'success');
+        }
+
+        function renderPulsePicker() {
+            const root = document.getElementById('pulse-picker-modal-root');
+            document.body.classList.toggle('modal-open', state.testPanelOpen || state.pulsePicker.open);
+            if (!state.pulsePicker.open) {
+                root.innerHTML = '';
+                return;
+            }
+
+            const selectedCount = Object.values(state.pulsePicker.selected).filter(Boolean).length;
+            root.innerHTML = `
+                <div id="pulse-picker-modal" class="modal-backdrop">
+                    <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="pulse-picker-title">
+                        <div class="panel-head">
+                            <div>
+                                <h3 id="pulse-picker-title">Add Pulses From Plaza</h3>
+                                <div class="muted">Search shared Plaza pulse definitions, select multiple entries, and add them to this pulser.</div>
+                            </div>
+                            <div class="toolbar">
+                                <button class="ghost-btn" type="button" data-pulse-picker-close="true">Close</button>
+                            </div>
+                        </div>
+                        <div class="picker-grid">
+                            <div class="field">
+                                <label for="pulse-picker-search">Search Plaza Pulses</label>
+                                <input id="pulse-picker-search" type="text" value="${escapeAttribute(state.pulsePicker.search || '')}" placeholder="company profile, last price, news">
+                            </div>
+                            <div class="field" style="display:flex;align-items:end;">
+                                <button id="pulse-picker-search-btn" class="primary-btn" type="button">Search</button>
+                            </div>
+                        </div>
+                        <div id="pulse-picker-status" class="status${state.pulsePicker.error ? ' error' : ''}" style="margin-top:14px;">
+                            ${escapeHtml(state.pulsePicker.error || (state.pulsePicker.loading ? 'Searching Plaza pulses…' : `${selectedCount} selected`))}
+                        </div>
+                        <div id="pulse-picker-list" class="picker-list">
+                            ${renderPulsePickerItems()}
+                        </div>
+                        <div class="toolbar" style="margin-top:18px;justify-content:flex-end;">
+                            <button id="pulse-picker-add-btn" class="primary-btn" type="button">Add Selected Pulses</button>
+                        </div>
+                    </section>
+                </div>
+            `;
+
+            document.getElementById('pulse-picker-search').addEventListener('input', (event) => {
+                state.pulsePicker.search = event.target.value || '';
+            });
+            document.getElementById('pulse-picker-search-btn').addEventListener('click', () => {
+                searchPlazaPulses(state.pulsePicker.search);
+            });
+            document.getElementById('pulse-picker-add-btn').addEventListener('click', addSelectedPlazaPulses);
+            root.querySelectorAll('[data-picker-index]').forEach((node) => {
+                node.addEventListener('change', () => togglePulsePickerSelection(Number(node.dataset.pickerIndex || 0)));
+            });
+        }
+
+        function renderPulsePickerItems() {
+            if (state.pulsePicker.loading) {
+                return '<div class="muted">Loading Plaza pulses…</div>';
+            }
+            if (!state.pulsePicker.items.length) {
+                return '<div class="muted">No Plaza pulses found for the current search.</div>';
+            }
+            return state.pulsePicker.items.map((pulse, index) => `
+                <label class="picker-item">
+                    <div class="picker-item-head">
+                        <div>
+                            <div class="picker-item-title">${escapeHtml(pulse.name || 'Unnamed Pulse')}</div>
+                            <div class="picker-item-meta">${escapeHtml(pulse.description || pulse.pit_address || 'No description')}</div>
+                            <div class="picker-item-meta">${escapeHtml(pulse.pit_address || '')}</div>
+                            <div class="picker-item-tags">
+                                ${(Array.isArray(pulse.tags) ? pulse.tags : []).slice(0, 8).map((tag) => `<span class="picker-chip">${escapeHtml(tag)}</span>`).join('')}
+                            </div>
+                        </div>
+                        <input type="checkbox" data-picker-index="${index}" ${state.pulsePicker.selected[index] ? 'checked' : ''} style="width:auto;">
+                    </div>
+                </label>
+            `).join('');
+        }
+
+        function deletePulse() {
+            if (!state.config || !state.config.supported_pulses.length) return;
+            state.config.supported_pulses.splice(state.selectedPulseIndex, 1);
+            const nextDrafts = {};
+            Object.keys(state.pulseDrafts).forEach((key) => {
+                const index = Number(key);
+                if (index < state.selectedPulseIndex) nextDrafts[index] = state.pulseDrafts[key];
+                if (index > state.selectedPulseIndex) nextDrafts[index - 1] = state.pulseDrafts[key];
+            });
+            state.pulseDrafts = nextDrafts;
+            const nextTestDrafts = {};
+            Object.keys(state.testDrafts).forEach((key) => {
+                const index = Number(key);
+                if (index < state.selectedPulseIndex) nextTestDrafts[index] = state.testDrafts[key];
+                if (index > state.selectedPulseIndex) nextTestDrafts[index - 1] = state.testDrafts[key];
+            });
+            state.testDrafts = nextTestDrafts;
+            ensureConfigDefaults();
+            render();
+        }
+
+        function ensurePulseDraft(index) {
+            if (state.pulseDrafts[index]) return state.pulseDrafts[index];
+            const pulse = state.config.supported_pulses[index] || {};
+            const api = pulse.api || {};
+            const extra = JSON.parse(JSON.stringify(pulse));
+            delete extra.name;
+            delete extra.description;
+            delete extra.pulse_address;
+            delete extra.tags;
+            delete extra.cost;
+            delete extra.input_schema;
+            delete extra.output_schema;
+            delete extra.mapping;
+            delete extra.api;
+            delete extra.test_data;
+            delete extra.test_payload;
+            delete extra.sample_input;
+
+            state.pulseDrafts[index] = {
+                name: pulse.name || `pulse_${index + 1}`,
+                description: pulse.description || '',
+                pulse_address: pulse.pulse_address || `plaza://pulse/pulse_${index + 1}`,
+                tags_text: Array.isArray(pulse.tags) ? pulse.tags.join(', ') : String(pulse.tags || ''),
+                cost: String(pulse.cost ?? 0),
+                api_url: api.url || '',
+                api_method: String(api.method || 'GET').toUpperCase(),
+                api_root_path: api.root_path || '',
+                api_key_id: api.api_key_id || '',
+                api_key_json: formatJsonValue(api.api_key),
+                api_key_header: api.api_key_header || '',
+                api_key_prefix: api.api_key_prefix ?? '',
+                api_key_param: api.api_key_param || '',
+                api_headers_json: prettyJson(api.headers || {}),
+                input_schema_json: prettyJson(pulse.input_schema || {}),
+                output_schema_json: prettyJson(pulse.output_schema || {}),
+                mapping_json: prettyJson(pulse.mapping || {}),
+                test_data_json: prettyJson(pulse.test_data ?? pulse.test_payload ?? pulse.sample_input ?? {}),
+                extra_json: prettyJson(extra),
+            };
+            const normalizedDraft = callExtension('normalizePulseDraft', {
+                index,
+                pulse,
+                draft: state.pulseDrafts[index],
+            });
+            if (normalizedDraft && typeof normalizedDraft === 'object') {
+                state.pulseDrafts[index] = normalizedDraft;
+            }
+            return state.pulseDrafts[index];
+        }
+
+        function compilePulseDraftsIntoConfig() {
+            state.config.supported_pulses = state.config.supported_pulses.map((_, index) => compilePulse(index));
+        }
+
+        function compilePulse(index) {
+            const draft = ensurePulseDraft(index);
+            const extra = parseObjectField(draft.extra_json, 'Extra Pulse JSON');
+            const headers = parseObjectField(draft.api_headers_json, 'API Headers JSON');
+            const apiKey = parseJsonValueField(draft.api_key_json, 'API Key JSON');
+            const compiledPulse = {
+                ...(extra || {}),
+                name: draft.name,
+                description: draft.description,
+                pulse_address: draft.pulse_address,
+                tags: splitTags(draft.tags_text),
+                cost: parseNumberField(draft.cost, 'Cost'),
+                api: {
+                    url: draft.api_url,
+                    method: draft.api_method || 'GET',
+                    root_path: draft.api_root_path,
+                    headers: headers || {},
+                    ...(draft.api_key_id ? { api_key_id: draft.api_key_id } : {}),
+                    ...(apiKey !== null ? { api_key: apiKey } : {}),
+                    ...(draft.api_key_header ? { api_key_header: draft.api_key_header } : {}),
+                    ...(draft.api_key_prefix ? { api_key_prefix: draft.api_key_prefix } : {}),
+                    ...(draft.api_key_param ? { api_key_param: draft.api_key_param } : {}),
+                },
+                input_schema: parseObjectField(draft.input_schema_json, 'Input Schema JSON'),
+                output_schema: parseObjectField(draft.output_schema_json, 'Output Schema JSON'),
+                mapping: parseObjectField(draft.mapping_json, 'Mapping JSON'),
+                test_data: parseObjectField(draft.test_data_json, 'Pulse Test Data JSON'),
+            };
+            return callExtension('compilePulse', { index, draft, compiledPulse }) || compiledPulse;
+        }
+
+        function buildPreviewConfig() {
+            syncTopLevelInputs();
+            return {
+                ...state.config,
+                supported_pulses: state.config.supported_pulses.map((_, index) => compilePulse(index)),
+            };
+        }
+
+        function renderPreview() {
+            if (!state.config) return;
+            try {
+                renderJsonTreeInto(document.getElementById('config-preview'), buildPreviewConfig());
+            } catch (error) {
+                renderJsonTreeInto(document.getElementById('config-preview'), { error: error.message });
+            }
+        }
+
+        function syncTopLevelInputs() {
+            if (!state.config) return;
+            state.config.name = document.getElementById('pulser-name').value;
+            state.config.description = document.getElementById('pulser-description').value;
+            state.config.tags = splitTags(document.getElementById('pulser-tags').value);
+            const apiKey = parseJsonValueField(document.getElementById('pulser-api-key').value, 'Default API Key JSON');
+            const apiKeys = parseApiKeysField(document.getElementById('pulser-api-keys').value, 'API Keys JSON');
+            if (apiKey === null) {
+                delete state.config.api_key;
+            } else {
+                state.config.api_key = apiKey;
+            }
+            state.config.api_keys = apiKeys;
+            callExtension('syncTopLevelInputs', { config: state.config });
+        }
+
+        function defaultPulse(index = 1) {
+            const extensionPulse = callExtension('defaultPulse', { index });
+            if (extensionPulse && typeof extensionPulse === 'object') {
+                return extensionPulse;
+            }
+            return {
+                name: `pulse_${index}`,
+                description: '',
+                pulse_address: `plaza://pulse/pulse_${index}`,
+                tags: [],
+                cost: 0,
+                api: {
+                    url: '',
+                    method: 'GET',
+                    root_path: '',
+                    headers: {},
+                },
+                input_schema: {},
+                output_schema: {},
+                mapping: {},
+                test_data: {},
+            };
+        }
+
+        function renderExtensionPanels() {
+            const root = document.getElementById('pulser-extension-panels');
+            if (!root) return;
+            root.innerHTML = '';
+            callExtension('renderPanels', { root, config: state.config });
+        }
+
+        function parseObjectField(rawValue, label) {
+            const trimmed = String(rawValue || '').trim();
+            if (!trimmed) return {};
+            try {
+                const parsed = JSON.parse(trimmed);
+                if (Array.isArray(parsed) || typeof parsed !== 'object') {
+                    throw new Error(`${label} must be a JSON object.`);
+                }
+                return parsed;
+            } catch (error) {
+                throw new Error(error.message.includes(label) ? error.message : `${label} must be valid JSON.`);
+            }
+        }
+
+        function parseJsonValueField(rawValue, label) {
+            const trimmed = String(rawValue || '').trim();
+            if (!trimmed) return null;
+            try {
+                const parsed = JSON.parse(trimmed);
+                if (typeof parsed === 'string') return parsed;
+                if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed;
+                throw new Error(`${label} must be a JSON string or object.`);
+            } catch (error) {
+                throw new Error(error.message.includes(label) ? error.message : `${label} must be valid JSON.`);
+            }
+        }
+
+        function parseApiKeysField(rawValue, label) {
+            const trimmed = String(rawValue || '').trim();
+            if (!trimmed) return [];
+            try {
+                const parsed = JSON.parse(trimmed);
+                if (!Array.isArray(parsed)) {
+                    throw new Error(`${label} must be a JSON array.`);
+                }
+                parsed.forEach((entry, index) => {
+                    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
+                        throw new Error(`${label} entry ${index + 1} must be an object.`);
+                    }
+                    if (!entry.id) {
+                        throw new Error(`${label} entry ${index + 1} requires an id.`);
+                    }
+                });
+                return parsed;
+            } catch (error) {
+                throw new Error(error.message.includes(label) ? error.message : `${label} must be valid JSON.`);
+            }
+        }
+
+        function parseNumberField(rawValue, label) {
+            const trimmed = String(rawValue || '').trim();
+            if (!trimmed) return 0;
+            const value = Number(trimmed);
+            if (!Number.isFinite(value)) {
+                throw new Error(`${label} must be numeric.`);
+            }
+            return value;
+        }
+
+        function splitTags(rawValue) {
+            return String(rawValue || '')
+                .split(',')
+                .map((tag) => tag.trim())
+                .filter(Boolean);
+        }
+
+        function prettyJson(value) {
+            return JSON.stringify(value || {}, null, 2);
+        }
+
+        function parseDisplayJson(rawValue) {
+            if (rawValue === undefined || rawValue === null) return {};
+            if (typeof rawValue !== 'string') return rawValue;
+            try {
+                return JSON.parse(rawValue);
+            } catch (error) {
+                return rawValue;
+            }
+        }
+
+        function renderJsonTreeInto(node, value) {
+            if (!node) return;
+            node.innerHTML = '';
+            node.appendChild(buildJsonTreeNode(value));
+        }
+
+        function buildJsonTreeNode(value, key = null) {
+            const wrapper = document.createElement('div');
+            wrapper.className = key === null ? 'json-tree-root' : 'json-tree-children';
+
+            if (Array.isArray(value)) {
+                wrapper.appendChild(buildExpandableJsonBranch(key, value, `[${value.length}]`, value.map((item, index) => [index, item])));
+                return wrapper;
+            }
+
+            if (value && typeof value === 'object') {
+                wrapper.appendChild(buildExpandableJsonBranch(key, value, `{${Object.keys(value).length}}`, Object.entries(value)));
+                return wrapper;
+            }
+
+            wrapper.appendChild(buildJsonLeafRow(key, value));
+            return wrapper;
+        }
+
+        function buildExpandableJsonBranch(key, value, summaryNote, entries) {
+            const details = document.createElement('details');
+            details.open = true;
+
+            const summary = document.createElement('summary');
+            summary.className = 'json-tree-toggle';
+            if (key !== null) {
+                summary.appendChild(buildJsonKeyLabel(key));
+                const separator = document.createElement('span');
+                separator.textContent = ':';
+                summary.appendChild(separator);
+            }
+            const kind = document.createElement('span');
+            kind.className = 'json-tree-note';
+            kind.textContent = `${Array.isArray(value) ? 'Array' : 'Object'} ${summaryNote}`;
+            summary.appendChild(kind);
+            details.appendChild(summary);
+
+            const children = document.createElement('div');
+            children.className = 'json-tree-children';
+            if (!entries.length) {
+                const empty = document.createElement('div');
+                empty.className = 'json-tree-row';
+                const marker = document.createElement('span');
+                marker.className = 'json-tree-note';
+                marker.textContent = Array.isArray(value) ? '[]' : '{}';
+                empty.appendChild(marker);
+                children.appendChild(empty);
+            } else {
+                entries.forEach(([childKey, childValue]) => {
+                    const childNode = buildJsonTreeNode(childValue, childKey);
+                    if (childNode.firstChild) {
+                        children.appendChild(childNode.firstChild);
+                    }
+                });
+            }
+            details.appendChild(children);
+            return details;
+        }
+
+        function buildJsonLeafRow(key, value) {
+            const row = document.createElement('div');
+            row.className = 'json-tree-row';
+            if (key !== null) {
+                row.appendChild(buildJsonKeyLabel(key));
+                const separator = document.createElement('span');
+                separator.textContent = ':';
+                row.appendChild(separator);
+            }
+            row.appendChild(buildJsonValueLabel(value));
+            return row;
+        }
+
+        function buildJsonKeyLabel(key) {
+            const span = document.createElement('span');
+            span.className = 'json-tree-key';
+            span.textContent = String(key);
+            return span;
+        }
+
+        function buildJsonValueLabel(value) {
+            const span = document.createElement('span');
+            if (typeof value === 'string') {
+                span.className = 'json-tree-string';
+                span.textContent = `"${value}"`;
+                return span;
+            }
+            if (typeof value === 'number') {
+                span.className = 'json-tree-number';
+                span.textContent = String(value);
+                return span;
+            }
+            if (typeof value === 'boolean') {
+                span.className = 'json-tree-boolean';
+                span.textContent = String(value);
+                return span;
+            }
+            if (value === null) {
+                span.className = 'json-tree-null';
+                span.textContent = 'null';
+                return span;
+            }
+            span.className = 'json-tree-note';
+            span.textContent = String(value);
+            return span;
+        }
+
+        function formatJsonValue(value) {
+            if (value === undefined || value === null || value === '') return '';
+            return JSON.stringify(value, null, 2);
+        }
+
+        function setStatus(message, tone = '') {
+            const node = document.getElementById('status');
+            node.textContent = message;
+            node.className = `status${tone ? ` ${tone}` : ''}`;
+        }
+
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function escapeAttribute(value) {
+            return escapeHtml(value).replace(/\n/g, '&#10;');
+        }
+    {% block extension_bootstrap %}{% endblock %}
+    </script>
+</body>
+</html>

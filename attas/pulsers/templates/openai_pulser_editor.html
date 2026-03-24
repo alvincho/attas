@@ -1,0 +1,223 @@
+{% extends "phemacast/pulsers/templates/pulser_editor_base.html" %}
+
+{% block subtitle %}Shared pulser editor with an OpenAI/Ollama extension layer for model selection, discovery, and llm_chat defaults.{% endblock %}
+
+{% block hero_meta_extra %}
+<span class="chip">LLM Tools</span>
+{% endblock %}
+
+{% block extension_bootstrap %}
+const openaiPulserUiState = {
+    models: [],
+    modelsStatus: 'Load available models for the current provider.',
+    modelInfoJson: '{}',
+    selectedModel: '',
+};
+
+window.pulserEditorExtension = {
+    ensureConfigDefaults({ config }) {
+        if (!config.base_url) config.base_url = 'https://api.openai.com/v1/chat/completions';
+        if (!config.model) config.model = 'gpt-4o';
+    },
+
+    defaultPulse({ index }) {
+        return {
+            name: index === 1 ? 'llm_chat' : `llm_chat_${index}`,
+            description: 'Chat completion pulse via OpenAI-compatible provider.',
+            pulse_address: `plaza://pulse/llm_chat_${index}`,
+            tags: ['llm', 'chat'],
+            cost: 0,
+            api: {
+                url: '',
+                method: 'POST',
+                root_path: '',
+                headers: {},
+            },
+            input_schema: {
+                type: 'object',
+                properties: {
+                    prompt: { type: 'string' },
+                    model: { type: 'string' },
+                },
+                required: ['prompt'],
+            },
+            output_schema: {},
+            mapping: {
+                response: 'response',
+                model: 'model',
+                provider: 'provider',
+            },
+            test_data: {
+                prompt: 'Say hello in one sentence.',
+                model: 'gpt-4o',
+            },
+        };
+    },
+
+    renderTopLevelExtension({ root, config }) {
+        root.innerHTML = `
+            <div class="field">
+                <label for="openai-base-url">Base URL</label>
+                <input id="openai-base-url" type="text" value="${escapeAttribute(config?.base_url || '')}" placeholder="https://api.openai.com/v1/chat/completions">
+            </div>
+            <div class="field">
+                <label for="openai-model">Default Model</label>
+                <input id="openai-model" type="text" value="${escapeAttribute(config?.model || '')}" placeholder="gpt-4o">
+            </div>
+            <div class="field full-span">
+                <label for="openai-provider-readonly">Detected Provider</label>
+                <input id="openai-provider-readonly" type="text" value="${escapeAttribute(detectProvider(config?.base_url || ''))}" readonly>
+            </div>
+        `;
+
+        const baseUrlNode = document.getElementById('openai-base-url');
+        const modelNode = document.getElementById('openai-model');
+        const sync = () => {
+            state.config.base_url = baseUrlNode.value.trim();
+            state.config.model = modelNode.value.trim();
+            const providerNode = document.getElementById('openai-provider-readonly');
+            if (providerNode) providerNode.value = detectProvider(state.config.base_url);
+            renderPreview();
+            renderExtensionPanels();
+        };
+        baseUrlNode.addEventListener('input', sync);
+        modelNode.addEventListener('input', sync);
+    },
+
+    syncTopLevelInputs({ config }) {
+        const baseUrlNode = document.getElementById('openai-base-url');
+        const modelNode = document.getElementById('openai-model');
+        if (baseUrlNode) config.base_url = baseUrlNode.value.trim();
+        if (modelNode) config.model = modelNode.value.trim();
+    },
+
+    compilePulse({ compiledPulse }) {
+        compiledPulse.api = {
+            ...(compiledPulse.api || {}),
+            url: state.config.base_url || compiledPulse.api?.url || '',
+            method: 'POST',
+        };
+        compiledPulse.test_data = {
+            ...(compiledPulse.test_data || {}),
+            model: state.config.model || compiledPulse.test_data?.model || '',
+            prompt: compiledPulse.test_data?.prompt || 'Say hello in one sentence.',
+        };
+        return compiledPulse;
+    },
+
+    renderPanels({ root, config }) {
+        root.innerHTML = `
+            <section class="panel">
+                <div class="panel-head">
+                    <div>
+                        <h3>Model Tools</h3>
+                        <div class="muted">Restore model listing and quick inspection for OpenAI-compatible pulsers.</div>
+                    </div>
+                    <div class="toolbar">
+                        <button id="openai-load-models-btn" class="ghost-btn" type="button">Load Models</button>
+                        <button id="openai-model-info-btn" class="ghost-btn" type="button">Model Info</button>
+                    </div>
+                </div>
+                <div class="editor-grid">
+                    <div class="field">
+                        <label for="openai-model-select">Available Models</label>
+                        <select id="openai-model-select">
+                            ${renderModelOptions(config)}
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label for="openai-model-status">Model Status</label>
+                        <input id="openai-model-status" type="text" value="${escapeAttribute(openaiPulserUiState.modelsStatus)}" readonly>
+                    </div>
+                    <div class="field full-span">
+                        <label>Model Info</label>
+                        <div class="json-tree-shell compact" id="openai-model-info-output"></div>
+                    </div>
+                </div>
+            </section>
+        `;
+
+        const select = document.getElementById('openai-model-select');
+        if (select) {
+            select.addEventListener('change', (event) => {
+                openaiPulserUiState.selectedModel = event.target.value;
+                const input = document.getElementById('openai-model');
+                if (input) {
+                    input.value = event.target.value;
+                    state.config.model = event.target.value;
+                    renderPreview();
+                }
+            });
+        }
+
+        const loadBtn = document.getElementById('openai-load-models-btn');
+        if (loadBtn) {
+            loadBtn.addEventListener('click', loadModelsForProvider);
+        }
+
+        const infoBtn = document.getElementById('openai-model-info-btn');
+        if (infoBtn) {
+            infoBtn.addEventListener('click', loadSelectedModelInfo);
+        }
+
+        renderJsonTreeInto(
+            document.getElementById('openai-model-info-output'),
+            parseDisplayJson(openaiPulserUiState.modelInfoJson || '{}')
+        );
+    },
+};
+
+function detectProvider(baseUrl) {
+    return String(baseUrl || '').toLowerCase().includes('openai.com') ? 'openai' : 'ollama';
+}
+
+function renderModelOptions(config) {
+    const currentModel = openaiPulserUiState.selectedModel || config?.model || '';
+    const models = Array.isArray(openaiPulserUiState.models) ? openaiPulserUiState.models : [];
+    const merged = currentModel && !models.includes(currentModel) ? [currentModel, ...models] : models;
+    if (!merged.length) {
+        return '<option value="">No models loaded</option>';
+    }
+    return merged.map((model) => `<option value="${escapeAttribute(model)}" ${model === currentModel ? 'selected' : ''}>${escapeHtml(model)}</option>`).join('');
+}
+
+async function loadModelsForProvider() {
+    const provider = detectProvider(state.config?.base_url || '');
+    openaiPulserUiState.modelsStatus = `Loading ${provider} models...`;
+    renderExtensionPanels();
+    try {
+        const response = await fetch(`/list_models?provider=${encodeURIComponent(provider)}`);
+        const payload = await response.json();
+        if (!response.ok || payload.status !== 'success') {
+            throw new Error(payload.message || payload.detail || 'Failed to load models.');
+        }
+        openaiPulserUiState.models = Array.isArray(payload.models) ? payload.models : [];
+        openaiPulserUiState.selectedModel = state.config?.model || openaiPulserUiState.models[0] || '';
+        openaiPulserUiState.modelsStatus = `Loaded ${openaiPulserUiState.models.length} ${provider} model${openaiPulserUiState.models.length === 1 ? '' : 's'}.`;
+    } catch (error) {
+        openaiPulserUiState.modelsStatus = error.message;
+    }
+    renderExtensionPanels();
+}
+
+async function loadSelectedModelInfo() {
+    const selected = openaiPulserUiState.selectedModel || state.config?.model || '';
+    if (!selected) {
+        openaiPulserUiState.modelInfoJson = prettyJson({ error: 'Select or load a model first.' });
+        renderExtensionPanels();
+        return;
+    }
+    try {
+        const response = await fetch('/api/model-info', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ model: selected }),
+        });
+        const payload = await response.json();
+        openaiPulserUiState.modelInfoJson = prettyJson(payload);
+    } catch (error) {
+        openaiPulserUiState.modelInfoJson = prettyJson({ error: error.message });
+    }
+    renderExtensionPanels();
+}
+{% endblock %}

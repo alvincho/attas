@@ -1,0 +1,59 @@
+{
+  "id": "StockReportPhemar:generate_phema",
+  "agent_name": "StockReportPhemar",
+  "practice_id": "generate_phema",
+  "practice_name": "Generate Phema",
+  "practice_description": "Resolve a Phema blueprint into a static payload using Plaza pulser practices.",
+  "practice_data": {
+    "name": "Generate Phema",
+    "description": "Resolve a Phema blueprint into a static payload using Plaza pulser practices.",
+    "id": "generate_phema",
+    "cost": 0,
+    "tags": [
+      "phemar",
+      "phema",
+      "render"
+    ],
+    "examples": [
+      "POST /generate_phema {'phema_id': 'macro-brief', 'params': {'ticker': 'AAPL'}}"
+    ],
+    "inputModes": [
+      "http-post",
+      "json"
+    ],
+    "outputModes": [
+      "json"
+    ],
+    "parameters": {
+      "phema_id": {
+        "type": "string",
+        "description": "Optional Phema id registered on Plaza or preloaded into the agent.",
+        "enum": [
+          "841bd99a-5a65-5b80-9625-8298033d6a96"
+        ]
+      },
+      "phema_name": {
+        "type": "string",
+        "description": "Optional Phema name when resolving from Plaza or config.",
+        "enum": [
+          "Simple Report 2"
+        ]
+      },
+      "phema": {
+        "type": "object",
+        "description": "Inline Phema payload to resolve without directory lookup."
+      },
+      "params": {
+        "type": "object",
+        "description": "Input parameters forwarded to matching pulsers."
+      },
+      "input": {
+        "type": "object",
+        "description": "Alias for params when invoked by other agents."
+      }
+    },
+    "path": "/generate_phema"
+  },
+  "is_deleted": false,
+  "updated_at": "2026-03-23T13:11:08.721146+00:00"
+}

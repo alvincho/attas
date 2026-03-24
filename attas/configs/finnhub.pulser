@@ -1,0 +1,983 @@
+{
+    "name": "FinnhubApiPulser",
+    "type": "phemacast.pulsers.api_pulser.ApiPulser",
+    "host": "127.0.0.1",
+    "port": 8023,
+    "plaza_url": "http://127.0.0.1:8011",
+    "role": "pulser",
+    "description": "Maps Finnhub market, news, and event data onto shared Plaza pulse definitions.",
+    "tags": [
+        "finance",
+        "market-data",
+        "finnhub",
+        "stocks",
+        "fundamentals",
+        "news"
+    ],
+    "api_keys": [
+        {
+            "id": "finnhub",
+            "env": "FINNHUB_API_KEY",
+            "param": "token"
+        }
+    ],
+    "supported_pulses": [
+        {
+            "party": "attas",
+            "pulse_name": "last_price",
+            "name": "last_price",
+            "description": "Latest traded price snapshot from Finnhub quote.",
+            "pulse_address": "37dbc0b8-2677-4b29-8aea-dd097b652c8e",
+            "tags": [
+                "price",
+                "market-data",
+                "source-data",
+                "stock-prices",
+                "quote",
+                "realtime"
+            ],
+            "cost": 0,
+            "api": {
+                "url": "https://finnhub.io/api/v1/quote?symbol={symbol}",
+                "method": "GET",
+                "root_path": "",
+                "headers": {},
+                "api_key_id": "finnhub"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "symbol"
+                ]
+            },
+            "mapping": {
+                "symbol": "_input.symbol",
+                "last_price": "c",
+                "timestamp": "t",
+                "source": {
+                    "value": "finnhub"
+                }
+            },
+            "test_data": {
+                "symbol": "AAPL"
+            }
+        },
+        {
+            "party": "attas",
+            "pulse_name": "previous_close",
+            "name": "previous_close",
+            "description": "Previous close from Finnhub quote.",
+            "pulse_address": "c100f97c-d708-4bc0-808a-487f50da087c",
+            "tags": [
+                "price",
+                "market-data",
+                "source-data",
+                "stock-prices",
+                "quote"
+            ],
+            "cost": 0,
+            "api": {
+                "url": "https://finnhub.io/api/v1/quote?symbol={symbol}",
+                "method": "GET",
+                "root_path": "",
+                "headers": {},
+                "api_key_id": "finnhub"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    },
+                    "as_of_date": {
+                        "type": "string",
+                        "description": "Reference trade date for this quote snapshot."
+                    }
+                },
+                "required": [
+                    "symbol",
+                    "as_of_date"
+                ]
+            },
+            "mapping": {
+                "symbol": "_input.symbol",
+                "previous_close": "pc",
+                "trade_date": "_input.as_of_date",
+                "source": {
+                    "value": "finnhub"
+                }
+            },
+            "test_data": {
+                "symbol": "AAPL",
+                "as_of_date": "2026-03-19"
+            }
+        },
+        {
+            "party": "attas",
+            "pulse_name": "open_price",
+            "name": "open_price",
+            "description": "Official session open from Finnhub quote.",
+            "pulse_address": "1e06e429-2bbe-41ac-8623-b6f46f5a96c7",
+            "tags": [
+                "price",
+                "market-data",
+                "source-data",
+                "stock-prices",
+                "quote"
+            ],
+            "cost": 0,
+            "api": {
+                "url": "https://finnhub.io/api/v1/quote?symbol={symbol}",
+                "method": "GET",
+                "root_path": "",
+                "headers": {},
+                "api_key_id": "finnhub"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    },
+                    "as_of_date": {
+                        "type": "string",
+                        "description": "Reference trade date for this quote snapshot."
+                    }
+                },
+                "required": [
+                    "symbol",
+                    "as_of_date"
+                ]
+            },
+            "mapping": {
+                "symbol": "_input.symbol",
+                "open_price": "o",
+                "trade_date": "_input.as_of_date",
+                "source": {
+                    "value": "finnhub"
+                }
+            },
+            "test_data": {
+                "symbol": "AAPL",
+                "as_of_date": "2026-03-19"
+            }
+        },
+        {
+            "party": "attas",
+            "pulse_name": "day_high_low",
+            "name": "day_high_low",
+            "description": "Session high and low from Finnhub quote.",
+            "pulse_address": "1c3e791b-6ff1-436a-9243-b05848649df9",
+            "tags": [
+                "price",
+                "market-data",
+                "source-data",
+                "stock-prices",
+                "quote"
+            ],
+            "cost": 0,
+            "api": {
+                "url": "https://finnhub.io/api/v1/quote?symbol={symbol}",
+                "method": "GET",
+                "root_path": "",
+                "headers": {},
+                "api_key_id": "finnhub"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    },
+                    "as_of_date": {
+                        "type": "string",
+                        "description": "Reference trade date for this quote snapshot."
+                    }
+                },
+                "required": [
+                    "symbol",
+                    "as_of_date"
+                ]
+            },
+            "mapping": {
+                "symbol": "_input.symbol",
+                "day_high": "h",
+                "day_low": "l",
+                "trade_date": "_input.as_of_date",
+                "timestamp": "t",
+                "source": {
+                    "value": "finnhub"
+                }
+            },
+            "test_data": {
+                "symbol": "AAPL",
+                "as_of_date": "2026-03-19"
+            }
+        },
+        {
+            "party": "attas",
+            "pulse_name": "price_change_summary",
+            "name": "price_change_summary",
+            "description": "Day-over-day price change summary from Finnhub quote.",
+            "pulse_address": "4c4ffb34-c969-493c-a330-bbe8471e1dfe",
+            "tags": [
+                "price",
+                "performance",
+                "source-data",
+                "stock-prices",
+                "change"
+            ],
+            "cost": 0,
+            "api": {
+                "url": "https://finnhub.io/api/v1/quote?symbol={symbol}",
+                "method": "GET",
+                "root_path": "",
+                "headers": {},
+                "api_key_id": "finnhub"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "symbol"
+                ]
+            },
+            "mapping": {
+                "symbol": "_input.symbol",
+                "last_price": "c",
+                "day_change": "d",
+                "day_change_percent": "dp",
+                "timestamp": "t"
+            },
+            "test_data": {
+                "symbol": "AAPL"
+            }
+        },
+        {
+            "party": "attas",
+            "pulse_name": "trade_volume",
+            "name": "trade_volume",
+            "description": "Single trade-volume snapshot from Finnhub stock candle.",
+            "pulse_address": "02dfce3a-6beb-454e-bab5-4ef9e9d1d901",
+            "tags": [
+                "price",
+                "volume",
+                "source-data",
+                "stock-prices"
+            ],
+            "cost": 0,
+            "api": {
+                "url": "https://finnhub.io/api/v1/stock/candle?symbol={symbol}&resolution={resolution}&from={from_epoch}&to={to_epoch}",
+                "method": "GET",
+                "root_path": "",
+                "headers": {},
+                "api_key_id": "finnhub"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    },
+                    "resolution": {
+                        "type": "string",
+                        "default": "D"
+                    },
+                    "from_epoch": {
+                        "type": "integer"
+                    },
+                    "to_epoch": {
+                        "type": "integer"
+                    },
+                    "trade_date": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "symbol",
+                    "resolution",
+                    "from_epoch",
+                    "to_epoch",
+                    "trade_date"
+                ]
+            },
+            "mapping": {
+                "symbol": "_input.symbol",
+                "volume": "v.0",
+                "trade_date": "_input.trade_date",
+                "session_type": "_input.resolution",
+                "timestamp": "t.0",
+                "source": {
+                    "value": "finnhub"
+                }
+            },
+            "test_data": {
+                "symbol": "AAPL",
+                "resolution": "D",
+                "from_epoch": 1735257600,
+                "to_epoch": 1735343999,
+                "trade_date": "2024-12-27"
+            }
+        },
+        {
+            "party": "attas",
+            "pulse_name": "daily_ohlcv_bar",
+            "name": "daily_ohlcv_bar",
+            "description": "Single daily OHLCV bar from Finnhub stock candle.",
+            "pulse_address": "deb2b47d-29ca-4aec-acd2-f6928dd48205",
+            "tags": [
+                "price",
+                "ohlcv",
+                "source-data",
+                "historical-prices",
+                "daily"
+            ],
+            "cost": 0,
+            "api": {
+                "url": "https://finnhub.io/api/v1/stock/candle?symbol={symbol}&resolution={resolution}&from={from_epoch}&to={to_epoch}",
+                "method": "GET",
+                "root_path": "",
+                "headers": {},
+                "api_key_id": "finnhub"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    },
+                    "resolution": {
+                        "type": "string",
+                        "default": "D"
+                    },
+                    "from_epoch": {
+                        "type": "integer"
+                    },
+                    "to_epoch": {
+                        "type": "integer"
+                    },
+                    "trade_date": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "symbol",
+                    "resolution",
+                    "from_epoch",
+                    "to_epoch",
+                    "trade_date"
+                ]
+            },
+            "mapping": {
+                "symbol": "_input.symbol",
+                "trade_date": "_input.trade_date",
+                "open": "o.0",
+                "high": "h.0",
+                "low": "l.0",
+                "close": "c.0",
+                "volume": "v.0",
+                "source": {
+                    "value": "finnhub"
+                }
+            },
+            "test_data": {
+                "symbol": "AAPL",
+                "resolution": "D",
+                "from_epoch": 1735257600,
+                "to_epoch": 1735343999,
+                "trade_date": "2024-12-27"
+            }
+        },
+        {
+            "party": "attas",
+            "pulse_name": "intraday_ohlcv_bar",
+            "name": "intraday_ohlcv_bar",
+            "description": "Single intraday OHLCV bar from Finnhub stock candle.",
+            "pulse_address": "72e05791-42eb-4ac5-8254-60de91dad268",
+            "tags": [
+                "price",
+                "ohlcv",
+                "source-data",
+                "historical-prices",
+                "intraday"
+            ],
+            "cost": 0,
+            "api": {
+                "url": "https://finnhub.io/api/v1/stock/candle?symbol={symbol}&resolution={interval}&from={from_epoch}&to={to_epoch}",
+                "method": "GET",
+                "root_path": "",
+                "headers": {},
+                "api_key_id": "finnhub"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    },
+                    "interval": {
+                        "type": "string",
+                        "enum": [
+                            "1",
+                            "5",
+                            "15",
+                            "30",
+                            "60"
+                        ],
+                        "default": "5"
+                    },
+                    "from_epoch": {
+                        "type": "integer"
+                    },
+                    "to_epoch": {
+                        "type": "integer"
+                    },
+                    "bar_start": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "symbol",
+                    "interval",
+                    "from_epoch",
+                    "to_epoch",
+                    "bar_start"
+                ]
+            },
+            "mapping": {
+                "symbol": "_input.symbol",
+                "interval": "_input.interval",
+                "bar_start": "_input.bar_start",
+                "open": "o.0",
+                "high": "h.0",
+                "low": "l.0",
+                "close": "c.0",
+                "volume": "v.0",
+                "source": {
+                    "value": "finnhub"
+                }
+            },
+            "test_data": {
+                "symbol": "AAPL",
+                "interval": "5",
+                "from_epoch": 1773844200,
+                "to_epoch": 1773847800,
+                "bar_start": "2026-03-18T14:30:00Z"
+            }
+        },
+        {
+            "party": "attas",
+            "pulse_name": "company_profile",
+            "name": "company_profile",
+            "description": "Company profile from Finnhub profile2.",
+            "pulse_address": "2faf95ca-0184-4786-8dd7-40c1804308e1",
+            "tags": [
+                "company",
+                "reference-data",
+                "source-data",
+                "fundamentals",
+                "company-profile"
+            ],
+            "cost": 0,
+            "api": {
+                "url": "https://finnhub.io/api/v1/stock/profile2?symbol={symbol}",
+                "method": "GET",
+                "root_path": "",
+                "headers": {},
+                "api_key_id": "finnhub"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "symbol"
+                ]
+            },
+            "mapping": {
+                "symbol": "ticker",
+                "company_name": "name",
+                "sector": "finnhubIndustry",
+                "headquarters_country": "country",
+                "website": "weburl"
+            },
+            "test_data": {
+                "symbol": "AAPL"
+            }
+        },
+        {
+            "party": "attas",
+            "pulse_name": "market_cap_snapshot",
+            "name": "market_cap_snapshot",
+            "description": "Market capitalization snapshot from Finnhub profile2.",
+            "pulse_address": "8ba4cf3f-0bc7-4478-ab4c-e1d4784d7453",
+            "tags": [
+                "price",
+                "valuation",
+                "source-data",
+                "fundamentals",
+                "market-cap"
+            ],
+            "cost": 0,
+            "api": {
+                "url": "https://finnhub.io/api/v1/stock/profile2?symbol={symbol}",
+                "method": "GET",
+                "root_path": "",
+                "headers": {},
+                "api_key_id": "finnhub"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    },
+                    "as_of_datetime": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "symbol",
+                    "as_of_datetime"
+                ]
+            },
+            "mapping": {
+                "symbol": "ticker",
+                "market_cap": "marketCapitalization",
+                "shares_outstanding": "shareOutstanding",
+                "currency": "currency",
+                "timestamp": "_input.as_of_datetime",
+                "source": {
+                    "value": "finnhub"
+                }
+            },
+            "test_data": {
+                "symbol": "AAPL",
+                "as_of_datetime": "2026-03-19T00:00:00Z"
+            }
+        },
+        {
+            "party": "attas",
+            "pulse_name": "fifty_two_week_range",
+            "name": "fifty_two_week_range",
+            "description": "52-week trading range from Finnhub stock metric.",
+            "pulse_address": "d59e8007-1868-4c4c-9918-65b6034d2552",
+            "tags": [
+                "price",
+                "range",
+                "source-data",
+                "fundamentals",
+                "price-range"
+            ],
+            "cost": 0,
+            "api": {
+                "url": "https://finnhub.io/api/v1/stock/metric?symbol={symbol}&metric=all",
+                "method": "GET",
+                "root_path": "",
+                "headers": {},
+                "api_key_id": "finnhub"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    },
+                    "as_of_datetime": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "symbol",
+                    "as_of_datetime"
+                ]
+            },
+            "mapping": {
+                "symbol": "_input.symbol",
+                "fifty_two_week_high": "metric.52WeekHigh",
+                "fifty_two_week_low": "metric.52WeekLow",
+                "timestamp": "_input.as_of_datetime"
+            },
+            "test_data": {
+                "symbol": "AAPL",
+                "as_of_datetime": "2026-03-19T00:00:00Z"
+            }
+        },
+        {
+            "party": "attas",
+            "pulse_name": "dividend_info",
+            "name": "dividend_info",
+            "description": "Latest dividend record from Finnhub stock dividend.",
+            "pulse_address": "5732acad-165d-43cf-a051-24b702b770b7",
+            "tags": [
+                "corporate-actions",
+                "income",
+                "source-data",
+                "fundamentals",
+                "dividends"
+            ],
+            "cost": 0,
+            "api": {
+                "url": "https://finnhub.io/api/v1/stock/dividend?symbol={symbol}&from={from_date}&to={to_date}",
+                "method": "GET",
+                "root_path": "0",
+                "headers": {},
+                "api_key_id": "finnhub"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    },
+                    "from_date": {
+                        "type": "string"
+                    },
+                    "to_date": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "symbol",
+                    "from_date",
+                    "to_date"
+                ]
+            },
+            "mapping": {
+                "symbol": "_input.symbol",
+                "cash_amount": "amount",
+                "currency": "currency",
+                "declaration_date": "declarationDate",
+                "ex_date": "date",
+                "record_date": "recordDate",
+                "payment_date": "payDate"
+            },
+            "test_data": {
+                "symbol": "AAPL",
+                "from_date": "2025-01-01",
+                "to_date": "2026-12-31"
+            }
+        },
+        {
+            "party": "attas",
+            "pulse_name": "valuation_pe",
+            "name": "valuation_pe",
+            "description": "P/E valuation snapshot from Finnhub stock metric.",
+            "pulse_address": "80d2b57f-151e-4304-a68d-6e7b38013968",
+            "tags": [
+                "valuation",
+                "analysis",
+                "source-data",
+                "fundamentals"
+            ],
+            "cost": 0,
+            "api": {
+                "url": "https://finnhub.io/api/v1/stock/metric?symbol={symbol}&metric=all",
+                "method": "GET",
+                "root_path": "",
+                "headers": {},
+                "api_key_id": "finnhub"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    },
+                    "as_of_date": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "symbol",
+                    "as_of_date"
+                ]
+            },
+            "mapping": {
+                "symbol": "_input.symbol",
+                "price_to_earnings": "metric.peBasicExclExtraTTM",
+                "as_of_date": "_input.as_of_date"
+            },
+            "test_data": {
+                "symbol": "AAPL",
+                "as_of_date": "2026-03-19"
+            }
+        },
+        {
+            "party": "attas",
+            "pulse_name": "profitability_ratios",
+            "name": "profitability_ratios",
+            "description": "Profitability ratios from Finnhub stock metric.",
+            "pulse_address": "1b3fe8cf-2a2e-409a-95f0-eb544cbe7280",
+            "tags": [
+                "analysis",
+                "profitability",
+                "source-data",
+                "fundamentals",
+                "ratios"
+            ],
+            "cost": 0,
+            "api": {
+                "url": "https://finnhub.io/api/v1/stock/metric?symbol={symbol}&metric=all",
+                "method": "GET",
+                "root_path": "",
+                "headers": {},
+                "api_key_id": "finnhub"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    },
+                    "as_of_date": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "symbol",
+                    "as_of_date"
+                ]
+            },
+            "mapping": {
+                "symbol": "_input.symbol",
+                "period_end": "_input.as_of_date",
+                "gross_margin_percent": "metric.grossMarginAnnual",
+                "operating_margin_percent": "metric.operatingMarginAnnual",
+                "net_margin_percent": "metric.netMarginAnnual",
+                "return_on_equity_percent": "metric.roeTTM",
+                "return_on_assets_percent": "metric.roaTTM"
+            },
+            "test_data": {
+                "symbol": "AAPL",
+                "as_of_date": "2026-03-19"
+            }
+        },
+        {
+            "party": "attas",
+            "pulse_name": "news_article",
+            "name": "news_article",
+            "description": "Latest company news article from Finnhub company-news.",
+            "pulse_address": "5f82c4c9-ac00-587c-9e43-547557081ab6",
+            "tags": [
+                "news",
+                "source-data",
+                "company-news"
+            ],
+            "cost": 0,
+            "api": {
+                "url": "https://finnhub.io/api/v1/company-news?symbol={symbol}&from={from_date}&to={to_date}",
+                "method": "GET",
+                "root_path": "",
+                "headers": {},
+                "api_key_id": "finnhub"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    },
+                    "number_of_articles": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "description": "Number of recent articles requested for the news query window."
+                    },
+                    "from_date": {
+                        "type": "string"
+                    },
+                    "to_date": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "symbol",
+                    "number_of_articles",
+                    "from_date",
+                    "to_date"
+                ]
+            },
+            "mapping": {
+                "symbol": "_input.symbol",
+                "number_of_articles": "_input.number_of_articles",
+                "articles": {
+                    "source": "items",
+                    "limit_from": "_input.number_of_articles",
+                    "items": {
+                        "headline": "headline",
+                        "published_at": "datetime",
+                        "publisher": "source",
+                        "summary": "summary",
+                        "url": "url"
+                    }
+                }
+            },
+            "test_data": {
+                "symbol": "AAPL",
+                "number_of_articles": 10,
+                "from_date": "2026-03-01",
+                "to_date": "2026-03-19"
+            }
+        },
+        {
+            "party": "attas",
+            "pulse_name": "news_sentiment_aggregate",
+            "name": "news_sentiment_aggregate",
+            "description": "Aggregated news sentiment from Finnhub news-sentiment.",
+            "pulse_address": "cbdee24e-4bac-4eea-81c5-d404c6fd07bd",
+            "tags": [
+                "news",
+                "sentiment",
+                "source-data"
+            ],
+            "cost": 0,
+            "api": {
+                "url": "https://finnhub.io/api/v1/news-sentiment?symbol={symbol}",
+                "method": "GET",
+                "root_path": "",
+                "headers": {},
+                "api_key_id": "finnhub"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "symbol"
+                ]
+            },
+            "mapping": {
+                "symbol": "_input.symbol",
+                "window_days": {
+                    "value": 7
+                },
+                "article_count": "buzz.articlesInLastWeek",
+                "sentiment_score": "companyNewsScore"
+            },
+            "test_data": {
+                "symbol": "AAPL"
+            }
+        },
+        {
+            "party": "attas",
+            "pulse_name": "earnings_surprise_history",
+            "name": "earnings_surprise_history",
+            "description": "Most recent earnings surprise from Finnhub stock earnings.",
+            "pulse_address": "bcb51f42-9a34-4845-83b6-6b2b33407fd6",
+            "tags": [
+                "research",
+                "earnings",
+                "source-data",
+                "history"
+            ],
+            "cost": 0,
+            "api": {
+                "url": "https://finnhub.io/api/v1/stock/earnings?symbol={symbol}",
+                "method": "GET",
+                "root_path": "0",
+                "headers": {},
+                "api_key_id": "finnhub"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "symbol"
+                ]
+            },
+            "mapping": {
+                "symbol": "symbol",
+                "period_end": "period",
+                "eps_actual": "actual",
+                "eps_consensus": "estimate",
+                "eps_surprise": "surprise",
+                "eps_surprise_percent": "surprisePercent"
+            },
+            "test_data": {
+                "symbol": "AAPL"
+            }
+        },
+        {
+            "party": "attas",
+            "pulse_name": "earnings_event",
+            "name": "earnings_event",
+            "description": "Upcoming or recent earnings event from Finnhub earnings calendar.",
+            "pulse_address": "c3c3c471-e193-4b69-807a-1405d1ca0329",
+            "tags": [
+                "events",
+                "earnings",
+                "source-data",
+                "calendar"
+            ],
+            "cost": 0,
+            "api": {
+                "url": "https://finnhub.io/api/v1/calendar/earnings?from={from_date}&to={to_date}&symbol={symbol}",
+                "method": "GET",
+                "root_path": "earningsCalendar.0",
+                "headers": {},
+                "api_key_id": "finnhub"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    },
+                    "from_date": {
+                        "type": "string"
+                    },
+                    "to_date": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "symbol",
+                    "from_date",
+                    "to_date"
+                ]
+            },
+            "mapping": {
+                "symbol": "symbol",
+                "earnings_date": "date",
+                "fiscal_quarter": "quarter",
+                "fiscal_year": "year",
+                "earnings_time": "hour",
+                "status": {
+                    "value": "scheduled"
+                }
+            },
+            "test_data": {
+                "symbol": "AAPL",
+                "from_date": "2026-03-01",
+                "to_date": "2026-12-31"
+            }
+        }
+    ],
+    "pools": [
+        {
+            "type": "FileSystemPool",
+            "name": "finnhub_pool",
+            "description": "Finnhub local pool",
+            "root_path": "tests/storage/finnhub"
+        }
+    ]
+}

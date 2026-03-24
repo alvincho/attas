@@ -1,0 +1,64 @@
+{
+  "id": "MarketstackApiPulser:get_pulse_data",
+  "agent_name": "MarketstackApiPulser",
+  "practice_id": "get_pulse_data",
+  "practice_name": "Get Pulse Data",
+  "practice_description": "Fetch or transform pulse payloads for the agent's supported pulses.",
+  "practice_data": {
+    "name": "Get Pulse Data",
+    "description": "Fetch or transform pulse payloads for the agent's supported pulses.",
+    "id": "get_pulse_data",
+    "cost": 0,
+    "tags": [
+      "pulser",
+      "pulse",
+      "data"
+    ],
+    "examples": [
+      "POST /get_pulse_data {'pulse_name': 'last_price', 'params': {'symbol': 'AAPL'}}"
+    ],
+    "inputModes": [
+      "http-post",
+      "json"
+    ],
+    "outputModes": [
+      "json"
+    ],
+    "parameters": {
+      "pulse_name": {
+        "type": "string",
+        "description": "Optional pulse identifier. Defaults to the pulser's primary pulse.",
+        "enum": [
+          "last_price",
+          "previous_close",
+          "open_price",
+          "day_high_low",
+          "trade_volume",
+          "daily_ohlcv_bar",
+          "intraday_ohlcv_bar",
+          "dividend_info",
+          "corporate_action_event",
+          "company_profile"
+        ]
+      },
+      "pulse_address": {
+        "type": "string",
+        "description": "Optional pulse address override."
+      },
+      "params": {
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol"
+        ]
+      }
+    },
+    "path": "/get_pulse_data"
+  },
+  "is_deleted": false,
+  "updated_at": "2026-03-23T13:21:11.902967+00:00"
+}

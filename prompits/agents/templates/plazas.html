@@ -1,0 +1,4406 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>attas | Neural Registry</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Space+Mono&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        :root {
+            --plaza-panel: rgba(255, 255, 255, 0.74);
+            --plaza-panel-strong: rgba(255, 255, 255, 0.92);
+            --plaza-panel-soft: rgba(31, 122, 255, 0.08);
+            --plaza-border: rgba(31, 122, 255, 0.12);
+            --plaza-border-strong: rgba(31, 122, 255, 0.24);
+            --plaza-text-dim: #5f7392;
+            --plaza-text-faint: #8598b4;
+            --plaza-schema: #10b981;
+            --plaza-pulse: #f59e0b;
+            --plaza-phema: #0f766e;
+            --plaza-agent: #1f7aff;
+            --plaza-danger: #e45477;
+            --plaza-warning: #ef8f34;
+        }
+
+        .content-area.plaza-app {
+            max-width: none;
+            padding: 3rem 3rem 4rem;
+        }
+
+        .page-shell {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .toolbar-card,
+        .summary-card,
+        .plaza-panel,
+        .catalog-panel,
+        .workspace-panel,
+        .inspector-panel,
+        .node-card,
+        .plaza-card,
+        .draft-note {
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(240, 248, 255, 0.8));
+            border: 1px solid var(--plaza-border);
+            backdrop-filter: blur(18px);
+            box-shadow:
+                0 22px 60px rgba(31, 122, 255, 0.09),
+                inset 0 1px 0 rgba(255, 255, 255, 0.82);
+        }
+
+        .toolbar-card {
+            border-radius: 20px;
+            padding: 1rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.85rem;
+            align-items: center;
+        }
+
+        .toolbar-input,
+        .toolbar-select,
+        .editor-input,
+        .editor-select,
+        .json-editor,
+        .catalog-search {
+            width: 100%;
+            border: 1px solid var(--plaza-border);
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.94);
+            color: var(--text-primary);
+            font-family: var(--font-main);
+            font-size: 0.95rem;
+            padding: 0.95rem 1rem;
+            outline: none;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .toolbar-input:focus,
+        .toolbar-select:focus,
+        .editor-input:focus,
+        .editor-select:focus,
+        .json-editor:focus,
+        .catalog-search:focus {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 4px rgba(31, 122, 255, 0.12);
+        }
+
+        .toolbar-input-wrap {
+            flex: 1 1 280px;
+            min-width: 240px;
+        }
+
+        .toolbar-select-wrap {
+            flex: 0 0 190px;
+        }
+
+        .toolbar-actions {
+            margin-left: auto;
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .toggle-control {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.6rem;
+            border-radius: 999px;
+            padding: 0.8rem 1rem;
+            background: linear-gradient(180deg, rgba(249, 252, 255, 0.9), rgba(241, 248, 255, 0.82));
+            border: 1px solid var(--plaza-border);
+            color: var(--plaza-text-dim);
+            font-size: 0.88rem;
+        }
+
+        .toggle-control input {
+            width: auto;
+            flex: 0 0 auto;
+            padding: 0;
+            accent-color: var(--accent-color);
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1rem;
+        }
+
+        .summary-card {
+            border-radius: 20px;
+            padding: 1.25rem 1.4rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .summary-card::before,
+        .plaza-card::before,
+        .node-card::before,
+        .catalog-panel::before,
+        .workspace-panel::before,
+        .inspector-panel::before,
+        .users-panel::before,
+        .user-table-card::before,
+        .auth-status-card::before {
+            content: "";
+            position: absolute;
+            inset: 0 0 auto 0;
+            height: 1px;
+            background: linear-gradient(90deg, rgba(31, 122, 255, 0.24), rgba(103, 232, 249, 0.06), transparent 85%);
+            pointer-events: none;
+        }
+
+        .summary-card::after {
+            content: "";
+            position: absolute;
+            inset: auto -30px -30px auto;
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(99, 213, 255, 0.26), transparent 68%);
+        }
+
+        .summary-label {
+            display: block;
+            font-size: 0.72rem;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: var(--plaza-text-faint);
+            margin-bottom: 0.75rem;
+        }
+
+        .summary-value {
+            display: block;
+            font-size: 2rem;
+            font-weight: 800;
+            line-height: 1;
+            margin-bottom: 0.45rem;
+        }
+
+        .summary-meta {
+            font-size: 0.82rem;
+            color: var(--plaza-text-dim);
+        }
+
+        .monitor-stack,
+        .plaza-list,
+        .catalog-list,
+        .tab-bar {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .map-shell {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .map-board {
+            position: relative;
+            overflow: hidden;
+            border-radius: 28px;
+            padding: 1.5rem;
+            min-height: 620px;
+            background:
+                radial-gradient(circle at top, rgba(71, 194, 255, 0.16), transparent 32%),
+                radial-gradient(circle at bottom, rgba(31, 122, 255, 0.12), transparent 40%),
+                linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(236, 246, 255, 0.86));
+            border: 1px solid var(--plaza-border);
+            box-shadow:
+                0 22px 60px rgba(31, 122, 255, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.82);
+        }
+
+        .map-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(760px, 1fr));
+            gap: 1rem;
+        }
+
+        .map-graph-card {
+            position: relative;
+            border-radius: 24px;
+            padding: 1.2rem;
+            min-height: 760px;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.84), rgba(240, 248, 255, 0.8));
+            border: 1px solid var(--plaza-border);
+            box-shadow:
+                0 18px 40px rgba(31, 122, 255, 0.08),
+                inset 0 1px 0 rgba(255, 255, 255, 0.78);
+        }
+
+        .map-graph-header {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+
+        .map-graph-meta {
+            color: var(--plaza-text-dim);
+            font-size: 0.88rem;
+            line-height: 1.5;
+        }
+
+        .map-graph-stage {
+            position: relative;
+            min-height: 640px;
+            border-radius: 22px;
+            overflow: hidden;
+            background:
+                radial-gradient(circle at center, rgba(31, 122, 255, 0.08), rgba(31, 122, 255, 0) 48%),
+                linear-gradient(180deg, rgba(247, 251, 255, 0.92), rgba(231, 243, 255, 0.84));
+            border: 1px solid rgba(31, 122, 255, 0.1);
+        }
+
+        .map-orbit,
+        .map-connections,
+        .map-layer {
+            position: absolute;
+            inset: 0;
+        }
+
+        .map-orbit {
+            pointer-events: none;
+            background:
+                radial-gradient(circle at center, transparent 0 24%, rgba(31, 122, 255, 0.08) 24.5%, transparent 25.5%),
+                radial-gradient(circle at center, transparent 0 40%, rgba(31, 122, 255, 0.06) 40.5%, transparent 41.5%);
+            opacity: 0.9;
+        }
+
+        .map-connections {
+            width: 100%;
+            height: 100%;
+            overflow: visible;
+        }
+
+        .map-line {
+            stroke: rgba(31, 122, 255, 0.28);
+            stroke-width: 2.4;
+            stroke-linecap: round;
+        }
+
+        .map-line.inactive {
+            stroke: rgba(132, 148, 180, 0.3);
+            stroke-dasharray: 6 8;
+        }
+
+        .map-line.active {
+            filter: drop-shadow(0 0 12px rgba(31, 122, 255, 0.18));
+        }
+
+        .map-node {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            z-index: 2;
+            width: 180px;
+        }
+
+        .map-node.dragging {
+            z-index: 8;
+        }
+
+        .map-node-trigger,
+        .map-link-trigger {
+            border: none;
+            cursor: pointer;
+            font: inherit;
+            color: inherit;
+        }
+
+        .map-node-trigger {
+            position: relative;
+            display: block;
+            width: 100%;
+            background: transparent;
+            touch-action: none;
+        }
+
+        .map-node-core {
+            display: grid;
+            place-items: center;
+            width: 88px;
+            height: 88px;
+            border-radius: 24px;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(229, 241, 255, 0.92));
+            border: 1px solid rgba(31, 122, 255, 0.16);
+            box-shadow:
+                0 16px 34px rgba(31, 122, 255, 0.12),
+                inset 0 1px 0 rgba(255, 255, 255, 0.9);
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+            margin: 0 auto;
+        }
+
+        .map-node-trigger[data-draggable="true"] {
+            cursor: grab;
+        }
+
+        .map-node.dragging .map-node-trigger[data-draggable="true"] {
+            cursor: grabbing;
+        }
+
+        .map-node.plaza-node .map-node-core {
+            width: 136px;
+            height: 136px;
+            border-radius: 34px;
+            background:
+                radial-gradient(circle at top, rgba(99, 213, 255, 0.28), transparent 56%),
+                linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(223, 238, 255, 0.94));
+            border-color: rgba(31, 122, 255, 0.22);
+        }
+
+        .map-node.agent-node .map-node-core {
+            border-color: rgba(31, 122, 255, 0.18);
+        }
+
+        .map-node.inactive-node .map-node-core {
+            opacity: 0.76;
+            border-color: rgba(132, 148, 180, 0.2);
+        }
+
+        .map-node-trigger:hover .map-node-core,
+        .map-node-trigger:focus-visible .map-node-core,
+        .map-link-trigger:hover,
+        .map-link-trigger:focus-visible {
+            transform: translateY(-2px);
+            box-shadow:
+                0 22px 44px rgba(31, 122, 255, 0.18),
+                inset 0 1px 0 rgba(255, 255, 255, 0.94);
+        }
+
+        .map-avatar {
+            width: 70px;
+            height: 70px;
+            object-fit: cover;
+            border-radius: 18px;
+            display: block;
+            box-shadow: 0 10px 24px rgba(31, 122, 255, 0.14);
+        }
+
+        .map-node.plaza-node .map-avatar {
+            width: 98px;
+            height: 98px;
+            border-radius: 26px;
+        }
+
+        .map-avatar-fallback {
+            width: 70px;
+            height: 70px;
+            border-radius: 18px;
+            display: none;
+            place-items: center;
+            background: linear-gradient(135deg, rgba(31, 122, 255, 0.16), rgba(99, 213, 255, 0.22));
+            color: var(--plaza-agent);
+            font-size: 1.15rem;
+            font-weight: 800;
+            letter-spacing: 0.06em;
+        }
+
+        .map-node.plaza-node .map-avatar-fallback {
+            width: 98px;
+            height: 98px;
+            border-radius: 26px;
+            font-size: 1.5rem;
+        }
+
+        .map-avatar.hidden,
+        .map-avatar-fallback.hidden {
+            display: none;
+        }
+
+        .map-avatar-fallback.visible {
+            display: grid;
+        }
+
+        .map-node-label {
+            position: absolute;
+            top: calc(100% + 10px);
+            left: 50%;
+            transform: translateX(-50%);
+            max-width: 180px;
+            width: 180px;
+            text-align: center;
+            font-size: 0.58rem;
+            line-height: 1.2;
+            color: var(--text-primary);
+            word-break: break-word;
+            pointer-events: none;
+        }
+
+        .map-link-trigger {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            width: 18px;
+            height: 18px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.92);
+            border: 1px solid rgba(31, 122, 255, 0.16);
+            box-shadow: 0 12px 28px rgba(31, 122, 255, 0.12);
+            z-index: 1;
+        }
+
+        .map-link-trigger::before {
+            content: "";
+            width: 6px;
+            height: 6px;
+            border-radius: 999px;
+            background: var(--plaza-agent);
+            display: block;
+            margin: auto;
+            margin-top: 5px;
+        }
+
+        .map-link-trigger.inactive::before {
+            background: var(--plaza-text-faint);
+        }
+
+        .map-tooltip {
+            position: absolute;
+            left: 50%;
+            bottom: calc(100% + 12px);
+            transform: translateX(-50%) translateY(8px);
+            width: 190px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.16s ease, transform 0.16s ease;
+            z-index: 5;
+        }
+
+        .map-tooltip-panel {
+            border-radius: 18px;
+            padding: 0.85rem 0.95rem;
+            background: rgba(10, 23, 47, 0.94);
+            color: rgba(240, 246, 255, 0.95);
+            border: 1px solid rgba(99, 213, 255, 0.16);
+            box-shadow: 0 22px 44px rgba(8, 15, 32, 0.32);
+        }
+
+        .map-tooltip-title {
+            font-size: 0.78rem;
+            font-weight: 700;
+            margin-bottom: 0.35rem;
+        }
+
+        .map-tooltip-copy,
+        .map-tooltip-list div {
+            font-size: 0.66rem;
+            line-height: 1.35;
+            color: rgba(218, 231, 247, 0.86);
+        }
+
+        .map-tooltip-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            margin-top: 0.55rem;
+        }
+
+        .map-node-trigger:hover .map-tooltip,
+        .map-node-trigger:focus-visible .map-tooltip,
+        .map-link-trigger:hover .map-tooltip,
+        .map-link-trigger:focus-visible .map-tooltip {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .map-node.dragging .map-tooltip {
+            opacity: 0 !important;
+        }
+
+        .map-empty {
+            display: grid;
+            place-items: center;
+            min-height: 240px;
+            text-align: center;
+            color: var(--plaza-text-dim);
+            border: 1px dashed rgba(31, 122, 255, 0.16);
+            border-radius: 22px;
+            background: rgba(255, 255, 255, 0.68);
+        }
+
+        .plaza-card {
+            position: relative;
+            border-radius: 24px;
+            padding: 1.4rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.2rem;
+        }
+
+        .plaza-card-header,
+        .workspace-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+        .plaza-title-block h2,
+        .workspace-header h2 {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 0.35rem;
+        }
+
+        .muted-line,
+        .node-meta-line,
+        .catalog-meta,
+        .inspector-block p,
+        .empty-note,
+        .draft-caption {
+            color: var(--plaza-text-dim);
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .pulser-builder {
+            grid-column: 1 / -1;
+            display: grid;
+            grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+            gap: 1rem;
+            align-items: start;
+        }
+
+        .pulser-panel {
+            border: 1px solid var(--plaza-border);
+            border-radius: 18px;
+            background: rgba(247, 251, 255, 0.76);
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.9rem;
+        }
+
+        .pulser-panel-header,
+        .pulser-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .pulser-toolbar {
+            align-items: stretch;
+        }
+
+        .pulser-pulse-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            max-height: 620px;
+            overflow: auto;
+            padding-right: 0.2rem;
+        }
+
+        .pulser-pulse-card {
+            width: 100%;
+            text-align: left;
+            border: 1px solid var(--plaza-border);
+            border-radius: 16px;
+            padding: 0.95rem 1rem;
+            background: rgba(255, 255, 255, 0.88);
+            color: var(--text-primary);
+            transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .pulser-pulse-card:hover,
+        .pulser-pulse-card.active {
+            border-color: var(--plaza-agent);
+            transform: translateY(-1px);
+            box-shadow: 0 12px 24px rgba(31, 122, 255, 0.08);
+        }
+
+        .pulser-pulse-card strong {
+            display: block;
+            font-size: 0.96rem;
+            margin-bottom: 0.35rem;
+        }
+
+        .pulser-pulse-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.45rem;
+            margin-top: 0.65rem;
+        }
+
+        .mini-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.32rem 0.58rem;
+            border-radius: 999px;
+            border: 1px solid var(--plaza-border);
+            background: rgba(255, 255, 255, 0.76);
+            color: var(--plaza-text-dim);
+            font-size: 0.74rem;
+        }
+
+        .plaza-health {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.55rem 0.85rem;
+            border-radius: 999px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            border: 1px solid var(--plaza-border);
+            color: var(--plaza-text-dim);
+            background: rgba(246, 251, 255, 0.74);
+        }
+
+        .plaza-health.online {
+            color: var(--success);
+            border-color: rgba(19, 183, 122, 0.24);
+            background: rgba(19, 183, 122, 0.1);
+        }
+
+        .health-dot,
+        .heartbeat-dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        .plaza-stats {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+
+        .stat-pill,
+        .type-pill,
+        .status-pill,
+        .chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            border-radius: 999px;
+            padding: 0.45rem 0.75rem;
+            font-size: 0.76rem;
+            border: 1px solid var(--plaza-border);
+            background: linear-gradient(180deg, rgba(249, 252, 255, 0.92), rgba(241, 248, 255, 0.82));
+            color: var(--plaza-text-dim);
+        }
+
+        .type-pill.Schema {
+            color: var(--plaza-schema);
+            border-color: rgba(16, 185, 129, 0.2);
+            background: rgba(16, 185, 129, 0.1);
+        }
+
+        .type-pill.Pulse {
+            color: var(--plaza-pulse);
+            border-color: rgba(245, 158, 11, 0.22);
+            background: rgba(245, 158, 11, 0.11);
+        }
+
+        .type-pill.Phema {
+            color: var(--plaza-phema);
+            border-color: rgba(15, 118, 110, 0.22);
+            background: rgba(15, 118, 110, 0.11);
+        }
+
+        .type-pill.Agent,
+        .type-pill.Pulser {
+            color: var(--plaza-agent);
+            border-color: rgba(31, 122, 255, 0.18);
+            background: rgba(31, 122, 255, 0.1);
+        }
+
+        .type-pill.Other {
+            color: #5879a6;
+            border-color: rgba(99, 213, 255, 0.2);
+            background: rgba(99, 213, 255, 0.09);
+        }
+
+        .nodes-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(285px, 1fr));
+            gap: 1rem;
+        }
+
+        .node-card {
+            position: relative;
+            border-radius: 20px;
+            padding: 1.1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.9rem;
+            min-height: 220px;
+        }
+
+        .node-card-header,
+        .node-card-footer,
+        .catalog-item-header,
+        .tab-item,
+        .editor-actions {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+        }
+
+        .node-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+        }
+
+        .node-description {
+            color: var(--plaza-text-dim);
+            font-size: 0.88rem;
+            line-height: 1.5;
+            min-height: 2.6rem;
+        }
+
+        .node-meta-line {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .heartbeat-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            font-size: 0.75rem;
+            border-radius: 999px;
+            padding: 0.45rem 0.75rem;
+            border: 1px solid rgba(31, 122, 255, 0.12);
+            background: rgba(247, 251, 255, 0.76);
+            color: var(--plaza-text-dim);
+        }
+
+        .heartbeat-pill.active {
+            color: var(--success);
+            border-color: rgba(19, 183, 122, 0.22);
+        }
+
+        .heartbeat-pill.inactive {
+            color: var(--plaza-warning);
+            border-color: rgba(239, 143, 52, 0.2);
+        }
+
+        .ghost-btn,
+        .tab-btn,
+        .page-link-btn,
+        .chip-btn {
+            background: linear-gradient(180deg, rgba(249, 252, 255, 0.92), rgba(241, 248, 255, 0.82));
+            color: var(--text-primary);
+            border: 1px solid var(--plaza-border);
+            box-shadow: none;
+        }
+
+        .ghost-btn:hover,
+        .tab-btn:hover,
+        .page-link-btn:hover,
+        .chip-btn:hover {
+            border-color: var(--plaza-border-strong);
+            transform: none;
+            box-shadow: 0 12px 24px rgba(31, 122, 255, 0.08);
+        }
+
+        .ghost-btn,
+        .page-link-btn,
+        .chip-btn {
+            min-width: auto;
+            padding: 0.7rem 0.95rem;
+            border-radius: 12px;
+            font-size: 0.86rem;
+            font-weight: 600;
+        }
+
+        .page-link-btn {
+            color: var(--accent-color);
+        }
+
+        .editor-layout {
+            display: grid;
+            grid-template-columns: 300px minmax(0, 1fr) 320px;
+            gap: 1rem;
+            min-height: 72vh;
+        }
+
+        .catalog-panel,
+        .workspace-panel,
+        .inspector-panel {
+            position: relative;
+            border-radius: 24px;
+            padding: 1.2rem;
+            min-height: 100%;
+        }
+
+        .panel-title {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .panel-title h3 {
+            font-size: 1rem;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+        }
+
+        .catalog-tools,
+        .workspace-tools {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .type-chip-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .chip-btn.active,
+        .tab-item.active {
+            border-color: var(--plaza-border-strong);
+            background: linear-gradient(135deg, rgba(31, 122, 255, 0.12), rgba(99, 213, 255, 0.16));
+            color: var(--accent-color);
+        }
+
+        .catalog-list {
+            max-height: calc(72vh - 160px);
+            overflow-y: auto;
+            padding-right: 0.2rem;
+        }
+
+        .catalog-item {
+            padding: 0.95rem;
+            border-radius: 18px;
+            border: 1px solid var(--plaza-border);
+            background: linear-gradient(180deg, rgba(250, 253, 255, 0.94), rgba(243, 249, 255, 0.82));
+            display: flex;
+            flex-direction: column;
+            gap: 0.7rem;
+        }
+
+        .catalog-name {
+            font-size: 0.95rem;
+            font-weight: 700;
+        }
+
+        .tab-strip {
+            display: flex;
+            gap: 0.6rem;
+            overflow-x: auto;
+            padding-bottom: 0.35rem;
+            margin-bottom: 1rem;
+        }
+
+        .tab-item {
+            min-width: 180px;
+            padding: 0.8rem 0.9rem;
+            border-radius: 16px;
+            border: 1px solid var(--plaza-border);
+            background: linear-gradient(180deg, rgba(250, 253, 255, 0.92), rgba(243, 249, 255, 0.82));
+            cursor: pointer;
+            flex: 0 0 auto;
+        }
+
+        .tab-copy {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            min-width: 0;
+        }
+
+        .tab-title {
+            font-size: 0.88rem;
+            font-weight: 700;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .tab-meta {
+            font-size: 0.72rem;
+            color: var(--plaza-text-faint);
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+        }
+
+        .tab-close {
+            min-width: auto;
+            padding: 0.45rem 0.6rem;
+            border-radius: 10px;
+            line-height: 1;
+        }
+
+        .dirty-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--plaza-pulse);
+            box-shadow: 0 0 12px rgba(99, 213, 255, 0.34);
+        }
+
+        .draft-note {
+            border-radius: 18px;
+            padding: 0.95rem 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .workspace-empty,
+        .empty-state-card {
+            min-height: 420px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            border: 1px dashed rgba(31, 122, 255, 0.18);
+            border-radius: 20px;
+            background: rgba(246, 251, 255, 0.58);
+            padding: 2rem;
+        }
+
+        .workspace-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1.1rem;
+        }
+
+        .editor-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.95rem;
+        }
+
+        .editor-grid .full-span {
+            grid-column: 1 / -1;
+        }
+
+        .field-card,
+        .inspector-block {
+            border-radius: 18px;
+            border: 1px solid var(--plaza-border);
+            background: linear-gradient(180deg, rgba(250, 253, 255, 0.92), rgba(242, 249, 255, 0.82));
+            padding: 1rem;
+        }
+
+        .field-card label,
+        .inspector-label {
+            display: block;
+            font-size: 0.74rem;
+            letter-spacing: 1.2px;
+            text-transform: uppercase;
+            color: var(--plaza-text-faint);
+            margin-bottom: 0.5rem;
+        }
+
+        .json-editor {
+            min-height: 180px;
+            resize: vertical;
+            font-family: var(--font-mono);
+            font-size: 0.84rem;
+            line-height: 1.5;
+        }
+
+        .error-text {
+            margin-top: 0.5rem;
+            color: var(--plaza-danger);
+            font-size: 0.8rem;
+        }
+
+        .inspector-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .inspector-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.55rem;
+        }
+
+        .inspector-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            font-size: 0.88rem;
+        }
+
+        .inspector-row span:first-child {
+            color: var(--plaza-text-faint);
+        }
+
+        .code-preview {
+            margin: 0;
+            white-space: pre-wrap;
+            word-break: break-word;
+            font-family: var(--font-mono);
+            font-size: 0.78rem;
+            line-height: 1.55;
+            color: #274467;
+        }
+
+        .empty-note {
+            padding: 1.2rem;
+            border: 1px dashed rgba(31, 122, 255, 0.18);
+            border-radius: 16px;
+            text-align: center;
+            background: rgba(246, 251, 255, 0.6);
+        }
+
+        .error-box {
+            border-radius: 16px;
+            padding: 1rem 1.1rem;
+            border: 1px solid rgba(228, 84, 119, 0.24);
+            background: rgba(228, 84, 119, 0.1);
+            color: #a83957;
+        }
+
+        .users-layout {
+            display: block;
+        }
+
+        .sidebar-auth-shell {
+            display: flex;
+            flex-direction: column;
+            gap: 0.85rem;
+            margin-top: 1rem;
+        }
+
+        .sidebar-auth-shell .auth-status-card,
+        .sidebar-auth-shell .users-panel {
+            padding: 1rem;
+            border-radius: 18px;
+        }
+
+        .sidebar-auth-shell .panel-title {
+            margin-bottom: 0.75rem;
+        }
+
+        .sidebar-auth-shell .panel-title h3 {
+            font-size: 0.88rem;
+        }
+
+        .sidebar-auth-shell .users-panel-stack,
+        .sidebar-auth-shell .auth-form-stack {
+            gap: 0.75rem;
+        }
+
+        .sidebar-auth-shell .field-card,
+        .sidebar-auth-shell .inspector-block {
+            padding: 0.85rem;
+            border-radius: 14px;
+        }
+
+        .sidebar-auth-shell .editor-input {
+            padding: 0.82rem 0.9rem;
+            font-size: 0.9rem;
+        }
+
+        .sidebar-auth-actions {
+            display: flex;
+            gap: 0.6rem;
+        }
+
+        .sidebar-auth-actions button {
+            flex: 1;
+        }
+
+        .users-panel,
+        .user-table-card,
+        .auth-status-card {
+            position: relative;
+            border-radius: 24px;
+            padding: 1.2rem;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(240, 248, 255, 0.8));
+            border: 1px solid var(--plaza-border);
+            backdrop-filter: blur(18px);
+            box-shadow:
+                0 22px 60px rgba(31, 122, 255, 0.09),
+                inset 0 1px 0 rgba(255, 255, 255, 0.82);
+        }
+
+        .users-panel-stack,
+        .users-table-stack,
+        .auth-form-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .auth-mode-tabs {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .auth-mode-btn {
+            flex: 1;
+        }
+
+        .users-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .user-table {
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+        }
+
+        .user-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1.3fr) 140px 140px 120px;
+            gap: 0.75rem;
+            align-items: center;
+            padding: 0.95rem;
+            border-radius: 18px;
+            border: 1px solid var(--plaza-border);
+            background: linear-gradient(180deg, rgba(250, 253, 255, 0.92), rgba(243, 249, 255, 0.82));
+        }
+
+        .user-row-header {
+            font-size: 0.74rem;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            color: var(--plaza-text-faint);
+            background: transparent;
+            border: none;
+            padding: 0 0.95rem;
+        }
+
+        .user-identity {
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+            min-width: 0;
+        }
+
+        .user-email {
+            font-size: 0.95rem;
+            font-weight: 700;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .user-detail {
+            color: var(--plaza-text-dim);
+            font-size: 0.82rem;
+        }
+
+        .user-row input,
+        .user-row select {
+            width: 100%;
+            min-width: 0;
+        }
+
+        .auth-session-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .session-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.45rem 0.7rem;
+            border-radius: 999px;
+            border: 1px solid var(--plaza-border);
+            background: linear-gradient(180deg, rgba(249, 252, 255, 0.92), rgba(241, 248, 255, 0.82));
+            color: var(--plaza-text-dim);
+            font-size: 0.75rem;
+        }
+
+        .session-pill.role-admin {
+            color: #d64f71;
+            border-color: rgba(214, 79, 113, 0.2);
+            background: rgba(214, 79, 113, 0.1);
+        }
+
+        .session-pill.role-moderator {
+            color: var(--plaza-pulse);
+            border-color: rgba(245, 158, 11, 0.2);
+            background: rgba(245, 158, 11, 0.1);
+        }
+
+        .session-pill.role-user {
+            color: var(--plaza-agent);
+            border-color: rgba(31, 122, 255, 0.18);
+            background: rgba(31, 122, 255, 0.1);
+        }
+
+        .toolbar-card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(237, 247, 255, 0.86));
+        }
+
+        .summary-card {
+            background: linear-gradient(160deg, rgba(255, 255, 255, 0.94), rgba(237, 247, 255, 0.86));
+        }
+
+        .catalog-panel,
+        .workspace-panel,
+        .inspector-panel,
+        .plaza-card,
+        .node-card,
+        .users-panel,
+        .user-table-card,
+        .auth-status-card,
+        .draft-note {
+            background: linear-gradient(160deg, rgba(255, 255, 255, 0.9), rgba(237, 247, 255, 0.84));
+        }
+
+        .page-link-btn {
+            background: linear-gradient(135deg, rgba(31, 122, 255, 0.12), rgba(99, 213, 255, 0.16));
+            color: var(--accent-color);
+            border-color: rgba(31, 122, 255, 0.16);
+        }
+
+        .primary-btn {
+            background: linear-gradient(135deg, #1f7aff 0%, #57b8ff 100%);
+            color: #f8fbff;
+            box-shadow: 0 14px 30px rgba(31, 122, 255, 0.22);
+            border: none;
+        }
+
+        .primary-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 18px 36px rgba(31, 122, 255, 0.28);
+        }
+
+        .inline-actions {
+            display: flex;
+            gap: 0.6rem;
+            flex-wrap: wrap;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        @media (max-width: 1380px) {
+            .editor-layout {
+                grid-template-columns: 280px minmax(0, 1fr);
+            }
+
+            .inspector-panel {
+                grid-column: 1 / -1;
+            }
+        }
+
+        @media (max-width: 1120px) {
+            .summary-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .editor-layout {
+                grid-template-columns: 1fr;
+            }
+
+            .catalog-list {
+                max-height: none;
+            }
+
+            .map-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 860px) {
+            .content-area.plaza-app {
+                margin-left: 0;
+                padding: 6.5rem 1rem 2rem;
+            }
+
+            .sidebar {
+                width: 100%;
+                height: auto;
+                padding: 1rem;
+                flex-direction: row;
+                align-items: center;
+                gap: 1rem;
+            }
+
+            .sidebar-header {
+                margin-bottom: 0;
+            }
+
+            .nav-links {
+                display: flex;
+                gap: 0.5rem;
+                flex: 1;
+                flex-wrap: wrap;
+            }
+
+            .nav-links li {
+                margin-bottom: 0;
+                padding: 0.85rem 1rem;
+            }
+
+            .sidebar-footer {
+                display: none;
+            }
+
+            .summary-grid,
+            .editor-grid,
+            .nodes-grid,
+            .user-row,
+            .pulser-builder {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar-auth-shell {
+                width: 100%;
+                order: 3;
+            }
+
+            .toolbar-actions {
+                margin-left: 0;
+                width: 100%;
+            }
+
+            .toolbar-actions button {
+                flex: 1 1 160px;
+            }
+        }
+    </style>
+</head>
+
+<body class="dark-theme">
+    <div class="glass-background"></div>
+    <div class="noise-overlay"></div>
+
+    <nav class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo-icon"></div>
+            <h3>at<span>tas</span></h3>
+        </div>
+        <ul class="nav-links">
+            <li class="active" data-page="monitor"><span class="icon-grid"></span> Monitor</li>
+            <li data-page="map"><span class="icon-grid"></span> Map</li>
+            <li data-page="editor"><span class="icon-layout"></span> Editor</li>
+            <li data-page="users"><span class="icon-piece"></span> Users</li>
+        </ul>
+        <div id="sidebar-auth-shell" class="sidebar-auth-shell hidden">
+            <section class="auth-status-card">
+                <div class="panel-title">
+                    <h3>Session</h3>
+                    <span id="auth-config-badge" class="chip">Checking</span>
+                </div>
+                <div id="auth-status-body" class="users-panel-stack"></div>
+            </section>
+
+            <section class="users-panel">
+                <div class="panel-title">
+                    <h3>Access</h3>
+                    <span class="chip">Password</span>
+                </div>
+                <div class="auth-mode-tabs">
+                    <button id="auth-mode-signin" class="ghost-btn auth-mode-btn">Sign In</button>
+                    <button id="auth-mode-signup" class="ghost-btn auth-mode-btn">Sign Up</button>
+                </div>
+                <form id="auth-form" class="auth-form-stack">
+                    <div class="field-card">
+                        <label>Email</label>
+                        <input id="auth-email" class="editor-input" type="email" autocomplete="email" required>
+                    </div>
+                    <div class="field-card">
+                        <label>Password</label>
+                        <input id="auth-password" class="editor-input" type="password" autocomplete="current-password" required>
+                    </div>
+                    <div id="auth-display-name-card" class="field-card hidden">
+                        <label>Display Name</label>
+                        <input id="auth-display-name" class="editor-input" type="text" autocomplete="name">
+                    </div>
+                    <div class="sidebar-auth-actions">
+                        <button id="auth-submit-btn" class="primary-btn" type="submit">Sign In</button>
+                        <button id="auth-signout-btn" class="ghost-btn hidden" type="button">Sign Out</button>
+                    </div>
+                    <div id="auth-message" class="muted-line"></div>
+                </form>
+            </section>
+        </div>
+        <div class="sidebar-footer">
+            <div class="status-badge"><span class="pulsar"></span> {{ agent_name.split('Agent')[0] }}</div>
+        </div>
+    </nav>
+
+    <main class="content-area plaza-app">
+        <section id="monitor-page" class="page active">
+            <div class="page-shell">
+                <header class="page-header">
+                    <div class="header-info">
+                        <h1>Neural <span>Registry</span></h1>
+                        <p class="subtitle">Plaza monitor, searchable directory, and live drafting handoff</p>
+                    </div>
+                    <div class="header-actions">
+                        <button id="jump-editor-btn" class="page-link-btn">Open Editor</button>
+                    </div>
+                </header>
+
+                <section class="toolbar-card">
+                    <div class="toolbar-input-wrap">
+                        <input id="monitor-search" class="toolbar-input" type="text"
+                            placeholder="Search nodes, owners, descriptions, or addresses">
+                    </div>
+                    <div class="toolbar-select-wrap">
+                        {% set pit_type_options = supported_pit_types if supported_pit_types is defined and supported_pit_types else ['Agent', 'Pulser', 'Schema', 'Pulse'] %}
+                        {% set type_state = namespace(agent_rendered=false) %}
+                        <select id="type-filter" class="toolbar-select">
+                            <option value="">All PIT types</option>
+                            {% for pit_type in pit_type_options %}
+                            {% if pit_type in ['Agent', 'Pulser'] %}
+                            {% if not type_state.agent_rendered %}
+                            <option value="Agent">Agent</option>
+                            {% set type_state.agent_rendered = true %}
+                            {% endif %}
+                            {% else %}
+                            <option value="{{ pit_type }}">{{ pit_type }}</option>
+                            {% endif %}
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <label class="toggle-control" for="show-inactive">
+                        <input type="checkbox" id="show-inactive">
+                        Show inactive agents
+                    </label>
+                    <div class="toolbar-actions">
+                        <button id="refresh-btn" class="primary-btn"><span class="icon-refresh"></span> Sync Nodes</button>
+                    </div>
+                </section>
+
+                <section id="summary-grid" class="summary-grid"></section>
+                <section id="monitor-plazas" class="monitor-stack"></section>
+            </div>
+        </section>
+
+        <section id="editor-page" class="page">
+            <div class="page-shell">
+                <header class="page-header">
+                    <div class="header-info">
+                        <h1>Schema &amp; Pulse <span>Editor</span></h1>
+                        <p class="subtitle">Multi-tab local drafting workspace for Plaza artifacts and future pit types</p>
+                    </div>
+                    <div class="header-actions">
+                        <button id="back-monitor-btn" class="page-link-btn">Back To Monitor</button>
+                    </div>
+                </header>
+
+                <section class="toolbar-card">
+                    <div class="toolbar-actions">
+                        <button class="ghost-btn" data-create-kind="Schema">New Schema</button>
+                        <button class="ghost-btn" data-create-kind="Pulse">New Pulse</button>
+                        <button class="ghost-btn" data-create-kind="Phema">New Phema</button>
+                        <button class="ghost-btn" data-create-kind="Custom">New Custom</button>
+                    </div>
+                    <div class="toolbar-actions">
+                        <button id="save-draft-btn" class="primary-btn">Save Draft</button>
+                        <button id="delete-draft-btn" class="ghost-btn">Delete</button>
+                        <button id="export-draft-btn" class="ghost-btn">Export JSON</button>
+                        <button id="reset-draft-btn" class="ghost-btn">Reset Draft</button>
+                    </div>
+                </section>
+
+                <div class="editor-layout">
+                    <aside class="catalog-panel">
+                        <div class="panel-title">
+                            <h3>Artifact Catalog</h3>
+                            <span id="catalog-count" class="chip">0 items</span>
+                        </div>
+                        <div class="catalog-tools">
+                            <input id="editor-search" class="catalog-search" type="text"
+                                placeholder="Search editable items">
+                            <div class="type-chip-row" id="catalog-kind-row">
+                                <button class="chip-btn active" data-kind-filter="All">All</button>
+                                <button class="chip-btn" data-kind-filter="Schema">Schema</button>
+                                <button class="chip-btn" data-kind-filter="Pulse">Pulse</button>
+                                <button class="chip-btn" data-kind-filter="Phema">Phema</button>
+                                <button class="chip-btn" data-kind-filter="Other">Other</button>
+                            </div>
+                        </div>
+                        <div id="catalog-list" class="catalog-list"></div>
+                    </aside>
+
+                    <section class="workspace-panel">
+                        <div class="panel-title">
+                            <h3>Workspace</h3>
+                            <span class="chip">Phema sync enabled</span>
+                        </div>
+                        <div class="draft-note">
+                            <div class="draft-caption">Drafts persist in browser storage. `Phema` drafts can also be saved into the Plaza directory; other artifact types remain local for now.</div>
+                        </div>
+                        <div id="tab-strip" class="tab-strip"></div>
+                        <div id="workspace-body"></div>
+                    </section>
+
+                    <aside class="inspector-panel">
+                        <div class="panel-title">
+                            <h3>Inspector</h3>
+                            <span id="validation-badge" class="chip">No draft</span>
+                        </div>
+                        <div id="inspector-body" class="inspector-stack"></div>
+                    </aside>
+                </div>
+            </div>
+        </section>
+
+        <section id="map-page" class="page">
+            <div class="page-shell">
+                <header class="page-header">
+                    <div class="header-info">
+                        <h1>Plaza <span>Map</span></h1>
+                        <p class="subtitle">Graph view of Plaza and active agent connections with hover details</p>
+                    </div>
+                    <div class="header-actions">
+                        <button id="back-monitor-from-map-btn" class="page-link-btn">Back To Monitor</button>
+                    </div>
+                </header>
+
+                <section class="toolbar-card">
+                    <div class="toolbar-input-wrap">
+                        <div class="muted-line">Hover an agent node to inspect the agent. Hover a connection point on the line to inspect connection details.</div>
+                    </div>
+                    <div class="toolbar-actions">
+                        <button id="refresh-map-btn" class="primary-btn"><span class="icon-refresh"></span> Refresh Map</button>
+                    </div>
+                </section>
+
+                <section id="map-shell" class="map-shell"></section>
+            </div>
+        </section>
+
+        <section id="users-page" class="page">
+            <div class="page-shell">
+                <header class="page-header">
+                    <div class="header-info">
+                        <h1>User <span>Management</span></h1>
+                        <p class="subtitle">Role-based access for admin, moderator, and user</p>
+                    </div>
+                    <div class="header-actions inline-actions">
+                        <button id="users-refresh-btn" class="ghost-btn">Refresh Users</button>
+                    </div>
+                </header>
+
+                <div class="users-layout">
+                    <section class="user-table-card">
+                        <div class="users-toolbar">
+                            <div>
+                                <h3 style="font-size:1rem;font-weight:700;">Directory</h3>
+                                <p class="muted-line">Role-aware user listing and inline updates.</p>
+                            </div>
+                            <span id="users-count" class="chip">0 users</span>
+                        </div>
+                        <div id="users-table-wrap"></div>
+                    </section>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const HEARTBEAT_ACTIVE_WINDOW_SEC = 60;
+        const STORAGE_KEYS = {
+            activePage: 'plaza.ui.activePage',
+            monitorSearch: 'plaza.ui.monitorSearch',
+            typeFilter: 'plaza.ui.typeFilter',
+            showInactive: 'plaza.ui.showInactive',
+            editorSearch: 'plaza.ui.editorSearch',
+            editorKindFilter: 'plaza.ui.editorKindFilter',
+            drafts: 'plaza.ui.drafts',
+            activeDraftId: 'plaza.ui.activeDraftId',
+            authSession: 'plaza.ui.authSession',
+            authMode: 'plaza.ui.authMode'
+        };
+
+        const EDITOR_DEFINITIONS = {
+            Schema: {
+                label: 'Schema',
+                createModel(source) {
+                    const meta = clone(source.meta || {});
+                    const schemaPayload = meta.schema || {};
+                    delete meta.schema;
+                    return {
+                        kind: 'Schema',
+                        name: source.name || 'Schema Draft',
+                        description: source.description || '',
+                        owner: source.owner || '',
+                        address: source.address || '',
+                        schema_name: source.meta?.schema_name || source.name || '',
+                        schema_kind: source.meta?.schema_kind || 'data',
+                        schema_json: prettyJson(schemaPayload),
+                        meta_json: prettyJson(meta)
+                    };
+                },
+                emptyModel() {
+                    return {
+                        kind: 'Schema',
+                        name: 'Schema Draft',
+                        description: '',
+                        owner: '',
+                        address: '',
+                        schema_name: 'new_schema',
+                        schema_kind: 'data',
+                        schema_json: prettyJson({ name: 'new_schema', description: '', primary_key: ['id'], rowSchema: {} }),
+                        meta_json: prettyJson({})
+                    };
+                }
+            },
+            Pulse: {
+                label: 'Pulse',
+                createModel(source) {
+                    const meta = clone(source.meta || {});
+                    const inputSchema = meta.input_schema || {};
+                    const outputSchema = meta.output_schema || {};
+                    const pulseAddress = meta.pulse_address || '';
+                    delete meta.input_schema;
+                    delete meta.output_schema;
+                    delete meta.pulse_address;
+                    return {
+                        kind: 'Pulse',
+                        name: source.name || 'Pulse Draft',
+                        description: source.description || '',
+                        owner: source.owner || '',
+                        address: source.address || '',
+                        pulse_address: pulseAddress,
+                        input_schema_json: prettyJson(inputSchema),
+                        output_schema_json: prettyJson(outputSchema),
+                        meta_json: prettyJson(meta)
+                    };
+                },
+                emptyModel() {
+                    return {
+                        kind: 'Pulse',
+                        name: 'Pulse Draft',
+                        description: '',
+                        owner: '',
+                        address: '',
+                        pulse_address: 'plaza://pulse/new_pulse',
+                        input_schema_json: prettyJson({}),
+                        output_schema_json: prettyJson({}),
+                        meta_json: prettyJson({})
+                    };
+                }
+            },
+            Phema: {
+                label: 'Phema',
+                createModel(source) {
+                    const meta = clone(source.meta || {});
+                    const sections = Array.isArray(meta.sections) ? meta.sections : [];
+                    const tags = Array.isArray(meta.tags) ? meta.tags : (Array.isArray(source.card?.tags) ? source.card.tags : []);
+                    delete meta.sections;
+                    delete meta.tags;
+                    return {
+                        kind: 'Phema',
+                        name: source.name || 'Phema Draft',
+                        description: source.description || '',
+                        owner: source.owner || '',
+                        address: source.address || '',
+                        tags_json: prettyJson(tags),
+                        sections_json: prettyJson(sections),
+                        meta_json: prettyJson(meta)
+                    };
+                },
+                emptyModel() {
+                    return {
+                        kind: 'Phema',
+                        name: 'Phema Draft',
+                        description: '',
+                        owner: '',
+                        address: '',
+                        tags_json: prettyJson([]),
+                        sections_json: prettyJson([
+                            {
+                                name: 'Section 1',
+                                description: '',
+                                modifier: '',
+                                content: []
+                            }
+                        ]),
+                        meta_json: prettyJson({})
+                    };
+                }
+            },
+            Custom: {
+                label: 'Custom',
+                createModel(source) {
+                    return {
+                        kind: source.kind || 'Custom',
+                        name: source.name || 'Custom Draft',
+                        description: source.description || '',
+                        owner: source.owner || '',
+                        address: source.address || '',
+                        meta_json: prettyJson(source.meta || {})
+                    };
+                },
+                emptyModel() {
+                    return {
+                        kind: 'Custom',
+                        name: 'Custom Draft',
+                        description: '',
+                        owner: '',
+                        address: '',
+                        meta_json: prettyJson({})
+                    };
+                }
+            }
+        };
+
+        const state = {
+            plazas: [],
+            items: [],
+            monitorSearch: '',
+            typeFilter: '',
+            showInactive: false,
+            editorSearch: '',
+            editorKindFilter: 'All',
+            activePage: 'monitor',
+            drafts: [],
+            activeDraftId: '',
+            authMode: 'signin',
+            authConfig: null,
+            authSession: null,
+            currentUser: null,
+            users: [],
+            authMessage: '',
+            usersMessage: '',
+            mapSearch: '',
+            mapLayouts: {}
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            restoreUiState();
+            bindStaticEvents();
+            setActivePage(state.activePage);
+            renderAll();
+            fetchStatus();
+            loadAuthState();
+        });
+
+        function bindStaticEvents() {
+            document.querySelectorAll('.nav-links li[data-page]').forEach((item) => {
+                item.addEventListener('click', () => setActivePage(item.dataset.page));
+            });
+
+            document.getElementById('jump-editor-btn').addEventListener('click', () => setActivePage('editor'));
+            document.getElementById('back-monitor-btn').addEventListener('click', () => setActivePage('monitor'));
+            document.getElementById('refresh-btn').addEventListener('click', fetchStatus);
+            document.getElementById('back-monitor-from-map-btn').addEventListener('click', () => setActivePage('monitor'));
+            document.getElementById('refresh-map-btn').addEventListener('click', fetchStatus);
+
+            document.getElementById('monitor-search').addEventListener('input', (event) => {
+                state.monitorSearch = event.target.value;
+                persistUiState();
+                renderMonitor();
+            });
+
+            document.getElementById('type-filter').addEventListener('change', (event) => {
+                state.typeFilter = event.target.value;
+                persistUiState();
+                renderMonitor();
+            });
+
+            document.getElementById('show-inactive').addEventListener('change', (event) => {
+                state.showInactive = event.target.checked;
+                persistUiState();
+                renderMonitor();
+            });
+
+            document.getElementById('editor-search').addEventListener('input', (event) => {
+                state.editorSearch = event.target.value;
+                persistUiState();
+                renderEditorCatalog();
+            });
+
+            document.getElementById('catalog-kind-row').addEventListener('click', (event) => {
+                const btn = event.target.closest('[data-kind-filter]');
+                if (!btn) return;
+                state.editorKindFilter = btn.dataset.kindFilter;
+                persistUiState();
+                renderEditorCatalog();
+            });
+
+            document.querySelectorAll('[data-create-kind]').forEach((button) => {
+                button.addEventListener('click', () => {
+                    if (button.dataset.createKind === 'Phema') {
+                        openPhemaEditor();
+                        return;
+                    }
+                    createDraft(button.dataset.createKind);
+                });
+            });
+
+            document.getElementById('save-draft-btn').addEventListener('click', saveActiveDraft);
+            document.getElementById('delete-draft-btn').addEventListener('click', deleteActiveDraft);
+            document.getElementById('export-draft-btn').addEventListener('click', exportActiveDraft);
+            document.getElementById('reset-draft-btn').addEventListener('click', resetActiveDraft);
+
+            document.getElementById('monitor-plazas').addEventListener('click', (event) => {
+                const openBtn = event.target.closest('[data-open-source]');
+                if (openBtn) {
+                    const source = findItem(openBtn.dataset.openSource);
+                    if (source?.kind === 'Phema') {
+                        openPhemaEditor(source.sourceKey);
+                        return;
+                    }
+                    openDraftForSource(openBtn.dataset.openSource);
+                    setActivePage('editor');
+                    return;
+                }
+
+                const pulserBtn = event.target.closest('[data-open-pulsers]');
+                if (pulserBtn) {
+                    let pulsers = [];
+                    try {
+                        pulsers = JSON.parse(pulserBtn.dataset.pulserPayload || '[]');
+                    } catch (error) {
+                        pulsers = [];
+                    }
+                    openPulserLookupWindow({
+                        sourceKey: pulserBtn.dataset.openPulsersSource || '',
+                        pulseName: pulserBtn.dataset.pulseName || '',
+                        pulseAddress: pulserBtn.dataset.pulseAddress || '',
+                        pulseDescription: pulserBtn.dataset.pulseDescription || '',
+                        pulsers
+                    });
+                }
+            });
+
+            document.getElementById('catalog-list').addEventListener('click', (event) => {
+                const openBtn = event.target.closest('[data-open-source]');
+                if (!openBtn) return;
+                const source = findItem(openBtn.dataset.openSource);
+                if (source?.kind === 'Phema') {
+                    openPhemaEditor(source.sourceKey);
+                    return;
+                }
+                openDraftForSource(openBtn.dataset.openSource);
+            });
+
+            document.getElementById('tab-strip').addEventListener('click', (event) => {
+                const closeBtn = event.target.closest('[data-close-draft]');
+                if (closeBtn) {
+                    event.stopPropagation();
+                    closeDraft(closeBtn.dataset.closeDraft);
+                    return;
+                }
+
+                const tabBtn = event.target.closest('[data-activate-draft]');
+                if (tabBtn) activateDraft(tabBtn.dataset.activateDraft);
+            });
+
+            document.getElementById('workspace-body').addEventListener('input', (event) => {
+                const target = event.target;
+                const draftId = target.dataset.draftId;
+                const field = target.dataset.field;
+                if (!draftId || !field) return;
+                updateDraftField(draftId, field, target.value);
+            });
+
+            document.getElementById('auth-mode-signin').addEventListener('click', () => setAuthMode('signin'));
+            document.getElementById('auth-mode-signup').addEventListener('click', () => setAuthMode('signup'));
+            document.getElementById('auth-form').addEventListener('submit', handleAuthSubmit);
+            document.getElementById('users-refresh-btn').addEventListener('click', loadUsersDirectory);
+            document.getElementById('auth-signout-btn').addEventListener('click', signOutUiUser);
+            document.getElementById('users-table-wrap').addEventListener('click', async (event) => {
+                const saveBtn = event.target.closest('[data-save-user]');
+                if (!saveBtn) return;
+                const userId = saveBtn.dataset.saveUser;
+                const row = document.querySelector(`[data-user-row="${CSS.escape(userId)}"]`);
+                if (!row) return;
+                await saveUserRow(row, userId);
+            });
+        }
+
+        function restoreUiState() {
+            state.monitorSearch = localStorage.getItem(STORAGE_KEYS.monitorSearch) || '';
+            state.typeFilter = localStorage.getItem(STORAGE_KEYS.typeFilter) || '';
+            state.showInactive = localStorage.getItem(STORAGE_KEYS.showInactive) === '1';
+            state.editorSearch = localStorage.getItem(STORAGE_KEYS.editorSearch) || '';
+            state.editorKindFilter = localStorage.getItem(STORAGE_KEYS.editorKindFilter) || 'All';
+            state.activePage = localStorage.getItem(STORAGE_KEYS.activePage) || 'monitor';
+            state.activeDraftId = localStorage.getItem(STORAGE_KEYS.activeDraftId) || '';
+            state.authMode = localStorage.getItem(STORAGE_KEYS.authMode) || 'signin';
+
+            const rawDrafts = localStorage.getItem(STORAGE_KEYS.drafts);
+            if (rawDrafts) {
+                try {
+                    const parsed = JSON.parse(rawDrafts);
+                    if (Array.isArray(parsed)) state.drafts = parsed;
+                } catch (_) {
+                    state.drafts = [];
+                }
+            }
+
+            const rawSession = localStorage.getItem(STORAGE_KEYS.authSession);
+            if (rawSession) {
+                try {
+                    state.authSession = JSON.parse(rawSession);
+                } catch (_) {
+                    state.authSession = null;
+                }
+            }
+
+            document.getElementById('monitor-search').value = state.monitorSearch;
+            document.getElementById('type-filter').value = state.typeFilter;
+            document.getElementById('show-inactive').checked = state.showInactive;
+            document.getElementById('editor-search').value = state.editorSearch;
+        }
+
+        function persistUiState() {
+            localStorage.setItem(STORAGE_KEYS.monitorSearch, state.monitorSearch);
+            localStorage.setItem(STORAGE_KEYS.typeFilter, state.typeFilter);
+            localStorage.setItem(STORAGE_KEYS.showInactive, state.showInactive ? '1' : '0');
+            localStorage.setItem(STORAGE_KEYS.editorSearch, state.editorSearch);
+            localStorage.setItem(STORAGE_KEYS.editorKindFilter, state.editorKindFilter);
+            localStorage.setItem(STORAGE_KEYS.activePage, state.activePage);
+            localStorage.setItem(STORAGE_KEYS.activeDraftId, state.activeDraftId || '');
+            localStorage.setItem(STORAGE_KEYS.drafts, JSON.stringify(state.drafts));
+            localStorage.setItem(STORAGE_KEYS.authMode, state.authMode);
+            if (state.authSession) {
+                localStorage.setItem(STORAGE_KEYS.authSession, JSON.stringify(state.authSession));
+            } else {
+                localStorage.removeItem(STORAGE_KEYS.authSession);
+            }
+        }
+
+        function setActivePage(page) {
+            const allowedPages = new Set(['monitor', 'map', 'editor', 'users']);
+            state.activePage = allowedPages.has(page) ? page : 'monitor';
+            document.querySelectorAll('.nav-links li[data-page]').forEach((item) => {
+                item.classList.toggle('active', item.dataset.page === state.activePage);
+            });
+            document.querySelectorAll('.page').forEach((pageNode) => {
+                pageNode.classList.toggle('active', pageNode.id === `${state.activePage}-page`);
+            });
+            document.getElementById('sidebar-auth-shell').classList.toggle('hidden', state.activePage !== 'users');
+            if (state.activePage === 'users') {
+                renderUsersPage();
+                if (state.authSession?.access_token) {
+                    loadUsersDirectory();
+                }
+            }
+            persistUiState();
+        }
+
+        async function fetchStatus() {
+            const container = document.getElementById('monitor-plazas');
+            if (!state.plazas.length) {
+                container.innerHTML = '<div class="empty-state-card"><div><div class="loader" style="display:block;margin:0 auto 1rem;"></div><p class="empty-note">Syncing Plaza monitor...</p></div></div>';
+            }
+
+            try {
+                const response = await fetch('/api/plazas_status');
+                const data = await response.json();
+                if (data.status !== 'success') throw new Error(data.message || 'Unexpected response');
+                state.plazas = Array.isArray(data.plazas) ? data.plazas : [];
+                state.items = flattenItems(state.plazas);
+                reconcileDraftSources();
+                renderAll();
+            } catch (error) {
+                container.innerHTML = `<div class="error-box">Failed to sync Plaza monitor: ${escapeHtml(error.message)}</div>`;
+            }
+        }
+
+        function flattenItems(plazas) {
+            const deduped = new Map();
+            plazas.forEach((plaza, plazaIndex) => {
+                (plaza.agents || []).forEach((entry, entryIndex) => {
+                    const card = entry.card || {};
+                    const kind = normalizeKind(entry.pit_type || card.pit_type || entry.type || 'Agent');
+                    const sourceKey = String(entry.agent_id || card.agent_id || `${plaza.url || 'plaza'}::${kind}::${entry.name || entryIndex}`);
+                    if (deduped.has(sourceKey)) return;
+                    deduped.set(sourceKey, {
+                        sourceKey,
+                        plazaKey: String(plaza.url || `plaza-${plazaIndex}`),
+                        plazaUrl: plaza.url || '',
+                        plazaName: plaza.card?.name || 'Plaza',
+                        plazaOnline: !!plaza.online,
+                        kind,
+                        name: entry.name || card.name || `${kind} ${entryIndex + 1}`,
+                        description: entry.description || card.description || '',
+                        owner: entry.owner || card.owner || entry.name || '',
+                        address: card.address || entry.address || '',
+                        meta: normalizeMeta(entry.meta || card.meta || {}),
+                        card,
+                        raw: entry,
+                        last_active: Number(entry.last_active || 0),
+                        practices: Array.isArray(card.practices) ? card.practices : [],
+                        availablePulserCount: Number(entry.available_pulser_count || 0),
+                        availablePulsers: Array.isArray(entry.available_pulsers) ? entry.available_pulsers : []
+                    });
+                });
+            });
+            return Array.from(deduped.values()).sort((a, b) => a.name.localeCompare(b.name));
+        }
+
+        function reconcileDraftSources() {
+            state.drafts = state.drafts.map((draft) => {
+                if (!draft.sourceKey || draft.isNew) return draft;
+                const source = findItem(draft.sourceKey);
+                if (!source) return draft;
+                return {
+                    ...draft,
+                    sourceSnapshot: {
+                        sourceKey: source.sourceKey,
+                        kind: source.kind,
+                        name: source.name,
+                        description: source.description,
+                        owner: source.owner,
+                        address: source.address,
+                        meta: source.meta,
+                        plazaUrl: source.plazaUrl,
+                        plazaName: source.plazaName,
+                        raw: source.raw
+                    }
+                };
+            });
+            if (state.activeDraftId && !state.drafts.some((draft) => draft.id === state.activeDraftId)) {
+                state.activeDraftId = state.drafts[0]?.id || '';
+            }
+            persistUiState();
+        }
+
+        function renderAll() {
+            renderMonitor();
+            renderMap();
+            renderEditorCatalog();
+            renderTabStrip();
+            renderWorkspaceBody();
+            renderInspector();
+            renderUsersPage();
+        }
+
+        async function loadAuthState() {
+            await fetchAuthConfig();
+            setAuthMode(state.authMode);
+            renderUsersPage();
+            if (state.authSession?.access_token) {
+                await fetchCurrentUiUser();
+                await loadUsersDirectory();
+            }
+        }
+
+        async function fetchAuthConfig() {
+            try {
+                const response = await fetch('/api/ui_auth/config');
+                const data = await response.json();
+                if (data.status === 'success') {
+                    state.authConfig = data;
+                }
+            } catch (error) {
+                state.authConfig = { auth_enabled: false, service_role_enabled: false, roles: ['admin', 'moderator', 'user'] };
+                state.authMessage = `Failed to load auth config: ${error.message}`;
+            }
+            renderUsersPage();
+        }
+
+        function setAuthMode(mode) {
+            state.authMode = mode === 'signup' ? 'signup' : 'signin';
+            document.getElementById('auth-mode-signin').classList.toggle('active', state.authMode === 'signin');
+            document.getElementById('auth-mode-signup').classList.toggle('active', state.authMode === 'signup');
+            document.getElementById('auth-display-name-card').classList.toggle('hidden', state.authMode !== 'signup');
+            document.getElementById('auth-submit-btn').textContent = state.authMode === 'signup' ? 'Create Account' : 'Sign In';
+            persistUiState();
+        }
+
+        async function handleAuthSubmit(event) {
+            event.preventDefault();
+            const endpoint = state.authMode === 'signup' ? '/api/ui_auth/signup' : '/api/ui_auth/signin';
+            const payload = {
+                email: document.getElementById('auth-email').value.trim(),
+                password: document.getElementById('auth-password').value,
+            };
+            if (state.authMode === 'signup') {
+                payload.display_name = document.getElementById('auth-display-name').value.trim();
+            }
+
+            state.authMessage = '';
+            renderUsersPage();
+
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.detail || data.message || 'Authentication request failed');
+                }
+                state.authSession = data.session || null;
+                state.currentUser = data.user || null;
+                state.authMessage = state.authMode === 'signup'
+                    ? 'Account created. You are signed in.'
+                    : 'Signed in successfully.';
+                persistUiState();
+                renderUsersPage();
+                await loadUsersDirectory();
+            } catch (error) {
+                state.authMessage = error.message;
+                renderUsersPage();
+            }
+        }
+
+        async function fetchCurrentUiUser() {
+            if (!state.authSession?.access_token) {
+                state.currentUser = null;
+                renderUsersPage();
+                return null;
+            }
+
+            try {
+                const response = await authFetch('/api/ui_auth/me');
+                if (!response.ok) {
+                    const data = await response.json();
+                    throw new Error(data.detail || 'Failed to load current user');
+                }
+                const data = await response.json();
+                state.currentUser = data.user || null;
+                persistUiState();
+                renderUsersPage();
+                return state.currentUser;
+            } catch (error) {
+                state.currentUser = null;
+                state.authSession = null;
+                state.authMessage = error.message;
+                persistUiState();
+                renderUsersPage();
+                return null;
+            }
+        }
+
+        async function loadUsersDirectory() {
+            if (!state.authSession?.access_token) {
+                state.users = [];
+                renderUsersPage();
+                return;
+            }
+
+            try {
+                const response = await authFetch('/api/ui_users');
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.detail || data.message || 'Failed to load users');
+                }
+                state.users = Array.isArray(data.users) ? data.users : [];
+                if (data.viewer) state.currentUser = data.viewer;
+                state.usersMessage = '';
+            } catch (error) {
+                state.users = [];
+                state.usersMessage = error.message;
+            }
+            persistUiState();
+            renderUsersPage();
+        }
+
+        async function signOutUiUser() {
+            state.authSession = null;
+            state.currentUser = null;
+            state.users = [];
+            state.authMessage = 'Signed out.';
+            persistUiState();
+            renderUsersPage();
+        }
+
+        async function saveUserRow(row, userId) {
+            try {
+                const payload = {
+                    display_name: row.querySelector('[data-user-display-name]')?.value ?? undefined,
+                    role: row.querySelector('[data-user-role]')?.value ?? undefined,
+                    status: row.querySelector('[data-user-status]')?.value ?? undefined,
+                };
+                const response = await authFetch(`/api/ui_users/${encodeURIComponent(userId)}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.detail || data.message || 'Failed to save user');
+                }
+                state.authMessage = 'User updated.';
+                await loadUsersDirectory();
+            } catch (error) {
+                state.authMessage = error.message;
+                renderUsersPage();
+            }
+        }
+
+        async function authFetch(url, options = {}) {
+            const headers = new Headers(options.headers || {});
+            if (state.authSession?.access_token) {
+                headers.set('Authorization', `Bearer ${state.authSession.access_token}`);
+            }
+            return fetch(url, { ...options, headers });
+        }
+
+        function renderUsersPage() {
+            renderAuthStatus();
+            renderUsersTable();
+            document.getElementById('auth-message').textContent = state.authMessage || '';
+            document.getElementById('auth-signout-btn').classList.toggle('hidden', !state.authSession?.access_token);
+            document.getElementById('users-refresh-btn').classList.toggle('hidden', !state.authSession?.access_token);
+        }
+
+        function renderAuthStatus() {
+            const badge = document.getElementById('auth-config-badge');
+            const body = document.getElementById('auth-status-body');
+            const config = state.authConfig || {};
+            badge.textContent = config.auth_enabled ? 'Access Ready' : 'Auth Unavailable';
+            badge.classList.toggle('active', !!config.auth_enabled);
+
+            if (!config.auth_enabled) {
+                body.innerHTML = '<div class="empty-note">Authentication is unavailable for this Plaza instance. Configure a compatible access provider first.</div>';
+                return;
+            }
+
+            const currentUser = state.currentUser;
+            if (!currentUser) {
+                body.innerHTML = `
+                    <div class="empty-note">No active session. Sign in or create an account to access role-aware user management.</div>
+                    <div class="auth-session-meta">
+                        <span class="session-pill">${config.service_role_enabled ? 'Managed access ready' : 'Standard access flow'}</span>
+                    </div>
+                `;
+                return;
+            }
+
+            body.innerHTML = `
+                <div>
+                    <div class="user-email">${escapeHtml(currentUser.email || currentUser.id)}</div>
+                    <div class="user-detail">${escapeHtml(currentUser.display_name || 'No display name')}</div>
+                </div>
+                <div class="auth-session-meta">
+                    <span class="session-pill role-${escapeHtml(currentUser.role)}">${escapeHtml(currentUser.role)}</span>
+                    <span class="session-pill">${escapeHtml(currentUser.status || 'active')}</span>
+                    ${config.service_role_enabled ? '<span class="session-pill">Managed access ready</span>' : '<span class="session-pill">Role directory enabled</span>'}
+                </div>
+            `;
+        }
+
+        function renderUsersTable() {
+            const wrap = document.getElementById('users-table-wrap');
+            const count = document.getElementById('users-count');
+            const users = Array.isArray(state.users) ? state.users : [];
+            const currentUser = state.currentUser;
+            const viewerRole = currentUser?.role || 'user';
+            count.textContent = `${users.length} user${users.length === 1 ? '' : 's'}`;
+
+            if (!state.authConfig?.auth_enabled) {
+                wrap.innerHTML = '<div class="empty-note">Auth is not configured for this Plaza instance.</div>';
+                return;
+            }
+
+            if (!state.authSession?.access_token) {
+                wrap.innerHTML = '<div class="empty-note">Sign in to load the user directory.</div>';
+                return;
+            }
+
+            if (state.usersMessage) {
+                wrap.innerHTML = `<div class="error-box">${escapeHtml(state.usersMessage)}</div>`;
+                return;
+            }
+
+            if (!users.length) {
+                wrap.innerHTML = '<div class="empty-note">No Plaza UI users found yet.</div>';
+                return;
+            }
+
+            wrap.innerHTML = `
+                <div class="user-table">
+                    <div class="user-row user-row-header">
+                        <div>Identity</div>
+                        <div>Display Name</div>
+                        <div>Role / Status</div>
+                        <div>Action</div>
+                    </div>
+                    ${users.map((user) => renderUserRow(user, currentUser, viewerRole)).join('')}
+                </div>
+            `;
+        }
+
+        function renderUserRow(user, currentUser, viewerRole) {
+            const canEditRole = viewerRole === 'admin' || (viewerRole === 'moderator' && user.role !== 'admin');
+            const canEditStatus = canEditRole;
+            const canEditName = viewerRole === 'admin' || viewerRole === 'moderator' || currentUser?.id === user.id;
+            const allowedRoles = ['admin', 'moderator', 'user'].filter((role) => {
+                if (role === user.role) return true;
+                return !(viewerRole !== 'admin' && role === 'admin');
+            });
+            const roleOptions = allowedRoles
+                .map((role) => `<option value="${role}" ${user.role === role ? 'selected' : ''}>${role}</option>`)
+                .join('');
+
+            return `
+                <div class="user-row" data-user-row="${escapeHtml(user.id)}">
+                    <div class="user-identity">
+                        <div class="user-email">${escapeHtml(user.email || user.id)}</div>
+                        <div class="user-detail">Created ${escapeHtml(user.created_at || 'n/a')}</div>
+                        <div class="user-detail">Last sign-in ${escapeHtml(user.last_sign_in_at || 'never')}</div>
+                    </div>
+                    <input class="editor-input" data-user-display-name value="${escapeAttribute(user.display_name || '')}" ${canEditName ? '' : 'disabled'}>
+                    <div class="users-panel-stack">
+                        <select class="editor-select" data-user-role ${canEditRole ? '' : 'disabled'}>${roleOptions}</select>
+                        <select class="editor-select" data-user-status ${canEditStatus ? '' : 'disabled'}>
+                            <option value="active" ${user.status === 'active' ? 'selected' : ''}>active</option>
+                            <option value="disabled" ${user.status === 'disabled' ? 'selected' : ''}>disabled</option>
+                        </select>
+                    </div>
+                    <button class="ghost-btn" data-save-user="${escapeHtml(user.id)}" ${(canEditName || canEditRole || canEditStatus) ? '' : 'disabled'}>Save</button>
+                </div>
+            `;
+        }
+
+        function renderMonitor() {
+            renderSummary();
+            const container = document.getElementById('monitor-plazas');
+            const query = state.monitorSearch.trim().toLowerCase();
+
+            const filteredPlazas = state.plazas.map((plaza, plazaIndex) => {
+                const nodes = (plaza.agents || []).filter((agent) => matchesMonitorFilters(agent, plaza, query));
+                return {
+                    ...plaza,
+                    filteredNodes: nodes,
+                    plazaKey: String(plaza.url || `plaza-${plazaIndex}`)
+                };
+            }).filter((plaza) => plaza.filteredNodes.length > 0 || !query);
+
+            if (!filteredPlazas.length) {
+                container.innerHTML = '<div class="empty-state-card"><div><p class="empty-note">No registry entries match the current monitor filters.</p></div></div>';
+                return;
+            }
+
+            container.innerHTML = filteredPlazas.map((plaza) => renderPlazaCard(plaza)).join('');
+            updateHeartbeatLabels();
+        }
+
+        function renderMap() {
+            const shell = document.getElementById('map-shell');
+            if (!shell) return;
+
+            if (!state.plazas.length) {
+                shell.innerHTML = '<div class="map-board"><div class="map-empty"><div><p class="empty-note">Sync Plaza status to render the map.</p></div></div></div>';
+                return;
+            }
+
+            const graphCards = state.plazas.map((plaza, plazaIndex) => renderPlazaMapGraph(plaza, plazaIndex)).join('');
+            shell.innerHTML = `
+                <section class="map-board">
+                    <div class="map-grid">
+                        ${graphCards}
+                    </div>
+                </section>
+            `;
+            bindMapInteractions();
+        }
+
+        function renderPlazaMapGraph(plaza, plazaIndex) {
+            const activeAgents = (plaza.agents || []).filter((entry) => {
+                const kind = normalizeKind(entry.pit_type || entry.card?.pit_type || entry.type || 'Agent');
+                if (!tracksHeartbeat(kind)) return false;
+                return heartbeatState(Number(entry.last_active || 0)) === 'active';
+            });
+
+            const graphId = `plaza-map-${plazaIndex}`;
+            if (!activeAgents.length) {
+                return `
+                    <article class="map-graph-card">
+                        <div class="map-graph-header">
+                            <div>
+                                <h2>${escapeHtml(plaza.card?.name || 'Plaza')}</h2>
+                                <div class="map-graph-meta">${escapeHtml(plaza.url || 'No URL')}</div>
+                            </div>
+                            <span class="plaza-health ${plaza.online ? 'online' : ''}">
+                                <span class="health-dot"></span>
+                                ${plaza.online ? 'Online' : 'Offline'}
+                            </span>
+                        </div>
+                        <div class="map-empty">No active agents are currently connected to this Plaza.</div>
+                    </article>
+                `;
+            }
+
+            const width = 900;
+            const height = 640;
+            const centerX = width / 2;
+            const centerY = height / 2;
+            const lineMarkup = [];
+            const nodeMarkup = [];
+            const plazaKey = String(plaza.url || `plaza-${plazaIndex}`);
+
+            const plazaTooltip = renderMapTooltip({
+                title: plaza.card?.name || 'Plaza',
+                copy: plaza.card?.description || 'Registry hub for connected agents.',
+                rows: [
+                    `URL: ${plaza.url || 'Unavailable'}`,
+                    `Status: ${plaza.online ? 'Online' : 'Offline'}`,
+                    `Active agents: ${activeAgents.length}`
+                ]
+            });
+
+            nodeMarkup.push(`
+                <div class="map-node plaza-node" style="left:${centerX}px;top:${centerY}px;">
+                    <button class="map-node-trigger" type="button">
+                        <span class="map-node-core">
+                            ${renderMapAvatar({ imageName: 'plaza.jpg', fallbackLabel: 'P', alt: 'Plaza' })}
+                        </span>
+                        <span class="map-node-label">${escapeHtml(plaza.card?.name || 'Plaza')}</span>
+                        ${plazaTooltip}
+                    </button>
+                </div>
+            `);
+
+            activeAgents.forEach((agent, index) => {
+                const nodeKey = String(agent.agent_id || agent.card?.agent_id || `${plazaKey}-agent-${index}`);
+                const layout = getMapNodeLayout({
+                    plazaKey,
+                    nodeKey,
+                    index,
+                    count: activeAgents.length,
+                    centerX,
+                    centerY,
+                    width,
+                    height
+                });
+                const x = layout.x;
+                const y = layout.y;
+                const midX = centerX + (x - centerX) * 0.54;
+                const midY = centerY + (y - centerY) * 0.54;
+                const card = agent.card || {};
+                const rawKind = rawPitType(agent);
+                const status = heartbeatState(Number(agent.last_active || 0));
+                const visual = resolveMapAgentVisual(agent);
+                const supportedPulseCount = Array.isArray(card.meta?.supported_pulses)
+                    ? card.meta.supported_pulses.length
+                    : Array.isArray(agent.meta?.supported_pulses)
+                        ? agent.meta.supported_pulses.length
+                        : 0;
+
+                lineMarkup.push(`
+                    <line class="map-line ${status}" data-map-line="${escapeAttribute(nodeKey)}" x1="${centerX}" y1="${centerY}" x2="${x}" y2="${y}"></line>
+                `);
+
+                nodeMarkup.push(`
+                    <button class="map-link-trigger ${status === 'inactive' ? 'inactive' : ''}" data-map-link="${escapeAttribute(nodeKey)}" type="button" style="left:${midX}px;top:${midY}px;">
+                        ${renderMapTooltip({
+                    title: `${agent.name || card.name || 'Agent'} connection`,
+                    copy: 'Connection between the agent and Plaza.',
+                    rows: [
+                        `Plaza: ${plaza.url || 'Unavailable'}`,
+                        `Agent address: ${card.address || agent.address || 'Unavailable'}`,
+                        `Practices: ${Array.isArray(card.practices) ? card.practices.length : 0}`,
+                        `Heartbeat: ${renderHeartbeatCopy(Number(agent.last_active || 0))}`
+                    ]
+                })}
+                    </button>
+                `);
+
+                nodeMarkup.push(`
+                    <div class="map-node agent-node ${status === 'inactive' ? 'inactive-node' : ''}" data-map-node="${escapeAttribute(nodeKey)}" style="left:${x}px;top:${y}px;">
+                        <button class="map-node-trigger" data-draggable="true" data-map-plaza-key="${escapeAttribute(plazaKey)}" data-map-node-key="${escapeAttribute(nodeKey)}" type="button">
+                            <span class="map-node-core">
+                                ${renderMapAvatar({ imageName: visual.image, fallbackLabel: visual.fallback, alt: visual.alt })}
+                            </span>
+                            <span class="map-node-label">${escapeHtml(agent.name || card.name || `Agent ${index + 1}`)}</span>
+                            ${renderMapTooltip({
+                    title: agent.name || card.name || 'Agent',
+                    copy: agent.description || card.description || 'No description registered.',
+                    rows: [
+                        `Type: ${rawKind}`,
+                        `Owner: ${card.owner || agent.owner || 'Unknown'}`,
+                        `Address: ${card.address || agent.address || 'Unavailable'}`,
+                        `Heartbeat: ${renderHeartbeatCopy(Number(agent.last_active || 0))}`,
+                        `Practices: ${Array.isArray(card.practices) ? card.practices.length : 0}`,
+                        rawKind === 'Pulser' ? `Supported pulses: ${supportedPulseCount}` : ''
+                    ].filter(Boolean)
+                })}
+                        </button>
+                    </div>
+                `);
+            });
+
+            return `
+                <article class="map-graph-card" id="${escapeAttribute(graphId)}">
+                    <div class="map-graph-header">
+                        <div>
+                            <h2>${escapeHtml(plaza.card?.name || 'Plaza')}</h2>
+                            <div class="map-graph-meta">${escapeHtml(plaza.url || 'No URL')}</div>
+                        </div>
+                        <span class="plaza-health ${plaza.online ? 'online' : ''}">
+                            <span class="health-dot"></span>
+                            ${plaza.online ? 'Online' : 'Offline'}
+                        </span>
+                    </div>
+                    <div class="map-graph-stage" data-map-graph="${escapeAttribute(plazaKey)}" data-center-x="${centerX}" data-center-y="${centerY}">
+                        <div class="map-orbit"></div>
+                        <svg class="map-connections" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">
+                            ${lineMarkup.join('')}
+                        </svg>
+                        <div class="map-layer">
+                            ${nodeMarkup.join('')}
+                        </div>
+                    </div>
+                </article>
+            `;
+        }
+
+        function renderMapAvatar({ imageName = '', fallbackLabel = 'A', alt = 'Agent' }) {
+            const src = `/static/${imageName}`;
+            return `
+                <img class="map-avatar" src="${escapeAttribute(src)}" alt="${escapeAttribute(alt)}" onerror="this.classList.add('hidden'); this.nextElementSibling.classList.remove('hidden'); this.nextElementSibling.classList.add('visible');">
+                <span class="map-avatar-fallback hidden" aria-hidden="true">${escapeHtml(fallbackLabel)}</span>
+            `;
+        }
+
+        function renderMapTooltip({ title = '', copy = '', rows = [] }) {
+            return `
+                <div class="map-tooltip" role="tooltip">
+                    <div class="map-tooltip-panel">
+                        <div class="map-tooltip-title">${escapeHtml(title)}</div>
+                        ${copy ? `<div class="map-tooltip-copy">${escapeHtml(copy)}</div>` : ''}
+                        <div class="map-tooltip-list">
+                            ${rows.map((row) => `<div>${escapeHtml(row)}</div>`).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function bindMapInteractions() {
+            document.querySelectorAll('.map-node-trigger[data-draggable="true"]').forEach((trigger) => {
+                if (trigger.dataset.mapBound === '1') return;
+                trigger.dataset.mapBound = '1';
+                trigger.addEventListener('pointerdown', beginMapDrag);
+            });
+        }
+
+        function beginMapDrag(event) {
+            if (event.button !== 0) return;
+            const trigger = event.currentTarget;
+            const node = trigger.closest('.map-node[data-map-node]');
+            const graph = trigger.closest('[data-map-graph]');
+            if (!node || !graph) return;
+
+            event.preventDefault();
+            const nodeKey = trigger.dataset.mapNodeKey || '';
+            const plazaKey = trigger.dataset.mapPlazaKey || '';
+            const graphRect = graph.getBoundingClientRect();
+
+            node.classList.add('dragging');
+            trigger.setPointerCapture?.(event.pointerId);
+
+            const move = (moveEvent) => {
+                const x = clamp(moveEvent.clientX - graphRect.left, 76, graphRect.width - 76);
+                const y = clamp(moveEvent.clientY - graphRect.top, 76, graphRect.height - 76);
+                updateMapNodePosition(graph, nodeKey, x, y);
+                setMapNodeLayout(plazaKey, nodeKey, x, y);
+            };
+
+            const cleanup = () => {
+                node.classList.remove('dragging');
+                trigger.releasePointerCapture?.(event.pointerId);
+                window.removeEventListener('pointermove', move);
+                window.removeEventListener('pointerup', up);
+                window.removeEventListener('pointercancel', up);
+            };
+
+            const up = () => cleanup();
+
+            window.addEventListener('pointermove', move);
+            window.addEventListener('pointerup', up);
+            window.addEventListener('pointercancel', up);
+        }
+
+        function updateMapNodePosition(graph, nodeKey, x, y) {
+            const node = graph.querySelector(`[data-map-node="${CSS.escape(nodeKey)}"]`);
+            const line = graph.querySelector(`[data-map-line="${CSS.escape(nodeKey)}"]`);
+            const link = graph.querySelector(`[data-map-link="${CSS.escape(nodeKey)}"]`);
+            if (node) {
+                node.style.left = `${x}px`;
+                node.style.top = `${y}px`;
+            }
+            const centerX = Number(graph.dataset.centerX || 0);
+            const centerY = Number(graph.dataset.centerY || 0);
+            if (line) {
+                line.setAttribute('x2', String(x));
+                line.setAttribute('y2', String(y));
+            }
+            if (link) {
+                const midX = centerX + (x - centerX) * 0.54;
+                const midY = centerY + (y - centerY) * 0.54;
+                link.style.left = `${midX}px`;
+                link.style.top = `${midY}px`;
+            }
+        }
+
+        function getMapNodeLayout({ plazaKey = '', nodeKey = '', index = 0, count = 1, centerX = 450, centerY = 320, width = 900, height = 640 }) {
+            const saved = state.mapLayouts?.[plazaKey]?.[nodeKey];
+            if (saved && Number.isFinite(saved.x) && Number.isFinite(saved.y)) {
+                return saved;
+            }
+            const radius = Math.min(width, height) * 0.4;
+            const angle = (-Math.PI / 2) + ((Math.PI * 2) / Math.max(count, 1)) * index;
+            return {
+                x: centerX + Math.cos(angle) * radius,
+                y: centerY + Math.sin(angle) * radius
+            };
+        }
+
+        function setMapNodeLayout(plazaKey, nodeKey, x, y) {
+            if (!plazaKey || !nodeKey) return;
+            if (!state.mapLayouts[plazaKey]) state.mapLayouts[plazaKey] = {};
+            state.mapLayouts[plazaKey][nodeKey] = { x, y };
+        }
+
+        function resolveMapAgentVisual(agent) {
+            const rawKind = rawPitType(agent).toLowerCase();
+            const card = agent.card || {};
+            const text = [
+                agent.name,
+                agent.owner,
+                agent.description,
+                card.name,
+                card.owner,
+                card.description
+            ].join(' ').toLowerCase();
+
+            if (rawKind === 'pulser' || text.includes('pulser')) {
+                return { image: 'pulser.jpg', fallback: 'PU', alt: 'Pulser agent' };
+            }
+            if (text.includes('phemar')) {
+                return { image: 'phemar.jpg', fallback: 'PH', alt: 'Phemar agent' };
+            }
+            if (text.includes('castr')) {
+                return { image: 'castr.jpg', fallback: 'CA', alt: 'Castr agent' };
+            }
+            return { image: 'pulser.jpg', fallback: 'AG', alt: 'Agent' };
+        }
+
+        function clamp(value, min, max) {
+            return Math.min(Math.max(value, min), max);
+        }
+
+        function renderSummary() {
+            const grid = document.getElementById('summary-grid');
+            const onlinePlazas = state.plazas.filter((plaza) => plaza.online).length;
+            const totalItems = state.items.length;
+            const activeItems = state.items.filter((item) => !tracksHeartbeat(item.kind) || heartbeatState(item.last_active) === 'active').length;
+            const schemaCount = state.items.filter((item) => item.kind === 'Schema').length;
+            const pulseCount = state.items.filter((item) => item.kind === 'Pulse').length;
+
+            const cards = [
+                { label: 'Online Plazas', value: onlinePlazas, meta: `${state.plazas.length} total attached plazas` },
+                { label: 'Registered Nodes', value: totalItems, meta: `${activeItems} currently available` },
+                { label: 'Schema Items', value: schemaCount, meta: 'Ready for structured editing' },
+                { label: 'Pulse Items', value: pulseCount, meta: 'Draftable with input/output schemas' }
+            ];
+
+            grid.innerHTML = cards.map((card) => `
+                <article class="summary-card">
+                    <span class="summary-label">${escapeHtml(card.label)}</span>
+                    <span class="summary-value">${escapeHtml(card.value)}</span>
+                    <span class="summary-meta">${escapeHtml(card.meta)}</span>
+                </article>
+            `).join('');
+        }
+
+        function matchesMonitorFilters(agent, plaza, query) {
+            const card = agent.card || {};
+            const kind = normalizeKind(agent.pit_type || card.pit_type || agent.type || 'Agent');
+            const haystack = [
+                agent.name,
+                agent.description,
+                agent.owner,
+                card.owner,
+                card.address,
+                card.description,
+                JSON.stringify(agent.meta || {}),
+                JSON.stringify(card.meta || {})
+            ].join(' ').toLowerCase();
+
+            if (state.typeFilter && kind !== state.typeFilter) return false;
+            if (tracksHeartbeat(kind) && !state.showInactive && agent.last_active && heartbeatState(agent.last_active) === 'inactive') return false;
+            if (query && !haystack.includes(query)) return false;
+            return true;
+        }
+
+        function renderPlazaCard(plaza) {
+            const nodes = (plaza.filteredNodes || []).map((agent, index) => renderNodeCard(plaza, agent, index)).join('');
+            const allKinds = new Set((plaza.filteredNodes || []).map((agent) => normalizeKind(agent.pit_type || agent.card?.pit_type || agent.type || 'Agent')));
+            return `
+                <article class="plaza-card">
+                    <div class="plaza-card-header">
+                        <div class="plaza-title-block">
+                            <h2>${escapeHtml(plaza.card?.name || 'Plaza')}</h2>
+                            <p class="muted-line">${escapeHtml(plaza.url || 'No URL')}</p>
+                        </div>
+                        <div class="plaza-health ${plaza.online ? 'online' : ''}">
+                            <span class="health-dot"></span>
+                            ${plaza.online ? 'Online' : 'Offline'}
+                        </div>
+                    </div>
+                    <div class="plaza-stats">
+                        <span class="stat-pill">${plaza.filteredNodes?.length || 0} visible nodes</span>
+                        <span class="stat-pill">${allKinds.size || 0} pit types</span>
+                        <span class="stat-pill">${(plaza.filteredNodes || []).filter((node) => {
+                            const nodeKind = normalizeKind(node.pit_type || node.card?.pit_type || node.type || 'Agent');
+                            return !tracksHeartbeat(nodeKind) || heartbeatState(node.last_active) === 'active';
+                        }).length} available</span>
+                    </div>
+                    <div class="nodes-grid">${nodes || '<div class="empty-note">No nodes match the current filters.</div>'}</div>
+                </article>
+            `;
+        }
+
+        function renderNodeCard(plaza, agent, index) {
+            const card = agent.card || {};
+            const rawKind = rawPitType(agent);
+            const kind = normalizeKind(rawKind);
+            const sourceKey = String(agent.agent_id || card.agent_id || `${plaza.url || 'plaza'}::${kind}::${agent.name || index}`);
+            const item = findItem(sourceKey);
+            const hasEditor = !!item;
+            const lastActive = Number(agent.last_active || 0);
+            const status = lastActive ? heartbeatState(lastActive) : 'registered';
+            const tracksAgentHeartbeat = tracksHeartbeat(kind);
+            const practiceCount = Array.isArray(card.practices) ? card.practices.length : 0;
+            const pulseName = agent.name || card.name || '';
+            const pulseAddress = card.meta?.pulse_address || agent.meta?.pulse_address || card.address || agent.address || '';
+            const canLookupPulsers = rawKind === 'Pulse';
+            const availablePulsers = Array.isArray(agent.available_pulsers)
+                ? agent.available_pulsers
+                : Array.isArray(item?.availablePulsers)
+                    ? item.availablePulsers
+                    : [];
+            const activePulserCount = availablePulsers.filter((pulser) => popupHeartbeatState(Number(pulser.last_active || 0)) === 'active').length;
+            const availablePulserCount = activePulserCount;
+            const phemaModeBadge = rawKind === 'Phema' ? renderPhemaModeBadge(agent, card) : '';
+            const nonHeartbeatStatusLabel = rawKind === 'Phema'
+                ? (renderPhemaModeLabel(agent, card) || 'Registered')
+                : 'Registered';
+
+            return `
+                <article class="node-card">
+                    <div class="node-card-header">
+                        <span class="type-pill ${escapeHtml(rawKind === 'Pulser' ? 'Pulser' : kind)}">${escapeHtml(rawKind === 'Pulser' ? 'Pulser' : kind)}</span>
+                        <span class="status-pill">${practiceCount} practices</span>
+                    </div>
+                    <div>
+                        <div class="node-title">${escapeHtml(agent.name || card.name || `${kind} ${index + 1}`)}</div>
+                        <div class="node-description">${escapeHtml(agent.description || card.description || 'No description registered.')}</div>
+                    </div>
+                    <div class="node-meta-line">
+                        ${card.owner || agent.owner ? `<span class="chip">${escapeHtml(card.owner || agent.owner)}</span>` : ''}
+                        ${phemaModeBadge}
+                        ${card.address ? `<span class="chip">${escapeHtml(card.address)}</span>` : ''}
+                    </div>
+                    <div class="node-card-footer">
+                        ${tracksAgentHeartbeat
+                    ? `<span class="heartbeat-pill ${status}" data-last-active="${lastActive}">
+                                <span class="heartbeat-dot"></span>
+                                <span class="heartbeat-copy">${escapeHtml(renderHeartbeatCopy(lastActive))}</span>
+                            </span>`
+                    : `<span class="status-pill">${escapeHtml(nonHeartbeatStatusLabel)}</span>`}
+                        <div class="inline-actions">
+                            ${canLookupPulsers
+                    ? `<button class="ghost-btn" data-open-pulsers="1" data-open-pulsers-source="${escapeAttribute(sourceKey)}" data-pulser-payload="${escapeAttribute(JSON.stringify(availablePulsers))}" data-pulse-name="${escapeAttribute(pulseName)}" data-pulse-address="${escapeAttribute(pulseAddress)}" data-pulse-description="${escapeAttribute(agent.description || card.description || '')}">Pulsers (${availablePulserCount})</button>`
+                    : ''}
+                            ${hasEditor ? `<button class="ghost-btn" data-open-source="${escapeHtml(sourceKey)}">Open Editor</button>` : ''}
+                        </div>
+                    </div>
+                </article>
+            `;
+        }
+
+        function openPulserLookupWindow({ sourceKey = '', pulseName = '', pulseAddress = '', pulseDescription = '', pulsers = [] }) {
+            const popupTitle = pulseName || pulseAddress || 'Pulse';
+            const popup = window.open('', `pulse-pulsers-${sanitizeFilename(popupTitle)}`, 'popup=yes,width=640,height=760,resizable=yes,scrollbars=yes');
+            if (!popup) {
+                state.authMessage = 'Popup blocked. Allow popups to view pulser options for this pulse.';
+                renderUsersPage();
+                return;
+            }
+
+            popup.document.write(renderPulserLookupDocument({
+                title: popupTitle,
+                pulseAddress,
+                pulseDescription,
+                baseUrl: window.location.origin,
+                body: '<div class="popup-note">Loading available pulsers...</div>'
+            }));
+            popup.document.close();
+            loadPulserLookupResults({ popup, sourceKey, pulseName, pulseAddress, pulseDescription, pulsers });
+        }
+
+        async function loadPulserLookupResults({ popup, sourceKey = '', pulseName = '', pulseAddress = '', pulseDescription = '', pulsers = [] }) {
+            try {
+                const pulseItem = sourceKey ? findItem(sourceKey) : null;
+                const resolvedPulsers = Array.isArray(pulsers) && pulsers.length
+                    ? pulsers
+                    : Array.isArray(pulseItem?.availablePulsers)
+                        ? pulseItem.availablePulsers
+                        : Array.isArray(pulseItem?.raw?.available_pulsers)
+                            ? pulseItem.raw.available_pulsers
+                            : [];
+                const pulseDefinition = resolvePulseSummaryDefinition(pulseItem, resolvedPulsers, pulseName, pulseAddress);
+                if (popup.closed) return;
+                popup.document.open();
+                popup.document.write(renderPulserLookupDocument({
+                    title: pulseName || pulseAddress || 'Pulse',
+                    pulseAddress,
+                    pulseDescription,
+                    pulseDefinition,
+                    baseUrl: window.location.origin,
+                    availableBody: renderPulserLookupBody(resolvedPulsers, pulseName, pulseAddress),
+                    batchBody: renderPulserBatchBody(resolvedPulsers, pulseDefinition, pulseName, pulseAddress)
+                }));
+                popup.document.close();
+            } catch (error) {
+                if (popup.closed) return;
+                popup.document.open();
+                popup.document.write(renderPulserLookupDocument({
+                    title: pulseName || pulseAddress || 'Pulse',
+                    pulseAddress,
+                    pulseDescription,
+                    pulseDefinition: {},
+                    baseUrl: window.location.origin,
+                    availableBody: `<div class="popup-error">${escapeHtml(error.message)}</div>`,
+                    batchBody: `<div class="popup-error">${escapeHtml(error.message)}</div>`
+                }));
+                popup.document.close();
+            }
+        }
+
+        function resolvePulseSummaryDefinition(pulseItem, pulsers = [], pulseName = '', pulseAddress = '') {
+            const pulseMeta = pulseItem && typeof pulseItem.meta === 'object' && !Array.isArray(pulseItem.meta)
+                ? pulseItem.meta
+                : pulseItem && pulseItem.raw && typeof pulseItem.raw.meta === 'object' && !Array.isArray(pulseItem.raw.meta)
+                    ? pulseItem.raw.meta
+                    : {};
+            const pulseCard = pulseItem && pulseItem.raw && typeof pulseItem.raw.card === 'object' && !Array.isArray(pulseItem.raw.card)
+                ? pulseItem.raw.card
+                : {};
+            const definition = {
+                pulse_id: pulseAddress || pulseMeta.pulse_address || pulseCard.address || pulseItem?.address || '',
+                pulse_name: pulseName || pulseItem?.name || '',
+                input_schema: pulseMeta.input_schema,
+                output_schema: pulseMeta.output_schema,
+            };
+            if (definition.pulse_id || definition.input_schema || definition.output_schema) {
+                return definition;
+            }
+            const fallback = Array.isArray(pulsers)
+                ? pulsers.map((pulser) => resolvePulserDefinition(pulser, pulseName, pulseAddress)).find((entry) => entry && Object.keys(entry).length)
+                : null;
+            return fallback || {};
+        }
+
+        function resolvePulserDefinition(pulser, pulseName = '', pulseAddress = '') {
+            const direct = pulser && typeof pulser.pulse_definition === 'object' && !Array.isArray(pulser.pulse_definition)
+                ? pulser.pulse_definition
+                : {};
+            if (Object.keys(direct).length) return direct;
+
+            const meta = pulser && typeof pulser.meta === 'object' && !Array.isArray(pulser.meta) ? pulser.meta : {};
+            const supported = Array.isArray(meta.supported_pulses) ? meta.supported_pulses : [];
+            return supported.find((entry) => {
+                if (!entry || typeof entry !== 'object') return false;
+                const entryName = entry.pulse_name || entry.name || '';
+                const entryAddress = entry.pulse_address || '';
+                if (pulseName && !containsText(entryName, pulseName)) return false;
+                if (pulseAddress && entryAddress && !samePitRef(entryAddress, pulseAddress)) return false;
+                return true;
+            }) || {};
+        }
+
+        function derivePulserTestPayload(definition) {
+            if (definition && typeof definition.test_data === 'object' && !Array.isArray(definition.test_data)) {
+                return definition.test_data;
+            }
+            const schema = definition && typeof definition.input_schema === 'object' && !Array.isArray(definition.input_schema)
+                ? definition.input_schema
+                : {};
+            const properties = schema && typeof schema.properties === 'object' && !Array.isArray(schema.properties)
+                ? schema.properties
+                : {};
+            const payload = {};
+            Object.entries(properties).forEach(([key, value]) => {
+                if (!value || typeof value !== 'object') {
+                    payload[key] = '';
+                    return;
+                }
+                if (value.default !== undefined) {
+                    payload[key] = value.default;
+                    return;
+                }
+                if (value.examples && Array.isArray(value.examples) && value.examples.length) {
+                    payload[key] = value.examples[0];
+                    return;
+                }
+                if (value.enum && Array.isArray(value.enum) && value.enum.length) {
+                    payload[key] = value.enum[0];
+                    return;
+                }
+                payload[key] = value.type === 'number' || value.type === 'integer'
+                    ? 0
+                    : value.type === 'boolean'
+                        ? false
+                        : '';
+            });
+            return payload;
+        }
+
+        function selectPulsePractices(practices) {
+            const list = Array.isArray(practices) ? practices.filter((entry) => entry && typeof entry === 'object') : [];
+            const preferred = list.filter((practice) => {
+                const id = String(practice.id || '').trim();
+                const tags = Array.isArray(practice.tags) ? practice.tags.map((tag) => String(tag).toLowerCase()) : [];
+                if (!id) return false;
+                if (id === 'get_pulse_data') return true;
+                if (id.startsWith('pool-')) return false;
+                if (id.startsWith('plaza-')) return false;
+                if (id === 'register' || id === 'renew' || id === 'authenticate' || id === 'heartbeat' || id === 'search' || id === 'relay') return false;
+                return tags.includes('pulser') || tags.includes('pulse') || tags.includes('data');
+            });
+            return preferred.length ? preferred : list.filter((practice) => String(practice.id || '').trim() === 'get_pulse_data');
+        }
+
+        function popupHeartbeatState(lastActive) {
+            if (!lastActive) return 'inactive';
+            const diff = Math.max(0, Date.now() / 1000 - Number(lastActive));
+            return diff <= HEARTBEAT_ACTIVE_WINDOW_SEC ? 'active' : 'inactive';
+        }
+
+        function renderPopupHeartbeatCopy(lastActive) {
+            if (!lastActive) return 'No heartbeat';
+            const seconds = Math.max(0, Math.floor(Date.now() / 1000 - Number(lastActive)));
+            const stateLabel = popupHeartbeatState(lastActive) === 'active' ? 'Active' : 'Inactive';
+            return `${stateLabel} • ${seconds}s ago`;
+        }
+
+        function renderPulserLookupBody(pulsers, pulseName = '', pulseAddress = '') {
+            if (!pulsers.length) {
+                return '<div class="popup-note">No available pulser is registered for this pulse yet.</div>';
+            }
+
+            return `
+                <section data-inactive-scope="available">
+                    <div class="popup-toolbar">
+                        <label class="popup-toggle">
+                            <input type="checkbox" data-toggle-inactive-pulsers onchange="toggleInactivePulsers(this)">
+                            <span>Show inactive pulsers</span>
+                        </label>
+                    </div>
+                    <div class="popup-list">
+                        ${pulsers.map((pulser) => {
+                const meta = pulser.meta || {};
+                const definition = resolvePulserDefinition(pulser, pulseName, pulseAddress);
+                const practices = selectPulsePractices(pulser.practices);
+                const defaultInput = derivePulserTestPayload(definition);
+                const lastActive = Number(pulser.last_active || 0);
+                const heartbeatStateLabel = popupHeartbeatState(lastActive);
+                return `
+                            <article class="popup-card ${heartbeatStateLabel === 'inactive' ? 'popup-card-inactive hidden-inactive' : ''}" data-pulser-card="1" data-pulser-heartbeat-state="${escapeAttribute(heartbeatStateLabel)}" data-pulser-id="${escapeAttribute(pulser.agent_id || '')}" data-pulser-name="${escapeAttribute(pulser.name || '')}" data-pulser-address="${escapeAttribute(pulser.address || '')}" data-pulse-name="${escapeAttribute(definition.pulse_name || definition.name || pulseName || '')}" data-pulse-address="${escapeAttribute(definition.pulse_address || pulseAddress || '')}" data-pulse-output-schema="${escapeAttribute(JSON.stringify(definition.output_schema || {}))}">
+                                <div class="popup-card-head">
+                                    <div>
+                                        <h2>${escapeHtml(pulser.name || 'Unnamed Pulser')}</h2>
+                                        <div class="popup-meta">${escapeHtml(pulser.address || 'No address')}</div>
+                                    </div>
+                                    <span class="popup-pill">Pulser</span>
+                                </div>
+                                <p class="popup-copy">${escapeHtml(pulser.description || 'No description registered.')}</p>
+                                <div class="popup-chip-row">
+                                    ${pulser.owner ? `<span class="popup-pill subtle">${escapeHtml(pulser.owner)}</span>` : ''}
+                                    ${(pulser.plazaName || pulser.plaza_name) ? `<span class="popup-pill subtle">${escapeHtml(pulser.plazaName || pulser.plaza_name)}</span>` : ''}
+                                    <span class="popup-pill subtle">${escapeHtml(renderPopupHeartbeatCopy(lastActive))}</span>
+                                </div>
+                                <div class="popup-section">
+                                    <div class="popup-section-title">Pulser ID</div>
+                                    <pre class="popup-json">${escapeHtml(pulser.agent_id || 'Unavailable')}</pre>
+                                </div>
+                                <div class="popup-section">
+                                    <div class="popup-section-title">Test Pulse</div>
+                                    ${practices.length ? `
+                                        <select class="popup-select" data-pulser-practice>
+                                            ${practices.map((practice) => `<option value="${escapeAttribute(practice.id || '')}">${escapeHtml(practice.name || practice.id || 'Practice')}</option>`).join('')}
+                                        </select>
+                                    ` : '<div class="popup-note">No callable practices are published on this pulser.</div>'}
+                                    <textarea class="popup-input" data-pulser-test-input>${escapeHtml(JSON.stringify(defaultInput, null, 2))}</textarea>
+                                    <button class="popup-action" type="button" data-run-pulser-test="1" onclick="runPulserTest(this)" ${practices.length ? '' : 'disabled'}>Run Pulse Test</button>
+                                    <pre class="popup-json popup-result" data-pulser-test-result>${escapeHtml(JSON.stringify({ status: 'idle' }, null, 2))}</pre>
+                                </div>
+                            </article>
+                        `;
+            }).join('')}
+                    </div>
+                </section>
+            `;
+        }
+
+        function renderPulserBatchBody(pulsers = [], pulseDefinition = {}, pulseName = '', pulseAddress = '') {
+            const allPulsers = Array.isArray(pulsers) ? pulsers : [];
+            const firstPulserDefinition = allPulsers.length
+                ? resolvePulserDefinition(allPulsers[0], pulseName, pulseAddress)
+                : {};
+            const defaultInput = derivePulserTestPayload(
+                firstPulserDefinition && Object.keys(firstPulserDefinition || {}).length
+                    ? firstPulserDefinition
+                    : pulseDefinition && Object.keys(pulseDefinition || {}).length
+                        ? pulseDefinition
+                    : resolvePulseSummaryDefinition(null, allPulsers, pulseName, pulseAddress)
+            );
+
+            if (!allPulsers.length) {
+                return '<div class="popup-note">No pulsers are available for batch testing.</div>';
+            }
+
+            return `
+                <section class="popup-batch-shell" data-batch-test-panel="1" data-inactive-scope="batch" data-batch-pulse-name="${escapeAttribute(pulseDefinition.pulse_name || pulseName || '')}" data-batch-pulse-address="${escapeAttribute(pulseDefinition.pulse_id || pulseDefinition.pulse_address || pulseAddress || '')}" data-batch-output-schema="${escapeAttribute(JSON.stringify(pulseDefinition.output_schema || {}))}">
+                    <div class="popup-section">
+                        <div class="popup-section-title">Input Parameters</div>
+                        <textarea class="popup-input" data-batch-test-input>${escapeHtml(JSON.stringify(defaultInput, null, 2))}</textarea>
+                    </div>
+                    <div class="popup-section">
+                        <div class="popup-toolbar">
+                            <label class="popup-toggle">
+                                <input type="checkbox" data-toggle-inactive-pulsers onchange="toggleInactivePulsers(this)">
+                                <span>Show inactive pulsers</span>
+                            </label>
+                        </div>
+                        <div class="popup-section-title">Pulsers</div>
+                        <div class="popup-batch-list">
+                            ${allPulsers.map((pulser) => {
+                const definition = resolvePulserDefinition(pulser, pulseName, pulseAddress);
+                const practice = selectPulsePractices(pulser.practices)[0] || {};
+                const isActive = popupHeartbeatState(Number(pulser.last_active || 0)) === 'active';
+                return `
+                                <label class="popup-batch-item ${isActive ? '' : 'hidden-inactive'}" data-batch-pulser="1" data-batch-heartbeat-state="${escapeAttribute(isActive ? 'active' : 'inactive')}" data-pulser-id="${escapeAttribute(pulser.agent_id || '')}" data-pulser-name="${escapeAttribute(pulser.name || '')}" data-pulser-address="${escapeAttribute(pulser.address || '')}" data-practice-id="${escapeAttribute(practice.id || 'get_pulse_data')}" data-pulse-name="${escapeAttribute(definition.pulse_name || definition.name || pulseDefinition.pulse_name || pulseName || '')}" data-pulse-address="${escapeAttribute(definition.pulse_address || pulseDefinition.pulse_id || pulseDefinition.pulse_address || pulseAddress || '')}" data-pulse-output-schema="${escapeAttribute(JSON.stringify(definition.output_schema || pulseDefinition.output_schema || {}))}">
+                                    <input type="checkbox" ${isActive ? 'checked' : ''}>
+                                    <span class="popup-batch-main">
+                                        <span class="popup-batch-name">${escapeHtml(pulser.name || 'Unnamed Pulser')}</span>
+                                        <span class="popup-batch-progress" data-batch-progress="idle">Ready</span>
+                                    </span>
+                                    <span class="popup-batch-meta">${escapeHtml(renderPopupHeartbeatCopy(Number(pulser.last_active || 0)))}</span>
+                                </label>
+                            `;
+            }).join('')}
+                        </div>
+                    </div>
+                    <div class="popup-section">
+                        <button class="popup-action" type="button" data-run-batch-test="1" onclick="runBatchPulserTest(this)">Run Batch Test</button>
+                        <div class="popup-note">Selected pulser responses will be consolidated into a comparison table.</div>
+                        <div class="popup-batch-result" data-batch-test-result><div class="popup-note">No batch test run yet.</div></div>
+                    </div>
+                </section>
+            `;
+        }
+
+        function renderPulserLookupDocument({ title = '', pulseAddress = '', pulseDescription = '', pulseDefinition = {}, baseUrl = '', availableBody = '', batchBody = '' }) {
+            return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    ${baseUrl ? `<base href="${escapeAttribute(baseUrl)}/">` : ''}
+    <title>Pulsers For ${escapeHtml(title)}</title>
+    <style>
+        :root {
+            color-scheme: light;
+            --popup-bg: #eef8ff;
+            --popup-surface: rgba(255, 255, 255, 0.9);
+            --popup-border: rgba(31, 122, 255, 0.14);
+            --popup-text: #10213d;
+            --popup-dim: #5f7392;
+            --popup-accent: #1f7aff;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            padding: 1.25rem;
+            font-family: Outfit, sans-serif;
+            color: var(--popup-text);
+            background:
+                radial-gradient(circle at top left, rgba(56, 189, 248, 0.16), transparent 0 22%),
+                linear-gradient(180deg, #eef8ff 0%, #f9fcff 100%);
+        }
+        .popup-shell {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .popup-header,
+        .popup-card {
+            border: 1px solid var(--popup-border);
+            background: var(--popup-surface);
+            border-radius: 18px;
+            padding: 1rem 1.1rem;
+            box-shadow: 0 18px 40px rgba(31, 122, 255, 0.08);
+        }
+        h1, h2 { margin: 0; letter-spacing: -0.03em; }
+        h1 { font-size: 1.2rem; }
+        h2 { font-size: 1rem; margin-bottom: 0.3rem; }
+        .popup-meta, .popup-copy, .popup-note {
+            color: var(--popup-dim);
+            line-height: 1.5;
+            font-size: 0.92rem;
+        }
+        .popup-copy { margin: 0.7rem 0; }
+        .popup-tab-bar {
+            display: flex;
+            gap: 0.6rem;
+            flex-wrap: wrap;
+        }
+        .popup-tab-btn {
+            border: 1px solid rgba(31, 122, 255, 0.16);
+            background: rgba(255, 255, 255, 0.84);
+            color: var(--popup-dim);
+            border-radius: 999px;
+            padding: 0.55rem 0.9rem;
+            font: inherit;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .popup-tab-btn.active {
+            background: linear-gradient(135deg, rgba(31, 122, 255, 0.14), rgba(71, 194, 255, 0.18));
+            color: var(--popup-accent);
+            border-color: rgba(31, 122, 255, 0.28);
+        }
+        .popup-tab-panel {
+            display: none;
+        }
+        .popup-tab-panel.active {
+            display: block;
+        }
+        .popup-toolbar {
+            display: flex;
+            justify-content: flex-end;
+        }
+        .popup-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--popup-dim);
+            font-size: 0.9rem;
+        }
+        .popup-list { display: flex; flex-direction: column; gap: 0.9rem; }
+        .popup-card-head, .popup-chip-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 0.75rem;
+            align-items: flex-start;
+            flex-wrap: wrap;
+        }
+        .popup-chip-row { justify-content: flex-start; }
+        .popup-pill {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.38rem 0.7rem;
+            border-radius: 999px;
+            border: 1px solid rgba(31, 122, 255, 0.18);
+            background: rgba(31, 122, 255, 0.08);
+            color: var(--popup-accent);
+            font-size: 0.76rem;
+            font-weight: 600;
+        }
+        .popup-pill.subtle {
+            color: var(--popup-dim);
+            background: rgba(255, 255, 255, 0.72);
+        }
+        .popup-error {
+            border: 1px solid rgba(228, 84, 119, 0.24);
+            background: rgba(228, 84, 119, 0.1);
+            color: #a83957;
+            border-radius: 16px;
+            padding: 1rem;
+        }
+        .popup-disclosure {
+            margin-top: 0.9rem;
+            border: 1px solid rgba(31, 122, 255, 0.14);
+            border-radius: 16px;
+            background: rgba(244, 250, 255, 0.72);
+            overflow: hidden;
+        }
+        .popup-disclosure > summary {
+            list-style: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            padding: 0.9rem 1rem;
+            font-size: 0.88rem;
+            font-weight: 700;
+            color: var(--popup-text);
+        }
+        .popup-disclosure > summary::-webkit-details-marker {
+            display: none;
+        }
+        .popup-disclosure > summary::after {
+            content: '+';
+            font-size: 1rem;
+            color: var(--popup-accent);
+        }
+        .popup-disclosure[open] > summary::after {
+            content: '-';
+        }
+        .popup-disclosure-body {
+            padding: 0 1rem 1rem;
+        }
+        .popup-section {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            margin-top: 0.9rem;
+        }
+        .popup-section-title {
+            font-size: 0.72rem;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: var(--popup-dim);
+            font-weight: 700;
+        }
+        .popup-json,
+        .popup-input {
+            width: 100%;
+            margin: 0;
+            border-radius: 14px;
+            border: 1px solid rgba(31, 122, 255, 0.14);
+            background: rgba(244, 250, 255, 0.96);
+            color: var(--popup-text);
+            font: 0.84rem/1.45 "IBM Plex Mono", monospace;
+            padding: 0.8rem 0.9rem;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .popup-input {
+            min-height: 120px;
+            resize: vertical;
+        }
+        .popup-select,
+        .popup-action {
+            border-radius: 12px;
+            border: 1px solid rgba(31, 122, 255, 0.16);
+            font: inherit;
+        }
+        .popup-select {
+            background: rgba(255, 255, 255, 0.96);
+            color: var(--popup-text);
+            padding: 0.7rem 0.8rem;
+        }
+        .popup-action {
+            padding: 0.72rem 0.9rem;
+            background: linear-gradient(135deg, #1f7aff 0%, #47c2ff 100%);
+            color: white;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .popup-action[disabled] {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .popup-result.loading {
+            opacity: 0.7;
+        }
+        .popup-batch-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.65rem;
+        }
+        .popup-batch-item {
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            gap: 0.7rem;
+            align-items: center;
+            padding: 0.8rem 0.9rem;
+            border-radius: 14px;
+            border: 1px solid rgba(31, 122, 255, 0.14);
+            background: rgba(244, 250, 255, 0.72);
+        }
+        .popup-batch-name {
+            font-weight: 700;
+            color: var(--popup-text);
+        }
+        .popup-batch-main {
+            display: flex;
+            flex-direction: column;
+            gap: 0.16rem;
+            min-width: 0;
+        }
+        .popup-batch-progress {
+            color: var(--popup-dim);
+            font-size: 0.78rem;
+            line-height: 1.3;
+        }
+        .popup-batch-progress[data-batch-progress="running"] {
+            color: var(--popup-accent);
+        }
+        .popup-batch-progress[data-batch-progress="success"] {
+            color: #0f9f68;
+        }
+        .popup-batch-progress[data-batch-progress="error"] {
+            color: #c24b6c;
+        }
+        .popup-batch-meta {
+            color: var(--popup-dim);
+            font-size: 0.84rem;
+        }
+        .popup-batch-result {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        .popup-table-wrap {
+            overflow-x: auto;
+            border-radius: 14px;
+            border: 1px solid rgba(31, 122, 255, 0.14);
+            background: rgba(255, 255, 255, 0.88);
+        }
+        .popup-table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 560px;
+        }
+        .popup-table th,
+        .popup-table td {
+            border-bottom: 1px solid rgba(31, 122, 255, 0.12);
+            padding: 0.75rem 0.85rem;
+            text-align: left;
+            vertical-align: top;
+            font-size: 0.84rem;
+        }
+        .popup-table th {
+            color: var(--popup-text);
+            background: rgba(244, 250, 255, 0.72);
+            font-weight: 700;
+        }
+        .popup-table td:first-child,
+        .popup-table th:first-child {
+            min-width: 180px;
+        }
+        .hidden-inactive {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="popup-shell">
+        <section class="popup-header">
+            <h1>${escapeHtml(title)}</h1>
+            ${pulseAddress ? `<div class="popup-meta">${escapeHtml(pulseAddress)}</div>` : ''}
+            ${pulseDescription ? `<p class="popup-copy">${escapeHtml(pulseDescription)}</p>` : ''}
+            <details class="popup-disclosure">
+                <summary>Pulse Information</summary>
+                <div class="popup-disclosure-body">
+                    <div class="popup-section">
+                        <div class="popup-section-title">Pulse ID</div>
+                        <pre class="popup-json">${escapeHtml(pulseDefinition.pulse_id || pulseAddress || 'Unavailable')}</pre>
+                    </div>
+                    <div class="popup-section">
+                        <div class="popup-section-title">Pulse Definition</div>
+                        <div class="popup-meta">${escapeHtml(pulseDefinition.pulse_name || title || 'Pulse')}</div>
+                        ${pulseDefinition.input_schema ? `<pre class="popup-json">${escapeHtml(JSON.stringify(pulseDefinition.input_schema, null, 2))}</pre>` : ''}
+                        ${pulseDefinition.output_schema ? `<pre class="popup-json">${escapeHtml(JSON.stringify(pulseDefinition.output_schema, null, 2))}</pre>` : ''}
+                        ${!pulseDefinition.input_schema && !pulseDefinition.output_schema ? '<div class="popup-note">No structured pulse definition is registered.</div>' : ''}
+                    </div>
+                </div>
+            </details>
+        </section>
+        <nav class="popup-tab-bar">
+            <button class="popup-tab-btn active" type="button" data-popup-tab-button="available" onclick="switchPulserPopupTab('available')">Available Pulsers</button>
+            <button class="popup-tab-btn" type="button" data-popup-tab-button="batch" onclick="switchPulserPopupTab('batch')">Batch Test</button>
+        </nav>
+        <section class="popup-tab-panel active" data-popup-tab-panel="available">
+            ${availableBody}
+        </section>
+        <section class="popup-tab-panel" data-popup-tab-panel="batch">
+            ${batchBody}
+        </section>
+    </div>
+    <script>
+        const HEARTBEAT_ACTIVE_WINDOW_SEC = 60;
+
+        function popupHeartbeatState(lastActive) {
+            if (!lastActive) return 'inactive';
+            const diff = Math.max(0, Date.now() / 1000 - Number(lastActive));
+            return diff <= HEARTBEAT_ACTIVE_WINDOW_SEC ? 'active' : 'inactive';
+        }
+
+        function popupEscapeHtml(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function switchPulserPopupTab(target) {
+            document.querySelectorAll('[data-popup-tab-panel]').forEach((panel) => {
+                panel.classList.toggle('active', panel.dataset.popupTabPanel === target);
+            });
+            document.querySelectorAll('[data-popup-tab-button]').forEach((entry) => {
+                entry.classList.toggle('active', entry.dataset.popupTabButton === target);
+            });
+        }
+
+        document.addEventListener('click', (event) => {
+            const tabButton = event.target.closest('[data-popup-tab-button]');
+            if (tabButton) {
+                switchPulserPopupTab(tabButton.dataset.popupTabButton || 'available');
+                return;
+            }
+
+            const singleTestButton = event.target.closest('[data-run-pulser-test]');
+            if (singleTestButton) {
+                runPulserTest(singleTestButton);
+                return;
+            }
+
+            const batchTestButton = event.target.closest('[data-run-batch-test]');
+            if (batchTestButton) {
+                runBatchPulserTest(batchTestButton);
+            }
+        });
+
+        document.addEventListener('change', (event) => {
+            const inactiveToggle = event.target.closest('[data-toggle-inactive-pulsers]');
+            if (inactiveToggle) {
+                toggleInactivePulsers(inactiveToggle);
+            }
+        });
+
+        function toggleInactivePulsers(checkbox) {
+            const showInactive = !!checkbox?.checked;
+            const scope = checkbox?.closest('[data-inactive-scope]') || document;
+            scope.querySelectorAll('[data-pulser-heartbeat-state]').forEach((card) => {
+                const isInactive = card.dataset.pulserHeartbeatState === 'inactive';
+                card.classList.toggle('hidden-inactive', isInactive && !showInactive);
+            });
+            scope.querySelectorAll('[data-batch-heartbeat-state]').forEach((row) => {
+                const isInactive = row.dataset.batchHeartbeatState === 'inactive';
+                row.classList.toggle('hidden-inactive', isInactive && !showInactive);
+            });
+        }
+
+        function flattenBatchResult(value, prefix = '', target = {}) {
+            if (Array.isArray(value)) {
+                target[prefix || 'value'] = JSON.stringify(value);
+                return target;
+            }
+            if (value && typeof value === 'object') {
+                const entries = Object.entries(value);
+                if (!entries.length) {
+                    target[prefix || 'value'] = '{}';
+                    return target;
+                }
+                entries.forEach(([key, nested]) => {
+                    const nextPrefix = prefix ? prefix + '.' + key : key;
+                    flattenBatchResult(nested, nextPrefix, target);
+                });
+                return target;
+            }
+            target[prefix || 'value'] = value;
+            return target;
+        }
+
+        function renderBatchResultTable(results) {
+            const normalized = results.map((entry) => ({
+                name: entry.name,
+                flat: flattenBatchResult(entry.result || {})
+            }));
+            const fields = Array.from(new Set(normalized.flatMap((entry) => Object.keys(entry.flat)))).sort();
+            if (!fields.length) {
+                return '<div class="popup-note">Selected pulsers returned no structured fields.</div>';
+            }
+            const headerCells = normalized.map((entry) => '<th>' + popupEscapeHtml(entry.name || 'Pulser') + '</th>').join('');
+            const rows = fields.map((field) => {
+                const valueCells = normalized.map((entry) => '<td>' + popupEscapeHtml(entry.flat[field] ?? '') + '</td>').join('');
+                return '<tr><th>' + popupEscapeHtml(field) + '</th>' + valueCells + '</tr>';
+            }).join('');
+            return '<div class="popup-table-wrap"><table class="popup-table"><thead><tr><th>Field</th>' + headerCells + '</tr></thead><tbody>' + rows + '</tbody></table></div>';
+        }
+
+        function setBatchPulserProgress(row, status, message) {
+            const progressNode = row?.querySelector('[data-batch-progress]');
+            if (!progressNode) return;
+            progressNode.dataset.batchProgress = status || 'idle';
+            progressNode.textContent = message || 'Ready';
+        }
+
+        async function runBatchPulserTest(button) {
+            const panel = button.closest('[data-batch-test-panel]');
+            if (!panel) return;
+
+            const resultNode = panel.querySelector('[data-batch-test-result]');
+            const inputNode = panel.querySelector('[data-batch-test-input]');
+            if (!resultNode || !inputNode) return;
+
+            let parsedInput = {};
+            try {
+                parsedInput = JSON.parse(inputNode.value || '{}');
+            } catch (error) {
+                resultNode.innerHTML = '<div class="popup-error">' + popupEscapeHtml('Input must be valid JSON. ' + error.message) + '</div>';
+                return;
+            }
+
+            const selectedRows = Array.from(panel.querySelectorAll('[data-batch-pulser]')).filter((row) => row.querySelector('input[type="checkbox"]')?.checked);
+            if (!selectedRows.length) {
+                resultNode.innerHTML = '<div class="popup-note">Select at least one active pulser for batch testing.</div>';
+                return;
+            }
+
+            panel.querySelectorAll('[data-batch-pulser]').forEach((row) => {
+                setBatchPulserProgress(row, row.querySelector('input[type="checkbox"]')?.checked ? 'running' : 'idle', row.querySelector('input[type="checkbox"]')?.checked ? 'Queued' : 'Not selected');
+            });
+            button.disabled = true;
+            resultNode.innerHTML = '<div class="popup-note">Running batch test across selected pulsers...</div>';
+            const results = await Promise.all(selectedRows.map(async (row) => {
+                let outputSchema = {};
+                try {
+                    outputSchema = JSON.parse(row.dataset.pulseOutputSchema || '{}');
+                } catch (_) {
+                    outputSchema = {};
+                }
+                try {
+                    setBatchPulserProgress(row, 'running', 'Requesting data...');
+                    const response = await fetch('/api/pulsers/test', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            pulser_id: row.dataset.pulserId || '',
+                            pulser_name: row.dataset.pulserName || '',
+                            pulser_address: row.dataset.pulserAddress || '',
+                            practice_id: row.dataset.practiceId || 'get_pulse_data',
+                            pulse_name: row.dataset.pulseName || panel.dataset.batchPulseName || '',
+                            pulse_address: row.dataset.pulseAddress || panel.dataset.batchPulseAddress || '',
+                            output_schema: outputSchema,
+                            input: parsedInput
+                        })
+                    });
+                    const data = await response.json();
+                    if (!response.ok) {
+                        throw new Error(data.detail || data.message || 'Batch pulser test failed');
+                    }
+                    setBatchPulserProgress(row, 'success', 'Completed');
+                    return {
+                        name: row.dataset.pulserName || 'Pulser',
+                        result: data.result ?? data
+                    };
+                } catch (error) {
+                    setBatchPulserProgress(row, 'error', error.message || 'Request failed');
+                    return {
+                        name: row.dataset.pulserName || 'Pulser',
+                        result: { error: error.message }
+                    };
+                }
+            }));
+            resultNode.innerHTML = renderBatchResultTable(results);
+            button.disabled = false;
+        }
+
+        async function runPulserTest(button) {
+            const card = button.closest('[data-pulser-card]');
+            if (!card) return;
+
+            const resultNode = card.querySelector('[data-pulser-test-result]');
+            const practiceNode = card.querySelector('[data-pulser-practice]');
+            const inputNode = card.querySelector('[data-pulser-test-input]');
+            if (!resultNode || !practiceNode || !inputNode) return;
+
+            let parsedInput = {};
+            try {
+                parsedInput = JSON.parse(inputNode.value || '{}');
+            } catch (error) {
+                resultNode.textContent = JSON.stringify({ error: 'Input must be valid JSON.', detail: error.message }, null, 2);
+                return;
+            }
+
+            resultNode.classList.add('loading');
+            resultNode.textContent = JSON.stringify({ status: 'running' }, null, 2);
+            button.disabled = true;
+            try {
+                let outputSchema = {};
+                try {
+                    outputSchema = JSON.parse(card.dataset.pulseOutputSchema || '{}');
+                } catch (error) {
+                    outputSchema = {};
+                }
+                const response = await fetch('/api/pulsers/test', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        pulser_id: card.dataset.pulserId || '',
+                        pulser_name: card.dataset.pulserName || '',
+                        pulser_address: card.dataset.pulserAddress || '',
+                        practice_id: practiceNode.value || '',
+                        pulse_name: card.dataset.pulseName || '',
+                        pulse_address: card.dataset.pulseAddress || '',
+                        output_schema: outputSchema,
+                        input: parsedInput
+                    })
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.detail || data.message || 'Pulser test failed');
+                }
+                resultNode.textContent = JSON.stringify(data.result ?? data, null, 2);
+            } catch (error) {
+                resultNode.textContent = JSON.stringify({ error: error.message }, null, 2);
+            } finally {
+                resultNode.classList.remove('loading');
+                button.disabled = false;
+            }
+        }
+    ${'</scr' + 'ipt>'}
+</body>
+</html>`;
+        }
+
+        function renderEditorCatalog() {
+            const list = document.getElementById('catalog-list');
+            const count = document.getElementById('catalog-count');
+            const query = state.editorSearch.trim().toLowerCase();
+
+            document.querySelectorAll('[data-kind-filter]').forEach((button) => {
+                button.classList.toggle('active', button.dataset.kindFilter === state.editorKindFilter);
+            });
+
+            const filtered = state.items.filter((item) => {
+                const haystack = [item.name, item.description, item.owner, item.address, JSON.stringify(item.meta || {})].join(' ').toLowerCase();
+                const kind = item.kind === 'Schema' || item.kind === 'Pulse' || item.kind === 'Phema' ? item.kind : 'Other';
+                if (state.editorKindFilter !== 'All' && kind !== state.editorKindFilter) return false;
+                if (query && !haystack.includes(query)) return false;
+                return true;
+            });
+
+            count.textContent = `${filtered.length} items`;
+
+            if (!filtered.length) {
+                list.innerHTML = '<div class="empty-note">No catalog items match the current editor filters.</div>';
+                return;
+            }
+
+            list.innerHTML = filtered.map((item) => `
+                <article class="catalog-item">
+                    <div class="catalog-item-header">
+                        <span class="type-pill ${escapeHtml(item.kind)}">${escapeHtml(item.kind)}</span>
+                        <button class="ghost-btn" data-open-source="${escapeHtml(item.sourceKey)}">Open</button>
+                    </div>
+                    <div class="catalog-name">${escapeHtml(item.name)}</div>
+                    <div class="catalog-meta">${escapeHtml(item.description || 'No description registered.')}</div>
+                    <div class="node-meta-line">
+                        ${item.owner ? `<span class="chip">${escapeHtml(item.owner)}</span>` : ''}
+                        ${item.plazaName ? `<span class="chip">${escapeHtml(item.plazaName)}</span>` : ''}
+                    </div>
+                </article>
+            `).join('');
+        }
+
+        function renderTabStrip() {
+            const tabStrip = document.getElementById('tab-strip');
+
+            if (!state.drafts.length) {
+                tabStrip.innerHTML = '';
+                return;
+            }
+
+            tabStrip.innerHTML = state.drafts.map((draft) => `
+                <button class="tab-item ${draft.id === state.activeDraftId ? 'active' : ''}" data-activate-draft="${escapeHtml(draft.id)}">
+                    <div class="tab-copy">
+                        <span class="tab-title">${escapeHtml(draft.model.name || draft.kind)}</span>
+                        <span class="tab-meta">${escapeHtml(draft.kind)}</span>
+                    </div>
+                    <div class="editor-actions">
+                        ${draft.dirty ? '<span class="dirty-dot"></span>' : ''}
+                        <span class="tab-close ghost-btn" data-close-draft="${escapeHtml(draft.id)}">×</span>
+                    </div>
+                </button>
+            `).join('');
+        }
+
+        function renderWorkspaceBody() {
+            const body = document.getElementById('workspace-body');
+            const activeDraft = getActiveDraft();
+
+            if (!state.drafts.length) {
+                body.innerHTML = `
+                    <div class="workspace-empty">
+                        <div>
+                            <h2 style="margin-bottom:0.75rem;">No draft open</h2>
+                            <p class="empty-note">Open a Schema, Pulse, or Phema from the monitor, or create a blank draft for future extension types.</p>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            if (!activeDraft) {
+                body.innerHTML = '<div class="workspace-empty"><div><p class="empty-note">Select a draft tab to continue editing.</p></div></div>';
+                return;
+            }
+
+            body.innerHTML = renderDraftForm(activeDraft);
+        }
+
+        function renderDraftForm(draft) {
+            const compiled = compileDraft(draft);
+            const errors = compiled.errors;
+            const definition = EDITOR_DEFINITIONS[draft.kind] || EDITOR_DEFINITIONS.Custom;
+
+            return `
+                <div class="workspace-form">
+                    <div class="workspace-header">
+                        <div>
+                            <h2>${escapeHtml(draft.model.name || definition.label)}</h2>
+                            <p class="muted-line">${escapeHtml(draft.sourceSnapshot?.plazaName || 'Local draft')} • ${escapeHtml(draft.kind)}</p>
+                        </div>
+                        <div class="type-pill ${escapeHtml(draft.kind)}">${escapeHtml(draft.kind)}</div>
+                    </div>
+
+                    <div class="editor-grid">
+                        <div class="field-card">
+                            <label>Name</label>
+                            <input class="editor-input" data-draft-id="${escapeHtml(draft.id)}" data-field="name" value="${escapeAttribute(draft.model.name)}">
+                        </div>
+                        <div class="field-card">
+                            <label>Owner</label>
+                            <input class="editor-input" data-draft-id="${escapeHtml(draft.id)}" data-field="owner" value="${escapeAttribute(draft.model.owner)}">
+                        </div>
+                        <div class="field-card full-span">
+                            <label>Description</label>
+                            <textarea class="json-editor" data-draft-id="${escapeHtml(draft.id)}" data-field="description" style="min-height:120px;font-family:var(--font-main);">${escapeHtml(draft.model.description)}</textarea>
+                        </div>
+                        <div class="field-card full-span">
+                            <label>Address</label>
+                            <input class="editor-input" data-draft-id="${escapeHtml(draft.id)}" data-field="address" value="${escapeAttribute(draft.model.address)}">
+                        </div>
+                        ${renderKindSpecificFields(draft, errors)}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderKindSpecificFields(draft, errors) {
+            if (draft.kind === 'Schema') {
+                return `
+                    <div class="field-card">
+                        <label>Schema Name</label>
+                        <input class="editor-input" data-draft-id="${escapeHtml(draft.id)}" data-field="schema_name" value="${escapeAttribute(draft.model.schema_name)}">
+                    </div>
+                    <div class="field-card">
+                        <label>Schema Kind</label>
+                        <select class="editor-select" data-draft-id="${escapeHtml(draft.id)}" data-field="schema_kind">
+                            ${['data', 'table', 'event', 'custom'].map((option) => `
+                                <option value="${option}" ${draft.model.schema_kind === option ? 'selected' : ''}>${option}</option>
+                            `).join('')}
+                        </select>
+                    </div>
+                    <div class="field-card full-span">
+                        <label>Schema JSON</label>
+                        <textarea class="json-editor" data-draft-id="${escapeHtml(draft.id)}" data-field="schema_json">${escapeHtml(draft.model.schema_json)}</textarea>
+                        ${errors.schema_json ? `<div class="error-text">${escapeHtml(errors.schema_json)}</div>` : ''}
+                    </div>
+                    <div class="field-card full-span">
+                        <label>Extra Meta JSON</label>
+                        <textarea class="json-editor" data-draft-id="${escapeHtml(draft.id)}" data-field="meta_json">${escapeHtml(draft.model.meta_json)}</textarea>
+                        ${errors.meta_json ? `<div class="error-text">${escapeHtml(errors.meta_json)}</div>` : ''}
+                    </div>
+                `;
+            }
+
+            if (draft.kind === 'Pulse') {
+                return `
+                    <div class="field-card full-span">
+                        <label>Pulse Address</label>
+                        <input class="editor-input" data-draft-id="${escapeHtml(draft.id)}" data-field="pulse_address" value="${escapeAttribute(draft.model.pulse_address)}">
+                    </div>
+                    <div class="field-card full-span">
+                        <label>Input Schema JSON</label>
+                        <textarea class="json-editor" data-draft-id="${escapeHtml(draft.id)}" data-field="input_schema_json">${escapeHtml(draft.model.input_schema_json)}</textarea>
+                        ${errors.input_schema_json ? `<div class="error-text">${escapeHtml(errors.input_schema_json)}</div>` : ''}
+                    </div>
+                    <div class="field-card full-span">
+                        <label>Output Schema JSON</label>
+                        <textarea class="json-editor" data-draft-id="${escapeHtml(draft.id)}" data-field="output_schema_json">${escapeHtml(draft.model.output_schema_json)}</textarea>
+                        ${errors.output_schema_json ? `<div class="error-text">${escapeHtml(errors.output_schema_json)}</div>` : ''}
+                    </div>
+                    <div class="field-card full-span">
+                        <label>Extra Meta JSON</label>
+                        <textarea class="json-editor" data-draft-id="${escapeHtml(draft.id)}" data-field="meta_json">${escapeHtml(draft.model.meta_json)}</textarea>
+                        ${errors.meta_json ? `<div class="error-text">${escapeHtml(errors.meta_json)}</div>` : ''}
+                    </div>
+                `;
+            }
+
+            if (draft.kind === 'Phema') {
+                return `
+                    <div class="field-card full-span">
+                        <label>Tags JSON</label>
+                        <textarea class="json-editor" data-draft-id="${escapeHtml(draft.id)}" data-field="tags_json">${escapeHtml(draft.model.tags_json)}</textarea>
+                        ${errors.tags_json ? `<div class="error-text">${escapeHtml(errors.tags_json)}</div>` : ''}
+                    </div>
+                    <div class="field-card full-span">
+                        <label>Sections JSON</label>
+                        <textarea class="json-editor" data-draft-id="${escapeHtml(draft.id)}" data-field="sections_json">${escapeHtml(draft.model.sections_json)}</textarea>
+                        ${errors.sections_json ? `<div class="error-text">${escapeHtml(errors.sections_json)}</div>` : ''}
+                    </div>
+                    <div class="field-card full-span">
+                        <label>Extra Meta JSON</label>
+                        <textarea class="json-editor" data-draft-id="${escapeHtml(draft.id)}" data-field="meta_json">${escapeHtml(draft.model.meta_json)}</textarea>
+                        ${errors.meta_json ? `<div class="error-text">${escapeHtml(errors.meta_json)}</div>` : ''}
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="field-card full-span">
+                    <label>Meta JSON</label>
+                    <textarea class="json-editor" data-draft-id="${escapeHtml(draft.id)}" data-field="meta_json">${escapeHtml(draft.model.meta_json)}</textarea>
+                    ${errors.meta_json ? `<div class="error-text">${escapeHtml(errors.meta_json)}</div>` : ''}
+                </div>
+            `;
+        }
+
+        function renderInspector() {
+            const inspector = document.getElementById('inspector-body');
+            const badge = document.getElementById('validation-badge');
+            const draft = getActiveDraft();
+
+            if (!draft) {
+                badge.textContent = 'No draft';
+                inspector.innerHTML = '<div class="empty-note">Inspector data appears here once a draft is open.</div>';
+                return;
+            }
+
+            const compiled = compileDraft(draft);
+            const errors = Object.values(compiled.errors).filter(Boolean);
+            badge.textContent = errors.length ? `${errors.length} issue${errors.length > 1 ? 's' : ''}` : 'Valid JSON';
+            badge.className = `chip${errors.length ? '' : ' active'}`;
+
+            inspector.innerHTML = `
+                <section class="inspector-block">
+                    <span class="inspector-label">Source</span>
+                    <div class="inspector-list">
+                        <div class="inspector-row"><span>Type</span><span>${escapeHtml(draft.kind)}</span></div>
+                        <div class="inspector-row"><span>Origin</span><span>${escapeHtml(draft.sourceSnapshot?.plazaName || 'Local draft')}</span></div>
+                        <div class="inspector-row"><span>Source key</span><span>${escapeHtml(draft.sourceKey || draft.id)}</span></div>
+                    </div>
+                </section>
+                <section class="inspector-block">
+                    <span class="inspector-label">Validation</span>
+                    ${errors.length
+                    ? `<div class="inspector-list">${errors.map((message) => `<div class="error-text">${escapeHtml(message)}</div>`).join('')}</div>`
+                    : '<p>Structured payload is valid and ready to export.</p>'}
+                </section>
+                <section class="inspector-block">
+                    <span class="inspector-label">Compiled Payload</span>
+                    <pre class="code-preview">${escapeHtml(prettyJson(compiled.payload || {}))}</pre>
+                </section>
+                <section class="inspector-block">
+                    <span class="inspector-label">Source Snapshot</span>
+                    <pre class="code-preview">${escapeHtml(prettyJson(draft.sourceSnapshot?.raw || {}))}</pre>
+                </section>
+            `;
+        }
+
+        function openPhemaEditor(phemaId = '') {
+            const target = phemaId
+                ? `/phemas/editor/${encodeURIComponent(phemaId)}`
+                : '/phemas/editor';
+            window.open(target, '_blank', 'noopener');
+        }
+
+        function createDraft(kind) {
+            const normalizedKind = kind === 'Schema' || kind === 'Pulse' || kind === 'Phema' ? kind : 'Custom';
+            const definition = EDITOR_DEFINITIONS[normalizedKind] || EDITOR_DEFINITIONS.Custom;
+            const id = `draft-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+            const draft = {
+                id,
+                sourceKey: '',
+                isNew: true,
+                kind: normalizedKind,
+                model: definition.emptyModel(),
+                sourceSnapshot: null,
+                dirty: true,
+                savedAt: ''
+            };
+            state.drafts.push(draft);
+            state.activeDraftId = draft.id;
+            persistUiState();
+            renderAll();
+            setActivePage('editor');
+        }
+
+        function openDraftForSource(sourceKey) {
+            const existing = state.drafts.find((draft) => draft.sourceKey === sourceKey);
+            if (existing) {
+                state.activeDraftId = existing.id;
+                persistUiState();
+                renderTabStrip();
+                renderWorkspaceBody();
+                renderInspector();
+                return;
+            }
+
+            const source = findItem(sourceKey);
+            if (!source) return;
+
+            const definition = EDITOR_DEFINITIONS[source.kind] || EDITOR_DEFINITIONS.Custom;
+            const draft = {
+                id: `draft-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+                sourceKey: source.sourceKey,
+                isNew: false,
+                kind: source.kind,
+                model: definition.createModel(source),
+                sourceSnapshot: {
+                    sourceKey: source.sourceKey,
+                    kind: source.kind,
+                    name: source.name,
+                    description: source.description,
+                    owner: source.owner,
+                    address: source.address,
+                    meta: source.meta,
+                    plazaUrl: source.plazaUrl,
+                    plazaName: source.plazaName,
+                    raw: source.raw
+                },
+                dirty: false,
+                savedAt: ''
+            };
+
+            state.drafts.push(draft);
+            state.activeDraftId = draft.id;
+            persistUiState();
+            renderTabStrip();
+            renderWorkspaceBody();
+            renderInspector();
+        }
+
+        function closeDraft(draftId) {
+            const index = state.drafts.findIndex((draft) => draft.id === draftId);
+            if (index === -1) return;
+            state.drafts.splice(index, 1);
+            if (state.activeDraftId === draftId) {
+                state.activeDraftId = state.drafts[Math.max(0, index - 1)]?.id || state.drafts[0]?.id || '';
+            }
+            persistUiState();
+            renderTabStrip();
+            renderWorkspaceBody();
+            renderInspector();
+        }
+
+        function activateDraft(draftId) {
+            state.activeDraftId = draftId;
+            persistUiState();
+            renderTabStrip();
+            renderWorkspaceBody();
+            renderInspector();
+        }
+
+        function updateDraftField(draftId, field, value) {
+            const draft = state.drafts.find((entry) => entry.id === draftId);
+            if (!draft) return;
+            draft.model[field] = value;
+            draft.dirty = true;
+            if (field === 'name' && draft.model.name.trim()) {
+                draft.model.name = draft.model.name;
+            }
+            persistUiState();
+            renderTabStrip();
+            renderInspector();
+        }
+
+        async function saveActiveDraft() {
+            const draft = getActiveDraft();
+            if (!draft) return;
+            const compiled = compileDraft(draft);
+            if (Object.keys(compiled.errors).length) {
+                renderInspector();
+                return;
+            }
+
+            if (draft.kind === 'Phema') {
+                try {
+                    const response = await fetch('/api/phemas', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ phema: compiled.payload })
+                    });
+                    const data = await response.json();
+                    if (!response.ok) {
+                        throw new Error(data.detail || data.message || 'Failed to save Phema');
+                    }
+                    draft.sourceKey = data.phema?.phema_id || data.phema?.id || draft.sourceKey;
+                    draft.isNew = false;
+                    draft.dirty = false;
+                    draft.savedAt = data.phema?.updated_at || new Date().toISOString();
+                    await fetchStatus();
+                    syncDraftSnapshotFromSource(draft);
+                    renderAll();
+                    return;
+                } catch (error) {
+                    alert(error.message || 'Failed to save Phema');
+                    return;
+                }
+            }
+
+            draft.dirty = false;
+            draft.savedAt = new Date().toISOString();
+            persistUiState();
+            renderTabStrip();
+            renderWorkspaceBody();
+            renderInspector();
+        }
+
+        async function deleteActiveDraft() {
+            const draft = getActiveDraft();
+            if (!draft) return;
+
+            if (draft.kind === 'Phema' && !draft.isNew && draft.sourceKey) {
+                if (!confirm(`Delete Phema "${draft.model.name || draft.sourceKey}" from the Plaza directory?`)) {
+                    return;
+                }
+                try {
+                    const response = await fetch(`/api/phemas/${encodeURIComponent(draft.sourceKey)}`, {
+                        method: 'DELETE'
+                    });
+                    const data = await response.json();
+                    if (!response.ok) {
+                        throw new Error(data.detail || data.message || 'Failed to delete Phema');
+                    }
+                    const draftId = draft.id;
+                    closeDraft(draftId);
+                    await fetchStatus();
+                    renderAll();
+                    return;
+                } catch (error) {
+                    alert(error.message || 'Failed to delete Phema');
+                    return;
+                }
+            }
+
+            closeDraft(draft.id);
+        }
+
+        function resetActiveDraft() {
+            const draft = getActiveDraft();
+            if (!draft) return;
+
+            if (draft.isNew) {
+                const definition = EDITOR_DEFINITIONS[draft.kind] || EDITOR_DEFINITIONS.Custom;
+                draft.model = definition.emptyModel();
+            } else {
+                const source = findItem(draft.sourceKey);
+                const definition = EDITOR_DEFINITIONS[draft.kind] || EDITOR_DEFINITIONS.Custom;
+                if (!source) return;
+                draft.model = definition.createModel(source);
+                draft.sourceSnapshot = {
+                    sourceKey: source.sourceKey,
+                    kind: source.kind,
+                    name: source.name,
+                    description: source.description,
+                    owner: source.owner,
+                    address: source.address,
+                    meta: source.meta,
+                    plazaUrl: source.plazaUrl,
+                    plazaName: source.plazaName,
+                    raw: source.raw
+                };
+            }
+
+            draft.dirty = false;
+            persistUiState();
+            renderTabStrip();
+            renderWorkspaceBody();
+            renderInspector();
+        }
+
+        function exportActiveDraft() {
+            const draft = getActiveDraft();
+            if (!draft) return;
+
+            const compiled = compileDraft(draft);
+            if (Object.keys(compiled.errors).length) {
+                renderInspector();
+                return;
+            }
+
+            const blob = new Blob([prettyJson(compiled.payload)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `${sanitizeFilename(draft.model.name || draft.kind)}.json`;
+            link.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function syncDraftSnapshotFromSource(draft) {
+            if (!draft || !draft.sourceKey) return;
+            const source = findItem(draft.sourceKey);
+            if (!source) return;
+            draft.sourceSnapshot = {
+                sourceKey: source.sourceKey,
+                kind: source.kind,
+                name: source.name,
+                description: source.description,
+                owner: source.owner,
+                address: source.address,
+                meta: source.meta,
+                plazaUrl: source.plazaUrl,
+                plazaName: source.plazaName,
+                raw: source.raw
+            };
+            persistUiState();
+        }
+
+        function compileDraft(draft) {
+            const errors = {};
+            const meta = parseJsonField(draft.model.meta_json, 'Extra meta JSON', errors, 'meta_json');
+
+            if (draft.kind === 'Schema') {
+                const schema = parseJsonField(draft.model.schema_json, 'Schema JSON', errors, 'schema_json');
+                return {
+                    errors,
+                    payload: {
+                        name: draft.model.name,
+                        description: draft.model.description,
+                        owner: draft.model.owner,
+                        address: draft.model.address,
+                        pit_type: 'Schema',
+                        meta: {
+                            ...(meta || {}),
+                            schema_name: draft.model.schema_name,
+                            schema_kind: draft.model.schema_kind,
+                            schema: schema || {}
+                        }
+                    }
+                };
+            }
+
+            if (draft.kind === 'Pulse') {
+                const inputSchema = parseJsonField(draft.model.input_schema_json, 'Input schema JSON', errors, 'input_schema_json');
+                const outputSchema = parseJsonField(draft.model.output_schema_json, 'Output schema JSON', errors, 'output_schema_json');
+                return {
+                    errors,
+                    payload: {
+                        name: draft.model.name,
+                        description: draft.model.description,
+                        owner: draft.model.owner,
+                        address: draft.model.address,
+                        pit_type: 'Pulse',
+                        meta: {
+                            ...(meta || {}),
+                            pulse_address: draft.model.pulse_address,
+                            input_schema: inputSchema || {},
+                            output_schema: outputSchema || {}
+                        }
+                    }
+                };
+            }
+
+            if (draft.kind === 'Phema') {
+                const tags = parseJsonArrayField(draft.model.tags_json, 'Tags JSON', errors, 'tags_json');
+                const sections = parseJsonArrayField(draft.model.sections_json, 'Sections JSON', errors, 'sections_json');
+                return {
+                    errors,
+                    payload: {
+                        phema_id: draft.sourceKey || undefined,
+                        name: draft.model.name,
+                        description: draft.model.description,
+                        owner: draft.model.owner,
+                        address: draft.model.address,
+                        pit_type: 'Phema',
+                        tags: tags || [],
+                        sections: sections || [],
+                        meta: meta || {}
+                    }
+                };
+            }
+
+            return {
+                errors,
+                payload: {
+                    name: draft.model.name,
+                    description: draft.model.description,
+                    owner: draft.model.owner,
+                    address: draft.model.address,
+                    pit_type: draft.kind,
+                    meta: meta || {}
+                }
+            };
+        }
+
+        function parseJsonField(rawValue, label, errors, key) {
+            const trimmed = String(rawValue || '').trim();
+            if (!trimmed) return {};
+            try {
+                return JSON.parse(trimmed);
+            } catch (error) {
+                errors[key] = `${label} must be valid JSON.`;
+                return null;
+            }
+        }
+
+        function parseJsonArrayField(rawValue, label, errors, key) {
+            const trimmed = String(rawValue || '').trim();
+            if (!trimmed) return [];
+            try {
+                const parsed = JSON.parse(trimmed);
+                if (!Array.isArray(parsed)) {
+                    errors[key] = `${label} must be a JSON array.`;
+                    return null;
+                }
+                return parsed;
+            } catch (error) {
+                errors[key] = `${label} must be valid JSON.`;
+                return null;
+            }
+        }
+
+        function getActiveDraft() {
+            return state.drafts.find((draft) => draft.id === state.activeDraftId) || null;
+        }
+
+        function findItem(sourceKey) {
+            return state.items.find((item) => item.sourceKey === sourceKey) || null;
+        }
+
+        function heartbeatState(lastActive) {
+            if (!lastActive) return 'registered';
+            const diff = Math.max(0, Date.now() / 1000 - Number(lastActive));
+            return diff <= HEARTBEAT_ACTIVE_WINDOW_SEC ? 'active' : 'inactive';
+        }
+
+        function renderHeartbeatCopy(lastActive) {
+            if (!lastActive) return 'Registered';
+            const diff = Math.max(0, Math.floor(Date.now() / 1000 - Number(lastActive)));
+            const mm = String(Math.floor(diff / 60)).padStart(2, '0');
+            const ss = String(diff % 60).padStart(2, '0');
+            const stateLabel = heartbeatState(lastActive) === 'active' ? 'Active' : 'Inactive';
+            return `${stateLabel} (${mm}:${ss})`;
+        }
+
+        function updateHeartbeatLabels() {
+            document.querySelectorAll('[data-last-active]').forEach((node) => {
+                const lastActive = Number(node.dataset.lastActive || 0);
+                const stateLabel = heartbeatState(lastActive);
+                node.classList.toggle('active', stateLabel === 'active');
+                node.classList.toggle('inactive', stateLabel === 'inactive');
+                const copy = node.querySelector('.heartbeat-copy');
+                if (copy) copy.textContent = renderHeartbeatCopy(lastActive);
+            });
+        }
+
+        function normalizeKind(kind) {
+            const normalized = String(kind || 'Agent').trim();
+            if (normalized === 'Pulser') return 'Agent';
+            return normalized || 'Agent';
+        }
+
+        function rawPitType(entry) {
+            const card = entry?.card || {};
+            const raw = String(entry?.pit_type || card.pit_type || entry?.type || 'Agent').trim();
+            return raw || 'Agent';
+        }
+
+        function renderPhemaModeBadge(entry, card = {}) {
+            const label = renderPhemaModeLabel(entry, card);
+            if (!label) return '';
+            return `<span class="chip">${escapeHtml(label)}</span>`;
+        }
+
+        function renderPhemaModeLabel(entry, card = {}) {
+            const entryMeta = entry?.meta && typeof entry.meta === 'object' ? entry.meta : {};
+            const cardMeta = card?.meta && typeof card.meta === 'object' ? card.meta : {};
+            let registrationMode = String(
+                entry?.registration_mode
+                || entryMeta.registration_mode
+                || cardMeta.registration_mode
+                || ''
+            ).trim().toLowerCase();
+            if (!registrationMode) {
+                const sections = Array.isArray(entryMeta.sections)
+                    ? entryMeta.sections
+                    : (Array.isArray(cardMeta.sections) ? cardMeta.sections : []);
+                const hasHostReference = Boolean(
+                    entryMeta.host_phemar_name
+                    || cardMeta.host_phemar_name
+                    || entryMeta.host_phemar_pit_address
+                    || cardMeta.host_phemar_pit_address
+                    || entryMeta.access_practice_id
+                    || cardMeta.access_practice_id
+                );
+                if (sections.length) {
+                    registrationMode = 'hosted';
+                } else if (hasHostReference) {
+                    registrationMode = 'info_only';
+                }
+            }
+            if (!registrationMode) return '';
+            return registrationMode === 'info_only' ? 'Info Only' : 'Hosted';
+        }
+
+        function containsText(haystack, needle) {
+            if (!needle) return true;
+            return String(haystack || '').toLowerCase().includes(String(needle || '').toLowerCase());
+        }
+
+        function samePitRef(left, right) {
+            if (!left || !right) return false;
+            return String(left).trim().toLowerCase() === String(right).trim().toLowerCase();
+        }
+
+        function tracksHeartbeat(kind) {
+            return normalizeKind(kind) === 'Agent';
+        }
+
+        function normalizeMeta(meta) {
+            if (meta && typeof meta === 'object' && !Array.isArray(meta)) return clone(meta);
+            return meta && typeof meta === 'object' ? clone(meta) : {};
+        }
+
+        function prettyJson(value) {
+            return JSON.stringify(value || {}, null, 2);
+        }
+
+        function clone(value) {
+            return JSON.parse(JSON.stringify(value ?? {}));
+        }
+
+        function sanitizeFilename(value) {
+            return String(value || 'draft').replace(/[^a-z0-9-_]+/gi, '_').replace(/^_+|_+$/g, '') || 'draft';
+        }
+
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function escapeAttribute(value) {
+            return escapeHtml(value).replace(/\n/g, '&#10;');
+        }
+    </script>
+</body>
+
+</html>

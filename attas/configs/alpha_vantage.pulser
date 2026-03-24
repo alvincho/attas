@@ -1,0 +1,1101 @@
+{
+    "name": "AlphaVantageApiPulser",
+    "type": "phemacast.pulsers.api_pulser.ApiPulser",
+    "host": "127.0.0.1",
+    "port": 8022,
+    "plaza_url": "http://127.0.0.1:8011",
+    "role": "pulser",
+    "description": "Maps Alpha Vantage market, news, and fundamentals data onto shared Plaza pulse definitions.",
+    "tags": [
+        "finance",
+        "market-data",
+        "alpha-vantage",
+        "stocks",
+        "fundamentals",
+        "news"
+    ],
+    "api_keys": [
+        {
+            "id": "alpha_vantage",
+            "env": "ALPHA_VANTAGE_API_KEY",
+            "param": "apikey"
+        }
+    ],
+    "supported_pulses": [
+        {
+            "name": "last_price",
+            "pulse_address": "2cc630e2-895f-5ced-a4df-6293a9c7b2d6",
+            "description": "Latest traded price snapshot from GLOBAL_QUOTE.",
+            "tags": [
+                "stock-prices",
+                "quote",
+                "realtime"
+            ],
+            "api": {
+                "url": "https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol={symbol}",
+                "method": "GET",
+                "api_key_id": "alpha_vantage"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "symbol"
+                ]
+            },
+            "mapping": {
+                "symbol": "Global Quote.01. symbol",
+                "last_price": "Global Quote.05. price",
+                "timestamp": "Global Quote.07. latest trading day",
+                "source": {
+                    "value": "alpha_vantage"
+                }
+            },
+            "test_data": {
+                "symbol": "IBM"
+            },
+            "cost": 0,
+            "party": "attas"
+        },
+        {
+            "name": "previous_close",
+            "pulse_address": "e0ff71d7-e235-5027-9f74-94791fddf293",
+            "description": "Previous official close from GLOBAL_QUOTE.",
+            "tags": [
+                "stock-prices",
+                "quote"
+            ],
+            "api": {
+                "url": "https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol={symbol}",
+                "method": "GET",
+                "api_key_id": "alpha_vantage"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "symbol"
+                ]
+            },
+            "mapping": {
+                "symbol": "Global Quote.01. symbol",
+                "previous_close": "Global Quote.08. previous close",
+                "trade_date": "Global Quote.07. latest trading day",
+                "source": {
+                    "value": "alpha_vantage"
+                }
+            },
+            "test_data": {
+                "symbol": "IBM"
+            },
+            "cost": 0,
+            "party": "attas"
+        },
+        {
+            "name": "open_price",
+            "pulse_address": "aefa2c29-36db-50e0-b37f-e2e79f3252f5",
+            "description": "Official session open from GLOBAL_QUOTE.",
+            "tags": [
+                "stock-prices",
+                "quote"
+            ],
+            "api": {
+                "url": "https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol={symbol}",
+                "method": "GET",
+                "api_key_id": "alpha_vantage"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "symbol"
+                ]
+            },
+            "mapping": {
+                "symbol": "Global Quote.01. symbol",
+                "open_price": "Global Quote.02. open",
+                "trade_date": "Global Quote.07. latest trading day",
+                "source": {
+                    "value": "alpha_vantage"
+                }
+            },
+            "test_data": {
+                "symbol": "IBM"
+            },
+            "cost": 0,
+            "party": "attas"
+        },
+        {
+            "name": "day_high_low",
+            "pulse_address": "0dd30cc2-975c-5136-a708-8a6b37633444",
+            "description": "Intraday session high and low from GLOBAL_QUOTE.",
+            "tags": [
+                "stock-prices",
+                "quote"
+            ],
+            "api": {
+                "url": "https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol={symbol}",
+                "method": "GET",
+                "api_key_id": "alpha_vantage"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "symbol"
+                ]
+            },
+            "mapping": {
+                "symbol": "Global Quote.01. symbol",
+                "day_high": "Global Quote.03. high",
+                "day_low": "Global Quote.04. low",
+                "trade_date": "Global Quote.07. latest trading day",
+                "timestamp": "Global Quote.07. latest trading day",
+                "source": {
+                    "value": "alpha_vantage"
+                }
+            },
+            "test_data": {
+                "symbol": "IBM"
+            },
+            "cost": 0,
+            "party": "attas"
+        },
+        {
+            "name": "trade_volume",
+            "pulse_address": "5e414533-c54d-5419-b99e-454fd77c018d",
+            "description": "Session volume from GLOBAL_QUOTE.",
+            "tags": [
+                "stock-prices",
+                "volume"
+            ],
+            "api": {
+                "url": "https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol={symbol}",
+                "method": "GET",
+                "api_key_id": "alpha_vantage"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "symbol"
+                ]
+            },
+            "mapping": {
+                "symbol": "Global Quote.01. symbol",
+                "volume": "Global Quote.06. volume",
+                "trade_date": "Global Quote.07. latest trading day",
+                "source": {
+                    "value": "alpha_vantage"
+                }
+            },
+            "test_data": {
+                "symbol": "IBM"
+            },
+            "cost": 0,
+            "party": "attas"
+        },
+        {
+            "name": "price_change_summary",
+            "pulse_address": "a7b9fe78-83db-5a65-a5fc-c2c84a811c5d",
+            "description": "Day-over-day price change summary from GLOBAL_QUOTE.",
+            "tags": [
+                "stock-prices",
+                "change"
+            ],
+            "api": {
+                "url": "https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol={symbol}",
+                "method": "GET",
+                "api_key_id": "alpha_vantage"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "symbol"
+                ]
+            },
+            "mapping": {
+                "symbol": "Global Quote.01. symbol",
+                "last_price": "Global Quote.05. price",
+                "day_change": "Global Quote.09. change",
+                "day_change_percent": "Global Quote.10. change percent",
+                "timestamp": "Global Quote.07. latest trading day"
+            },
+            "test_data": {
+                "symbol": "IBM"
+            },
+            "cost": 0,
+            "party": "attas"
+        },
+        {
+            "name": "intraday_ohlcv_bar",
+            "pulse_address": "fed365ca-9ac2-5545-bb67-9568a39158c0",
+            "description": "Single intraday OHLCV bar selected from TIME_SERIES_INTRADAY.",
+            "tags": [
+                "historical-prices",
+                "intraday",
+                "ohlcv"
+            ],
+            "api": {
+                "url": "https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol={symbol}&interval={interval}&outputsize=compact&adjusted=true&extended_hours=false",
+                "method": "GET",
+                "root_path": "Time Series ({interval}).{bar_timestamp}",
+                "api_key_id": "alpha_vantage"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    },
+                    "interval": {
+                        "type": "string",
+                        "enum": [
+                            "1min",
+                            "5min",
+                            "15min",
+                            "30min",
+                            "60min"
+                        ],
+                        "default": "5min"
+                    },
+                    "bar_timestamp": {
+                        "type": "string",
+                        "description": "Timestamp key present in the Alpha Vantage intraday series, for example 2026-03-18 16:00:00."
+                    }
+                },
+                "required": [
+                    "symbol",
+                    "interval",
+                    "bar_timestamp"
+                ]
+            },
+            "mapping": {
+                "symbol": "_input.symbol",
+                "interval": "_input.interval",
+                "bar_start": "_input.bar_timestamp",
+                "open": "1. open",
+                "high": "2. high",
+                "low": "3. low",
+                "close": "4. close",
+                "volume": "5. volume",
+                "source": {
+                    "value": "alpha_vantage"
+                }
+            },
+            "test_data": {
+                "symbol": "IBM",
+                "interval": "5min",
+                "bar_timestamp": "2026-03-18 16:00:00"
+            },
+            "cost": 0,
+            "party": "attas"
+        },
+        {
+            "name": "daily_ohlcv_bar",
+            "pulse_address": "013ddac1-46e1-58b6-a2fc-7373c1d21ca0",
+            "description": "Single daily OHLCV bar selected from TIME_SERIES_DAILY_ADJUSTED.",
+            "tags": [
+                "historical-prices",
+                "daily",
+                "ohlcv"
+            ],
+            "api": {
+                "url": "https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol={symbol}&outputsize=full",
+                "method": "GET",
+                "root_path": "Time Series (Daily).{trade_date}",
+                "api_key_id": "alpha_vantage"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    },
+                    "trade_date": {
+                        "type": "string",
+                        "description": "Daily bar date present in the Alpha Vantage series, for example 2024-12-31."
+                    }
+                },
+                "required": [
+                    "symbol",
+                    "trade_date"
+                ]
+            },
+            "mapping": {
+                "symbol": "_input.symbol",
+                "trade_date": "_input.trade_date",
+                "open": "1. open",
+                "high": "2. high",
+                "low": "3. low",
+                "close": "4. close",
+                "adjusted_close": "5. adjusted close",
+                "volume": "6. volume",
+                "source": {
+                    "value": "alpha_vantage"
+                }
+            },
+            "test_data": {
+                "symbol": "IBM",
+                "trade_date": "2024-12-31"
+            },
+            "cost": 0,
+            "party": "attas"
+        },
+        {
+            "name": "company_profile",
+            "pulse_address": "5adbfd9a-c59f-5b85-a19f-565525d5712d",
+            "description": "Company overview mapped onto the shared company profile pulse.",
+            "tags": [
+                "fundamentals",
+                "company-profile"
+            ],
+            "api": {
+                "url": "https://www.alphavantage.co/query?function=OVERVIEW&symbol={symbol}",
+                "method": "GET",
+                "api_key_id": "alpha_vantage"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "symbol"
+                ]
+            },
+            "mapping": {
+                "symbol": "Symbol",
+                "company_name": "Name",
+                "sector": "Sector",
+                "industry": "Industry",
+                "headquarters_country": "Country",
+                "website": "OfficialSite"
+            },
+            "test_data": {
+                "symbol": "IBM"
+            },
+            "cost": 0,
+            "party": "attas"
+        },
+        {
+            "name": "business_description",
+            "pulse_address": "be4f7bf4-39eb-508c-b764-28728ac2aa0d",
+            "description": "Business narrative from Alpha Vantage OVERVIEW.",
+            "tags": [
+                "fundamentals",
+                "company-profile"
+            ],
+            "api": {
+                "url": "https://www.alphavantage.co/query?function=OVERVIEW&symbol={symbol}",
+                "method": "GET",
+                "api_key_id": "alpha_vantage"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "symbol"
+                ]
+            },
+            "mapping": {
+                "symbol": "Symbol",
+                "short_description": "Description",
+                "as_of_date": "LatestQuarter"
+            },
+            "test_data": {
+                "symbol": "IBM"
+            },
+            "cost": 0,
+            "party": "attas"
+        },
+        {
+            "name": "valuation_pe",
+            "pulse_address": "2d9c3159-0ec2-5fc2-b214-d3a3c89afb86",
+            "description": "P/E valuation snapshot from Alpha Vantage OVERVIEW.",
+            "tags": [
+                "fundamentals",
+                "valuation"
+            ],
+            "api": {
+                "url": "https://www.alphavantage.co/query?function=OVERVIEW&symbol={symbol}",
+                "method": "GET",
+                "api_key_id": "alpha_vantage"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "symbol"
+                ]
+            },
+            "mapping": {
+                "symbol": "Symbol",
+                "price_to_earnings": "PERatio",
+                "eps_ttm": "EPS",
+                "as_of_date": "LatestQuarter",
+                "currency": "Currency"
+            },
+            "test_data": {
+                "symbol": "IBM"
+            },
+            "cost": 0,
+            "party": "attas"
+        },
+        {
+            "name": "fifty_two_week_range",
+            "pulse_address": "507d9476-f1be-5019-9498-39396221c647",
+            "description": "52-week trading range from Alpha Vantage OVERVIEW.",
+            "tags": [
+                "fundamentals",
+                "price-range"
+            ],
+            "api": {
+                "url": "https://www.alphavantage.co/query?function=OVERVIEW&symbol={symbol}",
+                "method": "GET",
+                "api_key_id": "alpha_vantage"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "symbol"
+                ]
+            },
+            "mapping": {
+                "symbol": "Symbol",
+                "fifty_two_week_high": "52WeekHigh",
+                "fifty_two_week_low": "52WeekLow",
+                "source": {
+                    "value": "alpha_vantage"
+                }
+            },
+            "test_data": {
+                "symbol": "IBM"
+            },
+            "cost": 0,
+            "party": "attas"
+        },
+        {
+            "name": "dividend_info",
+            "pulse_address": "d259d4d0-c905-5961-803f-dadd396df483",
+            "description": "Dividend reference data from Alpha Vantage OVERVIEW.",
+            "tags": [
+                "fundamentals",
+                "dividends"
+            ],
+            "api": {
+                "url": "https://www.alphavantage.co/query?function=OVERVIEW&symbol={symbol}",
+                "method": "GET",
+                "api_key_id": "alpha_vantage"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "symbol"
+                ]
+            },
+            "mapping": {
+                "symbol": "Symbol",
+                "cash_amount": "DividendPerShare",
+                "currency": "Currency",
+                "ex_date": "ExDividendDate",
+                "dividend_yield": "DividendYield"
+            },
+            "test_data": {
+                "symbol": "IBM"
+            },
+            "cost": 0,
+            "party": "attas"
+        },
+        {
+            "name": "news_article",
+            "pulse_address": "5f82c4c9-ac00-587c-9e43-547557081ab6",
+            "description": "Latest stock news article from Alpha Vantage NEWS_SENTIMENT.",
+            "tags": [
+                "news",
+                "sentiment"
+            ],
+            "api": {
+                "url": "https://www.alphavantage.co/query?function=NEWS_SENTIMENT&tickers={symbol}&sort=LATEST&limit={number_of_articles}",
+                "method": "GET",
+                "api_key_id": "alpha_vantage"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    },
+                    "number_of_articles": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "description": "Number of latest articles to request before selecting the first result."
+                    }
+                },
+                "required": [
+                    "symbol",
+                    "number_of_articles"
+                ]
+            },
+            "mapping": {
+                "symbol": "_input.symbol",
+                "number_of_articles": "_input.number_of_articles",
+                "articles": {
+                    "source": "feed",
+                    "limit_from": "_input.number_of_articles",
+                    "items": {
+                        "headline": "title",
+                        "published_at": "time_published",
+                        "publisher": "source",
+                        "summary": "summary",
+                        "url": "url",
+                        "sentiment_label": "overall_sentiment_label"
+                    }
+                }
+            },
+            "test_data": {
+                "symbol": "IBM",
+                "number_of_articles": 1
+            },
+            "cost": 0,
+            "party": "attas"
+        },
+        {
+            "name": "earnings_surprise_history",
+            "pulse_address": "5bd5be59-3355-5fe5-aa8a-a738156cd22a",
+            "description": "Most recent quarterly earnings surprise from Alpha Vantage EARNINGS.",
+            "tags": [
+                "earnings",
+                "quarterly"
+            ],
+            "api": {
+                "url": "https://www.alphavantage.co/query?function=EARNINGS&symbol={symbol}",
+                "method": "GET",
+                "root_path": "quarterlyEarnings.0",
+                "api_key_id": "alpha_vantage"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "symbol"
+                ]
+            },
+            "mapping": {
+                "symbol": "_input.symbol",
+                "period_end": "fiscalDateEnding",
+                "eps_actual": "reportedEPS",
+                "eps_consensus": "estimatedEPS",
+                "eps_surprise": "surprise",
+                "eps_surprise_percent": "surprisePercentage",
+                "release_date": "reportedDate"
+            },
+            "test_data": {
+                "symbol": "IBM"
+            },
+            "cost": 0,
+            "party": "attas"
+        },
+        {
+            "name": "income_statement_revenue",
+            "pulse_address": "ffcb1f67-ddbc-5706-903f-73915f91f04a",
+            "description": "Most recent annual revenue line item from INCOME_STATEMENT.",
+            "tags": [
+                "financial-statements",
+                "income-statement",
+                "annual"
+            ],
+            "api": {
+                "url": "https://www.alphavantage.co/query?function=INCOME_STATEMENT&symbol={symbol}",
+                "method": "GET",
+                "root_path": "annualReports.0",
+                "api_key_id": "alpha_vantage"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "symbol"
+                ]
+            },
+            "mapping": {
+                "symbol": "_input.symbol",
+                "period_end": "fiscalDateEnding",
+                "period_type": {
+                    "value": "annual"
+                },
+                "revenue": "totalRevenue",
+                "currency": "reportedCurrency"
+            },
+            "test_data": {
+                "symbol": "IBM"
+            },
+            "cost": 0,
+            "party": "attas"
+        },
+        {
+            "name": "income_statement_gross_profit",
+            "pulse_address": "fb9cd669-8f6b-5b5b-953e-8f7f73019e15",
+            "description": "Most recent annual gross profit line item from INCOME_STATEMENT.",
+            "tags": [
+                "financial-statements",
+                "income-statement",
+                "annual"
+            ],
+            "api": {
+                "url": "https://www.alphavantage.co/query?function=INCOME_STATEMENT&symbol={symbol}",
+                "method": "GET",
+                "root_path": "annualReports.0",
+                "api_key_id": "alpha_vantage"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "symbol"
+                ]
+            },
+            "mapping": {
+                "symbol": "_input.symbol",
+                "period_end": "fiscalDateEnding",
+                "period_type": {
+                    "value": "annual"
+                },
+                "gross_profit": "grossProfit",
+                "currency": "reportedCurrency"
+            },
+            "test_data": {
+                "symbol": "IBM"
+            },
+            "cost": 0,
+            "party": "attas"
+        },
+        {
+            "name": "income_statement_operating_income",
+            "pulse_address": "9a63105a-cd32-5975-bd35-8200ec66ce78",
+            "description": "Most recent annual operating income line item from INCOME_STATEMENT.",
+            "tags": [
+                "financial-statements",
+                "income-statement",
+                "annual"
+            ],
+            "api": {
+                "url": "https://www.alphavantage.co/query?function=INCOME_STATEMENT&symbol={symbol}",
+                "method": "GET",
+                "root_path": "annualReports.0",
+                "api_key_id": "alpha_vantage"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "symbol"
+                ]
+            },
+            "mapping": {
+                "symbol": "_input.symbol",
+                "period_end": "fiscalDateEnding",
+                "period_type": {
+                    "value": "annual"
+                },
+                "operating_income": "operatingIncome",
+                "currency": "reportedCurrency"
+            },
+            "test_data": {
+                "symbol": "IBM"
+            },
+            "cost": 0,
+            "party": "attas"
+        },
+        {
+            "name": "income_statement_net_income",
+            "pulse_address": "266c85e4-09a8-5b27-9450-46a84eef22d7",
+            "description": "Most recent annual net income line item from INCOME_STATEMENT.",
+            "tags": [
+                "financial-statements",
+                "income-statement",
+                "annual"
+            ],
+            "api": {
+                "url": "https://www.alphavantage.co/query?function=INCOME_STATEMENT&symbol={symbol}",
+                "method": "GET",
+                "root_path": "annualReports.0",
+                "api_key_id": "alpha_vantage"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "symbol"
+                ]
+            },
+            "mapping": {
+                "symbol": "_input.symbol",
+                "period_end": "fiscalDateEnding",
+                "period_type": {
+                    "value": "annual"
+                },
+                "net_income": "netIncome",
+                "currency": "reportedCurrency"
+            },
+            "test_data": {
+                "symbol": "IBM"
+            },
+            "cost": 0,
+            "party": "attas"
+        },
+        {
+            "name": "income_statement_eps",
+            "pulse_address": "55da0488-949f-5617-900a-0091c54aa5da",
+            "description": "Most recent quarterly EPS record from Alpha Vantage EARNINGS.",
+            "tags": [
+                "financial-statements",
+                "income-statement",
+                "quarterly"
+            ],
+            "api": {
+                "url": "https://www.alphavantage.co/query?function=EARNINGS&symbol={symbol}",
+                "method": "GET",
+                "root_path": "quarterlyEarnings.0",
+                "api_key_id": "alpha_vantage"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "symbol"
+                ]
+            },
+            "mapping": {
+                "symbol": "_input.symbol",
+                "period_end": "fiscalDateEnding",
+                "period_type": {
+                    "value": "quarterly"
+                },
+                "eps_diluted": "reportedEPS"
+            },
+            "test_data": {
+                "symbol": "IBM"
+            },
+            "cost": 0,
+            "party": "attas"
+        },
+        {
+            "name": "balance_sheet_cash",
+            "pulse_address": "43455461-f8fd-52c7-bdd0-fcdeea526c4d",
+            "description": "Most recent annual cash position from BALANCE_SHEET.",
+            "tags": [
+                "financial-statements",
+                "balance-sheet",
+                "annual"
+            ],
+            "api": {
+                "url": "https://www.alphavantage.co/query?function=BALANCE_SHEET&symbol={symbol}",
+                "method": "GET",
+                "root_path": "annualReports.0",
+                "api_key_id": "alpha_vantage"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "symbol"
+                ]
+            },
+            "mapping": {
+                "symbol": "_input.symbol",
+                "period_end": "fiscalDateEnding",
+                "period_type": {
+                    "value": "annual"
+                },
+                "cash_and_equivalents": "cashAndCashEquivalentsAtCarryingValue",
+                "currency": "reportedCurrency"
+            },
+            "test_data": {
+                "symbol": "IBM"
+            },
+            "cost": 0,
+            "party": "attas"
+        },
+        {
+            "name": "balance_sheet_total_assets",
+            "pulse_address": "bb9bed2f-b51d-5f0b-95de-2c94dbfdd343",
+            "description": "Most recent annual total assets from BALANCE_SHEET.",
+            "tags": [
+                "financial-statements",
+                "balance-sheet",
+                "annual"
+            ],
+            "api": {
+                "url": "https://www.alphavantage.co/query?function=BALANCE_SHEET&symbol={symbol}",
+                "method": "GET",
+                "root_path": "annualReports.0",
+                "api_key_id": "alpha_vantage"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "symbol"
+                ]
+            },
+            "mapping": {
+                "symbol": "_input.symbol",
+                "period_end": "fiscalDateEnding",
+                "period_type": {
+                    "value": "annual"
+                },
+                "total_assets": "totalAssets",
+                "currency": "reportedCurrency"
+            },
+            "test_data": {
+                "symbol": "IBM"
+            },
+            "cost": 0,
+            "party": "attas"
+        },
+        {
+            "name": "balance_sheet_total_debt",
+            "pulse_address": "cbc6dd27-2a6f-5135-83aa-db363dc0e028",
+            "description": "Most recent annual total debt from BALANCE_SHEET.",
+            "tags": [
+                "financial-statements",
+                "balance-sheet",
+                "annual"
+            ],
+            "api": {
+                "url": "https://www.alphavantage.co/query?function=BALANCE_SHEET&symbol={symbol}",
+                "method": "GET",
+                "root_path": "annualReports.0",
+                "api_key_id": "alpha_vantage"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "symbol"
+                ]
+            },
+            "mapping": {
+                "symbol": "_input.symbol",
+                "period_end": "fiscalDateEnding",
+                "total_debt": "shortLongTermDebtTotal",
+                "currency": "reportedCurrency"
+            },
+            "test_data": {
+                "symbol": "IBM"
+            },
+            "cost": 0,
+            "party": "attas"
+        },
+        {
+            "name": "balance_sheet_shareholder_equity",
+            "pulse_address": "649b248f-cbd8-5d2c-99ae-e8de94ffb96a",
+            "description": "Most recent annual shareholders' equity from BALANCE_SHEET.",
+            "tags": [
+                "financial-statements",
+                "balance-sheet",
+                "annual"
+            ],
+            "api": {
+                "url": "https://www.alphavantage.co/query?function=BALANCE_SHEET&symbol={symbol}",
+                "method": "GET",
+                "root_path": "annualReports.0",
+                "api_key_id": "alpha_vantage"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "symbol"
+                ]
+            },
+            "mapping": {
+                "symbol": "_input.symbol",
+                "period_end": "fiscalDateEnding",
+                "shareholders_equity": "totalShareholderEquity",
+                "currency": "reportedCurrency"
+            },
+            "test_data": {
+                "symbol": "IBM"
+            },
+            "cost": 0,
+            "party": "attas"
+        },
+        {
+            "name": "cash_flow_operating_cash_flow",
+            "pulse_address": "06b79701-414d-5a51-bc5c-d66c6ed314f0",
+            "description": "Most recent annual operating cash flow from CASH_FLOW.",
+            "tags": [
+                "financial-statements",
+                "cash-flow",
+                "annual"
+            ],
+            "api": {
+                "url": "https://www.alphavantage.co/query?function=CASH_FLOW&symbol={symbol}",
+                "method": "GET",
+                "root_path": "annualReports.0",
+                "api_key_id": "alpha_vantage"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "symbol"
+                ]
+            },
+            "mapping": {
+                "symbol": "_input.symbol",
+                "period_end": "fiscalDateEnding",
+                "period_type": {
+                    "value": "annual"
+                },
+                "operating_cash_flow": "operatingCashflow",
+                "currency": "reportedCurrency"
+            },
+            "test_data": {
+                "symbol": "IBM"
+            },
+            "cost": 0,
+            "party": "attas"
+        },
+        {
+            "name": "cash_flow_capex",
+            "pulse_address": "4b8f4a79-8b04-53fb-a046-c66df922cd02",
+            "description": "Most recent annual capex from CASH_FLOW.",
+            "tags": [
+                "financial-statements",
+                "cash-flow",
+                "annual"
+            ],
+            "api": {
+                "url": "https://www.alphavantage.co/query?function=CASH_FLOW&symbol={symbol}",
+                "method": "GET",
+                "root_path": "annualReports.0",
+                "api_key_id": "alpha_vantage"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "symbol"
+                ]
+            },
+            "mapping": {
+                "symbol": "_input.symbol",
+                "period_end": "fiscalDateEnding",
+                "period_type": {
+                    "value": "annual"
+                },
+                "capital_expenditure": "capitalExpenditures",
+                "currency": "reportedCurrency"
+            },
+            "test_data": {
+                "symbol": "IBM"
+            },
+            "cost": 0,
+            "party": "attas"
+        }
+    ],
+    "pools": [
+        {
+            "type": "FileSystemPool",
+            "name": "alpha_vantage_pool",
+            "description": "Alpha Vantage local pool",
+            "root_path": "tests/storage/alpha_vantage"
+        }
+    ]
+}

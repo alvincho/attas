@@ -1,0 +1,31 @@
+{
+  "id": "UserAgent:pool-disconnect",
+  "agent_name": "UserAgent",
+  "practice_id": "pool-disconnect",
+  "practice_name": "Pool Disconnect",
+  "practice_description": "Mark the filesystem pool as disconnected.",
+  "practice_data": {
+    "name": "Pool Disconnect",
+    "description": "Mark the filesystem pool as disconnected.",
+    "id": "pool-disconnect",
+    "cost": 0,
+    "tags": [
+      "pool",
+      "filesystem",
+      "storage",
+      "disconnect"
+    ],
+    "examples": [],
+    "inputModes": [
+      "http-post",
+      "json"
+    ],
+    "outputModes": [
+      "json"
+    ],
+    "parameters": {},
+    "path": "/pool_disconnect"
+  },
+  "is_deleted": false,
+  "updated_at": "2026-03-14T23:07:55.808870+00:00"
+}

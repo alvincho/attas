@@ -1,0 +1,36 @@
+{
+  "id": "bob2:pool-table-exists",
+  "agent_name": "bob2",
+  "practice_id": "pool-table-exists",
+  "practice_name": "Pool Table Exists",
+  "practice_description": "Check whether a filesystem-backed table exists.",
+  "practice_data": {
+    "name": "Pool Table Exists",
+    "description": "Check whether a filesystem-backed table exists.",
+    "id": "pool-table-exists",
+    "cost": 0,
+    "tags": [
+      "pool",
+      "filesystem",
+      "storage",
+      "table-exists"
+    ],
+    "examples": [],
+    "inputModes": [
+      "http-post",
+      "json"
+    ],
+    "outputModes": [
+      "json"
+    ],
+    "parameters": {
+      "table_name": {
+        "type": "string",
+        "description": "Logical table name."
+      }
+    },
+    "path": "/pool_table_exists"
+  },
+  "is_deleted": false,
+  "updated_at": "2026-03-23T11:14:50.793519+00:00"
+}

@@ -1,0 +1,73 @@
+{
+  "id": "YFinancePulser:get_pulse_data",
+  "agent_name": "YFinancePulser",
+  "practice_id": "get_pulse_data",
+  "practice_name": "Get Pulse Data",
+  "practice_description": "Fetch or transform pulse payloads for the agent's supported pulses.",
+  "practice_data": {
+    "name": "Get Pulse Data",
+    "description": "Fetch or transform pulse payloads for the agent's supported pulses.",
+    "id": "get_pulse_data",
+    "cost": 0,
+    "tags": [
+      "pulser",
+      "pulse",
+      "data"
+    ],
+    "examples": [
+      "POST /get_pulse_data {'pulse_name': 'last_price', 'params': {'symbol': 'AAPL'}}"
+    ],
+    "inputModes": [
+      "http-post",
+      "json"
+    ],
+    "outputModes": [
+      "json"
+    ],
+    "parameters": {
+      "pulse_name": {
+        "type": "string",
+        "description": "Optional pulse identifier. Defaults to the pulser's primary pulse.",
+        "enum": [
+          "last_price",
+          "previous_close",
+          "open_price",
+          "day_high_low",
+          "trade_volume",
+          "bid_ask",
+          "market_cap",
+          "valuation_multiples",
+          "profitability_metrics",
+          "balance_sheet_strength",
+          "cashflow_snapshot",
+          "revenue_and_growth",
+          "eps_metrics",
+          "dividend_profile",
+          "fifty_two_week_range",
+          "beta_and_volatility",
+          "analyst_sentiment",
+          "company_profile"
+        ]
+      },
+      "pulse_address": {
+        "type": "string",
+        "description": "Optional pulse address override."
+      },
+      "params": {
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "description": "Ticker symbol, for example AAPL."
+          }
+        },
+        "required": [
+          "symbol"
+        ]
+      }
+    },
+    "path": "/get_pulse_data"
+  },
+  "is_deleted": false,
+  "updated_at": "2026-03-23T13:21:18.777612+00:00"
+}

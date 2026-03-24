@@ -1,0 +1,17 @@
+{
+    "name": "bob2",
+    "role": "worker",
+    "tags": ["test"],
+    "host": "127.0.0.1",
+    "port": 9013,
+    "plaza_url": "http://127.0.0.1:8011",
+    "pools": [
+        {
+            "type": "FileSystemPool",
+            "name": "bob_pool",
+            "description": "Bob local pool",
+            "root_path": "tests/storage/bob_fake"
+        }
+    ],
+    "type": "prompits.agents.standby.StandbyAgent"
+}

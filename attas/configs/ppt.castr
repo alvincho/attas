@@ -1,0 +1,22 @@
+{
+    "name": "PptCastr",
+    "type": "phemacast.agents.castr.Castr",
+    "host": "127.0.0.1",
+    "port": 8028,
+    "plaza_url": "http://127.0.0.1:8011",
+    "role": "castr",
+    "tags": ["castr", "ppt", "media", "render"],
+    "pools": [
+        {
+            "type": "FileSystemPool",
+            "name": "ppt_castr_pool",
+            "description": "Local pool for PPT Castr state.",
+            "root_path": "tests/storage/ppt_castr"
+        }
+    ],
+    "castr": {
+        "description": "A Castr agent specialized in rendering Phemas into PPT presentations.",
+        "tags": ["ppt"],
+        "media_type": "PPT"
+    }
+}

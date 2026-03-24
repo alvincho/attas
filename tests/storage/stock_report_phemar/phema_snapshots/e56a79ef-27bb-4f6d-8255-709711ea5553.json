@@ -1,0 +1,313 @@
+{
+  "id": "e56a79ef-27bb-4f6d-8255-709711ea5553",
+  "phema_id": "841bd99a-5a65-5b80-9625-8298033d6a96",
+  "phema_name": "Simple Report 2",
+  "params_hash": "34db6d75e5a856ec6419c51604d370d66b4df8ab9956834890b3738e3c20eba5",
+  "params": {
+    "symbol": "NVDA"
+  },
+  "tags": [
+    "static",
+    "snapshot"
+  ],
+  "snapshot": {
+    "id": "e56a79ef-27bb-4f6d-8255-709711ea5553",
+    "phema_id": "e56a79ef-27bb-4f6d-8255-709711ea5553",
+    "name": "Simple Report 2 Static Snapshot",
+    "description": "Simple report contains 2 sections",
+    "owner": "StockReportPhemar",
+    "address": "plaza://phema/e56a79ef-27bb-4f6d-8255-709711ea5553",
+    "pit_type": "Phema",
+    "pit_address": {
+      "pit_id": "e56a79ef-27bb-4f6d-8255-709711ea5553",
+      "plazas": []
+    },
+    "tags": [
+      "static",
+      "snapshot"
+    ],
+    "input_schema": {
+      "type": "object",
+      "required": [
+        "symbol"
+      ],
+      "properties": {
+        "symbol": {
+          "type": "string"
+        }
+      }
+    },
+    "sections": [
+      {
+        "name": "Company Info 2",
+        "description": "",
+        "modifier": "",
+        "content": [
+          {
+            "name": "company_profile:sector",
+            "static": true,
+            "value": {
+              "field_path": "sector",
+              "fetch": "a6c42cfb-cf43-4f92-92bd-9ad822efed9f",
+              "data": "TECHNOLOGY"
+            }
+          },
+          {
+            "name": "company_profile:symbol",
+            "static": true,
+            "value": {
+              "field_path": "symbol",
+              "fetch": "a6c42cfb-cf43-4f92-92bd-9ad822efed9f",
+              "data": "IBM"
+            }
+          },
+          {
+            "name": "company_profile:website",
+            "static": true,
+            "value": {
+              "field_path": "website",
+              "fetch": "a6c42cfb-cf43-4f92-92bd-9ad822efed9f",
+              "data": "https://www.ibm.com"
+            }
+          },
+          {
+            "name": "company_profile:industry",
+            "static": true,
+            "value": {
+              "field_path": "industry",
+              "fetch": "a6c42cfb-cf43-4f92-92bd-9ad822efed9f",
+              "data": "INFORMATION TECHNOLOGY SERVICES"
+            }
+          }
+        ]
+      },
+      {
+        "name": "Prices",
+        "description": "",
+        "modifier": "",
+        "content": [
+          {
+            "name": "last_price:source",
+            "static": true,
+            "value": {
+              "field_path": "source",
+              "fetch": "bec3417e-4228-4ca8-8880-f38641473500",
+              "data": "marketstack"
+            }
+          },
+          {
+            "name": "last_price:symbol",
+            "static": true,
+            "value": {
+              "field_path": "symbol",
+              "fetch": "bec3417e-4228-4ca8-8880-f38641473500",
+              "data": "IBM"
+            }
+          },
+          {
+            "name": "last_price:timestamp",
+            "static": true,
+            "value": {
+              "field_path": "timestamp",
+              "fetch": "bec3417e-4228-4ca8-8880-f38641473500",
+              "data": "2026-03-20T00:00:00+0000"
+            }
+          },
+          {
+            "name": "last_price:last_price",
+            "static": true,
+            "value": {
+              "field_path": "last_price",
+              "fetch": "bec3417e-4228-4ca8-8880-f38641473500",
+              "data": 241.77
+            }
+          }
+        ]
+      },
+      {
+        "name": "News Summary",
+        "description": "latest news article with headline, summary, and source link.",
+        "modifier": "",
+        "content": [
+          {
+            "type": "text",
+            "text": "Headline:"
+          },
+          {
+            "name": "news_article:headline",
+            "static": true,
+            "value": {
+              "field_path": "headline",
+              "fetch": "e3344be5-3ba6-4732-a0ef-bbf2f8577d53",
+              "data": "Price to earnings ratio of MDJM Ltd. \u2013 OTC:UOKAF"
+            }
+          },
+          {
+            "type": "text",
+            "text": "\nSummary:"
+          },
+          {
+            "name": "news_article:summary",
+            "static": true,
+            "value": {
+              "field_path": "summary",
+              "fetch": "e3344be5-3ba6-4732-a0ef-bbf2f8577d53",
+              "data": "This article displays the price to earnings ratio for MDJM Ltd. (OTC:UOKAF). It briefly presents the company's stock information and links to its financial overview on TradingView. The page provides general market data and educational resources offered by TradingView."
+            }
+          },
+          {
+            "type": "text",
+            "text": "\nSource:"
+          },
+          {
+            "name": "news_article:url",
+            "static": true,
+            "value": {
+              "field_path": "url",
+              "fetch": "e3344be5-3ba6-4732-a0ef-bbf2f8577d53",
+              "data": "https://www.tradingview.com/symbols/OTC-UOKAF/financials-statistics-and-ratios/price-earnings/"
+            }
+          }
+        ]
+      }
+    ],
+    "resolution_mode": "static",
+    "snapshot_cache_time": 0,
+    "meta": {
+      "resolution_mode": "static",
+      "source_phema_id": "841bd99a-5a65-5b80-9625-8298033d6a96",
+      "source_phema_name": "Simple Report 2",
+      "source_phema_address": "plaza://phema/841bd99a-5a65-5b80-9625-8298033d6a96",
+      "static_snapshot": true,
+      "snapshot_generated_at": "2026-03-23T06:52:23.856386+00:00",
+      "snapshot_input": {
+        "symbol": "NVDA"
+      },
+      "fetches": [
+        {
+          "id": "a6c42cfb-cf43-4f92-92bd-9ad822efed9f",
+          "pulse_name": "company_profile",
+          "pulse_pit_address": {
+            "pit_id": "5adbfd9a-c59f-5b85-a19f-565525d5712d",
+            "plazas": [
+              "http://127.0.0.1:8011"
+            ]
+          },
+          "pulser_name": "AlphaVantageApiPulser",
+          "pulser_pit_address": {
+            "pit_id": "a68a31a1-d03e-49f9-8183-a974078fb727",
+            "plazas": [
+              "http://127.0.0.1:8011"
+            ]
+          },
+          "params": {
+            "symbol": "IBM"
+          },
+          "fetch": {
+            "started_at": "2026-03-23T06:52:14.955383+00:00",
+            "ended_at": "2026-03-23T06:52:17.872397+00:00",
+            "duration_ms": 2917.0264170002156,
+            "cost": 0.0,
+            "cache_hit": false
+          },
+          "data": {
+            "sector": "TECHNOLOGY",
+            "symbol": "IBM",
+            "website": "https://www.ibm.com",
+            "industry": "INFORMATION TECHNOLOGY SERVICES",
+            "company_name": "International Business Machines",
+            "headquarters_country": "USA"
+          }
+        },
+        {
+          "id": "bec3417e-4228-4ca8-8880-f38641473500",
+          "pulse_name": "last_price",
+          "pulse_pit_address": {
+            "pit_id": "37dbc0b8-2677-4b29-8aea-dd097b652c8e",
+            "plazas": [
+              "http://127.0.0.1:8011"
+            ]
+          },
+          "pulser_name": "MarketstackApiPulser",
+          "pulser_pit_address": {
+            "pit_id": "2a0c1f8f-7320-463e-8661-203fe15d24cb",
+            "plazas": [
+              "http://127.0.0.1:8011"
+            ]
+          },
+          "params": {
+            "symbol": "IBM"
+          },
+          "fetch": {
+            "started_at": "2026-03-23T06:52:17.880303+00:00",
+            "ended_at": "2026-03-23T06:52:19.975473+00:00",
+            "duration_ms": 2095.1797500001703,
+            "cost": 0.0,
+            "cache_hit": false
+          },
+          "data": {
+            "source": "marketstack",
+            "symbol": "IBM",
+            "currency": "USD",
+            "exchange": "XNYS",
+            "timestamp": "2026-03-20T00:00:00+0000",
+            "last_price": 241.77
+          }
+        },
+        {
+          "id": "e3344be5-3ba6-4732-a0ef-bbf2f8577d53",
+          "pulse_name": "news_article",
+          "pulse_pit_address": {
+            "pit_id": "5f82c4c9-ac00-587c-9e43-547557081ab6",
+            "plazas": [
+              "http://127.0.0.1:8011"
+            ]
+          },
+          "pulser_name": "AlphaVantageApiPulser",
+          "pulser_pit_address": {
+            "pit_id": "a68a31a1-d03e-49f9-8183-a974078fb727",
+            "plazas": [
+              "http://127.0.0.1:8011"
+            ]
+          },
+          "params": {
+            "symbol": "",
+            "number_of_articles": 1
+          },
+          "fetch": {
+            "started_at": "2026-03-23T06:52:19.986231+00:00",
+            "ended_at": "2026-03-23T06:52:23.856104+00:00",
+            "duration_ms": 3869.8889170000257,
+            "cost": 0.0,
+            "cache_hit": false
+          },
+          "data": {
+            "symbol": "",
+            "number_of_articles": 1,
+            "articles": [
+              {
+                "url": "https://www.tradingview.com/symbols/OTC-UOKAF/financials-statistics-and-ratios/price-earnings/",
+                "summary": "This article displays the price to earnings ratio for MDJM Ltd. (OTC:UOKAF). It briefly presents the company's stock information and links to its financial overview on TradingView. The page provides general market data and educational resources offered by TradingView.",
+                "headline": "Price to earnings ratio of MDJM Ltd. \u2013 OTC:UOKAF",
+                "publisher": "TradingView",
+                "published_at": "20260323T053940",
+                "sentiment_label": "Neutral"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "resolution_mode": "static",
+  "cache_ttl_seconds": 0,
+  "expires_at": null,
+  "meta": {
+    "source_phema_id": "841bd99a-5a65-5b80-9625-8298033d6a96",
+    "source_phema_name": "Simple Report 2",
+    "source_phema_address": "plaza://phema/841bd99a-5a65-5b80-9625-8298033d6a96",
+    "cache_ttl_seconds": 0
+  },
+  "created_at": "2026-03-23T06:52:23.856760+00:00",
+  "updated_at": "2026-03-23T06:52:23.856760+00:00"
+}

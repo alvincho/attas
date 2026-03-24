@@ -1,0 +1,103 @@
+{% extends "phemacast/pulsers/templates/pulser_editor_base.html" %}
+
+{% block subtitle %}Shared pulser editor with a YFinance extension layer for quote presets and yfinance-specific pulse editing.{% endblock %}
+
+{% block hero_meta_extra %}
+<span class="chip">Yahoo Finance</span>
+{% endblock %}
+
+{% block extension_bootstrap %}
+window.pulserEditorExtension = {
+    defaultPulse({ index }) {
+        return {
+            name: `quote_${index}`,
+            description: 'YFinance-derived pulse.',
+            pulse_address: `plaza://pulse/quote_${index}`,
+            tags: ['finance', 'quote'],
+            cost: 0,
+            api: {
+                url: '',
+                method: 'GET',
+                root_path: '',
+                headers: {},
+            },
+            input_schema: {
+                type: 'object',
+                properties: {
+                    symbol: { type: 'string', description: 'Ticker symbol, for example AAPL.' },
+                },
+                required: ['symbol'],
+            },
+            output_schema: {},
+            mapping: {
+                symbol: 'symbol',
+                source: { value: 'yfinance' },
+            },
+            test_data: {
+                symbol: 'AAPL',
+            },
+        };
+    },
+
+    renderTopLevelExtension({ root }) {
+        root.innerHTML = `
+            <div class="field full-span">
+                <label>Provider Notes</label>
+                <textarea readonly style="min-height:88px;font-family:var(--sans);">YFinancePulser reads market data from the yfinance Python module. API URL and API key fields are ignored here, so use mapping, schemas, and Pulse Test Data JSON as the primary controls.</textarea>
+            </div>
+        `;
+    },
+
+    renderPulseEditorExtension({ root }) {
+        const fieldsToHide = ['api_url', 'api_method', 'api_root_path', 'api_key_id', 'api_key_json', 'api_key_header', 'api_key_prefix', 'api_key_param', 'api_headers_json'];
+        fieldsToHide.forEach((fieldName) => {
+            const node = root.querySelector(`[data-pulse-field="${fieldName}"]`);
+            if (!node) return;
+            const field = node.closest('.field');
+            if (field) {
+                field.style.display = 'none';
+            }
+        });
+
+        const noteId = 'yfinance-pulse-note';
+        if (!document.getElementById(noteId)) {
+            const note = document.createElement('div');
+            note.id = noteId;
+            note.className = 'field full-span';
+            note.innerHTML = `
+                <label>YFinance Pulse Extension</label>
+                <textarea readonly style="min-height:88px;font-family:var(--sans);">This pulse is backed by yfinance snapshot data. Keep the input schema centered on ticker symbols and map fields from the shared snapshot keys like last_price, previous_close, open_price, day_high, day_low, volume, average_daily_volume_30d, currency, and source.</textarea>
+            `;
+            root.appendChild(note);
+        }
+    },
+
+    renderPanels({ root }) {
+        root.innerHTML = `
+            <section class="panel">
+                <div class="panel-head">
+                    <div>
+                        <h3>Quick Quote Presets</h3>
+                        <div class="muted">Load common symbols into the selected pulse’s Pulse Test Data JSON.</div>
+                    </div>
+                </div>
+                <div class="toolbar">
+                    <button class="ghost-btn" type="button" data-symbol-preset="AAPL">AAPL</button>
+                    <button class="ghost-btn" type="button" data-symbol-preset="MSFT">MSFT</button>
+                    <button class="ghost-btn" type="button" data-symbol-preset="NVDA">NVDA</button>
+                    <button class="ghost-btn" type="button" data-symbol-preset="TSLA">TSLA</button>
+                </div>
+            </section>
+        `;
+
+        root.querySelectorAll('[data-symbol-preset]').forEach((button) => {
+            button.addEventListener('click', () => {
+                const draft = ensurePulseDraft(state.selectedPulseIndex);
+                draft.test_data_json = prettyJson({ symbol: button.dataset.symbolPreset });
+                renderPulseEditor();
+                renderPreview();
+            });
+        });
+    },
+};
+{% endblock %}

@@ -1,0 +1,4356 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>attas | Phema Editor</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Space+Mono&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg: #f4f8fb;
+            --panel: rgba(255, 255, 255, 0.9);
+            --panel-strong: rgba(255, 255, 255, 0.96);
+            --border: rgba(15, 118, 110, 0.14);
+            --border-strong: rgba(15, 118, 110, 0.28);
+            --text: #13313a;
+            --muted: #5d7680;
+            --label-text: #365560;
+            --accent: #0f766e;
+            --accent-soft: rgba(15, 118, 110, 0.08);
+            --warning: #ef8f34;
+            --danger: #dc4d67;
+            --shadow: 0 20px 60px rgba(15, 46, 58, 0.12);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: 'Outfit', sans-serif;
+            color: var(--text);
+            background:
+                radial-gradient(circle at top left, rgba(15, 118, 110, 0.15), transparent 32%),
+                radial-gradient(circle at bottom right, rgba(31, 122, 255, 0.12), transparent 28%),
+                linear-gradient(180deg, #f9fcfd, var(--bg));
+        }
+
+        .shell {
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+
+        .topbar,
+        .meta-grid,
+        .pulse-panel,
+        .sections-panel,
+        .meta-panel,
+        .section-card {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(18px);
+        }
+
+        .topbar {
+            padding: 1.25rem 1.4rem;
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+        .topbar h1 {
+            margin: 0 0 0.35rem;
+            font-size: clamp(1.8rem, 3vw, 2.8rem);
+            line-height: 1;
+        }
+
+        .topbar p,
+        .muted {
+            margin: 0;
+            color: var(--muted);
+            line-height: 1.5;
+        }
+
+        .top-actions,
+        .section-actions,
+        .header-actions {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .top-status-pill {
+            min-width: 180px;
+            justify-content: center;
+            font-weight: 800;
+        }
+
+        button,
+        .link-btn {
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 0.8rem 1rem;
+            font: inherit;
+            font-weight: 600;
+            cursor: pointer;
+            color: var(--text);
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(242, 250, 250, 0.92));
+        }
+
+        button:hover,
+        .link-btn:hover {
+            border-color: var(--border-strong);
+        }
+
+        .primary-btn {
+            color: white;
+            background: linear-gradient(135deg, #0f766e, #139b91);
+            border-color: rgba(15, 118, 110, 0.6);
+        }
+
+        .danger-btn {
+            color: var(--danger);
+            border-color: rgba(220, 77, 103, 0.22);
+            background: rgba(220, 77, 103, 0.06);
+        }
+
+        .link-btn {
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .meta-grid {
+            padding: 1.2rem;
+            display: grid;
+            grid-template-columns: 1.3fr 1fr 1fr 1fr;
+            gap: 1rem;
+        }
+
+        #phema-input-schema {
+            min-height: 180px;
+            font-family: 'Space Mono', monospace;
+            font-size: 0.82rem;
+        }
+
+        .field,
+        .stack {
+            display: flex;
+            flex-direction: column;
+            gap: 0.45rem;
+        }
+
+        .field label,
+        .panel-title span,
+        .section-meta label {
+            font-size: 0.78rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--label-text);
+        }
+
+        input,
+        textarea {
+            width: 100%;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            background: var(--panel-strong);
+            padding: 0.95rem 1rem;
+            color: var(--text);
+            font: inherit;
+            resize: vertical;
+        }
+
+        input:focus,
+        textarea:focus {
+            outline: none;
+            border-color: var(--border-strong);
+            box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.08);
+        }
+
+        textarea {
+            min-height: 108px;
+        }
+
+        .workspace {
+            display: grid;
+            grid-template-columns: 320px minmax(0, 1fr) 320px;
+            gap: 1rem;
+            align-items: start;
+            min-height: 0;
+        }
+
+        .pulse-panel,
+        .sections-panel,
+        .meta-panel {
+            padding: 1.1rem;
+        }
+
+        .pulse-panel {
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+
+        .sections-panel {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-title {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .panel-title h2,
+        .section-header h3 {
+            margin: 0;
+            font-size: 1.05rem;
+        }
+
+        .pulse-list,
+        .sections-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.9rem;
+        }
+
+        .pulse-list {
+            flex: 1 1 auto;
+            min-height: 280px;
+            max-height: min(62vh, 820px);
+            overflow: auto;
+            padding-right: 0.25rem;
+            scrollbar-gutter: stable;
+        }
+
+        .sections-list {
+            width: 100%;
+        }
+
+        .sections-intro {
+            margin: -0.35rem 0 1rem;
+            color: var(--muted);
+            line-height: 1.45;
+        }
+
+        .pulse-tools {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .pulse-tools-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+        }
+
+        .checkbox-field {
+            display: flex;
+            align-items: flex-end;
+        }
+
+        .checkbox-inline {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.6rem;
+            min-height: 54px;
+            padding: 0.85rem 0.95rem;
+            border: 1px solid rgba(15, 118, 110, 0.18);
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.9);
+            color: var(--text);
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .checkbox-inline input {
+            width: 1rem;
+            height: 1rem;
+            margin: 0;
+            accent-color: var(--accent);
+        }
+
+        .pulse-select {
+            width: 100%;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            background: var(--panel-strong);
+            padding: 0.95rem 1rem;
+            color: var(--text);
+            font: inherit;
+        }
+
+        .pulse-card {
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            padding: 0.95rem;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(239, 250, 249, 0.92));
+            cursor: grab;
+        }
+
+        .pulse-card strong {
+            display: block;
+            margin-bottom: 0.25rem;
+        }
+
+        .section-card {
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.9rem;
+        }
+
+        .section-card[draggable="true"] {
+            cursor: grab;
+        }
+
+        .section-card.reorder-target {
+            box-shadow: 0 0 0 2px rgba(15, 118, 110, 0.18);
+            border-color: var(--border-strong);
+        }
+
+        .section-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+        .section-card.collapsed {
+            padding: 0.7rem 0.85rem;
+            gap: 0;
+        }
+
+        .section-card.collapsed .section-header {
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .section-heading {
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+            min-width: 0;
+        }
+
+        .section-heading-toggle {
+            border: 0;
+            background: transparent;
+            padding: 0;
+            margin: 0;
+            text-align: left;
+            color: inherit;
+            cursor: pointer;
+        }
+
+        .section-summary {
+            color: var(--muted);
+            font-size: 0.88rem;
+        }
+
+        .section-toggle-btn {
+            min-width: 32px;
+            width: 32px;
+            height: 32px;
+            padding: 0;
+            border-radius: 10px;
+            font-size: 1rem;
+            line-height: 1;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+        }
+
+        .section-action-btn {
+            padding: 0.48rem 0.72rem;
+            border-radius: 12px;
+            font-size: 0.82rem;
+            line-height: 1.1;
+        }
+
+        .section-toolbar-btn {
+            padding: 0.52rem 0.78rem;
+            border-radius: 12px;
+            font-size: 0.82rem;
+            line-height: 1.1;
+        }
+
+        .section-body {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .section-card.collapsed .section-body {
+            display: none;
+        }
+
+        .section-card.collapsed .section-summary {
+            font-size: 0.8rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .section-card.collapsed .section-actions {
+            gap: 0.45rem;
+            flex-wrap: nowrap;
+        }
+
+        .section-card.collapsed .section-actions button:not(.section-toggle-btn) {
+            display: none;
+        }
+
+        .section-meta {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.85rem;
+        }
+
+        .section-meta .full {
+            grid-column: 1 / -1;
+        }
+
+        .dropzone {
+            border: 2px dashed rgba(15, 118, 110, 0.22);
+            border-radius: 14px;
+            padding: 0;
+            background: rgba(255, 255, 255, 0.96);
+            overflow: hidden;
+        }
+
+        .dropzone.drag-over {
+            border-color: var(--accent);
+            background: rgba(15, 118, 110, 0.16);
+        }
+
+        .content-node {
+            display: inline;
+            border-radius: 18px;
+            transition: box-shadow 120ms ease, border-color 120ms ease;
+        }
+
+        .content-node.selected {
+            box-shadow: 0 0 0 2px rgba(15, 118, 110, 0.18);
+        }
+
+        .content-node.draggable {
+            cursor: grab;
+        }
+
+        .content-composer {
+            display: block;
+            min-height: 56px;
+            width: 100%;
+            padding: 0.45rem 0.6rem;
+            outline: none;
+            white-space: pre-wrap;
+            word-break: break-word;
+            font-size: 0.96rem;
+            line-height: 1.4;
+            cursor: text;
+        }
+
+        .content-composer:empty::before {
+            content: attr(data-placeholder);
+            color: var(--muted);
+        }
+
+        .content-composer.read-only {
+            cursor: default;
+        }
+
+        .content-text-fragment {
+            white-space: pre-wrap;
+        }
+
+        .content-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0;
+            padding: 0.02rem 0.28rem;
+            border-radius: 7px;
+            background: rgba(15, 118, 110, 0.08);
+            color: var(--accent);
+            border: 1px solid rgba(15, 118, 110, 0.18);
+            font-size: 0.74rem;
+            line-height: 1.15;
+            font-weight: 600;
+        }
+
+        .field-chip {
+            background: rgba(31, 122, 255, 0.08);
+            border-color: rgba(31, 122, 255, 0.18);
+            color: #1f5fd7;
+        }
+
+        .content-chip.dragging {
+            opacity: 0.55;
+        }
+
+        .content-token {
+            display: inline-flex;
+            align-items: center;
+            margin: 0;
+            vertical-align: baseline;
+        }
+
+        .chip-remove {
+            border: 0;
+            background: transparent;
+            color: inherit;
+            padding: 0;
+            cursor: pointer;
+            font-size: 0.72rem;
+            line-height: 1;
+            display: none;
+        }
+
+        .content-node.selected .chip-remove {
+            display: inline-flex;
+            margin-left: 0.18rem;
+        }
+
+        .empty-note,
+        .status-line {
+            color: var(--muted);
+            line-height: 1.5;
+        }
+
+        .status-banner {
+            border: 1px solid rgba(21, 86, 195, 0.18);
+            border-radius: 20px;
+            padding: 0.95rem 1.1rem;
+            background: linear-gradient(135deg, rgba(31, 122, 255, 0.12), rgba(15, 118, 110, 0.08));
+            color: #15384a;
+            font-weight: 700;
+            box-shadow: var(--shadow);
+        }
+
+        .status-banner.error {
+            border-color: rgba(220, 77, 103, 0.22);
+            background: rgba(220, 77, 103, 0.1);
+            color: var(--danger);
+        }
+
+        .status-banner.success {
+            border-color: rgba(15, 118, 110, 0.22);
+            background: rgba(15, 118, 110, 0.12);
+            color: var(--accent);
+        }
+
+        .task-list-shell {
+            margin-top: 0.85rem;
+            border: 1px dashed rgba(21, 86, 195, 0.18);
+            border-radius: 18px;
+            padding: 0.8rem 0.95rem;
+            background: rgba(255, 255, 255, 0.58);
+        }
+
+        .task-list-shell[hidden] {
+            display: none;
+        }
+
+        .task-list-title {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #285267;
+            margin-bottom: 0.55rem;
+        }
+
+        .task-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.45rem;
+        }
+
+        .task-item {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            color: #234b5d;
+            font-size: 0.84rem;
+            line-height: 1.4;
+        }
+
+        .task-dot {
+            width: 0.58rem;
+            height: 0.58rem;
+            border-radius: 999px;
+            background: linear-gradient(135deg, #1556c3, #1f7aff);
+            box-shadow: 0 0 0 4px rgba(31, 122, 255, 0.12);
+            flex: 0 0 auto;
+        }
+
+        .status-line.error {
+            color: var(--danger);
+        }
+
+        .status-line.success {
+            color: var(--accent);
+        }
+
+        .meta-panel textarea {
+            min-height: 220px;
+            font-family: 'Space Mono', monospace;
+            font-size: 0.82rem;
+        }
+
+        .inspector-card {
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            padding: 0.95rem;
+            background: rgba(255, 255, 255, 0.82);
+            display: flex;
+            flex-direction: column;
+            gap: 0.7rem;
+        }
+
+        .inspector-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 0.7rem;
+        }
+
+        .inspector-value {
+            color: var(--text);
+            line-height: 1.5;
+            word-break: break-word;
+        }
+
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            border-radius: 999px;
+            padding: 0.45rem 0.7rem;
+            font-size: 0.74rem;
+            font-weight: 700;
+            color: #13424c;
+            background: rgba(15, 118, 110, 0.14);
+            border: 1px solid rgba(15, 118, 110, 0.24);
+        }
+
+        .manager-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .manager-panel {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(18px);
+            padding: 1.1rem;
+        }
+
+        .manager-toolbar {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 0.75rem;
+            align-items: center;
+            margin-bottom: 0.9rem;
+        }
+
+        .manager-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            max-height: 320px;
+            overflow: auto;
+        }
+
+        .manager-item {
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            padding: 0.95rem;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(239, 250, 249, 0.92));
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .manager-item.active {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px rgba(15, 118, 110, 0.14);
+        }
+
+        .manager-item-header,
+        .manager-item-meta {
+            display: flex;
+            justify-content: space-between;
+            gap: 0.75rem;
+            align-items: center;
+        }
+
+        .manager-item-footer {
+            display: flex;
+            justify-content: space-between;
+            gap: 0.75rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .manager-inline-btn {
+            padding: 0.5rem 0.78rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .manager-item-title {
+            font-weight: 700;
+        }
+
+        .manager-badges {
+            display: flex;
+            gap: 0.4rem;
+            flex-wrap: wrap;
+        }
+
+        .manager-badge {
+            display: inline-flex;
+            align-items: center;
+            border-radius: 999px;
+            padding: 0.28rem 0.6rem;
+            font-size: 0.72rem;
+            font-weight: 700;
+            background: rgba(15, 118, 110, 0.12);
+            color: #174954;
+            border: 1px solid rgba(15, 118, 110, 0.24);
+        }
+
+        .manager-badge.locked {
+            background: rgba(220, 77, 103, 0.08);
+            color: var(--danger);
+            border-color: rgba(220, 77, 103, 0.18);
+        }
+
+        .manager-badge.local {
+            background: rgba(15, 118, 110, 0.08);
+            color: var(--accent);
+        }
+
+        .manager-badge.plaza {
+            background: rgba(31, 122, 255, 0.08);
+            color: #1f5fd7;
+            border-color: rgba(31, 122, 255, 0.16);
+        }
+
+        .manager-empty {
+            color: var(--muted);
+            line-height: 1.5;
+            padding: 0.4rem 0;
+        }
+
+        .manager-search-panel,
+        .manager-detail-panel {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(18px);
+            padding: 1.1rem;
+        }
+
+        .manager-search-toolbar {
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr) auto;
+            gap: 0.9rem;
+            align-items: end;
+            margin-bottom: 1rem;
+        }
+
+        .manager-scope-group {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .manager-scope-btn.active {
+            color: white;
+            background: linear-gradient(135deg, #0f766e, #139b91);
+            border-color: rgba(15, 118, 110, 0.6);
+        }
+
+        .manager-results {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 0.85rem;
+        }
+
+        .manager-detail-meta {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .pulse-card-line {
+            display: flex;
+            justify-content: space-between;
+            gap: 0.75rem;
+            align-items: center;
+            margin-bottom: 0.2rem;
+        }
+
+        .pulse-card-line:last-child {
+            margin-bottom: 0;
+        }
+
+        .pulse-card-copy {
+            color: #48656f;
+            font-size: 0.86rem;
+            line-height: 1.5;
+        }
+
+        .pulse-card-subtle {
+            color: #365560;
+            font-size: 0.82rem;
+        }
+
+        .pulse-card-meta {
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+        }
+
+        .pulser-picker {
+            display: flex;
+            flex-direction: column;
+            gap: 0.65rem;
+            max-height: 260px;
+            overflow: auto;
+        }
+
+        .pulser-choice {
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            padding: 0.85rem 0.95rem;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(239, 250, 249, 0.92));
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            gap: 0.45rem;
+        }
+
+        .pulser-choice.active {
+            border-color: rgba(15, 118, 110, 0.24);
+        }
+
+        .pulser-choice.selected {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px rgba(15, 118, 110, 0.14);
+        }
+
+        .pulser-choice-head,
+        .pulser-choice-meta {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+        }
+
+        .pulser-choice-actions {
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .pulser-choice-title {
+            font-weight: 700;
+        }
+
+        .pulser-sample-btn {
+            padding: 0.62rem 0.95rem;
+            border-radius: 12px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            letter-spacing: 0.01em;
+            color: white;
+            background: linear-gradient(135deg, #1556c3, #1f7aff);
+            border: 1px solid rgba(21, 86, 195, 0.45);
+            box-shadow: 0 10px 20px rgba(31, 122, 255, 0.18);
+        }
+
+        .pill.success {
+            color: #0b6a63;
+            border-color: rgba(15, 118, 110, 0.18);
+            background: rgba(217, 242, 239, 0.96);
+        }
+
+        .pill.warning {
+            color: #a55d12;
+            border-color: rgba(239, 143, 52, 0.2);
+            background: rgba(255, 241, 225, 0.96);
+        }
+
+        .pill.info {
+            color: #1556c3;
+            border-color: rgba(31, 122, 255, 0.2);
+            background: rgba(31, 122, 255, 0.1);
+        }
+
+        .modal-shell {
+            position: fixed;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            background: rgba(10, 23, 33, 0.42);
+            z-index: 1000;
+        }
+
+        .modal-shell.open {
+            display: flex;
+        }
+
+        .modal-card {
+            width: min(920px, 100%);
+            max-height: calc(100vh - 2rem);
+            overflow: auto;
+            background: var(--panel-strong);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            box-shadow: var(--shadow);
+            padding: 1.2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .modal-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .field-picker {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.55rem;
+            max-height: 220px;
+            overflow: auto;
+            padding: 0.8rem;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.72);
+        }
+
+        .field-option {
+            display: inline-flex;
+            gap: 0.6rem;
+            align-items: center;
+            color: var(--text);
+            font-size: 0.88rem;
+            padding: 0.45rem 0.7rem;
+            border: 1px solid rgba(15, 118, 110, 0.16);
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.9);
+            white-space: nowrap;
+        }
+
+        .field-option code {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.8rem;
+        }
+
+        .primary-btn:disabled,
+        .pulser-sample-btn:disabled,
+        button:disabled {
+            cursor: not-allowed;
+            opacity: 0.56;
+            box-shadow: none;
+        }
+
+        .result-preview {
+            min-height: 220px;
+            max-height: 320px;
+            overflow: auto;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.84);
+            padding: 0.9rem;
+            font-family: 'Space Mono', monospace;
+            font-size: 0.8rem;
+            white-space: pre-wrap;
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        @media (max-width: 1200px) {
+            .workspace {
+                grid-template-columns: 1fr;
+            }
+
+            .meta-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .manager-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .manager-search-toolbar,
+            .manager-results {
+                grid-template-columns: 1fr;
+            }
+
+            .modal-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 720px) {
+            .shell {
+                padding: 1rem;
+            }
+
+            .topbar,
+            .meta-grid {
+                padding: 1rem;
+            }
+
+            .meta-grid,
+            .section-meta {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    {% set is_manager_mode = manager_mode | default(false) %}
+    <div class="shell">
+        <header class="topbar">
+            <div>
+                <h1>{{ 'Phema Manager' if is_manager_mode else 'Phema Editor' }}</h1>
+                <p>
+                    {% if is_manager_mode %}
+                    Manage Phemas across your local pool and Plaza, then edit the selected Phema with Plaza Pulse drag-and-drop.
+                    {% else %}
+                    Dedicated wide-canvas editing for complex Phema composition, with Plaza Pulse drag-and-drop into sections.
+                    {% endif %}
+                </p>
+            </div>
+            <div class="top-actions">
+                {% if is_manager_mode %}
+                <span id="topbar-status-pill" class="pill top-status-pill">Ready.</span>
+                {% endif %}
+                {% if is_manager_mode and back_href %}
+                <a class="link-btn" href="{{ back_href }}">{{ back_label or 'Open Plaza' }}</a>
+                {% elif not is_manager_mode %}
+                <a class="link-btn" href="/plazas">Back To Plaza</a>
+                {% endif %}
+                {% if is_manager_mode %}
+                <button id="new-btn">New Phema</button>
+                <button id="edit-btn">Edit</button>
+                {% else %}
+                <button id="delete-btn" class="danger-btn">Delete</button>
+                <button id="save-btn" class="primary-btn">Save Phema</button>
+                {% endif %}
+            </div>
+        </header>
+
+        <div id="global-status-banner" class="status-banner">Ready.</div>
+        <section id="task-list-shell" class="task-list-shell" hidden>
+            <div class="task-list-title">Current Tasks</div>
+            <div id="task-list" class="task-list"></div>
+        </section>
+
+        {% if is_manager_mode %}
+        <section class="manager-search-panel">
+            <div class="panel-title">
+                <h2>Search Phemas</h2>
+                <div class="manager-badges">
+                    <span id="manager-refresh-status" class="pill">Idle</span>
+                    <span id="manager-phema-count" class="pill">0 results</span>
+                </div>
+            </div>
+            <div class="manager-search-toolbar">
+                <div class="field">
+                    <label>Source</label>
+                    <div class="manager-scope-group" id="manager-scope-group">
+                        <button type="button" class="manager-scope-btn active" data-manager-scope="all">All</button>
+                        <button type="button" class="manager-scope-btn" data-manager-scope="local">Local Pool</button>
+                        <button type="button" class="manager-scope-btn" data-manager-scope="plaza">Plaza</button>
+                    </div>
+                </div>
+                <div class="field">
+                    <label for="manager-search">Search Local Pool Or Plaza</label>
+                    <input id="manager-search" type="text" placeholder="Name, owner, tags, description">
+                </div>
+                <button id="refresh-manager-btn" type="button">Refresh</button>
+            </div>
+            <div id="manager-search-results" class="manager-results"></div>
+        </section>
+
+        <section id="manager-detail-panel" class="manager-detail-panel" {% if not initial_phema_id %}hidden{% endif %}>
+            <div class="panel-title">
+                <h2>Selected Phema</h2>
+                <span id="manager-detail-pill" class="pill">No selection</span>
+            </div>
+            <div id="manager-detail-meta" class="manager-detail-meta">
+                <span class="manager-badge">Select a Phema above to inspect or edit it.</span>
+            </div>
+            <div class="header-actions" style="margin-top: 1rem;">
+                <div class="field" style="min-width: 220px; margin: 0;">
+                    <label for="plaza-mode-select">Plaza Mode</label>
+                    <select id="plaza-mode-select" class="pulse-select">
+                        <option value="not_registered">Not Registered</option>
+                        <option value="info_only">Info Only</option>
+                        <option value="hosted">Hosted</option>
+                    </select>
+                </div>
+                <button id="update-plaza-mode-btn" type="button">Update Plaza</button>
+                <button id="generate-snapshot-btn" type="button">Generate Snapshot</button>
+                <button id="save-btn" class="primary-btn">Save</button>
+                <button id="save-as-btn">Save As</button>
+                <button id="delete-btn" class="danger-btn">Delete</button>
+            </div>
+        </section>
+
+        <section id="manager-snapshots-panel" class="manager-detail-panel" {% if not initial_phema_id %}hidden{% endif %}>
+            <div class="panel-title">
+                <h2>Search Snapshots</h2>
+                <div class="manager-badges">
+                    <span id="snapshot-refresh-status" class="pill">Idle</span>
+                    <span id="snapshot-count" class="pill">0 snapshots</span>
+                </div>
+            </div>
+                <div class="manager-search-toolbar">
+                <div class="field">
+                    <label for="snapshot-search">Search Snapshot History</label>
+                    <input id="snapshot-search" type="text" placeholder="Input, tags, source phema, result">
+                </div>
+                <button id="refresh-snapshots-btn" type="button">Refresh Snapshots</button>
+            </div>
+            <div id="snapshot-search-results" class="manager-results"></div>
+        </section>
+        {% endif %}
+
+        <section id="phema-meta-grid" class="meta-grid" {% if is_manager_mode and not initial_phema_id %}hidden{% endif %}>
+            <div class="field">
+                <label for="phema-name">Name</label>
+                <input id="phema-name" type="text" placeholder="e.g. Macro Morning Brief">
+            </div>
+            <div class="field">
+                <label for="phema-owner">Owner</label>
+                <input id="phema-owner" type="text" placeholder="Plaza">
+            </div>
+            <div class="field">
+                <label for="phema-address">Address</label>
+                <input id="phema-address" type="text" placeholder="plaza://phema/your-phema-id">
+            </div>
+            <div class="field">
+                <label for="phema-tags">Tags</label>
+                <input id="phema-tags" type="text" placeholder="macro, daily, overview">
+            </div>
+            <div class="field" style="grid-column: 1 / -1;">
+                <label for="phema-input-schema">Input Schema</label>
+                <textarea id="phema-input-schema" class="json-area" placeholder='{"symbol": {"type": "string"}}'>{}</textarea>
+            </div>
+            <div class="field" style="grid-column: 1 / -1;">
+                <label for="phema-description">Description</label>
+                <textarea id="phema-description" placeholder="Describe what this Phema is for and how it should be used."></textarea>
+            </div>
+        </section>
+
+        <section id="phema-workspace" class="workspace" {% if is_manager_mode and not initial_phema_id %}hidden{% endif %}>
+            <aside class="pulse-panel">
+                <div class="panel-title">
+                    <h2>Available Pulses</h2>
+                    <div class="manager-badges">
+                        <span id="pulse-refresh-status" class="pill">Idle</span>
+                        <span id="pulse-count" class="pill">0 loaded</span>
+                    </div>
+                </div>
+                <p class="muted">Drag any Plaza Pulse onto a section below.</p>
+                <div class="pulse-tools">
+                    <div class="field">
+                        <label for="pulse-search">Name Or Description</label>
+                        <input id="pulse-search" type="text" placeholder="Filter by pulse name or description">
+                    </div>
+                    <div class="pulse-tools-grid">
+                        <div class="field">
+                            <label for="pulse-tag-filter">Tags</label>
+                            <input id="pulse-tag-filter" type="text" placeholder="price, macro, news">
+                        </div>
+                        <div class="field">
+                            <label for="pulse-pulser-filter">Pulser</label>
+                            <input id="pulse-pulser-filter" type="text" placeholder="Filter by pulser name">
+                        </div>
+                    </div>
+                    <div class="pulse-tools-grid">
+                        <div class="field">
+                            <label for="pulse-sort">Sort By</label>
+                            <select id="pulse-sort" class="pulse-select">
+                                <option value="name">Name</option>
+                                <option value="pulser">Pulser</option>
+                            </select>
+                        </div>
+                        <div class="field checkbox-field">
+                            <label class="checkbox-inline" for="pulse-active-only">
+                                <input id="pulse-active-only" type="checkbox">
+                                <span>Active Only</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div id="pulse-list" class="pulse-list"></div>
+            </aside>
+
+            <main class="sections-panel">
+                <div class="panel-title">
+                    <h2>Sections</h2>
+                    <div class="header-actions">
+                        <span id="section-count" class="pill">0 sections</span>
+                        <button id="collapse-all-sections-btn" class="section-toolbar-btn" type="button">Collapse All</button>
+                        <button id="expand-all-sections-btn" class="section-toolbar-btn" type="button">Expand All</button>
+                        <button id="add-section-btn" type="button">+ Add Section</button>
+                    </div>
+                </div>
+                <p class="sections-intro">Drag Plaza Pulse cards into the sections below and collapse cards you are not working on.</p>
+                <div id="sections-list" class="sections-list"></div>
+            </main>
+
+            <aside class="meta-panel">
+                <div class="panel-title">
+                    <h2>Inspector &amp; Meta</h2>
+                    <span class="pill" id="content-inspector-pill">No selection</span>
+                </div>
+                <div class="stack">
+                    <div class="field">
+                        <label>Selected Content</label>
+                        <div id="content-inspector" class="inspector-card">
+                            <div class="empty-note">Select a text segment or pulse field in Section Content to inspect it here.</div>
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label for="phema-meta">Extra Meta</label>
+                        <textarea id="phema-meta" placeholder='{"audience": "trader"}'>{}</textarea>
+                    </div>
+                    <div id="status-line" class="status-line">Ready.</div>
+                </div>
+            </aside>
+        </section>
+    </div>
+
+    <div id="pulse-config-modal" class="modal-shell" aria-hidden="true">
+        <div class="modal-card">
+            <div class="panel-title">
+                <h2>Pulse Properties</h2>
+                <span id="pulse-config-summary" class="pill">Configure pulser and fields</span>
+            </div>
+            <div class="modal-grid">
+                <div class="stack">
+                    <div class="field">
+                        <label for="pulse-config-name">Pulse</label>
+                        <input id="pulse-config-name" type="text" readonly>
+                    </div>
+                    <div class="field">
+                        <label>Available Pulsers</label>
+                        <div id="pulse-config-pulser-list" class="pulser-picker">
+                            <div class="empty-note">No pulser available for this pulse.</div>
+                        </div>
+                        <select id="pulse-config-pulser" class="pulse-select" hidden></select>
+                    </div>
+                    <div class="field">
+                        <label for="pulse-config-params">Get Data Input JSON</label>
+                        <textarea id="pulse-config-params" placeholder='{"symbol":"AAPL"}'></textarea>
+                    </div>
+                    <div class="field">
+                        <label>Returned Fields To Display</label>
+                        <div id="pulse-config-fields" class="field-picker">
+                            <div class="empty-note">Use Get Sample to choose fields.</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="stack">
+                    <div class="field">
+                        <label>Test Result</label>
+                        <pre id="pulse-config-result" class="result-preview">{
+  "status": "idle"
+}</pre>
+                    </div>
+                    <div class="field">
+                        <label>Preview</label>
+                        <pre id="pulse-config-display" class="result-preview">{
+  "display": {}
+}</pre>
+                    </div>
+                </div>
+            </div>
+            <div id="pulse-config-status" class="status-line">Select a pulser and run get data.</div>
+            <div class="modal-actions">
+                <button id="pulse-config-cancel" type="button">Cancel</button>
+                <button id="pulse-config-save" class="primary-btn" type="button">Add To Section</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const initialPhemaId = {{ initial_phema_id | tojson }};
+        const managerMode = {{ is_manager_mode | tojson }};
+        const HEARTBEAT_ACTIVE_WINDOW_SEC = 60;
+
+        const state = {
+            phemaId: initialPhemaId || '',
+            hasEditorContext: Boolean(initialPhemaId),
+            name: '',
+            description: '',
+            owner: '',
+            address: '',
+            tags: [],
+            inputSchemaText: '{}',
+            inputSchemaAutoText: '{}',
+            metaText: '{}',
+            sections: [],
+            pulses: [],
+            pulseSearch: '',
+            pulseTagFilter: '',
+            pulsePulserFilter: '',
+            pulseSort: 'name',
+            pulseActiveOnly: false,
+            loadingPulseLibrary: false,
+            loadingManagerData: false,
+            loadingSnapshots: false,
+            activeTasks: [],
+            nextTaskId: 1,
+            localPhemas: [],
+            plazaPhemas: [],
+            snapshots: [],
+            managerSearch: '',
+            managerScope: 'all',
+            snapshotSearch: '',
+            selectedSource: 'local',
+            plazaEditable: false,
+            editorReadOnly: false,
+            selectedContent: null,
+            draggingSectionId: '',
+            composerSelection: null,
+            pulseModal: {
+                open: false,
+                sectionId: '',
+                contentIndex: null,
+                insertTarget: null,
+                pulse: null,
+                selectedPulserId: '',
+                paramsText: '{}',
+                rawResult: null,
+                selectedFields: [],
+                saving: false
+            },
+            plazaRegistrationTargetMode: 'not_registered',
+            plazaRegistrationTargetPhemaId: '',
+            status: 'Ready.',
+            statusKind: ''
+        };
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            bindEvents();
+            if (!state.phemaId && !managerMode) {
+                addSection();
+            }
+            await Promise.all([
+                refreshPlazaData({ announce: false }),
+                loadExistingPhema(),
+            ]);
+            renderAll();
+        });
+
+        function bindEvents() {
+            document.getElementById('phema-name').addEventListener('input', (event) => {
+                state.name = event.target.value;
+            });
+            document.getElementById('phema-description').addEventListener('input', (event) => {
+                state.description = event.target.value;
+            });
+            document.getElementById('phema-owner').addEventListener('input', (event) => {
+                state.owner = event.target.value;
+            });
+            document.getElementById('phema-address').addEventListener('input', (event) => {
+                state.address = event.target.value;
+            });
+            document.getElementById('phema-tags').addEventListener('input', (event) => {
+                state.tags = splitTags(event.target.value);
+            });
+            document.getElementById('phema-input-schema').addEventListener('input', (event) => {
+                state.inputSchemaText = event.target.value;
+            });
+            document.getElementById('phema-meta').addEventListener('input', (event) => {
+                state.metaText = event.target.value;
+            });
+            document.getElementById('pulse-search').addEventListener('input', (event) => {
+                state.pulseSearch = event.target.value;
+                renderPulseLibrary();
+            });
+            document.getElementById('pulse-tag-filter').addEventListener('input', (event) => {
+                state.pulseTagFilter = event.target.value;
+                renderPulseLibrary();
+            });
+            document.getElementById('pulse-pulser-filter').addEventListener('input', (event) => {
+                state.pulsePulserFilter = event.target.value;
+                renderPulseLibrary();
+            });
+            document.getElementById('pulse-sort').addEventListener('change', (event) => {
+                state.pulseSort = event.target.value;
+                renderPulseLibrary();
+            });
+            document.getElementById('pulse-active-only').addEventListener('change', (event) => {
+                state.pulseActiveOnly = Boolean(event.target.checked);
+                renderPulseLibrary();
+            });
+
+            document.getElementById('add-section-btn').addEventListener('click', () => {
+                if (state.editorReadOnly) {
+                    setStatus('Click Edit before changing this Plaza Phema.', 'error');
+                    return;
+                }
+                addSection();
+                renderSections();
+            });
+            document.getElementById('collapse-all-sections-btn').addEventListener('click', () => {
+                collapseAllSections();
+                renderSections();
+            });
+            document.getElementById('expand-all-sections-btn').addEventListener('click', () => {
+                expandAllSections();
+                renderSections();
+            });
+            document.getElementById('save-btn').addEventListener('click', savePhema);
+            document.getElementById('delete-btn').addEventListener('click', deletePhema);
+            if (managerMode) {
+                document.getElementById('edit-btn').addEventListener('click', startEditingCurrentPhema);
+                document.getElementById('save-as-btn').addEventListener('click', savePhemaAsCopy);
+                document.getElementById('generate-snapshot-btn').addEventListener('click', generateSnapshotFromManager);
+                document.getElementById('plaza-mode-select').addEventListener('change', (event) => {
+                    state.plazaRegistrationTargetMode = event.target.value || 'not_registered';
+                    renderAll();
+                });
+                document.getElementById('update-plaza-mode-btn').addEventListener('click', updateSelectedPhemaPlazaMode);
+            }
+            document.getElementById('pulse-config-cancel').addEventListener('click', closePulseConfigModal);
+            document.getElementById('pulse-config-save').addEventListener('click', savePulseConfigToSection);
+            document.getElementById('pulse-config-pulser').addEventListener('change', (event) => {
+                handlePulsePulserChanged(event.target.value);
+            });
+            if (managerMode) {
+                document.getElementById('new-btn').addEventListener('click', createNewPhema);
+                document.getElementById('manager-search').addEventListener('input', (event) => {
+                    state.managerSearch = event.target.value;
+                    renderManagerResults();
+                });
+                document.getElementById('snapshot-search').addEventListener('input', (event) => {
+                    state.snapshotSearch = event.target.value;
+                    renderSnapshotResults();
+                });
+                document.getElementById('refresh-manager-btn').addEventListener('click', async () => {
+                    await refreshPlazaData({ announce: true });
+                    renderAll();
+                });
+                document.getElementById('refresh-snapshots-btn').addEventListener('click', async () => {
+                    await loadSnapshotHistory({ announce: true });
+                    renderAll();
+                });
+                document.getElementById('manager-scope-group').addEventListener('click', (event) => {
+                    const button = event.target.closest('[data-manager-scope]');
+                    if (!button) return;
+                    state.managerScope = button.dataset.managerScope || 'all';
+                    renderManagerResults();
+                });
+                document.getElementById('manager-search-results').addEventListener('click', async (event) => {
+                    const button = event.target.closest('[data-load-phema]');
+                    if (!button) return;
+                    if ((button.dataset.phemaSource || 'local') === 'plaza') {
+                        await loadPlazaPhema(button.dataset.loadPhema);
+                        return;
+                    }
+                    await loadLocalPhema(button.dataset.loadPhema);
+                });
+                document.getElementById('snapshot-search-results').addEventListener('click', async (event) => {
+                    const historyButton = event.target.closest('[data-snapshot-history]');
+                    if (historyButton) {
+                        event.preventDefault();
+                        openSnapshotHistoryWindow(historyButton.dataset.snapshotHistory);
+                        return;
+                    }
+                    const retakeButton = event.target.closest('[data-retake-snapshot]');
+                    if (retakeButton) {
+                        event.preventDefault();
+                        await retakeSnapshot(retakeButton.dataset.retakeSnapshot);
+                        return;
+                    }
+                    const deleteButton = event.target.closest('[data-delete-snapshot]');
+                    if (deleteButton) {
+                        event.preventDefault();
+                        await deleteSnapshot(deleteButton.dataset.deleteSnapshot);
+                    }
+                });
+            }
+
+            document.getElementById('sections-list').addEventListener('input', (event) => {
+                if (state.editorReadOnly) return;
+                const target = event.target;
+                const composer = target.closest('[data-section-composer]');
+                if (composer) {
+                    syncComposerContent(composer.dataset.sectionComposer, composer);
+                    selectComposerContentFromSelection(composer.dataset.sectionComposer, composer);
+                    return;
+                }
+                const sectionId = target.dataset.sectionId;
+                const field = target.dataset.field;
+                if (!sectionId || !field) return;
+                const section = getSection(sectionId);
+                if (!section) return;
+                section[field] = target.value;
+            });
+
+            document.getElementById('sections-list').addEventListener('click', (event) => {
+                const composer = event.target.closest('[data-section-composer]');
+                if (composer) {
+                    selectComposerContentFromSelection(composer.dataset.sectionComposer, composer);
+                }
+                const contentNode = event.target.closest('[data-token-index]');
+                if (contentNode) {
+                    setSelectedContent(contentNode.dataset.sectionId, Number(contentNode.dataset.contentIndex), false);
+                    renderContentInspector();
+                }
+                const toggleSectionBtn = event.target.closest('[data-toggle-section]');
+                if (toggleSectionBtn) {
+                    toggleSectionCollapse(toggleSectionBtn.dataset.toggleSection);
+                    renderSections();
+                    return;
+                }
+                if (state.editorReadOnly) {
+                    if (event.target.closest('[data-add-text]') || event.target.closest('[data-remove-section]') || event.target.closest('[data-remove-content]') || event.target.closest('[data-edit-content]')) {
+                        setStatus('Click Edit before changing this Plaza Phema.', 'error');
+                    }
+                    return;
+                }
+                const removeSectionBtn = event.target.closest('[data-remove-section]');
+                if (removeSectionBtn) {
+                    removeSection(removeSectionBtn.dataset.removeSection);
+                    syncInputSchemaFromSections();
+                    renderSections();
+                    return;
+                }
+                const addTextBtn = event.target.closest('[data-add-text]');
+                if (addTextBtn) {
+                    focusSectionComposer(addTextBtn.dataset.addText);
+                    return;
+                }
+                const removeContentBtn = event.target.closest('[data-remove-content]');
+                if (removeContentBtn) {
+                    const section = getSection(removeContentBtn.dataset.sectionId);
+                    const index = Number(removeContentBtn.dataset.removeContent);
+                    if (section && Number.isInteger(index)) {
+                        section.content.splice(index, 1);
+                        reconcileSelectedContentAfterRemoval(removeContentBtn.dataset.sectionId, index);
+                        syncInputSchemaFromSections();
+                        renderSections();
+                        renderContentInspector();
+                    }
+                    return;
+                }
+                const editContentBtn = event.target.closest('[data-edit-content]');
+                if (editContentBtn) {
+                    const section = getSection(editContentBtn.dataset.sectionId);
+                    const index = Number(editContentBtn.dataset.editContent);
+                    if (!section || !Number.isInteger(index)) return;
+                    const item = section.content[index];
+                    if (item?.type === 'pulse' || item?.type === 'pulse-field') {
+                        openPulseConfigModal(section.id, findMatchingPulse(item), item, index);
+                    }
+                }
+            });
+
+            document.getElementById('sections-list').addEventListener('focusin', (event) => {
+                const target = event.target;
+                const composer = target.closest('[data-section-composer]');
+                if (composer) {
+                    selectComposerContentFromSelection(composer.dataset.sectionComposer, composer);
+                }
+            });
+
+            document.getElementById('sections-list').addEventListener('dblclick', (event) => {
+                const tokenNode = event.target.closest('[data-token-index]');
+                if (!tokenNode || state.editorReadOnly) return;
+                const section = getSection(tokenNode.dataset.sectionId);
+                const index = Number(tokenNode.dataset.contentIndex);
+                if (!section || !Number.isInteger(index)) return;
+                const item = section.content[index];
+                if (item?.type === 'pulse' || item?.type === 'pulse-field') {
+                    openPulseConfigModal(section.id, findMatchingPulse(item), item, index);
+                }
+            });
+
+            document.getElementById('sections-list').addEventListener('dragstart', (event) => {
+                const node = event.target.closest('[data-token-index][draggable="true"]');
+                if (node && !state.editorReadOnly) {
+                    state.draggingSectionId = '';
+                    const payload = {
+                        sectionId: node.dataset.sectionId,
+                        index: Number(node.dataset.contentIndex)
+                    };
+                    event.dataTransfer.setData('application/x-phema-content', JSON.stringify(payload));
+                    event.dataTransfer.effectAllowed = 'move';
+                    const chip = node.querySelector('.content-chip');
+                    if (chip) chip.classList.add('dragging');
+                    return;
+                }
+                const card = event.target.closest('[data-section-card][draggable="true"]');
+                if (!card || state.editorReadOnly) return;
+                state.draggingSectionId = card.dataset.sectionId || '';
+                event.dataTransfer.setData('application/x-phema-section', JSON.stringify({
+                    sectionId: card.dataset.sectionId
+                }));
+                event.dataTransfer.effectAllowed = 'move';
+            });
+
+            document.getElementById('sections-list').addEventListener('dragend', (event) => {
+                const node = event.target.closest('[data-content-node]');
+                if (node) {
+                    const chip = node.querySelector('.content-chip');
+                    if (chip) chip.classList.remove('dragging');
+                }
+                document.querySelectorAll('.section-card.reorder-target').forEach((card) => {
+                    card.classList.remove('reorder-target');
+                });
+                state.draggingSectionId = '';
+            });
+
+            document.getElementById('sections-list').addEventListener('dragover', (event) => {
+                if (state.draggingSectionId) {
+                    const card = event.target.closest('[data-section-card]');
+                    if (!card) return;
+                    event.preventDefault();
+                    document.querySelectorAll('.section-card.reorder-target').forEach((node) => {
+                        if (node !== card) node.classList.remove('reorder-target');
+                    });
+                    card.classList.add('reorder-target');
+                    return;
+                }
+                const zone = event.target.closest('[data-section-composer]');
+                if (!zone) return;
+                event.preventDefault();
+                zone.classList.add('drag-over');
+            });
+
+            document.getElementById('sections-list').addEventListener('dragleave', (event) => {
+                const card = event.target.closest('[data-section-card]');
+                if (card) {
+                    card.classList.remove('reorder-target');
+                }
+                const zone = event.target.closest('[data-section-composer]');
+                if (!zone) return;
+                zone.classList.remove('drag-over');
+            });
+
+            document.getElementById('sections-list').addEventListener('drop', (event) => {
+                if (state.draggingSectionId) {
+                    event.preventDefault();
+                    document.querySelectorAll('.section-card.reorder-target').forEach((card) => {
+                        card.classList.remove('reorder-target');
+                    });
+                    if (state.editorReadOnly) {
+                        state.draggingSectionId = '';
+                        setStatus('Click Edit before reordering sections in this Plaza Phema.', 'error');
+                        return;
+                    }
+                    const targetCard = event.target.closest('[data-section-card]');
+                    if (!targetCard) {
+                        state.draggingSectionId = '';
+                        return;
+                    }
+                    try {
+                        moveSection(
+                            state.draggingSectionId,
+                            targetCard.dataset.sectionId,
+                            event.clientY
+                        );
+                        renderSections();
+                    } catch (_) {
+                        setStatus('Failed to reorder sections.', 'error');
+                    } finally {
+                        state.draggingSectionId = '';
+                    }
+                    return;
+                }
+                if (state.editorReadOnly) {
+                    setStatus('Click Edit before dragging pulses into this Plaza Phema.', 'error');
+                    return;
+                }
+                const zone = event.target.closest('[data-section-composer]');
+                if (!zone) return;
+                event.preventDefault();
+                zone.classList.remove('drag-over');
+                try {
+                    const insertTarget = buildComposerInsertTarget(zone.dataset.sectionComposer, event.clientX, event.clientY);
+                    const contentRaw = event.dataTransfer.getData('application/x-phema-content');
+                    if (contentRaw) {
+                        const move = JSON.parse(contentRaw);
+                        const sourceSection = getSection(move.sectionId);
+                        if (!sourceSection) return;
+                        let targetSectionId = zone.dataset.sectionComposer;
+                        if (insertTarget && insertTarget.mode === 'text-cursor' && Number.isInteger(insertTarget.textIndex)) {
+                            const [item] = sourceSection.content.splice(Number(move.index), 1);
+                            if (!item) return;
+                            let adjustedTextIndex = insertTarget.textIndex;
+                            if (move.sectionId === targetSectionId && Number(move.index) < insertTarget.textIndex) {
+                                adjustedTextIndex -= 1;
+                            }
+                            if (insertItemsAtTextCursor(targetSectionId, adjustedTextIndex, insertTarget.cursorPos, [item]) === null) {
+                                moveContentItem(
+                                    move.sectionId,
+                                    Number(move.index),
+                                    targetSectionId,
+                                    resolveDropInsertIndex(zone, event)
+                                );
+                            }
+                        } else {
+                            moveContentItem(
+                                move.sectionId,
+                                Number(move.index),
+                                targetSectionId,
+                                insertTarget && insertTarget.mode === 'index'
+                                    ? insertTarget.index
+                                    : resolveDropInsertIndex(zone, event)
+                            );
+                        }
+                        renderSections();
+                        renderContentInspector();
+                        return;
+                    }
+                    const raw = event.dataTransfer.getData('application/json');
+                    const pulse = JSON.parse(raw);
+                    addPulseToSection(
+                        zone.dataset.sectionComposer,
+                        pulse,
+                        insertTarget
+                    );
+                } catch (_) {
+                    setStatus('Failed to read dragged Pulse payload.', 'error');
+                }
+            });
+            document.getElementById('pulse-config-modal').addEventListener('click', (event) => {
+                if (event.target.id === 'pulse-config-modal') {
+                    closePulseConfigModal();
+                }
+            });
+        }
+
+        async function refreshPlazaData({ announce = true } = {}) {
+            const taskId = beginTask('Refreshing Plaza');
+            try {
+                await Promise.all([
+                    loadPulseLibrary(),
+                    managerMode ? loadManagerData() : Promise.resolve()
+                ]);
+                if (announce && state.statusKind !== 'error') {
+                    setStatus('Plaza data refreshed.', 'success');
+                }
+            } finally {
+                finishTask(taskId);
+            }
+        }
+
+        async function loadPulseLibrary() {
+            state.loadingPulseLibrary = true;
+            renderPlazaRefreshState();
+            try {
+                const response = await fetch('/api/plazas_status');
+                const data = await response.json();
+                const plazas = Array.isArray(data.plazas) ? data.plazas : [];
+                const pulses = [];
+                plazas.forEach((plaza) => {
+                    (plaza.agents || []).forEach((entry) => {
+                        const resolvedType = String(entry.pit_type || entry.card?.pit_type || entry.type || '').trim();
+                        if (resolvedType !== 'Pulse') {
+                            return;
+                        }
+                        const meta = entry.meta || {};
+                        const availablePulsers = sortPulsers(Array.isArray(entry.available_pulsers) ? entry.available_pulsers : []);
+                        const activePulserCount = availablePulsers.filter((pulser) => popupHeartbeatState(Number(pulser.last_active || 0)) === 'active').length;
+                        pulses.push({
+                            key: `${entry.name || meta.pulse_address || entry.address || Math.random().toString(36).slice(2)}`,
+                            name: entry.name || 'Unnamed Pulse',
+                            address: entry.address || entry.card?.address || meta.pulse_address || '',
+                            owner: entry.owner || entry.card?.owner || '',
+                            pulser: availablePulsers.map((pulser) => pulser.name || '').filter(Boolean).join(', '),
+                            description: entry.description || entry.card?.description || '',
+                            tags: normalizeTags(meta.tags || entry.card?.tags || []),
+                            input_schema: meta.input_schema || {},
+                            output_schema: meta.output_schema || {},
+                            available_pulser_count: Number(entry.available_pulser_count || availablePulsers.length || 0),
+                            active_pulser_count: activePulserCount,
+                            available_pulsers: availablePulsers
+                        });
+                    });
+                });
+                state.pulses = dedupePulses(pulses);
+                syncInputSchemaFromSections();
+            } catch (error) {
+                setStatus(`Failed to load pulses: ${error.message}`, 'error');
+            } finally {
+                state.loadingPulseLibrary = false;
+                renderPlazaRefreshState();
+            }
+            renderPulseLibrary();
+        }
+
+        async function loadExistingPhema() {
+            if (!state.phemaId) return;
+            try {
+                const response = await fetch(`/api/phemas/${encodeURIComponent(state.phemaId)}`);
+                const data = await response.json();
+                if (response.ok) {
+                    hydrateFromPhema(data.phema, 'local');
+                    if (managerMode) {
+                        await loadSnapshotHistory({ announce: false });
+                    }
+                    return;
+                }
+                if (!managerMode) {
+                    throw new Error(data.detail || 'Failed to load Phema');
+                }
+                const plazaResponse = await fetch(`/api/plaza/phemas/${encodeURIComponent(state.phemaId)}`);
+                const plazaData = await plazaResponse.json();
+                if (!plazaResponse.ok) {
+                    throw new Error(plazaData.detail || data.detail || 'Failed to load Phema');
+                }
+                hydrateFromPhema(plazaData.phema, 'plaza');
+                await loadSnapshotHistory({ announce: false });
+            } catch (error) {
+                setStatus(error.message, 'error');
+            }
+        }
+
+        async function loadManagerData() {
+            state.loadingManagerData = true;
+            renderPlazaRefreshState();
+            try {
+                const response = await fetch('/api/phemar/manager');
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Failed to load Phema manager data');
+                }
+                state.localPhemas = Array.isArray(data.local_phemas) ? data.local_phemas : [];
+                state.plazaPhemas = Array.isArray(data.plaza_phemas) ? data.plaza_phemas : [];
+                if (data.plaza_error) {
+                    setStatus(`Plaza unavailable: ${data.plaza_error}`, 'error');
+                }
+            } catch (error) {
+                setStatus(error.message, 'error');
+            } finally {
+                state.loadingManagerData = false;
+                renderPlazaRefreshState();
+            }
+        }
+
+        async function loadSnapshotHistory({ announce = false } = {}) {
+            if (!managerMode) return;
+            if (!state.phemaId) {
+                state.snapshots = [];
+                renderSnapshotRefreshState();
+                renderSnapshotResults();
+                return;
+            }
+            const taskId = beginTask('Getting snapshots');
+            state.loadingSnapshots = true;
+            renderSnapshotRefreshState();
+            try {
+                const params = new URLSearchParams();
+                params.set('phema_id', state.phemaId);
+                if (state.snapshotSearch.trim()) {
+                    params.set('q', state.snapshotSearch.trim());
+                }
+                const response = await fetch(`/api/phema-snapshots?${params.toString()}`);
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Failed to load snapshot history');
+                }
+                state.snapshots = Array.isArray(data.snapshots) ? data.snapshots : [];
+                if (announce && state.statusKind !== 'error') {
+                    setStatus(`Loaded ${state.snapshots.length} snapshots for "${state.name || state.phemaId}".`, 'success');
+                }
+            } catch (error) {
+                state.snapshots = [];
+                setStatus(error.message, 'error');
+            } finally {
+                state.loadingSnapshots = false;
+                renderSnapshotRefreshState();
+                renderSnapshotResults();
+                finishTask(taskId);
+            }
+        }
+
+        async function loadLocalPhema(phemaId) {
+            const taskId = beginTask('Getting phema');
+            try {
+                const response = await fetch(`/api/phemas/${encodeURIComponent(phemaId)}`);
+                const data = await response.json();
+                if (!response.ok) {
+                    setStatus(data.detail || 'Failed to load local Phema', 'error');
+                    return;
+                }
+                hydrateFromPhema(data.phema, 'local');
+                await loadSnapshotHistory({ announce: false });
+                renderAll();
+                history.replaceState({}, '', `/phemas/editor/${encodeURIComponent(state.phemaId)}`);
+            } finally {
+                finishTask(taskId);
+            }
+        }
+
+        async function loadPlazaPhema(phemaId) {
+            const taskId = beginTask('Getting phema');
+            try {
+                const response = await fetch(`/api/plaza/phemas/${encodeURIComponent(phemaId)}`);
+                const data = await response.json();
+                if (!response.ok) {
+                    setStatus(data.detail || 'Failed to load Plaza Phema', 'error');
+                    return;
+                }
+                hydrateFromPhema(data.phema, 'plaza');
+                await loadSnapshotHistory({ announce: false });
+                renderAll();
+                history.replaceState({}, '', `/phemas/editor/${encodeURIComponent(state.phemaId)}`);
+            } finally {
+                finishTask(taskId);
+            }
+        }
+
+        function hydrateFromPhema(phema, source = 'local') {
+            state.phemaId = phema.phema_id || phema.id || '';
+            state.hasEditorContext = true;
+            state.name = phema.name || '';
+            state.description = phema.description || '';
+            state.owner = phema.owner || '';
+            state.address = phema.address || '';
+            state.tags = Array.isArray(phema.tags) ? phema.tags : [];
+            state.inputSchemaText = JSON.stringify(phema.input_schema || {}, null, 2);
+            state.inputSchemaAutoText = '{}';
+            state.metaText = JSON.stringify(phema.meta || {}, null, 2);
+            state.selectedSource = source;
+            state.plazaEditable = Boolean(phema.editable);
+            state.editorReadOnly = managerMode
+                ? source === 'plaza'
+                : source === 'plaza' && !phema.editable;
+            state.selectedContent = null;
+            state.sections = Array.isArray(phema.sections) && phema.sections.length
+                ? phema.sections.map((section) => normalizeSection(section))
+                : [createEmptySection()];
+            syncInputSchemaFromSections();
+        }
+
+        function renderAll() {
+            const showEditorContext = !managerMode || state.hasEditorContext;
+            if (managerMode) {
+                document.getElementById('manager-detail-panel').hidden = !showEditorContext;
+                document.getElementById('manager-snapshots-panel').hidden = !showEditorContext;
+                document.getElementById('phema-meta-grid').hidden = !showEditorContext;
+                document.getElementById('phema-workspace').hidden = !showEditorContext;
+            }
+            document.getElementById('phema-name').value = state.name;
+            document.getElementById('phema-description').value = state.description;
+            document.getElementById('phema-owner').value = state.owner;
+            document.getElementById('phema-address').value = state.address;
+            document.getElementById('phema-tags').value = state.tags.join(', ');
+            document.getElementById('phema-input-schema').value = state.inputSchemaText;
+            document.getElementById('phema-meta').value = state.metaText;
+            document.getElementById('phema-name').disabled = state.editorReadOnly;
+            document.getElementById('phema-description').disabled = state.editorReadOnly;
+            document.getElementById('phema-owner').disabled = state.editorReadOnly;
+            document.getElementById('phema-address').disabled = state.editorReadOnly;
+            document.getElementById('phema-tags').disabled = state.editorReadOnly;
+            document.getElementById('phema-input-schema').disabled = state.editorReadOnly;
+            document.getElementById('phema-meta').disabled = state.editorReadOnly;
+            document.getElementById('pulse-search').value = state.pulseSearch;
+            document.getElementById('pulse-tag-filter').value = state.pulseTagFilter;
+            document.getElementById('pulse-pulser-filter').value = state.pulsePulserFilter;
+            document.getElementById('pulse-sort').value = state.pulseSort;
+            document.getElementById('pulse-active-only').checked = state.pulseActiveOnly;
+            document.getElementById('add-section-btn').disabled = state.editorReadOnly;
+            renderPlazaRefreshState();
+            renderPulseLibrary();
+            renderSections();
+            renderContentInspector();
+            if (managerMode) {
+                const selectedManagerEntry = getSelectedManagerEntry();
+                const currentPlazaMode = getCurrentPlazaRegistrationMode(selectedManagerEntry);
+                syncPlazaRegistrationModeControl(currentPlazaMode);
+                document.getElementById('manager-search').value = state.managerSearch;
+                document.getElementById('snapshot-search').value = state.snapshotSearch;
+                document.querySelectorAll('[data-manager-scope]').forEach((button) => {
+                    button.classList.toggle('active', button.dataset.managerScope === state.managerScope);
+                });
+                renderManagerResults();
+                renderManagerDetail();
+                renderSnapshotRefreshState();
+                renderSnapshotResults();
+                document.getElementById('edit-btn').disabled = !canEditCurrentPhema();
+                document.getElementById('save-btn').disabled = state.editorReadOnly || !state.name.trim();
+                document.getElementById('save-as-btn').disabled = !state.name.trim();
+                document.getElementById('delete-btn').disabled = !canDeleteCurrentPhema();
+                document.getElementById('generate-snapshot-btn').disabled = !state.phemaId;
+                document.getElementById('delete-btn').textContent = state.selectedSource === 'plaza' ? 'De-register' : 'Delete';
+                document.getElementById('plaza-mode-select').value = state.plazaRegistrationTargetMode;
+                document.getElementById('plaza-mode-select').disabled = !selectedManagerEntry?.local;
+                document.getElementById('update-plaza-mode-btn').disabled = !selectedManagerEntry?.local || state.plazaRegistrationTargetMode === currentPlazaMode;
+            } else {
+                document.getElementById('delete-btn').disabled = !state.phemaId;
+            }
+            renderStatus();
+        }
+
+        function renderManagerResults() {
+            if (!managerMode) return;
+            const results = document.getElementById('manager-search-results');
+            const visible = filterManagerPhemas(buildManagerCatalog(), state.managerSearch, state.managerScope);
+            document.getElementById('manager-phema-count').textContent = `${visible.length} results`;
+            results.innerHTML = visible.length
+                ? visible.map((entry) => renderManagerItem(entry)).join('')
+                : '<div class="manager-empty">No Phemas matched the current search.</div>';
+        }
+
+        function renderManagerItem(entry) {
+            const primary = entry.local || entry.plaza || {};
+            const preferredSource = entry.preferredSource || 'local';
+            const isActive = state.phemaId && state.phemaId === (primary.phema_id || primary.id) && state.selectedSource === preferredSource;
+            const owner = primary.owner || 'Unknown owner';
+            const sourceBadges = [
+                entry.local ? '<span class="manager-badge local">local</span>' : '',
+                entry.plaza ? '<span class="manager-badge plaza">plaza</span>' : ''
+            ].join('');
+            const registrationBadge = entry.local?.plaza_registered
+                ? `<span class="manager-badge plaza">${escapeHtml(describeRegistrationMode(entry.local.plaza_registration_mode))}</span>`
+                : '';
+            const editBadge = entry.plaza && !entry.plaza.editable
+                ? '<span class="manager-badge locked">Read only</span>'
+                : '<span class="manager-badge">Editable</span>';
+            return `
+                <article class="manager-item ${isActive ? 'active' : ''}" data-load-phema="${escapeAttribute(primary.phema_id || primary.id || '')}" data-phema-source="${escapeAttribute(preferredSource)}">
+                    <div class="manager-item-header">
+                        <div class="manager-item-title">${escapeHtml(primary.name || 'Unnamed Phema')}</div>
+                        <div class="manager-badges">
+                            ${sourceBadges}
+                            ${registrationBadge}
+                            ${entry.plaza ? editBadge : ''}
+                        </div>
+                    </div>
+                    <div class="muted">${escapeHtml(primary.description || 'No description')}</div>
+                    <div class="manager-item-footer">
+                        <div class="manager-badges">
+                            <span class="manager-badge">${escapeHtml(owner)}</span>
+                            ${(primary.tags || []).slice(0, 3).map((tag) => `<span class="manager-badge">${escapeHtml(tag)}</span>`).join('')}
+                        </div>
+                        <div class="header-actions">
+                            <span class="muted">${escapeHtml(primary.updated_at || '')}</span>
+                        </div>
+                    </div>
+                </article>
+            `;
+        }
+
+        function buildManagerCatalog() {
+            const catalog = [];
+            const byKey = new Map();
+            const getKey = (phema) => {
+                const id = String(phema?.phema_id || phema?.id || '').trim();
+                if (id) return `id:${id}`;
+                return `name:${String(phema?.name || '').trim().toLowerCase()}`;
+            };
+            state.localPhemas.forEach((phema) => {
+                const key = getKey(phema);
+                const entry = { key, local: { ...phema, source: 'local' }, plaza: null, preferredSource: 'local', sources: ['local'] };
+                byKey.set(key, entry);
+                catalog.push(entry);
+            });
+            state.plazaPhemas.forEach((phema) => {
+                const key = getKey(phema);
+                const existing = byKey.get(key);
+                if (existing) {
+                    existing.plaza = { ...phema, source: 'plaza' };
+                    existing.sources = existing.sources.includes('plaza') ? existing.sources : [...existing.sources, 'plaza'];
+                    return;
+                }
+                const entry = { key, local: null, plaza: { ...phema, source: 'plaza' }, preferredSource: 'plaza', sources: ['plaza'] };
+                byKey.set(key, entry);
+                catalog.push(entry);
+            });
+            return catalog;
+        }
+
+        function filterManagerPhemas(phemas, query, scope = 'all') {
+            const lowered = String(query || '').trim().toLowerCase();
+            const scoped = phemas.filter((phema) => scope === 'all' || (phema.sources || []).includes(scope));
+            if (!lowered) return scoped;
+            return scoped.filter((phema) => {
+                const primary = phema.local || phema.plaza || {};
+                const haystack = [
+                    primary.name,
+                    primary.description,
+                    primary.owner,
+                    primary.address,
+                    (primary.tags || []).join(' '),
+                    JSON.stringify(primary.meta || {}),
+                    JSON.stringify((phema.plaza || {}).meta || {}),
+                    describeRegistrationMode((phema.local || {}).plaza_registration_mode || (phema.plaza || {}).registration_mode || '')
+                ].join(' ').toLowerCase();
+                return haystack.includes(lowered);
+            });
+        }
+
+        function renderManagerDetail() {
+            if (!managerMode) return;
+            const pill = document.getElementById('manager-detail-pill');
+            const meta = document.getElementById('manager-detail-meta');
+            if (!state.phemaId) {
+                pill.textContent = 'No selection';
+                meta.innerHTML = '<span class="manager-badge">Select a Phema above to inspect or edit it.</span>';
+                return;
+            }
+            const selectedEntry = getSelectedManagerEntry();
+            const selectedLocal = selectedEntry?.local || null;
+            const selectedPlaza = selectedEntry?.plaza || null;
+            const registrationMode = selectedLocal?.plaza_registration_mode || selectedPlaza?.registration_mode || '';
+            pill.textContent = `${state.selectedSource} ${state.editorReadOnly ? 'view' : 'editing'}`;
+            meta.innerHTML = `
+                <span class="manager-badge ${escapeAttribute(state.selectedSource)}">${escapeHtml(state.selectedSource)}</span>
+                <span class="manager-badge">${escapeHtml(state.owner || 'No owner')}</span>
+                <span class="manager-badge">${escapeHtml(state.address || 'No address')}</span>
+                <span class="manager-badge ${state.plazaEditable || state.selectedSource === 'local' ? '' : 'locked'}">${escapeHtml(canEditCurrentPhema() ? 'Can edit' : 'Read only')}</span>
+                ${selectedEntry?.plaza ? '<span class="manager-badge plaza">Registered On Plaza</span>' : ''}
+                ${registrationMode ? `<span class="manager-badge plaza">${escapeHtml(describeRegistrationMode(registrationMode))}</span>` : ''}
+                ${selectedPlaza?.downloadable === false ? '<span class="manager-badge locked">Use owning Phemar</span>' : ''}
+            `;
+        }
+
+        function renderSnapshotRefreshState() {
+            if (!managerMode) return;
+            const statusNode = document.getElementById('snapshot-refresh-status');
+            const countNode = document.getElementById('snapshot-count');
+            const refreshButton = document.getElementById('refresh-snapshots-btn');
+            const groupedCount = buildSnapshotGroups(state.snapshots).length;
+            if (statusNode) {
+                statusNode.textContent = state.loadingSnapshots ? 'Loading...' : 'Idle';
+                statusNode.className = `pill${state.loadingSnapshots ? ' info' : ''}`;
+            }
+            if (countNode) {
+                countNode.textContent = `${groupedCount} groups`;
+            }
+            if (refreshButton) {
+                refreshButton.disabled = state.loadingSnapshots || !state.phemaId;
+            }
+        }
+
+        function renderSnapshotResults() {
+            if (!managerMode) return;
+            const results = document.getElementById('snapshot-search-results');
+            if (!results) return;
+            if (!state.phemaId) {
+                results.innerHTML = '<div class="manager-empty">Select a Phema to browse its snapshots.</div>';
+                return;
+            }
+            if (!state.snapshots.length) {
+                results.innerHTML = '<div class="manager-empty">No snapshots matched the current search.</div>';
+                return;
+            }
+            const groups = buildSnapshotGroups(state.snapshots);
+            results.innerHTML = groups.map((group) => renderSnapshotItem(group)).join('');
+        }
+
+        function snapshotGroupKey(snapshot) {
+            return `${String(snapshot.phema_id || '')}::${String(snapshot.params_hash || '')}`;
+        }
+
+        function buildSnapshotGroups(snapshots) {
+            const byKey = new Map();
+            for (const snapshot of Array.isArray(snapshots) ? snapshots : []) {
+                const key = snapshotGroupKey(snapshot);
+                const existing = byKey.get(key);
+                if (!existing) {
+                    byKey.set(key, { key, latest: snapshot, history: [snapshot] });
+                    continue;
+                }
+                existing.history.push(snapshot);
+                const currentCreated = String(existing.latest?.created_at || '');
+                const candidateCreated = String(snapshot?.created_at || '');
+                if (candidateCreated > currentCreated) {
+                    existing.latest = snapshot;
+                }
+            }
+            return Array.from(byKey.values()).map((group) => ({
+                ...group,
+                history: group.history.sort((left, right) => String(right.created_at || '').localeCompare(String(left.created_at || ''))),
+            }));
+        }
+
+        function getSnapshotGroup(groupKey) {
+            return buildSnapshotGroups(state.snapshots).find((group) => group.key === groupKey) || null;
+        }
+
+        function renderSnapshotItem(group) {
+            const snapshot = group.latest || {};
+            const snapshotId = String(snapshot.snapshot_id || snapshot.id || '');
+            const meta = isPlainObject(snapshot.meta) ? snapshot.meta : {};
+            const params = isPlainObject(snapshot.params) ? snapshot.params : {};
+            const tags = Array.isArray(snapshot.tags) ? snapshot.tags : [];
+            const createdAt = String(snapshot.created_at || '');
+            const sourceName = String(snapshot.phema_name || meta.source_phema_name || state.name || 'Snapshot').trim();
+            const shortId = snapshotId ? snapshotId.slice(0, 8) : 'snapshot';
+            return `
+                <article class="manager-item">
+                    <div class="manager-item-header">
+                        <div class="manager-item-title">${escapeHtml(sourceName)} Snapshot</div>
+                        <div class="manager-badges">
+                            <span class="manager-badge">#${escapeHtml(shortId)}</span>
+                            ${snapshot.cache_ttl_seconds ? `<span class="manager-badge plaza">${escapeHtml(`${snapshot.cache_ttl_seconds}s cache`)}</span>` : ''}
+                        </div>
+                    </div>
+                    <div class="muted">${escapeHtml(createdAt || 'No timestamp')}</div>
+                    <div class="manager-item-footer">
+                        <div class="manager-badges">
+                            ${Object.keys(params).length ? `<span class="manager-badge">${escapeHtml(JSON.stringify(params))}</span>` : '<span class="manager-badge">No input</span>'}
+                            ${tags.slice(0, 2).map((tag) => `<span class="manager-badge">${escapeHtml(tag)}</span>`).join('')}
+                            ${group.history.length > 1 ? `<span class="manager-badge plaza">${escapeHtml(`${group.history.length} versions`)}</span>` : ''}
+                        </div>
+                        <div class="header-actions">
+                            <button type="button" class="manager-inline-btn" data-retake-snapshot="${escapeAttribute(snapshotId)}">Retake</button>
+                            <button type="button" class="manager-inline-btn" data-snapshot-history="${escapeAttribute(group.key)}">History</button>
+                            <a class="manager-inline-btn" href="/phema-snapshots/${encodeURIComponent(snapshotId)}/view" target="_blank" rel="noreferrer">View</a>
+                            <button type="button" class="manager-inline-btn danger-btn" data-delete-snapshot="${escapeAttribute(snapshotId)}">Delete</button>
+                            <span class="muted">${escapeHtml(meta.source_phema_id || '')}</span>
+                        </div>
+                    </div>
+                </article>
+            `;
+        }
+
+        function canEditCurrentPhema() {
+            return state.selectedSource === 'local' || state.plazaEditable;
+        }
+
+        function canDeleteCurrentPhema() {
+            if (!state.phemaId) return false;
+            if (state.selectedSource === 'local') return true;
+            return state.selectedSource === 'plaza' && state.plazaEditable;
+        }
+
+        function findLocalPhemaById(phemaId) {
+            return state.localPhemas.find((entry) => String(entry.phema_id || entry.id || '') === String(phemaId || '')) || null;
+        }
+
+        function getSelectedManagerEntry() {
+            if (!managerMode || !state.phemaId) return null;
+            return buildManagerCatalog().find((entry) => {
+                const primary = entry.local || entry.plaza || {};
+                return String(primary.phema_id || primary.id || '') === String(state.phemaId || '');
+            }) || null;
+        }
+
+        function getCurrentPlazaRegistrationMode(entry = getSelectedManagerEntry()) {
+            if (!entry?.local) return 'not_registered';
+            if (!entry.local.plaza_registered) return 'not_registered';
+            const normalized = String(entry.local.plaza_registration_mode || 'hosted').trim().toLowerCase();
+            return normalized === 'info_only' ? 'info_only' : 'hosted';
+        }
+
+        function syncPlazaRegistrationModeControl(currentMode) {
+            const currentPhemaId = String(state.phemaId || '');
+            if (state.plazaRegistrationTargetPhemaId !== currentPhemaId) {
+                state.plazaRegistrationTargetPhemaId = currentPhemaId;
+                state.plazaRegistrationTargetMode = currentMode;
+                return;
+            }
+            if (!['not_registered', 'info_only', 'hosted'].includes(state.plazaRegistrationTargetMode)) {
+                state.plazaRegistrationTargetMode = currentMode;
+            }
+        }
+
+        function describeRegistrationMode(mode) {
+            const normalized = String(mode || '').trim().toLowerCase();
+            if (!normalized) return '';
+            if (normalized === 'not_registered') return 'Not Registered';
+            return normalized === 'info_only' ? 'Info Only' : 'Hosted';
+        }
+
+        function buildRegisterableLocalPhema(row) {
+            if (!row) return null;
+            return {
+                phema_id: row.phema_id || row.id || '',
+                name: row.name || '',
+                description: row.description || '',
+                owner: row.owner || '',
+                address: row.address || '',
+                tags: Array.isArray(row.tags) ? [...row.tags] : [],
+                input_schema: row.input_schema && typeof row.input_schema === 'object' && !Array.isArray(row.input_schema) ? row.input_schema : {},
+                sections: Array.isArray(row.sections) ? row.sections : [],
+                meta: row.meta && typeof row.meta === 'object' && !Array.isArray(row.meta) ? row.meta : {}
+            };
+        }
+
+        function renderPulseLibrary() {
+            const list = document.getElementById('pulse-list');
+            const visiblePulses = getVisiblePulses();
+            document.getElementById('pulse-count').textContent = `${visiblePulses.length} / ${state.pulses.length}`;
+            if (!visiblePulses.length) {
+                list.innerHTML = '<div class="empty-note">No Plaza Pulses are available right now.</div>';
+                return;
+            }
+            list.innerHTML = visiblePulses.map((pulse) => `
+                <article class="pulse-card" draggable="true" data-pulse-key="${escapeAttribute(pulse.key)}">
+                    <div class="pulse-card-line">
+                        <strong>${escapeHtml(pulse.name)}</strong>
+                        <span class="pill">${escapeHtml(String(pulse.active_pulser_count || 0))} active</span>
+                    </div>
+                    <div class="pulse-card-copy">${escapeHtml(pulse.description || pulse.address || 'No description')}</div>
+                    <div class="pulse-card-meta">
+                        <span class="pulse-card-subtle">${escapeHtml(describePulsePulserNames(pulse))}</span>
+                    </div>
+                </article>
+            `).join('');
+
+            list.querySelectorAll('[data-pulse-key]').forEach((node) => {
+                node.addEventListener('dragstart', (event) => {
+                    const pulse = state.pulses.find((entry) => entry.key === node.dataset.pulseKey);
+                    if (!pulse) return;
+                    event.dataTransfer.setData('application/json', JSON.stringify(pulse));
+                    event.dataTransfer.effectAllowed = 'copy';
+                });
+            });
+        }
+
+        function getVisiblePulses() {
+            const search = state.pulseSearch.trim().toLowerCase();
+            const tagFilter = state.pulseTagFilter.trim().toLowerCase();
+            const pulserFilter = state.pulsePulserFilter.trim().toLowerCase();
+            const activeOnly = state.pulseActiveOnly;
+
+            const filtered = state.pulses.filter((pulse) => {
+                const searchText = `${pulse.name} ${pulse.description}`.toLowerCase();
+                const tagsText = (pulse.tags || []).join(' ').toLowerCase();
+                const pulserText = String(pulse.pulser || '').toLowerCase();
+                if (search && !searchText.includes(search)) return false;
+                if (tagFilter && !tagsText.includes(tagFilter)) return false;
+                if (pulserFilter && !pulserText.includes(pulserFilter)) return false;
+                if (activeOnly && Number(pulse.active_pulser_count || 0) <= 0) return false;
+                return true;
+            });
+
+            const sortKey = state.pulseSort === 'pulser' ? 'pulser' : 'name';
+            filtered.sort((left, right) => {
+                const leftValue = String(left[sortKey] || '').toLowerCase();
+                const rightValue = String(right[sortKey] || '').toLowerCase();
+                const primary = leftValue.localeCompare(rightValue);
+                if (primary !== 0) return primary;
+                return String(left.name || '').toLowerCase().localeCompare(String(right.name || '').toLowerCase());
+            });
+            return filtered;
+        }
+
+        function renderSections() {
+            const list = document.getElementById('sections-list');
+            document.getElementById('section-count').textContent = `${state.sections.length} sections`;
+            reconcileSelectedContent();
+            if (!state.sections.length) {
+                list.innerHTML = '<div class="empty-note">Add a section to start structuring this Phema.</div>';
+                return;
+            }
+            list.innerHTML = state.sections.map((section, index) => `
+                <article class="section-card ${section.collapsed ? 'collapsed' : ''}" data-section-card="1" data-section-id="${escapeHtml(section.id)}" ${!state.editorReadOnly ? 'draggable="true"' : ''}>
+                    <div class="section-header">
+                        <div class="section-heading">
+                            <button class="section-heading-toggle" type="button" data-toggle-section="${escapeHtml(section.id)}" aria-label="${section.collapsed ? 'Expand section' : 'Collapse section'}">
+                                <h3>${escapeHtml(section.name || `Untitled Section ${index + 1}`)}</h3>
+                                <span class="section-summary">${escapeHtml(section.content.length ? `${section.content.length} content item${section.content.length === 1 ? '' : 's'}` : 'Empty section')}</span>
+                            </button>
+                        </div>
+                        <div class="section-actions">
+                            <button class="section-action-btn" type="button" data-add-text="${escapeHtml(section.id)}" ${state.editorReadOnly ? 'disabled' : ''}>Add Text</button>
+                            <button class="section-action-btn danger-btn" data-remove-section="${escapeHtml(section.id)}" ${state.editorReadOnly ? 'disabled' : ''}>Remove</button>
+                            <button class="section-toggle-btn" type="button" data-toggle-section="${escapeHtml(section.id)}" aria-label="${section.collapsed ? 'Expand section' : 'Collapse section'}" title="${section.collapsed ? 'Expand section' : 'Collapse section'}">${section.collapsed ? '+' : '-'}</button>
+                        </div>
+                    </div>
+                    <div class="section-body">
+                        <div class="section-meta">
+                            <div class="field">
+                                <label>Name</label>
+                                <input data-section-id="${escapeHtml(section.id)}" data-field="name" value="${escapeAttribute(section.name)}" placeholder="Section name" ${state.editorReadOnly ? 'disabled' : ''}>
+                            </div>
+                            <div class="field">
+                                <label>Modifier</label>
+                                <input data-section-id="${escapeHtml(section.id)}" data-field="modifier" value="${escapeAttribute(section.modifier)}" placeholder="How this section should use its inputs" ${state.editorReadOnly ? 'disabled' : ''}>
+                            </div>
+                            <div class="field full">
+                                <label>Description</label>
+                                <textarea data-section-id="${escapeHtml(section.id)}" data-field="description" placeholder="Section description" ${state.editorReadOnly ? 'disabled' : ''}>${escapeHtml(section.description)}</textarea>
+                            </div>
+                        </div>
+                        <div class="field">
+                            <label>Section Content</label>
+                            <div class="dropzone">
+                                ${renderSectionContent(section)}
+                            </div>
+                        </div>
+                    </div>
+                </article>
+            `).join('');
+        }
+
+        function renderSectionContent(section) {
+            return `<div class="content-composer ${state.editorReadOnly ? 'read-only' : ''}" data-section-composer="${escapeHtml(section.id)}" data-dropzone="${escapeHtml(section.id)}" data-placeholder="Type section text here, then drag pulse fields directly into the text." ${state.editorReadOnly ? 'contenteditable="false"' : 'contenteditable="true"'} spellcheck="true">${renderSectionComposerNodes(section)}</div>`;
+        }
+
+        function renderSectionComposerNodes(section) {
+            if (!Array.isArray(section.content) || !section.content.length) {
+                return '';
+            }
+            return section.content.map((item, index) => {
+                if (item.type === 'text') {
+                    return `<span class="content-text-fragment" data-content-node="1" data-content-type="text" data-section-id="${escapeHtml(section.id)}" data-content-index="${index}">${escapeHtml(item.text || '')}</span>`;
+                }
+                return `<span class="content-node content-token ${isSelectedContent(section.id, index) ? 'selected' : ''} draggable" data-content-node="1" data-content-type="${escapeAttribute(item.type || 'pulse-field')}" data-section-id="${escapeHtml(section.id)}" data-content-index="${index}" data-token-index="${index}" ${!state.editorReadOnly ? 'draggable="true"' : ''} contenteditable="false"><span class="content-chip ${item.type === 'pulse-field' ? 'field-chip' : ''}">${escapeHtml(renderContentTokenLabel(item))}<button class="chip-remove" type="button" data-section-id="${escapeHtml(section.id)}" data-remove-content="${index}" ${state.editorReadOnly ? 'disabled' : ''}>×</button></span></span>`;
+            }).join('');
+        }
+
+        function renderContentTokenLabel(item) {
+            if (item?.type === 'pulse-field') {
+                const fieldPath = String(item.field_path || (Array.isArray(item.selected_fields) ? item.selected_fields[0] : '') || '');
+                if (fieldPath) {
+                    return fieldPath.split('.').filter(Boolean).pop() || fieldPath;
+                }
+            }
+            if (Array.isArray(item?.selected_fields) && item.selected_fields.length === 1) {
+                const fieldPath = String(item.selected_fields[0] || '');
+                if (fieldPath) {
+                    return fieldPath.split('.').filter(Boolean).pop() || fieldPath;
+                }
+            }
+            return item?.pulse_name || item?.name || item?.label || 'Pulse';
+        }
+
+        function addSection(seed = null) {
+            state.sections.push(seed ? normalizeSection(seed) : createEmptySection());
+        }
+
+        function toggleSectionCollapse(sectionId) {
+            const section = getSection(sectionId);
+            if (!section) return;
+            section.collapsed = !section.collapsed;
+        }
+
+        function collapseAllSections() {
+            state.sections.forEach((section) => {
+                section.collapsed = true;
+            });
+        }
+
+        function expandAllSections() {
+            state.sections.forEach((section) => {
+                section.collapsed = false;
+            });
+        }
+
+        function moveSection(sourceSectionId, targetSectionId, clientY) {
+            if (!sourceSectionId || !targetSectionId || sourceSectionId === targetSectionId) return;
+            const sourceIndex = state.sections.findIndex((section) => section.id === sourceSectionId);
+            const targetIndex = state.sections.findIndex((section) => section.id === targetSectionId);
+            if (sourceIndex < 0 || targetIndex < 0) return;
+            const targetNode = document.querySelector(`[data-section-card][data-section-id="${CSS.escape(targetSectionId)}"]`);
+            let insertIndex = targetIndex;
+            if (targetNode) {
+                const rect = targetNode.getBoundingClientRect();
+                const insertAfter = clientY > (rect.top + rect.height / 2);
+                insertIndex = targetIndex + (insertAfter ? 1 : 0);
+            }
+            const [section] = state.sections.splice(sourceIndex, 1);
+            if (!section) return;
+            if (sourceIndex < insertIndex) {
+                insertIndex -= 1;
+            }
+            insertIndex = Math.max(0, Math.min(insertIndex, state.sections.length));
+            state.sections.splice(insertIndex, 0, section);
+        }
+
+        function removeSection(sectionId) {
+            state.sections = state.sections.filter((section) => section.id !== sectionId);
+            if (state.selectedContent?.sectionId === sectionId) {
+                state.selectedContent = null;
+            }
+            if (!state.sections.length) {
+                addSection();
+            }
+        }
+
+        function addPulseToSection(sectionId, pulse, insertTarget = null) {
+            if (state.editorReadOnly) return;
+            const section = getSection(sectionId);
+            if (!section || !pulse) return;
+            openPulseConfigModal(sectionId, pulse, null, null, insertTarget);
+        }
+
+        function getSection(sectionId) {
+            return state.sections.find((section) => section.id === sectionId) || null;
+        }
+
+        function getContentItem(sectionId, index) {
+            const section = getSection(sectionId);
+            if (!section || !Number.isInteger(index) || index < 0 || index >= section.content.length) return null;
+            return section.content[index];
+        }
+
+        function isSelectedContent(sectionId, index) {
+            return state.selectedContent
+                && state.selectedContent.sectionId === sectionId
+                && Number(state.selectedContent.index) === Number(index);
+        }
+
+        function setSelectedContent(sectionId, index, render = true) {
+            if (!getContentItem(sectionId, index)) {
+                state.selectedContent = null;
+            } else {
+                state.selectedContent = { sectionId, index: Number(index) };
+            }
+            if (render) {
+                renderSections();
+                renderContentInspector();
+            }
+        }
+
+        function reconcileSelectedContent() {
+            if (!state.selectedContent) return;
+            if (!getContentItem(state.selectedContent.sectionId, Number(state.selectedContent.index))) {
+                state.selectedContent = null;
+            }
+        }
+
+        function reconcileSelectedContentAfterRemoval(sectionId, removedIndex) {
+            if (!state.selectedContent || state.selectedContent.sectionId !== sectionId) return;
+            if (Number(state.selectedContent.index) === Number(removedIndex)) {
+                state.selectedContent = null;
+                return;
+            }
+            if (Number(state.selectedContent.index) > Number(removedIndex)) {
+                state.selectedContent.index -= 1;
+            }
+        }
+
+        function moveContentItem(sourceSectionId, sourceIndex, targetSectionId, targetIndex) {
+            const sourceSection = getSection(sourceSectionId);
+            const targetSection = getSection(targetSectionId);
+            if (!sourceSection || !targetSection) return;
+            if (!Number.isInteger(sourceIndex) || sourceIndex < 0 || sourceIndex >= sourceSection.content.length) return;
+            const [item] = sourceSection.content.splice(sourceIndex, 1);
+            if (!item) return;
+            let insertIndex = Number.isInteger(targetIndex) ? targetIndex : targetSection.content.length;
+            insertIndex = Math.max(0, Math.min(insertIndex, targetSection.content.length));
+            if (sourceSectionId === targetSectionId && sourceIndex < insertIndex) {
+                insertIndex -= 1;
+            }
+            targetSection.content.splice(insertIndex, 0, item);
+            state.selectedContent = { sectionId: targetSectionId, index: insertIndex };
+        }
+
+        function createTextContentItem(text = '') {
+            return {
+                type: 'text',
+                text,
+                label: text || 'Text'
+            };
+        }
+
+        function appendTextContentItem(items, text) {
+            const normalizedText = String(text || '').replace(/\u00a0/g, ' ');
+            if (!normalizedText) return;
+            const last = items[items.length - 1];
+            if (last?.type === 'text') {
+                last.text += normalizedText;
+                last.label = last.text || 'Text';
+                return;
+            }
+            items.push(createTextContentItem(normalizedText));
+        }
+
+        function getComposerRangeFromPoint(clientX, clientY) {
+            if (typeof document.caretRangeFromPoint === 'function') {
+                return document.caretRangeFromPoint(clientX, clientY);
+            }
+            if (typeof document.caretPositionFromPoint === 'function') {
+                const position = document.caretPositionFromPoint(clientX, clientY);
+                if (position) {
+                    const range = document.createRange();
+                    range.setStart(position.offsetNode, position.offset);
+                    range.collapse(true);
+                    return range;
+                }
+            }
+            return null;
+        }
+
+        function getClosestComposerTextNode(node, composer) {
+            if (!node || !composer) return null;
+            if (node.nodeType === Node.TEXT_NODE) {
+                return node.parentElement?.closest('[data-content-type="text"]');
+            }
+            if (node.nodeType === Node.ELEMENT_NODE) {
+                return node.closest('[data-content-type="text"]');
+            }
+            return null;
+        }
+
+        function getRangeOffsetWithinNode(container, range) {
+            try {
+                const prefix = document.createRange();
+                prefix.selectNodeContents(container);
+                prefix.setEnd(range.startContainer, range.startOffset);
+                return prefix.toString().length;
+            } catch (_) {
+                return String(container.textContent || '').length;
+            }
+        }
+
+        function buildComposerInsertTarget(sectionId, clientX, clientY) {
+            const section = getSection(sectionId);
+            if (!section) return null;
+            const range = getComposerRangeFromPoint(clientX, clientY);
+            if (!range) {
+                return { mode: 'index', index: section.content.length };
+            }
+            const tokenNode = range.startContainer.nodeType === Node.ELEMENT_NODE
+                ? range.startContainer.closest('[data-token-index]')
+                : range.startContainer.parentElement?.closest('[data-token-index]');
+            if (tokenNode) {
+                const rect = tokenNode.getBoundingClientRect();
+                const after = clientX > rect.left + rect.width / 2;
+                return {
+                    mode: 'index',
+                    index: Number(tokenNode.dataset.tokenIndex) + (after ? 1 : 0)
+                };
+            }
+            const textNode = getClosestComposerTextNode(range.startContainer, document.querySelector(`[data-section-composer="${CSS.escape(sectionId)}"]`));
+            if (textNode) {
+                return {
+                    mode: 'text-cursor',
+                    textIndex: Number(textNode.dataset.contentIndex),
+                    cursorPos: getRangeOffsetWithinNode(textNode, range)
+                };
+            }
+            return { mode: 'index', index: section.content.length };
+        }
+
+        function parseComposerDomToContent(sectionId, node, items) {
+            Array.from(node.childNodes || []).forEach((child) => {
+                if (child.nodeType === Node.TEXT_NODE) {
+                    appendTextContentItem(items, child.textContent || '');
+                    return;
+                }
+                if (child.nodeType !== Node.ELEMENT_NODE) {
+                    return;
+                }
+                if (child.matches('[data-token-index]')) {
+                    const existing = getContentItem(sectionId, Number(child.dataset.tokenIndex));
+                    if (existing) {
+                        items.push(deepClone(existing));
+                    }
+                    return;
+                }
+                if (child.tagName === 'BR') {
+                    appendTextContentItem(items, '\n');
+                    return;
+                }
+                const blockLike = ['DIV', 'P'].includes(child.tagName);
+                parseComposerDomToContent(sectionId, child, items);
+                if (blockLike) {
+                    appendTextContentItem(items, '\n');
+                }
+            });
+        }
+
+        function normalizeComposerContentItems(items) {
+            const normalized = [];
+            items.forEach((item) => {
+                if (!item) return;
+                if (item.type === 'text') {
+                    const text = String(item.text || '');
+                    if (!text) return;
+                    appendTextContentItem(normalized, text);
+                    return;
+                }
+                const clone = deepClone(item);
+                clone.label = buildPulseItemLabel(clone);
+                normalized.push(clone);
+            });
+            return normalized;
+        }
+
+        function refreshComposerTokenMappings(sectionId, composer) {
+            const section = getSection(sectionId);
+            if (!section || !composer) return;
+            const tokenIndexes = section.content
+                .map((item, index) => (item?.type === 'text' ? null : index))
+                .filter((index) => index !== null);
+            composer.querySelectorAll('[data-token-index]').forEach((node, order) => {
+                const mappedIndex = tokenIndexes[order];
+                if (!Number.isInteger(mappedIndex)) return;
+                node.dataset.contentIndex = String(mappedIndex);
+                node.dataset.tokenIndex = String(mappedIndex);
+                node.classList.toggle('selected', isSelectedContent(sectionId, mappedIndex));
+            });
+        }
+
+        function syncComposerContent(sectionId, composer) {
+            const section = getSection(sectionId);
+            if (!section || !composer) return;
+            const nextItems = [];
+            parseComposerDomToContent(sectionId, composer, nextItems);
+            section.content = normalizeComposerContentItems(nextItems);
+            reconcileSelectedContent();
+            refreshComposerTokenMappings(sectionId, composer);
+            syncInputSchemaFromSections();
+        }
+
+        function focusSectionComposer(sectionId) {
+            requestAnimationFrame(() => {
+                const composer = document.querySelector(`[data-section-composer="${CSS.escape(sectionId)}"]`);
+                if (!composer) return;
+                composer.focus();
+                const selection = window.getSelection();
+                if (!selection) return;
+                const range = document.createRange();
+                range.selectNodeContents(composer);
+                range.collapse(false);
+                selection.removeAllRanges();
+                selection.addRange(range);
+            });
+        }
+
+        function selectComposerContentFromSelection(sectionId, composer) {
+            const selection = window.getSelection();
+            if (!selection || !selection.rangeCount) {
+                state.selectedContent = null;
+                renderContentInspector();
+                return;
+            }
+            const range = selection.getRangeAt(0);
+            const tokenNode = range.startContainer.nodeType === Node.ELEMENT_NODE
+                ? range.startContainer.closest('[data-token-index]')
+                : range.startContainer.parentElement?.closest('[data-token-index]');
+            if (tokenNode && composer.contains(tokenNode)) {
+                setSelectedContent(sectionId, Number(tokenNode.dataset.tokenIndex), false);
+                renderContentInspector();
+                return;
+            }
+            const textNode = getClosestComposerTextNode(range.startContainer, composer);
+            if (textNode && composer.contains(textNode)) {
+                setSelectedContent(sectionId, Number(textNode.dataset.contentIndex), false);
+                renderContentInspector();
+                return;
+            }
+            state.selectedContent = null;
+            renderContentInspector();
+        }
+
+        function insertItemsAtTextCursor(sectionId, textIndex, cursorPos, items) {
+            const section = getSection(sectionId);
+            if (!section || !Array.isArray(items) || !items.length) return null;
+            const targetItem = section.content[textIndex];
+            if (!targetItem || targetItem.type !== 'text') return null;
+            const text = String(targetItem.text || '');
+            const offset = Math.max(0, Math.min(Number(cursorPos) || 0, text.length));
+            const before = text.slice(0, offset);
+            const after = text.slice(offset);
+            const replacement = [];
+            if (before) {
+                replacement.push({ type: 'text', text: before, label: before || 'Text' });
+            }
+            replacement.push(...items);
+            if (after) {
+                replacement.push({ type: 'text', text: after, label: after || 'Text' });
+            }
+            section.content.splice(textIndex, 1, ...replacement);
+            const insertedIndex = textIndex + (before ? 1 : 0);
+            state.selectedContent = { sectionId, index: insertedIndex };
+            return insertedIndex;
+        }
+
+        function resolveDropInsertIndex(zone, event) {
+            const targetNode = event.target.closest('[data-content-node]');
+            if (!targetNode || targetNode.dataset.sectionId !== zone.dataset.dropzone) {
+                const section = getSection(zone.dataset.dropzone);
+                return section ? section.content.length : 0;
+            }
+            const rect = targetNode.getBoundingClientRect();
+            const after = event.clientX > rect.left + rect.width / 2;
+            return Number(targetNode.dataset.contentIndex) + (after ? 1 : 0);
+        }
+
+        function renderContentInspector() {
+            const pill = document.getElementById('content-inspector-pill');
+            const panel = document.getElementById('content-inspector');
+            const selected = state.selectedContent ? getContentItem(state.selectedContent.sectionId, Number(state.selectedContent.index)) : null;
+            if (!selected) {
+                pill.textContent = 'No selection';
+                panel.innerHTML = '<div class="empty-note">Select a text segment or pulse field in Section Content to inspect it here.</div>';
+                return;
+            }
+            pill.textContent = selected.type || 'content';
+            if (selected.type === 'text') {
+                panel.innerHTML = `
+                    <div class="inspector-grid">
+                        <div class="field">
+                            <label>Type</label>
+                            <div class="inspector-value">Text</div>
+                        </div>
+                        <div class="field">
+                            <label>Section</label>
+                            <div class="inspector-value">${escapeHtml(getSection(state.selectedContent.sectionId)?.name || 'Untitled Section')}</div>
+                        </div>
+                        <div class="field">
+                            <label>Text</label>
+                            <div class="inspector-value">${escapeHtml(selected.text || '')}</div>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+            panel.innerHTML = `
+                <div class="inspector-grid">
+                    <div class="field">
+                        <label>Type</label>
+                        <div class="inspector-value">${escapeHtml(selected.type || 'pulse')}</div>
+                    </div>
+                    <div class="field">
+                        <label>Section</label>
+                        <div class="inspector-value">${escapeHtml(getSection(state.selectedContent.sectionId)?.name || 'Untitled Section')}</div>
+                    </div>
+                    <div class="field">
+                        <label>Pulse</label>
+                        <div class="inspector-value">${escapeHtml(selected.pulse_name || '')}</div>
+                    </div>
+                    <div class="field">
+                        <label>Pulser</label>
+                        <div class="inspector-value">${escapeHtml(selected.pulser_name || selected.pulser_id || '')}</div>
+                    </div>
+                    <div class="field">
+                        <label>Field Path</label>
+                        <div class="inspector-value">${escapeHtml(selected.field_path || (selected.selected_fields || []).join(', ') || 'All pulse data')}</div>
+                    </div>
+                    <div class="field">
+                        <label>Params</label>
+                        <textarea readonly>${escapeHtml(JSON.stringify(selected.params || {}, null, 2))}</textarea>
+                    </div>
+                </div>
+            `;
+        }
+
+        function openPulseConfigModal(sectionId, pulse, existingItem = null, contentIndex = null, insertTarget = null) {
+            const shell = document.getElementById('pulse-config-modal');
+            const pulserSelect = document.getElementById('pulse-config-pulser');
+            const choices = sortPulsers(Array.isArray(pulse?.available_pulsers) ? pulse.available_pulsers : []);
+            const preferredPulserId = String(existingItem?.pulser_id || '');
+            const defaultPulserId = preferredPulserId && choices.some((pulser) => String(pulser.agent_id || '') === preferredPulserId)
+                ? preferredPulserId
+                : String(choices.find((pulser) => popupHeartbeatState(Number(pulser.last_active || 0)) === 'active')?.agent_id || choices[0]?.agent_id || '');
+            const paramsText = (() => {
+                if (existingItem?.params && typeof existingItem.params === 'object' && !Array.isArray(existingItem.params)) {
+                    return JSON.stringify(existingItem.params, null, 2);
+                }
+                const pulser = choices.find((entry) => String(entry.agent_id || '') === defaultPulserId) || choices[0];
+                return JSON.stringify(
+                    derivePulserTestPayload(
+                        resolvePulserDefinition(pulser, pulse?.name || pulse?.pulse_name || '', pulse?.address || pulse?.pulse_address || '')
+                    ),
+                    null,
+                    2
+                );
+            })();
+            state.pulseModal = {
+                open: true,
+                sectionId,
+                contentIndex,
+                insertTarget,
+                pulse,
+                selectedPulserId: defaultPulserId,
+                paramsText,
+                rawResult: null,
+                selectedFields: Array.isArray(existingItem?.selected_fields) ? [...existingItem.selected_fields] : [],
+                saving: false
+            };
+            document.getElementById('pulse-config-name').value = pulse?.name || pulse?.pulse_name || '';
+            pulserSelect.innerHTML = choices.length
+                ? choices.map((pulser) => {
+                    const isActive = popupHeartbeatState(Number(pulser.last_active || 0)) === 'active';
+                    return `<option value="${escapeAttribute(pulser.agent_id || '')}">${escapeHtml(pulser.name || 'Unnamed Pulser')} ${isActive ? '(Active)' : '(Inactive)'}</option>`;
+                }).join('')
+                : '<option value="">No pulser available</option>';
+            pulserSelect.value = state.pulseModal.selectedPulserId;
+            document.getElementById('pulse-config-params').value = state.pulseModal.paramsText;
+            document.getElementById('pulse-config-result').textContent = JSON.stringify({ status: 'idle' }, null, 2);
+            document.getElementById('pulse-config-display').textContent = JSON.stringify({ display: {} }, null, 2);
+            document.getElementById('pulse-config-fields').innerHTML = '<div class="empty-note">Use Get Sample to choose fields.</div>';
+            document.getElementById('pulse-config-summary').textContent = renderPulsePulserAvailability(pulse);
+            document.getElementById('pulse-config-save').textContent = contentIndex === null ? 'Add To Section' : 'Update Section';
+            updatePulseConfigSaveState();
+            renderPulseConfigPulserChoices();
+            document.getElementById('pulse-config-status').textContent = choices.length
+                ? 'Select a pulser, use Get Sample, then choose fields for this section.'
+                : 'No pulser is currently available for this pulse.';
+            document.getElementById('pulse-config-status').className = 'status-line';
+            shell.classList.add('open');
+            shell.setAttribute('aria-hidden', 'false');
+        }
+
+        function closePulseConfigModal() {
+            const shell = document.getElementById('pulse-config-modal');
+            state.pulseModal.open = false;
+            shell.classList.remove('open');
+            shell.setAttribute('aria-hidden', 'true');
+        }
+
+        function getModalPulserChoices() {
+            const pulse = state.pulseModal.pulse;
+            if (!pulse) return [];
+            return sortPulsers(Array.isArray(pulse.available_pulsers) ? pulse.available_pulsers : []);
+        }
+
+        function currentModalPulser() {
+            return getModalPulserChoices().find((pulser) => String(pulser.agent_id || '') === String(state.pulseModal.selectedPulserId || '')) || null;
+        }
+
+        function handlePulsePulserChanged(nextPulserId) {
+            state.pulseModal.selectedPulserId = String(nextPulserId || '');
+            const pulse = state.pulseModal.pulse;
+            const pulser = currentModalPulser();
+            const definition = resolvePulserDefinition(pulser, pulse?.name || pulse?.pulse_name || '', pulse?.address || pulse?.pulse_address || '');
+            state.pulseModal.paramsText = JSON.stringify(derivePulserTestPayload(definition), null, 2);
+            document.getElementById('pulse-config-pulser').value = state.pulseModal.selectedPulserId;
+            document.getElementById('pulse-config-params').value = state.pulseModal.paramsText;
+            state.pulseModal.rawResult = null;
+            state.pulseModal.selectedFields = [];
+            document.getElementById('pulse-config-fields').innerHTML = '<div class="empty-note">Use Get Sample to choose fields.</div>';
+            document.getElementById('pulse-config-result').textContent = JSON.stringify({ status: 'idle' }, null, 2);
+            document.getElementById('pulse-config-display').textContent = JSON.stringify({ display: {} }, null, 2);
+            updatePulseConfigSaveState();
+            renderPulseConfigPulserChoices();
+            setPulseConfigStatus('Pulser changed. Use Get Sample again to refresh fields.', '');
+        }
+
+        function renderPulseConfigPulserChoices() {
+            const container = document.getElementById('pulse-config-pulser-list');
+            const choices = getModalPulserChoices();
+            if (!choices.length) {
+                container.innerHTML = '<div class="empty-note">No pulser available for this pulse.</div>';
+                return;
+            }
+            container.innerHTML = choices.map((pulser) => {
+                const heartbeat = popupHeartbeatState(Number(pulser.last_active || 0));
+                const definition = resolvePulserDefinition(
+                    pulser,
+                    state.pulseModal.pulse?.name || state.pulseModal.pulse?.pulse_name || '',
+                    state.pulseModal.pulse?.address || state.pulseModal.pulse?.pulse_address || ''
+                );
+                const pulseLabel = definition.pulse_name || definition.name || state.pulseModal.pulse?.name || 'Pulse';
+                const selected = String(pulser.agent_id || '') === String(state.pulseModal.selectedPulserId || '');
+                return `
+                    <article class="pulser-choice ${heartbeat === 'active' ? 'active' : ''} ${selected ? 'selected' : ''}" data-select-pulser="${escapeAttribute(pulser.agent_id || '')}">
+                        <div class="pulser-choice-head">
+                            <span class="pulser-choice-title">${escapeHtml(pulser.name || 'Unnamed Pulser')}</span>
+                            <span class="pill ${heartbeat === 'active' ? 'success' : 'warning'}">${escapeHtml(heartbeat === 'active' ? 'Active' : 'Inactive')}</span>
+                        </div>
+                        <div class="pulse-card-copy">${escapeHtml(pulser.description || pulser.address || 'No description')}</div>
+                        <div class="pulser-choice-meta">
+                            <span class="pulse-card-subtle">${escapeHtml(pulseLabel)}</span>
+                            <span class="pulse-card-subtle">${escapeHtml(renderPopupHeartbeatCopy(Number(pulser.last_active || 0)))}</span>
+                        </div>
+                        <div class="pulser-choice-actions">
+                            <button class="pulser-sample-btn" type="button" data-run-sample="${escapeAttribute(pulser.agent_id || '')}">Get Sample</button>
+                        </div>
+                    </article>
+                `;
+            }).join('');
+            container.querySelectorAll('[data-select-pulser]').forEach((node) => {
+                node.addEventListener('click', () => handlePulsePulserChanged(node.dataset.selectPulser));
+            });
+            container.querySelectorAll('[data-run-sample]').forEach((node) => {
+                node.addEventListener('click', (event) => {
+                    event.stopPropagation();
+                    runPulseConfigSample(node.dataset.runSample);
+                });
+            });
+        }
+
+        function updatePulseConfigFieldPicker(result) {
+            const container = document.getElementById('pulse-config-fields');
+            const fieldPaths = collectFieldPaths(result);
+            if (!fieldPaths.length) {
+                container.innerHTML = '<div class="empty-note">No selectable fields were returned.</div>';
+                document.getElementById('pulse-config-display').textContent = JSON.stringify({ display: result }, null, 2);
+                updatePulseConfigSaveState();
+                return;
+            }
+            if (!state.pulseModal.selectedFields.length) {
+                state.pulseModal.selectedFields = fieldPaths.slice(0, Math.min(fieldPaths.length, 4));
+            }
+            container.innerHTML = fieldPaths.map((path) => `
+                <label class="field-option">
+                    <input type="checkbox" value="${escapeAttribute(path)}" ${state.pulseModal.selectedFields.includes(path) ? 'checked' : ''}>
+                    <code>${escapeHtml(path)}</code>
+                </label>
+            `).join('');
+            container.querySelectorAll('input[type="checkbox"]').forEach((node) => {
+                node.addEventListener('change', () => {
+                    state.pulseModal.selectedFields = Array.from(container.querySelectorAll('input[type="checkbox"]:checked')).map((checkbox) => checkbox.value);
+                    updatePulseConfigDisplay();
+                    updatePulseConfigSaveState();
+                });
+            });
+            updatePulseConfigDisplay();
+            updatePulseConfigSaveState();
+        }
+
+        function updatePulseConfigDisplay() {
+            const preview = projectSelectedFields(state.pulseModal.rawResult, state.pulseModal.selectedFields);
+            document.getElementById('pulse-config-display').textContent = JSON.stringify({ display: preview }, null, 2);
+        }
+
+        function updatePulseConfigSaveState() {
+            const button = document.getElementById('pulse-config-save');
+            const hasFields = Array.isArray(state.pulseModal.selectedFields) && state.pulseModal.selectedFields.length > 0;
+            button.disabled = !hasFields;
+        }
+
+        async function runPulseConfigSample(pulserId = '') {
+            if (pulserId && String(pulserId) !== String(state.pulseModal.selectedPulserId || '')) {
+                handlePulsePulserChanged(pulserId);
+            }
+            const pulser = currentModalPulser();
+            const pulse = state.pulseModal.pulse;
+            if (!pulser || !pulse) {
+                setPulseConfigStatus('No pulser is selected for this pulse.', 'error');
+                return;
+            }
+            let parsedInput = {};
+            try {
+                parsedInput = JSON.parse(document.getElementById('pulse-config-params').value || '{}');
+            } catch (error) {
+                setPulseConfigStatus(`Input must be valid JSON: ${error.message}`, 'error');
+                return;
+            }
+            const definition = resolvePulserDefinition(pulser, pulse.name || pulse.pulse_name, pulse.address || pulse.pulse_address);
+            const resultNode = document.getElementById('pulse-config-result');
+            resultNode.textContent = JSON.stringify({ status: 'running' }, null, 2);
+            setPulseConfigStatus(`Requesting sample data from ${pulser.name || 'selected pulser'}...`, '');
+            try {
+                const response = await fetch('/api/pulsers/test', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        pulser_id: pulser.agent_id || '',
+                        pulser_name: pulser.name || '',
+                        pulser_address: pulser.address || '',
+                        practice_id: (selectPulsePractices(pulser.practices)[0] || {}).id || 'get_pulse_data',
+                        pulse_name: definition.pulse_name || definition.name || pulse.name || pulse.pulse_name || '',
+                        pulse_address: definition.pulse_address || pulse.address || pulse.pulse_address || '',
+                        output_schema: definition.output_schema || {},
+                        input: parsedInput
+                    })
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.detail || data.message || 'Pulser test failed');
+                }
+                const result = data.result ?? data;
+                state.pulseModal.rawResult = result;
+                resultNode.textContent = JSON.stringify(result, null, 2);
+                updatePulseConfigFieldPicker(result);
+                setPulseConfigStatus('Sample loaded. Select fields to display.', 'success');
+            } catch (error) {
+                resultNode.textContent = JSON.stringify({ error: error.message }, null, 2);
+                setPulseConfigStatus(error.message, 'error');
+            }
+        }
+
+        function savePulseConfigToSection() {
+            const section = getSection(state.pulseModal.sectionId);
+            const pulse = state.pulseModal.pulse;
+            const pulser = currentModalPulser();
+            if (!section || !pulse || !pulser) {
+                setPulseConfigStatus('Missing section, pulse, or pulser selection.', 'error');
+                return;
+            }
+            if (!Array.isArray(state.pulseModal.selectedFields) || !state.pulseModal.selectedFields.length) {
+                setPulseConfigStatus('Select at least one field before adding this pulse to the section.', 'error');
+                updatePulseConfigSaveState();
+                return;
+            }
+            let parsedParams = {};
+            try {
+                parsedParams = JSON.parse(document.getElementById('pulse-config-params').value || '{}');
+            } catch (error) {
+                setPulseConfigStatus(`Input must be valid JSON: ${error.message}`, 'error');
+                return;
+            }
+            const definition = resolvePulserDefinition(pulser, pulse.name || pulse.pulse_name, pulse.address || pulse.pulse_address);
+            const shared = {
+                pulse_name: definition.pulse_name || definition.name || pulse.name || pulse.pulse_name,
+                pulse_address: definition.pulse_address || pulse.address || pulse.pulse_address,
+                pulser_id: pulser.agent_id || '',
+                pulser_name: pulser.name || '',
+                owner: pulse.owner,
+                description: pulse.description,
+                input_schema: definition.input_schema || pulse.input_schema || {},
+            };
+            const items = state.pulseModal.selectedFields.map((fieldPath) => ({
+                ...shared,
+                type: 'pulse-field',
+                field_path: fieldPath,
+                params: parsedParams,
+                selected_fields: [fieldPath],
+                label: buildPulseItemLabel({
+                    ...shared,
+                    type: 'pulse-field',
+                    field_path: fieldPath,
+                    selected_fields: [fieldPath]
+                })
+            }));
+            if (Number.isInteger(state.pulseModal.contentIndex) && state.pulseModal.contentIndex >= 0 && state.pulseModal.contentIndex < section.content.length) {
+                section.content.splice(state.pulseModal.contentIndex, 1, ...items);
+                state.selectedContent = { sectionId: section.id, index: state.pulseModal.contentIndex };
+            } else if (
+                state.pulseModal.insertTarget
+                && state.pulseModal.insertTarget.mode === 'text-cursor'
+                && Number.isInteger(state.pulseModal.insertTarget.textIndex)
+            ) {
+                const insertedIndex = insertItemsAtTextCursor(
+                    section.id,
+                    state.pulseModal.insertTarget.textIndex,
+                    state.pulseModal.insertTarget.cursorPos,
+                    items
+                );
+                if (insertedIndex === null) {
+                    const startIndex = section.content.length;
+                    section.content.push(...items);
+                    state.selectedContent = { sectionId: section.id, index: startIndex };
+                }
+            } else if (
+                state.pulseModal.insertTarget
+                && state.pulseModal.insertTarget.mode === 'index'
+                && Number.isInteger(state.pulseModal.insertTarget.index)
+            ) {
+                const insertIndex = Math.max(0, Math.min(state.pulseModal.insertTarget.index, section.content.length));
+                section.content.splice(insertIndex, 0, ...items);
+                state.selectedContent = { sectionId: section.id, index: insertIndex };
+            } else {
+                const startIndex = section.content.length;
+                section.content.push(...items);
+                state.selectedContent = { sectionId: section.id, index: startIndex };
+            }
+            syncInputSchemaFromSections();
+            closePulseConfigModal();
+            renderSections();
+            setStatus(`Configured pulse "${shared.pulse_name}" with pulser "${shared.pulser_name}".`, 'success');
+        }
+
+        function setPulseConfigStatus(message, kind = '') {
+            const node = document.getElementById('pulse-config-status');
+            node.textContent = message;
+            node.className = `status-line${kind ? ` ${kind}` : ''}`;
+        }
+
+        function resolveSnapshotCacheTimeFromState() {
+            try {
+                const meta = JSON.parse(String(state.metaText || '{}') || '{}');
+                const values = [meta.snapshot_cache_time, meta.snapshot_cache_seconds, meta.cache_time];
+                for (const value of values) {
+                    if (value === undefined || value === null || value === '') continue;
+                    const normalized = Number(value);
+                    if (Number.isFinite(normalized) && normalized >= 0) {
+                        return Math.floor(normalized);
+                    }
+                }
+            } catch (_) {
+                return 0;
+            }
+            return 0;
+        }
+
+        async function generateSnapshotFromManager() {
+            if (!state.phemaId) {
+                setStatus('Select a Phema before generating a snapshot.', 'error');
+                return;
+            }
+            const rawInput = window.prompt('Snapshot input JSON:', '{}');
+            if (rawInput === null) {
+                setStatus('Snapshot generation cancelled.', '');
+                return;
+            }
+
+            let parsedInput = {};
+            try {
+                parsedInput = JSON.parse(rawInput || '{}');
+            } catch (_) {
+                setStatus('Snapshot input must be valid JSON.', 'error');
+                return;
+            }
+            if (!isPlainObject(parsedInput)) {
+                setStatus('Snapshot input must be a JSON object.', 'error');
+                return;
+            }
+
+            const suggestedCacheTime = resolveSnapshotCacheTimeFromState();
+            const rawCacheTime = window.prompt(
+                'Cache time in seconds (blank uses the Phema setting):',
+                suggestedCacheTime ? String(suggestedCacheTime) : ''
+            );
+            if (rawCacheTime === null) {
+                setStatus('Snapshot generation cancelled.', '');
+                return;
+            }
+
+            const payload = {
+                phema_id: state.phemaId,
+                input: parsedInput
+            };
+            if (String(rawCacheTime || '').trim()) {
+                const cacheTime = Number(rawCacheTime);
+                if (!Number.isFinite(cacheTime) || cacheTime < 0) {
+                    setStatus('Cache time must be a non-negative number of seconds.', 'error');
+                    return;
+                }
+                payload.cache_time = Math.floor(cacheTime);
+            }
+
+            const taskId = beginTask('Generating snapshot');
+            try {
+                setStatus(`Generating snapshot for "${state.name || state.phemaId}"...`, '');
+                const response = await fetch('/api/phemas/snapshot', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.detail || data.message || 'Failed to generate snapshot');
+                }
+                await loadSnapshotHistory({ announce: false });
+                renderAll();
+                setStatus(
+                    data.cached
+                        ? `Reused cached snapshot ${String(data.snapshot_id || '').slice(0, 8)}.`
+                        : `Generated snapshot ${String(data.snapshot_id || '').slice(0, 8)}.`,
+                    'success'
+                );
+            } catch (error) {
+                setStatus(error.message, 'error');
+            } finally {
+                finishTask(taskId);
+            }
+        }
+
+        async function retakeSnapshot(snapshotId) {
+            const snapshot = state.snapshots.find((entry) => String(entry.snapshot_id || entry.id || '') === String(snapshotId || ''));
+            if (!snapshot) {
+                setStatus('Snapshot could not be found in the current list.', 'error');
+                return;
+            }
+            const taskId = beginTask('Generating snapshot');
+            try {
+                const response = await fetch('/api/phemas/snapshot', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        phema_id: snapshot.phema_id || (snapshot.meta || {}).source_phema_id || state.phemaId,
+                        input: isPlainObject(snapshot.params) ? snapshot.params : {},
+                        cache_time: 0,
+                    })
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.detail || data.message || 'Failed to retake snapshot');
+                }
+                await loadSnapshotHistory({ announce: false });
+                renderAll();
+                setStatus(`Retook snapshot as ${String(data.snapshot_id || '').slice(0, 8)}.`, 'success');
+            } catch (error) {
+                setStatus(error.message, 'error');
+            } finally {
+                finishTask(taskId);
+            }
+        }
+
+        async function deleteSnapshot(snapshotId, options = {}) {
+            if (!snapshotId) return;
+            const skipConfirm = Boolean(options && options.skipConfirm);
+            if (!skipConfirm && !window.confirm(`Delete snapshot ${String(snapshotId).slice(0, 8)}?`)) {
+                return;
+            }
+            const taskId = beginTask('Deleting snapshot');
+            try {
+                const response = await fetch(`/api/phema-snapshots/${encodeURIComponent(snapshotId)}`, {
+                    method: 'DELETE'
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.detail || data.message || 'Failed to delete snapshot');
+                }
+                state.snapshots = state.snapshots.filter((entry) => String(entry.snapshot_id || entry.id || '') !== String(snapshotId));
+                renderSnapshotRefreshState();
+                renderSnapshotResults();
+                if (!options || options.silentStatus !== true) {
+                    setStatus(`Deleted snapshot ${String(snapshotId).slice(0, 8)}.`, 'success');
+                }
+            } catch (error) {
+                setStatus(error.message, 'error');
+            } finally {
+                finishTask(taskId);
+            }
+        }
+
+        async function deleteSnapshotGroup(groupKey, options = {}) {
+            const group = getSnapshotGroup(groupKey);
+            if (!group || !group.history.length) return;
+            const skipConfirm = Boolean(options && options.skipConfirm);
+            if (!skipConfirm && !window.confirm(`Delete all ${group.history.length} snapshots in this history group?`)) {
+                return;
+            }
+            for (const snapshot of group.history) {
+                await deleteSnapshot(snapshot.snapshot_id || snapshot.id, { skipConfirm: true, silentStatus: true });
+            }
+            if (!options || options.silentStatus !== true) {
+                setStatus(`Deleted ${group.history.length} snapshots from history.`, 'success');
+            }
+        }
+
+        function escapeHtmlForPopup(value) {
+            return escapeHtml(value);
+        }
+
+        function openSnapshotHistoryWindow(groupKey) {
+            const popup = window.open('', `snapshot-history-${encodeURIComponent(groupKey)}`, 'width=920,height=720,resizable=yes,scrollbars=yes');
+            if (!popup) {
+                setStatus('Popup blocked. Allow popups to view snapshot history.', 'error');
+                return;
+            }
+
+            const renderPopup = () => {
+                const group = getSnapshotGroup(groupKey);
+                const sourceName = group?.latest?.phema_name || state.name || 'Snapshot';
+                const groupParams = isPlainObject(group?.latest?.params) ? JSON.stringify(group.latest.params, null, 2) : '{}';
+                const rows = (group?.history || []).map((snapshot) => {
+                    const snapshotId = String(snapshot.snapshot_id || snapshot.id || '');
+                    const params = isPlainObject(snapshot.params) ? JSON.stringify(snapshot.params) : '{}';
+                    return `
+                        <tr>
+                            <td><code>${escapeHtmlForPopup(snapshotId.slice(0, 8))}</code></td>
+                            <td>${escapeHtmlForPopup(String(snapshot.created_at || ''))}</td>
+                            <td><code>${escapeHtmlForPopup(params)}</code></td>
+                            <td class="actions">
+                                <a href="/phema-snapshots/${encodeURIComponent(snapshotId)}/view" target="_blank" rel="noreferrer">View</a>
+                                <button data-popup-delete="${escapeHtmlForPopup(snapshotId)}">Delete</button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+
+                popup.document.open();
+                popup.document.write(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Snapshot History</title>
+  <style>
+    body { font-family: ui-sans-serif, system-ui, sans-serif; margin: 0; padding: 24px; background: #f4f7f8; color: #17323b; }
+    .shell { max-width: 980px; margin: 0 auto; }
+    .header { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 16px; }
+    .title { font-size: 22px; font-weight: 700; }
+    .subtle { color: #526d78; font-size: 13px; }
+    .toolbar { display: flex; gap: 10px; flex-wrap: wrap; }
+    .params-card { margin-bottom: 16px; padding: 14px 16px; background: white; border-radius: 18px; box-shadow: 0 16px 40px rgba(23,50,59,0.08); }
+    .params-label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: #41616b; margin-bottom: 8px; font-weight: 700; }
+    .params-card pre { margin: 0; white-space: pre-wrap; word-break: break-word; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; line-height: 1.55; color: #17323b; }
+    button, a { border: 1px solid rgba(15,118,110,0.2); background: white; color: #0f766e; border-radius: 999px; padding: 9px 14px; font: inherit; font-size: 13px; font-weight: 700; text-decoration: none; cursor: pointer; }
+    .danger { color: #b42318; border-color: rgba(180,35,24,0.18); }
+    table { width: 100%; border-collapse: collapse; background: white; border-radius: 18px; overflow: hidden; box-shadow: 0 16px 40px rgba(23,50,59,0.08); }
+    th, td { padding: 12px 14px; border-bottom: 1px solid #e3ebee; text-align: left; vertical-align: top; }
+    th { background: #eef7f6; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: #41616b; }
+    tr:last-child td { border-bottom: 0; }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .empty { padding: 18px; background: white; border-radius: 18px; color: #526d78; }
+  </style>
+</head>
+<body>
+  <div class="shell">
+      <div class="header">
+        <div>
+          <div class="title">${escapeHtmlForPopup(sourceName)} Snapshot History</div>
+          <div class="subtle">${escapeHtmlForPopup(group?.history?.length || 0)} snapshots for one input group</div>
+        </div>
+      <div class="toolbar">
+        <button id="popup-refresh">Refresh</button>
+        <button id="popup-delete-all" class="danger">Delete All</button>
+        </div>
+      </div>
+      <div class="params-card">
+        <div class="params-label">Input Parameters</div>
+        <pre><code>${escapeHtmlForPopup(groupParams)}</code></pre>
+      </div>
+      ${(group?.history?.length || 0)
+        ? `<table><thead><tr><th>Id</th><th>Created</th><th>Params</th><th>Actions</th></tr></thead><tbody>${rows}</tbody></table>`
+        : '<div class="empty">No snapshots remain in this history group.</div>'}
+  </div>
+</body>
+</html>`);
+                popup.document.close();
+
+                const bind = () => {
+                    const refreshBtn = popup.document.getElementById('popup-refresh');
+                    if (refreshBtn) {
+                        refreshBtn.onclick = async () => {
+                            await loadSnapshotHistory({ announce: false });
+                            renderPopup();
+                        };
+                    }
+                    const deleteAllBtn = popup.document.getElementById('popup-delete-all');
+                    if (deleteAllBtn) {
+                        deleteAllBtn.onclick = async () => {
+                            await deleteSnapshotGroup(groupKey);
+                            await loadSnapshotHistory({ announce: false });
+                            renderPopup();
+                        };
+                    }
+                    popup.document.querySelectorAll('[data-popup-delete]').forEach((button) => {
+                        button.onclick = async () => {
+                            await deleteSnapshot(button.getAttribute('data-popup-delete'));
+                            await loadSnapshotHistory({ announce: false });
+                            renderPopup();
+                        };
+                    });
+                };
+                bind();
+            };
+
+            renderPopup();
+        }
+
+        async function savePhema() {
+            const payload = compilePayload();
+            if (!payload) return;
+
+            try {
+                const response = await fetch('/api/phemas', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phema: payload })
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.detail || data.message || 'Failed to save Phema');
+                }
+                hydrateFromPhema(data.phema, 'local');
+                if (managerMode) {
+                    state.editorReadOnly = true;
+                    await loadManagerData();
+                    await loadSnapshotHistory({ announce: false });
+                }
+                renderAll();
+                setStatus(managerMode ? 'Phema saved to the local pool.' : 'Phema saved to the Plaza directory.', 'success');
+                if (window.location.pathname !== `/phemas/editor/${encodeURIComponent(state.phemaId)}`) {
+                    history.replaceState({}, '', `/phemas/editor/${encodeURIComponent(state.phemaId)}`);
+                }
+            } catch (error) {
+                setStatus(error.message, 'error');
+            }
+        }
+
+        function startEditingCurrentPhema() {
+            if (!canEditCurrentPhema()) {
+                setStatus('This Phema is read only for the current Phemar.', 'error');
+                return;
+            }
+            state.editorReadOnly = false;
+            renderAll();
+            setStatus('Editing enabled for the selected Phema.', '');
+        }
+
+        async function savePhemaAsCopy() {
+            const payload = compilePayload();
+            if (!payload) return;
+            payload.phema_id = undefined;
+            payload.address = '';
+            payload.name = window.prompt('Save as local copy named:', payload.name ? `${payload.name} Copy` : 'New Phema Copy') || payload.name;
+            if (!payload.name || !payload.name.trim()) {
+                setStatus('Save As cancelled.', '');
+                return;
+            }
+            try {
+                const response = await fetch('/api/phemas', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phema: payload })
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.detail || data.message || 'Failed to save local copy');
+                }
+                hydrateFromPhema(data.phema, 'local');
+                state.editorReadOnly = true;
+                await loadManagerData();
+                await loadSnapshotHistory({ announce: false });
+                renderAll();
+                setStatus('Saved a new local copy of this Phema.', 'success');
+            } catch (error) {
+                setStatus(error.message, 'error');
+            }
+        }
+
+        async function deletePhema() {
+            if (!state.phemaId) return;
+            if (managerMode && state.selectedSource === 'plaza') {
+                await deregisterPhemaFromPlaza();
+                return;
+            }
+            const prompt = managerMode
+                ? `Delete local Phema "${state.name || state.phemaId}" from this Phemar pool?`
+                : `Delete Phema "${state.name || state.phemaId}" from the Plaza directory?`;
+            if (!confirm(prompt)) {
+                return;
+            }
+            try {
+                const response = await fetch(`/api/phemas/${encodeURIComponent(state.phemaId)}`, {
+                    method: 'DELETE'
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.detail || data.message || 'Failed to delete Phema');
+                }
+                if (managerMode) {
+                    createNewPhema();
+                    await loadManagerData();
+                    renderAll();
+                    setStatus('Local Phema deleted from the pool.', 'success');
+                    history.replaceState({}, '', '/phemas/editor');
+                    return;
+                }
+                window.location.href = '/phemas/editor';
+            } catch (error) {
+                setStatus(error.message, 'error');
+            }
+        }
+
+        function createNewPhema() {
+            state.phemaId = '';
+            state.hasEditorContext = true;
+            state.name = '';
+            state.description = '';
+            state.owner = managerMode ? '{{ agent_name }}' : '';
+            state.address = '';
+            state.tags = [];
+            state.inputSchemaText = '{}';
+            state.inputSchemaAutoText = '{}';
+            state.metaText = '{}';
+            state.sections = [createEmptySection()];
+            state.selectedSource = 'local';
+            state.plazaEditable = false;
+            state.editorReadOnly = false;
+            state.snapshots = [];
+            state.selectedContent = null;
+            syncInputSchemaFromSections();
+            setStatus('Ready for a new local Phema.', '');
+            renderAll();
+        }
+
+        async function registerPhemaOnPlaza(phemaId = '', options = {}) {
+            const preserveSelection = Boolean(options && options.preserveSelection);
+            const localPhema = options && options.localPhema ? options.localPhema : null;
+            const registrationMode = String((options && options.registrationMode) || 'hosted').trim().toLowerCase() || 'hosted';
+            if (!phemaId && state.selectedSource === 'plaza' && !state.plazaEditable) {
+                setStatus('Only the owner Phemar can edit or re-register this Plaza Phema.', 'error');
+                return;
+            }
+            try {
+                setStatus(
+                    registrationMode === 'info_only'
+                        ? 'Registering info-only Phema on Plaza...'
+                        : 'Hosting Phema on Plaza...',
+                    ''
+                );
+                let body = {};
+                if (localPhema) {
+                    body = { phema: localPhema, registration_mode: registrationMode };
+                } else if (phemaId) {
+                    body = { phema_id: phemaId, registration_mode: registrationMode };
+                } else {
+                    const payload = compilePayload();
+                    if (!payload) return;
+                    body = { phema: payload, registration_mode: registrationMode };
+                }
+                const response = await fetch('/api/plaza/phemas/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.detail || data.message || 'Failed to register Phema on Plaza');
+                }
+                await loadManagerData();
+                if (phemaId && preserveSelection) {
+                    if (state.selectedSource === 'local' && String(state.phemaId || '') === String(phemaId)) {
+                        renderAll();
+                    } else {
+                        renderManagerResults();
+                        renderManagerDetail();
+                    }
+                } else {
+                    hydrateFromPhema(data.phema, 'plaza');
+                    state.editorReadOnly = true;
+                    renderAll();
+                }
+                setStatus(
+                    registrationMode === 'info_only'
+                        ? 'Phema registered on Plaza as info only.'
+                        : 'Phema hosted on Plaza.',
+                    'success'
+                );
+            } catch (error) {
+                setStatus(error.message, 'error');
+            }
+        }
+
+        async function updateSelectedPhemaPlazaMode() {
+            const selectedEntry = getSelectedManagerEntry();
+            const localPhema = buildRegisterableLocalPhema(findLocalPhemaById(state.phemaId));
+            if (!selectedEntry?.local || !localPhema) {
+                setStatus('Select a local Phema to update its Plaza mode.', 'error');
+                return;
+            }
+            const currentMode = getCurrentPlazaRegistrationMode(selectedEntry);
+            const nextMode = state.plazaRegistrationTargetMode || 'not_registered';
+            if (nextMode === currentMode) {
+                setStatus('Plaza mode is already up to date.', '');
+                return;
+            }
+            if (nextMode === 'not_registered') {
+                if (!selectedEntry.local.plaza_registered || !selectedEntry.local.plaza_phema_id) {
+                    setStatus('This local Phema is not registered on Plaza.', 'error');
+                    return;
+                }
+                try {
+                    const response = await fetch(`/api/plaza/phemas/${encodeURIComponent(selectedEntry.local.plaza_phema_id)}`, {
+                        method: 'DELETE'
+                    });
+                    const data = await response.json();
+                    if (!response.ok) {
+                        throw new Error(data.detail || data.message || 'Failed to de-register Phema from Plaza');
+                    }
+                    await loadManagerData();
+                    state.selectedSource = 'local';
+                    state.plazaRegistrationTargetMode = 'not_registered';
+                    renderAll();
+                    setStatus('Phema de-registered from Plaza.', 'success');
+                    return;
+                } catch (error) {
+                    setStatus(error.message, 'error');
+                    return;
+                }
+            }
+
+            await registerPhemaOnPlaza(state.phemaId, {
+                preserveSelection: true,
+                localPhema,
+                registrationMode: nextMode,
+            });
+        }
+
+        async function deregisterPhemaFromPlaza() {
+            if (!(state.selectedSource === 'plaza' && state.phemaId)) return;
+            if (!state.plazaEditable) {
+                setStatus('Only the owner Phemar can de-register this Plaza Phema.', 'error');
+                return;
+            }
+            if (!confirm(`De-register Plaza Phema "${state.name || state.phemaId}"?`)) {
+                return;
+            }
+            try {
+                const response = await fetch(`/api/plaza/phemas/${encodeURIComponent(state.phemaId)}`, {
+                    method: 'DELETE'
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.detail || data.message || 'Failed to de-register Phema from Plaza');
+                }
+                await loadManagerData();
+                createNewPhema();
+                history.replaceState({}, '', '/phemas/editor');
+                setStatus('Phema removed from Plaza.', 'success');
+            } catch (error) {
+                setStatus(error.message, 'error');
+            }
+        }
+
+        function popupHeartbeatState(lastActive) {
+            if (!lastActive) return 'inactive';
+            const diff = Math.max(0, Date.now() / 1000 - Number(lastActive));
+            return diff <= HEARTBEAT_ACTIVE_WINDOW_SEC ? 'active' : 'inactive';
+        }
+
+        function renderPopupHeartbeatCopy(lastActive) {
+            if (!lastActive) return 'No heartbeat';
+            const seconds = Math.max(0, Math.floor(Date.now() / 1000 - Number(lastActive)));
+            const stateLabel = popupHeartbeatState(lastActive) === 'active' ? 'Active' : 'Inactive';
+            return `${stateLabel} • ${seconds}s ago`;
+        }
+
+        function sortPulsers(pulsers) {
+            return [...(Array.isArray(pulsers) ? pulsers : [])].sort((left, right) => {
+                const leftActive = popupHeartbeatState(Number(left?.last_active || 0)) === 'active' ? 0 : 1;
+                const rightActive = popupHeartbeatState(Number(right?.last_active || 0)) === 'active' ? 0 : 1;
+                if (leftActive !== rightActive) return leftActive - rightActive;
+                return String(left?.name || '').localeCompare(String(right?.name || ''));
+            });
+        }
+
+        function renderPulsePulserAvailability(pulse) {
+            const active = Number(pulse?.active_pulser_count || 0);
+            const total = Number(pulse?.available_pulser_count || 0);
+            return `${active} active / ${total} available pulsers`;
+        }
+
+        function describePulsePulserNames(pulse) {
+            const activeNames = sortPulsers(pulse?.available_pulsers || [])
+                .filter((pulser) => popupHeartbeatState(Number(pulser.last_active || 0)) === 'active')
+                .map((pulser) => pulser.name || '')
+                .filter(Boolean);
+            if (activeNames.length) {
+                const visible = activeNames.slice(0, 2).join(', ');
+                const remaining = activeNames.length - 2;
+                return remaining > 0 ? `${visible}, +${remaining} more active` : `Active on ${visible}`;
+            }
+            const fallback = sortPulsers(pulse?.available_pulsers || [])
+                .map((pulser) => pulser.name || '')
+                .filter(Boolean);
+            if (fallback.length) {
+                const visible = fallback.slice(0, 2).join(', ');
+                const remaining = fallback.length - 2;
+                return remaining > 0 ? `Available on ${visible}, +${remaining} more` : `Available on ${visible}`;
+            }
+            return 'No pulser currently registered for this pulse';
+        }
+
+        function samePitRef(left, right) {
+            const normalize = (value) => String(value || '').trim().toLowerCase();
+            return normalize(left) === normalize(right);
+        }
+
+        function containsText(left, right) {
+            return String(left || '').toLowerCase().includes(String(right || '').toLowerCase());
+        }
+
+        function resolvePulserDefinition(pulser, pulseName = '', pulseAddress = '') {
+            const direct = pulser && typeof pulser.pulse_definition === 'object' && !Array.isArray(pulser.pulse_definition)
+                ? pulser.pulse_definition
+                : {};
+            if (Object.keys(direct).length) return direct;
+
+            const meta = pulser && typeof pulser.meta === 'object' && !Array.isArray(pulser.meta) ? pulser.meta : {};
+            const supported = Array.isArray(meta.supported_pulses) ? meta.supported_pulses : [];
+            return supported.find((entry) => {
+                if (!entry || typeof entry !== 'object') return false;
+                const entryName = entry.pulse_name || entry.name || '';
+                const entryAddress = entry.pulse_address || '';
+                if (pulseName && !containsText(entryName, pulseName)) return false;
+                if (pulseAddress && entryAddress && !samePitRef(entryAddress, pulseAddress)) return false;
+                return true;
+            }) || {};
+        }
+
+        function derivePulserTestPayload(definition) {
+            if (definition && typeof definition.test_data === 'object' && !Array.isArray(definition.test_data)) {
+                return definition.test_data;
+            }
+            const schema = definition && typeof definition.input_schema === 'object' && !Array.isArray(definition.input_schema)
+                ? definition.input_schema
+                : {};
+            const properties = schema && typeof schema.properties === 'object' && !Array.isArray(schema.properties)
+                ? schema.properties
+                : {};
+            const payload = {};
+            Object.entries(properties).forEach(([key, value]) => {
+                if (!value || typeof value !== 'object') {
+                    payload[key] = '';
+                    return;
+                }
+                if (value.default !== undefined) {
+                    payload[key] = value.default;
+                    return;
+                }
+                if (value.examples && Array.isArray(value.examples) && value.examples.length) {
+                    payload[key] = value.examples[0];
+                    return;
+                }
+                if (value.enum && Array.isArray(value.enum) && value.enum.length) {
+                    payload[key] = value.enum[0];
+                    return;
+                }
+                payload[key] = value.type === 'number' || value.type === 'integer'
+                    ? 0
+                    : value.type === 'boolean'
+                        ? false
+                        : '';
+            });
+            return payload;
+        }
+
+        function selectPulsePractices(practices) {
+            const list = Array.isArray(practices) ? practices.filter((entry) => entry && typeof entry === 'object') : [];
+            const preferred = list.filter((practice) => {
+                const id = String(practice.id || '').trim();
+                const tags = Array.isArray(practice.tags) ? practice.tags.map((tag) => String(tag).toLowerCase()) : [];
+                if (!id) return false;
+                if (id === 'get_pulse_data') return true;
+                if (id.startsWith('pool-') || id.startsWith('plaza-')) return false;
+                if (id === 'register' || id === 'renew' || id === 'authenticate' || id === 'heartbeat' || id === 'search' || id === 'relay') return false;
+                return tags.includes('pulser') || tags.includes('pulse') || tags.includes('data');
+            });
+            return preferred.length ? preferred : list.filter((practice) => String(practice.id || '').trim() === 'get_pulse_data');
+        }
+
+        function resolvePath(data, path) {
+            let current = data;
+            let remaining = String(path || '').trim();
+            if (!remaining) return current;
+            while (remaining) {
+                if (current && typeof current === 'object' && !Array.isArray(current)) {
+                    if (Object.prototype.hasOwnProperty.call(current, remaining)) return current[remaining];
+                    let matched = false;
+                    Object.keys(current).sort((left, right) => right.length - left.length).forEach((key) => {
+                        if (matched) return;
+                        const prefix = `${key}.`;
+                        if (remaining.startsWith(prefix)) {
+                            current = current[key];
+                            remaining = remaining.slice(prefix.length);
+                            matched = true;
+                        }
+                    });
+                    if (matched) continue;
+                    return undefined;
+                }
+                if (Array.isArray(current)) {
+                    const [part, ...rest] = remaining.split('.');
+                    if (!/^\d+$/.test(part)) return undefined;
+                    current = current[Number(part)];
+                    remaining = rest.join('.');
+                    if (!remaining) return current;
+                    continue;
+                }
+                return undefined;
+            }
+            return current;
+        }
+
+        function assignPath(target, path, value) {
+            const parts = String(path || '').split('.').filter(Boolean);
+            if (!parts.length) return;
+            let current = target;
+            parts.slice(0, -1).forEach((part) => {
+                if (!current[part] || typeof current[part] !== 'object' || Array.isArray(current[part])) {
+                    current[part] = {};
+                }
+                current = current[part];
+            });
+            current[parts[parts.length - 1]] = value;
+        }
+
+        function projectSelectedFields(result, selectedFields) {
+            if (!Array.isArray(selectedFields) || !selectedFields.length) return result;
+            if (!result || typeof result !== 'object') return result;
+            const projected = {};
+            selectedFields.forEach((fieldPath) => {
+                const value = resolvePath(result, fieldPath);
+                if (value !== undefined) {
+                    assignPath(projected, fieldPath, value);
+                }
+            });
+            return Object.keys(projected).length ? projected : {};
+        }
+
+        function collectFieldPaths(value, prefix = '') {
+            const paths = [];
+            if (Array.isArray(value)) {
+                if (prefix) paths.push(prefix);
+                if (value.length && value[0] && typeof value[0] === 'object') {
+                    paths.push(...collectFieldPaths(value[0], `${prefix ? `${prefix}.0` : '0'}`));
+                }
+                return paths;
+            }
+            if (value && typeof value === 'object') {
+                Object.entries(value).forEach(([key, nested]) => {
+                    const nextPrefix = prefix ? `${prefix}.${key}` : key;
+                    if (nested && typeof nested === 'object') {
+                        const nestedPaths = collectFieldPaths(nested, nextPrefix);
+                        paths.push(...nestedPaths.length ? nestedPaths : [nextPrefix]);
+                    } else {
+                        paths.push(nextPrefix);
+                    }
+                });
+                return paths;
+            }
+            return prefix ? [prefix] : [];
+        }
+
+        function buildPulseItemLabel(item) {
+            if (item.type === 'pulse-field' && item.field_path) {
+                return `${item.field_path}${item.pulser_name ? ` via ${item.pulser_name}` : ''}`;
+            }
+            if (item.type === 'text') {
+                return item.text || 'Text';
+            }
+            const pulseName = item.pulse_name || item.name || 'Pulse';
+            const pulserName = item.pulser_name ? ` via ${item.pulser_name}` : '';
+            const fieldSummary = Array.isArray(item.selected_fields) && item.selected_fields.length
+                ? ` [${item.selected_fields.join(', ')}]`
+                : '';
+            return `${pulseName}${pulserName}${fieldSummary}`;
+        }
+
+        function isPlainObject(value) {
+            return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+        }
+
+        function deepClone(value) {
+            if (Array.isArray(value)) {
+                return value.map((entry) => deepClone(entry));
+            }
+            if (isPlainObject(value)) {
+                return Object.fromEntries(Object.entries(value).map(([key, entry]) => [key, deepClone(entry)]));
+            }
+            return value;
+        }
+
+        function deepMerge(base, overlay) {
+            if (!isPlainObject(base) || !isPlainObject(overlay)) {
+                return overlay === undefined ? deepClone(base) : deepClone(overlay);
+            }
+            const merged = deepClone(base);
+            Object.entries(overlay).forEach(([key, value]) => {
+                if (isPlainObject(value) && isPlainObject(merged[key])) {
+                    merged[key] = deepMerge(merged[key], value);
+                    return;
+                }
+                merged[key] = deepClone(value);
+            });
+            return merged;
+        }
+
+        function extractSchemaOverrides(current, previousAuto) {
+            if (current === undefined) return undefined;
+            if (isPlainObject(current) && isPlainObject(previousAuto)) {
+                const overrides = {};
+                Object.keys(current).forEach((key) => {
+                    const diff = extractSchemaOverrides(current[key], previousAuto[key]);
+                    if (diff !== undefined) {
+                        overrides[key] = diff;
+                    }
+                });
+                return Object.keys(overrides).length ? overrides : undefined;
+            }
+            if (JSON.stringify(current) === JSON.stringify(previousAuto)) {
+                return undefined;
+            }
+            return deepClone(current);
+        }
+
+        function resolveInputSchemaForContentItem(item) {
+            if (isPlainObject(item?.input_schema) && Object.keys(item.input_schema).length) {
+                return item.input_schema;
+            }
+            const pulse = resolvePulseForItem(item);
+            if (isPlainObject(pulse?.input_schema) && Object.keys(pulse.input_schema).length) {
+                return pulse.input_schema;
+            }
+            return {};
+        }
+
+        function buildCombinedSectionInputSchema() {
+            return state.sections.reduce((combined, section) => {
+                (section.content || []).forEach((item) => {
+                    if (item?.type !== 'pulse' && item?.type !== 'pulse-field') return;
+                    combined = deepMerge(combined, resolveInputSchemaForContentItem(item));
+                });
+                return combined;
+            }, {});
+        }
+
+        function syncInputSchemaFromSections() {
+            const combined = buildCombinedSectionInputSchema();
+            let currentSchema = {};
+            let previousAuto = {};
+            try {
+                currentSchema = JSON.parse(String(state.inputSchemaText || '{}') || '{}');
+            } catch (_) {
+                currentSchema = {};
+            }
+            try {
+                previousAuto = JSON.parse(String(state.inputSchemaAutoText || '{}') || '{}');
+            } catch (_) {
+                previousAuto = {};
+            }
+            const overrides = extractSchemaOverrides(currentSchema, previousAuto) || {};
+            const merged = deepMerge(combined, overrides);
+            state.inputSchemaAutoText = JSON.stringify(combined, null, 2);
+            state.inputSchemaText = JSON.stringify(merged, null, 2);
+            const inputNode = document.getElementById('phema-input-schema');
+            if (inputNode && document.activeElement !== inputNode) {
+                inputNode.value = state.inputSchemaText;
+            }
+        }
+
+        function compilePayload() {
+            const name = state.name.trim();
+            if (!name) {
+                setStatus('Phema name is required.', 'error');
+                return null;
+            }
+
+            let meta = {};
+            const rawMeta = String(state.metaText || '').trim();
+            if (rawMeta) {
+                try {
+                    meta = JSON.parse(rawMeta);
+                } catch (error) {
+                    setStatus('Extra Meta must be valid JSON.', 'error');
+                    return null;
+                }
+            }
+
+            let inputSchema = {};
+            const rawInputSchema = String(state.inputSchemaText || '').trim();
+            if (rawInputSchema) {
+                try {
+                    inputSchema = JSON.parse(rawInputSchema);
+                } catch (error) {
+                    setStatus('Input Schema must be valid JSON.', 'error');
+                    return null;
+                }
+            }
+
+            return {
+                phema_id: state.phemaId || undefined,
+                name,
+                description: state.description.trim(),
+                owner: state.owner.trim(),
+                address: state.address.trim(),
+                tags: [...state.tags],
+                input_schema: inputSchema,
+                sections: state.sections.map((section) => ({
+                    name: section.name.trim(),
+                    description: section.description.trim(),
+                    modifier: section.modifier.trim(),
+                    content: section.content.map((item) => serializeContentItem(item))
+                })),
+                meta
+            };
+        }
+
+        function serializeContentItem(item) {
+            if (item.type === 'text') {
+                return {
+                    type: 'text',
+                    text: item.text || ''
+                };
+            }
+            if (item.type === 'pulse') {
+                return {
+                    type: 'pulse',
+                    pulse_name: item.pulse_name,
+                    pulse_address: item.pulse_address,
+                    pulser_id: item.pulser_id || '',
+                    pulser_name: item.pulser_name || '',
+                    owner: item.owner || '',
+                    description: item.description || '',
+                    input_schema: item.input_schema || {},
+                    params: item.params || {},
+                    selected_fields: Array.isArray(item.selected_fields) ? item.selected_fields : []
+                };
+            }
+            if (item.type === 'pulse-field') {
+                return {
+                    type: 'pulse-field',
+                    pulse_name: item.pulse_name,
+                    pulse_address: item.pulse_address,
+                    pulser_id: item.pulser_id || '',
+                    pulser_name: item.pulser_name || '',
+                    owner: item.owner || '',
+                    description: item.description || '',
+                    input_schema: item.input_schema || {},
+                    params: item.params || {},
+                    field_path: item.field_path || '',
+                    selected_fields: Array.isArray(item.selected_fields) ? item.selected_fields : (item.field_path ? [item.field_path] : [])
+                };
+            }
+            if (item.raw !== undefined) {
+                return item.raw;
+            }
+            return item.label;
+        }
+
+        function normalizeSection(section) {
+            return {
+                id: section.id || makeId(),
+                name: section.name || '',
+                description: section.description || '',
+                modifier: section.modifier || '',
+                collapsed: Boolean(section.collapsed),
+                content: Array.isArray(section.content) ? section.content.map((item) => normalizeContentItem(item)) : []
+            };
+        }
+
+        function normalizeContentItem(item) {
+            if (typeof item === 'string') {
+                return { type: 'text', label: item, raw: item };
+            }
+            if (item && typeof item === 'object') {
+                if (item.type === 'text') {
+                    return {
+                        type: 'text',
+                        text: item.text || '',
+                        label: item.text || 'Text'
+                    };
+                }
+                if (item.type === 'pulse-field' || item.field_path) {
+                    return {
+                        type: 'pulse-field',
+                        pulse_name: item.pulse_name || item.name || 'Pulse',
+                        pulse_address: item.pulse_address || item.address || '',
+                        pulser_id: item.pulser_id || '',
+                        pulser_name: item.pulser_name || '',
+                        owner: item.owner || '',
+                        description: item.description || '',
+                        input_schema: item.input_schema || {},
+                        params: item.params || {},
+                        field_path: item.field_path || (Array.isArray(item.selected_fields) ? item.selected_fields[0] : ''),
+                        selected_fields: Array.isArray(item.selected_fields) ? item.selected_fields : (item.field_path ? [item.field_path] : []),
+                        label: buildPulseItemLabel({
+                            ...item,
+                            type: 'pulse-field',
+                            field_path: item.field_path || (Array.isArray(item.selected_fields) ? item.selected_fields[0] : '')
+                        })
+                    };
+                }
+                if (item.type === 'pulse' || item.pulse_name || item.pulse_address) {
+                    return {
+                        type: 'pulse',
+                        pulse_name: item.pulse_name || item.name || 'Pulse',
+                        pulse_address: item.pulse_address || item.address || '',
+                        pulser_id: item.pulser_id || '',
+                        pulser_name: item.pulser_name || '',
+                        owner: item.owner || '',
+                        description: item.description || '',
+                        input_schema: item.input_schema || {},
+                        params: item.params || {},
+                        selected_fields: Array.isArray(item.selected_fields) ? item.selected_fields : [],
+                        label: buildPulseItemLabel(item)
+                    };
+                }
+                return {
+                    type: 'object',
+                    label: item.name || item.id || JSON.stringify(item),
+                    raw: item
+                };
+            }
+            return { type: 'text', label: String(item), raw: item };
+        }
+
+        function createEmptySection() {
+            return {
+                id: makeId(),
+                name: '',
+                description: '',
+                modifier: '',
+                collapsed: false,
+                content: []
+            };
+        }
+
+        function splitTags(value) {
+            return String(value || '')
+                .split(',')
+                .map((tag) => tag.trim())
+                .filter(Boolean);
+        }
+
+        function dedupePulses(pulses) {
+            const seen = new Set();
+            return pulses.filter((pulse) => {
+                const key = `${pulse.name}::${pulse.address}`;
+                if (seen.has(key)) return false;
+                seen.add(key);
+                pulse.key = pulse.key || key;
+                return true;
+            });
+        }
+
+        function normalizeTags(value) {
+            if (Array.isArray(value)) {
+                return value.map((tag) => String(tag).trim()).filter(Boolean);
+            }
+            if (!value) return [];
+            return [String(value).trim()].filter(Boolean);
+        }
+
+        function findMatchingPulse(item) {
+            const pulseName = item?.pulse_name || '';
+            const pulseAddress = item?.pulse_address || '';
+            return state.pulses.find((pulse) => {
+                if (pulseAddress && samePitRef(pulse.address || '', pulseAddress)) return true;
+                if (pulseName && String(pulse.name || '').trim().toLowerCase() === String(pulseName || '').trim().toLowerCase()) return true;
+                return false;
+            }) || {
+                key: `${pulseName || pulseAddress || 'pulse'}::fallback`,
+                name: pulseName || 'Pulse',
+                address: pulseAddress || '',
+                owner: item?.owner || '',
+                description: item?.description || '',
+                tags: [],
+                input_schema: item?.input_schema || {},
+                output_schema: {},
+                available_pulser_count: item?.pulser_id ? 1 : 0,
+                active_pulser_count: item?.pulser_id ? 1 : 0,
+                available_pulsers: item?.pulser_id ? [{
+                    agent_id: item.pulser_id,
+                    name: item.pulser_name || 'Selected Pulser',
+                    address: '',
+                    description: '',
+                    last_active: Math.floor(Date.now() / 1000),
+                    practices: [{ id: 'get_pulse_data', name: 'Get Pulse Data', tags: ['pulser', 'pulse', 'data'] }],
+                    pulse_definition: {
+                        pulse_name: pulseName || '',
+                        pulse_address: pulseAddress || '',
+                        input_schema: item?.input_schema || {}
+                    }
+                }] : []
+            };
+        }
+
+        function setStatus(message, kind = '') {
+            state.status = message;
+            state.statusKind = kind;
+            renderStatus();
+        }
+
+        function beginTask(label) {
+            const task = {
+                id: state.nextTaskId++,
+                label: String(label || 'Working...')
+            };
+            state.activeTasks = [...state.activeTasks, task];
+            renderTaskList();
+            return task.id;
+        }
+
+        function finishTask(taskId) {
+            state.activeTasks = state.activeTasks.filter((task) => task.id !== taskId);
+            renderTaskList();
+        }
+
+        function renderTaskList() {
+            const shell = document.getElementById('task-list-shell');
+            const list = document.getElementById('task-list');
+            if (!shell || !list) return;
+            shell.hidden = state.activeTasks.length === 0;
+            list.innerHTML = state.activeTasks.map((task) => `
+                <div class="task-item">
+                    <span class="task-dot"></span>
+                    <span>${escapeHtml(task.label)}</span>
+                </div>
+            `).join('');
+        }
+
+        function renderStatus() {
+            const line = document.getElementById('status-line');
+            line.textContent = state.status;
+            line.className = `status-line${state.statusKind ? ` ${state.statusKind}` : ''}`;
+            const banner = document.getElementById('global-status-banner');
+            if (banner) {
+                banner.textContent = state.status;
+                banner.className = `status-banner${state.statusKind ? ` ${state.statusKind}` : ''}`;
+            }
+            renderTaskList();
+        }
+
+        function renderPlazaRefreshState() {
+            const refreshing = state.loadingPulseLibrary || state.loadingManagerData;
+            const pulseStatusNode = document.getElementById('pulse-refresh-status');
+            if (pulseStatusNode) {
+                pulseStatusNode.textContent = state.loadingPulseLibrary ? 'Refreshing Plaza...' : 'Idle';
+                pulseStatusNode.className = `pill${state.loadingPulseLibrary ? ' info' : ''}`;
+            }
+            const managerStatusNode = document.getElementById('manager-refresh-status');
+            if (managerStatusNode) {
+                managerStatusNode.textContent = state.loadingManagerData ? 'Refreshing Plaza...' : 'Idle';
+                managerStatusNode.className = `pill${state.loadingManagerData ? ' info' : ''}`;
+            }
+            const refreshButton = document.getElementById('refresh-manager-btn');
+            if (refreshButton) {
+                refreshButton.disabled = refreshing;
+                refreshButton.textContent = refreshing ? 'Refreshing Plaza...' : 'Refresh';
+            }
+            const topbarStatusNode = document.getElementById('topbar-status-pill');
+            if (topbarStatusNode) {
+                topbarStatusNode.textContent = refreshing ? 'Refreshing Plaza...' : 'Ready.';
+                topbarStatusNode.className = `pill top-status-pill${refreshing ? ' info' : ''}`;
+            }
+        }
+
+        function makeId() {
+            if (window.crypto?.randomUUID) return window.crypto.randomUUID();
+            return `section-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        }
+
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function escapeAttribute(value) {
+            return escapeHtml(value).replace(/\n/g, '&#10;');
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,31 @@
+{
+  "id": "bob2:pool-connect",
+  "agent_name": "bob2",
+  "practice_id": "pool-connect",
+  "practice_name": "Pool Connect",
+  "practice_description": "Initialize the filesystem pool root.",
+  "practice_data": {
+    "name": "Pool Connect",
+    "description": "Initialize the filesystem pool root.",
+    "id": "pool-connect",
+    "cost": 0,
+    "tags": [
+      "pool",
+      "filesystem",
+      "storage",
+      "connect"
+    ],
+    "examples": [],
+    "inputModes": [
+      "http-post",
+      "json"
+    ],
+    "outputModes": [
+      "json"
+    ],
+    "parameters": {},
+    "path": "/pool_connect"
+  },
+  "is_deleted": false,
+  "updated_at": "2026-03-23T11:14:50.791696+00:00"
+}

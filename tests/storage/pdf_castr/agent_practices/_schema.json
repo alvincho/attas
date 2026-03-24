@@ -1,0 +1,33 @@
+{
+  "name": "agent_practices",
+  "description": "Persisted practice metadata by agent and practice id",
+  "primary_key": [
+    "id"
+  ],
+  "rowSchema": {
+    "id": {
+      "type": "string"
+    },
+    "agent_name": {
+      "type": "string"
+    },
+    "practice_id": {
+      "type": "string"
+    },
+    "practice_name": {
+      "type": "string"
+    },
+    "practice_description": {
+      "type": "string"
+    },
+    "practice_data": {
+      "type": "json"
+    },
+    "is_deleted": {
+      "type": "boolean"
+    },
+    "updated_at": {
+      "type": "datetime"
+    }
+  }
+}

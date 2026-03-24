@@ -1,0 +1,17 @@
+{
+    "name": "YFinancePulser",
+    "type": "attas.pulsers.yfinance_pulser.YFinancePulser",
+    "host": "127.0.0.1",
+    "port": 8020,
+    "plaza_url": "http://127.0.0.1:8011",
+    "role": "pulser",
+    "tags": ["finance", "yahoo", "market-data"],
+    "pools": [
+        {
+            "type": "FileSystemPool",
+            "name": "yfinance_pool",
+            "description": "YFinance local pool",
+            "root_path": "tests/storage/yfinance"
+        }
+    ]
+}

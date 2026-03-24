@@ -1,0 +1,16 @@
+{
+    "name": "alice",
+    "role": "worker",
+    "tags": ["test"],
+    "host": "127.0.0.1",
+    "port": 8012,
+    "pools": [
+        {
+            "type": "FileSystemPool",
+            "name": "alice_pool",
+            "description": "Alice local pool",
+            "root_path": "tests/storage/alice"
+        }
+    ],
+    "type": "prompits.agents.standby.StandbyAgent"
+}

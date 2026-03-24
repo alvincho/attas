@@ -1,0 +1,10 @@
+.env
+.env.*
+*.log
+
+.pytest_cache/
+__pycache__/
+*.py[cod]
+
+plaza_credentials/
+**/plaza_credentials/

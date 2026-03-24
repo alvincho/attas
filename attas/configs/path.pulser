@@ -1,0 +1,237 @@
+{
+    "name": "PathPulser",
+    "type": "phemacast.pulsers.path_pulser.PathPulser",
+    "host": "127.0.0.1",
+    "port": 8031,
+    "plaza_url": "http://127.0.0.1:8011",
+    "role": "pulser",
+    "description": "Composes new pulses from one or more upstream pulsers with ordered fetch and Python transformation steps.",
+    "tags": [
+        "path",
+        "composition",
+        "workflow",
+        "pulser"
+    ],
+    "pools": [
+        {
+            "type": "FileSystemPool",
+            "name": "path_pool",
+            "description": "Storage for the path pulser runtime",
+            "root_path": "tests/storage/path"
+        }
+    ],
+    "supported_pulses": [
+        {
+            "steps": [
+                {
+                    "name": "fetch_news",
+                    "type": "source",
+                    "pulser_url": "http://127.0.0.1:8022",
+                    "pulse_name": "news_article",
+                    "params": {
+                        "symbol": "{{_input.symbol}}",
+                        "number_of_articles": 8
+                    },
+                    "output_schema": {
+                        "type": "object",
+                        "properties": {
+                            "symbol": {
+                                "type": "string"
+                            },
+                            "number_of_articles": {
+                                "type": "integer"
+                            },
+                            "articles": {
+                                "type": "array"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "build_prompt",
+                    "type": "python",
+                    "script": "articles = previous_output.get('articles') or []\nlines = []\nfor index, article in enumerate(articles[:8], start=1):\n    headline = article.get('headline') or ''\n    summary = article.get('summary') or ''\n    sentiment = article.get('sentiment_label') or 'Unknown'\n    publisher = article.get('publisher') or ''\n    lines.append(f\"{index}. Headline: {headline}\\n   Publisher: {publisher}\\n   Sentiment Label: {sentiment}\\n   Summary: {summary}\")\nprompt = (\n    'You are a financial news sentiment aggregator. '\n    'Return JSON only with keys symbol, window_days, article_count, sentiment_score, '\n    'positive_article_count, negative_article_count, top_theme. '\n    'Use a normalized sentiment_score from -1 to 1. '\n    'Do not wrap the JSON in markdown.\\n\\n'\n    f\"Symbol: {input_data.get('symbol')}\\n\"\n    'Window Days: 7\\n'\n    f\"Article Count: {len(articles[:8])}\\n\\n\"\n    'Articles:\\n' + '\\n'.join(lines)\n)\nresult = {\n    'prompt': prompt,\n    'model': 'qwen3:8b'\n}",
+                    "output_schema": {
+                        "type": "object",
+                        "properties": {
+                            "prompt": {
+                                "type": "string"
+                            },
+                            "model": {
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "prompt"
+                        ]
+                    }
+                },
+                {
+                    "name": "llm_sentiment",
+                    "type": "source",
+                    "pulser_url": "http://127.0.0.1:8030",
+                    "pulse_name": "llm_chat",
+                    "params": {
+                        "prompt": "{{_previous.prompt}}",
+                        "model": "{{_previous.model}}"
+                    },
+                    "output_schema": {
+                        "type": "object",
+                        "properties": {
+                            "response": {
+                                "type": "string"
+                            },
+                            "model": {
+                                "type": "string"
+                            },
+                            "provider": {
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "response"
+                        ]
+                    }
+                },
+                {
+                    "name": "normalize_output",
+                    "type": "python",
+                    "script": "raw_text = (previous_output.get('response') or '').strip()\nif raw_text.startswith('```'):\n    parts = raw_text.split('```')\n    raw_text = next((part for part in parts if '{' in part), raw_text).strip()\n    if raw_text.startswith('json'):\n        raw_text = raw_text[4:].strip()\npayload = json.loads(raw_text)\nresult = {\n    'symbol': payload.get('symbol') or input_data.get('symbol'),\n    'window_days': int(payload.get('window_days', 7)),\n    'article_count': int(payload.get('article_count', 0)),\n    'sentiment_score': float(payload.get('sentiment_score', 0)),\n    'positive_article_count': int(payload.get('positive_article_count', 0)),\n    'negative_article_count': int(payload.get('negative_article_count', 0)),\n    'top_theme': payload.get('top_theme', '')\n}",
+                    "output_schema": {
+                        "type": "object",
+                        "properties": {
+                            "symbol": {
+                                "type": "string",
+                                "description": "Primary stock ticker used inside the platform."
+                            },
+                            "lseg_ric": {
+                                "type": "string",
+                                "description": "LSEG RIC code for the same stock, when available."
+                            },
+                            "bloomberg_ticker": {
+                                "type": "string",
+                                "description": "Bloomberg formatted ticker for the same stock, when available."
+                            },
+                            "window_days": {
+                                "type": "integer",
+                                "description": "Number of days included in the aggregation."
+                            },
+                            "article_count": {
+                                "type": "integer",
+                                "description": "Number of articles included in the aggregation."
+                            },
+                            "sentiment_score": {
+                                "type": "number",
+                                "description": "Normalized sentiment score across the article set."
+                            },
+                            "positive_article_count": {
+                                "type": "integer",
+                                "description": "Number of positively classified articles."
+                            },
+                            "negative_article_count": {
+                                "type": "integer",
+                                "description": "Number of negatively classified articles."
+                            },
+                            "top_theme": {
+                                "type": "string",
+                                "description": "Most prominent theme extracted from the coverage."
+                            }
+                        },
+                        "required": [
+                            "symbol",
+                            "window_days",
+                            "sentiment_score"
+                        ],
+                        "additionalProperties": false
+                    }
+                }
+            ],
+            "result_path": "steps.normalize_output",
+            "is_complete": false,
+            "completion_status": "unfinished",
+            "completion_errors": [
+                "Waiting for AlphaVantageApiPulser and OllamaPulser to be reachable for validation."
+            ],
+            "pulse_name": "news_sentiment_aggregate",
+            "name": "news_sentiment_aggregate",
+            "description": "Aggregated news sentiment over a defined window.",
+            "pulse_address": "cbdee24e-4bac-4eea-81c5-d404c6fd07bd",
+            "tags": [
+                "news",
+                "sentiment",
+                "source-data"
+            ],
+            "cost": 0,
+            "api": {
+                "url": "",
+                "method": "POST",
+                "root_path": "",
+                "headers": {}
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string",
+                        "description": "Primary stock ticker used inside the platform."
+                    }
+                },
+                "required": [
+                    "symbol"
+                ]
+            },
+            "output_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string",
+                        "description": "Primary stock ticker used inside the platform."
+                    },
+                    "lseg_ric": {
+                        "type": "string",
+                        "description": "LSEG RIC code for the same stock, when available."
+                    },
+                    "bloomberg_ticker": {
+                        "type": "string",
+                        "description": "Bloomberg formatted ticker for the same stock, when available."
+                    },
+                    "window_days": {
+                        "type": "integer",
+                        "description": "Number of days included in the aggregation."
+                    },
+                    "article_count": {
+                        "type": "integer",
+                        "description": "Number of articles included in the aggregation."
+                    },
+                    "sentiment_score": {
+                        "type": "number",
+                        "description": "Normalized sentiment score across the article set."
+                    },
+                    "positive_article_count": {
+                        "type": "integer",
+                        "description": "Number of positively classified articles."
+                    },
+                    "negative_article_count": {
+                        "type": "integer",
+                        "description": "Number of negatively classified articles."
+                    },
+                    "top_theme": {
+                        "type": "string",
+                        "description": "Most prominent theme extracted from the coverage."
+                    }
+                },
+                "required": [
+                    "symbol",
+                    "window_days",
+                    "sentiment_score"
+                ],
+                "additionalProperties": false
+            },
+            "mapping": {},
+            "test_data": {
+                "symbol": "AAPL"
+            }
+        }
+    ],
+    "api_keys": []
+}

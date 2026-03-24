@@ -1,0 +1,27 @@
+{% extends "phemacast/pulsers/templates/pulser_editor_base.html" %}
+
+{% block subtitle %}Dedicated editor for supported pulses, API mappings, and test data. Saves directly back to this pulser’s config file.{% endblock %}
+
+{% block extension_bootstrap %}
+window.pulserEditorExtension = {
+    defaultPulse({ index }) {
+        return {
+            name: `pulse_${index}`,
+            description: '',
+            pulse_address: `plaza://pulse/pulse_${index}`,
+            tags: [],
+            cost: 0,
+            api: {
+                url: '',
+                method: 'GET',
+                root_path: '',
+                headers: {},
+            },
+            input_schema: {},
+            output_schema: {},
+            mapping: {},
+            test_data: {},
+        };
+    },
+};
+{% endblock %}

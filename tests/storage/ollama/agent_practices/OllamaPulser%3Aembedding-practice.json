@@ -1,0 +1,42 @@
+{
+  "id": "OllamaPulser:embedding-practice",
+  "agent_name": "OllamaPulser",
+  "practice_id": "embedding-practice",
+  "practice_name": "EmbeddingPractice",
+  "practice_description": "Enables text embedding generation via ollama.",
+  "practice_data": {
+    "name": "EmbeddingPractice",
+    "description": "Enables text embedding generation via ollama.",
+    "id": "embedding-practice",
+    "cost": 0,
+    "tags": [
+      "llm",
+      "embeddings",
+      "ollama"
+    ],
+    "examples": [
+      "POST /embeddings {'input': 'The quick brown fox jumps over the lazy dog'}"
+    ],
+    "inputModes": [
+      "http-post",
+      "json"
+    ],
+    "outputModes": [
+      "json"
+    ],
+    "parameters": {
+      "input": {
+        "type": "text",
+        "description": "Enter the text to generate embeddings for.",
+        "placeholder": "Enter your sentence here..."
+      },
+      "model": {
+        "type": "string",
+        "description": "Optional model override for this request."
+      }
+    },
+    "path": "/embedding_practice"
+  },
+  "is_deleted": false,
+  "updated_at": "2026-03-23T00:50:26.719878+00:00"
+}

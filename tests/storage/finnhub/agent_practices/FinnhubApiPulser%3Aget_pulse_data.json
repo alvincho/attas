@@ -1,0 +1,72 @@
+{
+  "id": "FinnhubApiPulser:get_pulse_data",
+  "agent_name": "FinnhubApiPulser",
+  "practice_id": "get_pulse_data",
+  "practice_name": "Get Pulse Data",
+  "practice_description": "Fetch or transform pulse payloads for the agent's supported pulses.",
+  "practice_data": {
+    "name": "Get Pulse Data",
+    "description": "Fetch or transform pulse payloads for the agent's supported pulses.",
+    "id": "get_pulse_data",
+    "cost": 0,
+    "tags": [
+      "pulser",
+      "pulse",
+      "data"
+    ],
+    "examples": [
+      "POST /get_pulse_data {'pulse_name': 'last_price', 'params': {'symbol': 'AAPL'}}"
+    ],
+    "inputModes": [
+      "http-post",
+      "json"
+    ],
+    "outputModes": [
+      "json"
+    ],
+    "parameters": {
+      "pulse_name": {
+        "type": "string",
+        "description": "Optional pulse identifier. Defaults to the pulser's primary pulse.",
+        "enum": [
+          "last_price",
+          "previous_close",
+          "open_price",
+          "day_high_low",
+          "price_change_summary",
+          "trade_volume",
+          "daily_ohlcv_bar",
+          "intraday_ohlcv_bar",
+          "company_profile",
+          "market_cap_snapshot",
+          "fifty_two_week_range",
+          "dividend_info",
+          "valuation_pe",
+          "profitability_ratios",
+          "news_article",
+          "news_sentiment_aggregate",
+          "earnings_surprise_history",
+          "earnings_event"
+        ]
+      },
+      "pulse_address": {
+        "type": "string",
+        "description": "Optional pulse address override."
+      },
+      "params": {
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol"
+        ]
+      }
+    },
+    "path": "/get_pulse_data"
+  },
+  "is_deleted": false,
+  "updated_at": "2026-03-23T13:16:54.768600+00:00"
+}
