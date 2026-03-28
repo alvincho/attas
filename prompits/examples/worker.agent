@@ -1,0 +1,17 @@
+{
+  "name": "worker-a",
+  "role": "worker",
+  "tags": ["demo", "chat"],
+  "host": "127.0.0.1",
+  "port": 8212,
+  "plaza_url": "http://127.0.0.1:8211",
+  "pools": [
+    {
+      "type": "FileSystemPool",
+      "name": "worker_pool",
+      "description": "Local worker storage",
+      "root_path": "prompits/examples/storage/worker"
+    }
+  ],
+  "type": "prompits.agents.standby.StandbyAgent"
+}

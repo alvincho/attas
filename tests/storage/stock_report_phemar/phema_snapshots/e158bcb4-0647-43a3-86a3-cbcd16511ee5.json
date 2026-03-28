@@ -1,0 +1,304 @@
+{
+  "id": "e158bcb4-0647-43a3-86a3-cbcd16511ee5",
+  "phema_id": "841bd99a-5a65-5b80-9625-8298033d6a96",
+  "phema_name": "Simple Report 2",
+  "params_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+  "params": {},
+  "tags": [
+    "static",
+    "snapshot"
+  ],
+  "snapshot": {
+    "id": "e158bcb4-0647-43a3-86a3-cbcd16511ee5",
+    "phema_id": "e158bcb4-0647-43a3-86a3-cbcd16511ee5",
+    "name": "Simple Report 2 Static Snapshot",
+    "description": "Simple report contains 2 sections",
+    "owner": "StockReportPhemar",
+    "address": "plaza://phema/e158bcb4-0647-43a3-86a3-cbcd16511ee5",
+    "pit_type": "Phema",
+    "pit_address": {
+      "pit_id": "e158bcb4-0647-43a3-86a3-cbcd16511ee5",
+      "plazas": []
+    },
+    "tags": [
+      "static",
+      "snapshot"
+    ],
+    "input_schema": {
+      "type": "object",
+      "required": [
+        "symbol"
+      ],
+      "properties": {
+        "symbol": {
+          "type": "string"
+        }
+      }
+    },
+    "sections": [
+      {
+        "name": "Company Info 2",
+        "description": "",
+        "modifier": "",
+        "content": [
+          {
+            "name": "company_profile:sector",
+            "static": true,
+            "value": {
+              "field_path": "sector",
+              "fetch": "6ec3b31e-161d-41fb-a001-6c0c6f9684c0",
+              "data": "TECHNOLOGY"
+            }
+          },
+          {
+            "name": "company_profile:symbol",
+            "static": true,
+            "value": {
+              "field_path": "symbol",
+              "fetch": "6ec3b31e-161d-41fb-a001-6c0c6f9684c0",
+              "data": "IBM"
+            }
+          },
+          {
+            "name": "company_profile:website",
+            "static": true,
+            "value": {
+              "field_path": "website",
+              "fetch": "6ec3b31e-161d-41fb-a001-6c0c6f9684c0",
+              "data": "https://www.ibm.com"
+            }
+          },
+          {
+            "name": "company_profile:industry",
+            "static": true,
+            "value": {
+              "field_path": "industry",
+              "fetch": "6ec3b31e-161d-41fb-a001-6c0c6f9684c0",
+              "data": "INFORMATION TECHNOLOGY SERVICES"
+            }
+          }
+        ]
+      },
+      {
+        "name": "Prices",
+        "description": "",
+        "modifier": "",
+        "content": [
+          {
+            "name": "last_price:source",
+            "static": true,
+            "value": {
+              "field_path": "source",
+              "fetch": "60eedc31-049c-4761-a16f-52cfe03a7939",
+              "data": null
+            }
+          },
+          {
+            "name": "last_price:symbol",
+            "static": true,
+            "value": {
+              "field_path": "symbol",
+              "fetch": "60eedc31-049c-4761-a16f-52cfe03a7939",
+              "data": null
+            }
+          },
+          {
+            "name": "last_price:timestamp",
+            "static": true,
+            "value": {
+              "field_path": "timestamp",
+              "fetch": "60eedc31-049c-4761-a16f-52cfe03a7939",
+              "data": null
+            }
+          },
+          {
+            "name": "last_price:last_price",
+            "static": true,
+            "value": {
+              "field_path": "last_price",
+              "fetch": "60eedc31-049c-4761-a16f-52cfe03a7939",
+              "data": null
+            }
+          }
+        ]
+      },
+      {
+        "name": "News Summary",
+        "description": "latest news article with headline, summary, and source link.",
+        "modifier": "",
+        "content": [
+          {
+            "type": "text",
+            "text": "Headline:"
+          },
+          {
+            "name": "news_article:articles.0.headline",
+            "static": true,
+            "value": {
+              "field_path": "articles.0.headline",
+              "fetch": "cf80b0f9-1137-4efa-9526-75b30fa221e1",
+              "data": "MDRR Stock News Today | Earnings, Events & Price Alerts"
+            }
+          },
+          {
+            "type": "text",
+            "text": "\nSummary:"
+          },
+          {
+            "name": "news_article:articles.0.summary",
+            "static": true,
+            "value": {
+              "field_path": "articles.0.summary",
+              "fetch": "cf80b0f9-1137-4efa-9526-75b30fa221e1",
+              "data": "This article provides recent news and dividend information for Medalist Diversified REIT (MDRR). It lists quarterly dividend declarations from December 2025 back to April 2025, alongside mentions of insider buying and ex-dividend dates. The page also offers current stock price data for MDRR."
+            }
+          },
+          {
+            "type": "text",
+            "text": "\nSource:"
+          },
+          {
+            "name": "news_article:articles.0.url",
+            "static": true,
+            "value": {
+              "field_path": "articles.0.url",
+              "fetch": "cf80b0f9-1137-4efa-9526-75b30fa221e1",
+              "data": "https://intellectia.ai/en/stock/MDRR/news"
+            }
+          }
+        ]
+      }
+    ],
+    "resolution_mode": "static",
+    "snapshot_cache_time": 0,
+    "meta": {
+      "resolution_mode": "static",
+      "source_phema_id": "841bd99a-5a65-5b80-9625-8298033d6a96",
+      "source_phema_name": "Simple Report 2",
+      "source_phema_address": "plaza://phema/841bd99a-5a65-5b80-9625-8298033d6a96",
+      "static_snapshot": true,
+      "snapshot_generated_at": "2026-03-26T11:19:20.466409+00:00",
+      "snapshot_input": {},
+      "fetches": [
+        {
+          "id": "6ec3b31e-161d-41fb-a001-6c0c6f9684c0",
+          "pulse_name": "company_profile",
+          "pulse_pit_address": {
+            "pit_id": "5adbfd9a-c59f-5b85-a19f-565525d5712d",
+            "plazas": [
+              "http://127.0.0.1:8011"
+            ]
+          },
+          "pulser_name": "AlphaVantageApiPulser",
+          "pulser_pit_address": {
+            "pit_id": "a68a31a1-d03e-49f9-8183-a974078fb727",
+            "plazas": [
+              "http://127.0.0.1:8011"
+            ]
+          },
+          "params": {
+            "symbol": "IBM"
+          },
+          "fetch": {
+            "started_at": "2026-03-26T11:19:03.747587+00:00",
+            "ended_at": "2026-03-26T11:19:06.864254+00:00",
+            "duration_ms": 3116.678666032385,
+            "cost": 0.0,
+            "cache_hit": false
+          },
+          "data": {
+            "sector": "TECHNOLOGY",
+            "symbol": "IBM",
+            "website": "https://www.ibm.com",
+            "industry": "INFORMATION TECHNOLOGY SERVICES",
+            "company_name": "International Business Machines",
+            "headquarters_country": "USA"
+          }
+        },
+        {
+          "id": "60eedc31-049c-4761-a16f-52cfe03a7939",
+          "pulse_name": "last_price",
+          "pulse_pit_address": {
+            "pit_id": "37dbc0b8-2677-4b29-8aea-dd097b652c8e",
+            "plazas": [
+              "http://127.0.0.1:8011"
+            ]
+          },
+          "pulser_name": "MarketstackApiPulser",
+          "pulser_pit_address": {
+            "pit_id": "2a0c1f8f-7320-463e-8661-203fe15d24cb",
+            "plazas": [
+              "http://127.0.0.1:8011"
+            ]
+          },
+          "params": {
+            "symbol": "IBM"
+          },
+          "fetch": {
+            "started_at": "2026-03-26T11:19:06.868396+00:00",
+            "ended_at": "2026-03-26T11:19:06.916949+00:00",
+            "duration_ms": 48.55395801132545,
+            "cost": 0.0,
+            "cache_hit": false
+          },
+          "data": {
+            "error": "Missing API key value for registry 'marketstack' (MARKETSTACK_API_KEY)"
+          }
+        },
+        {
+          "id": "cf80b0f9-1137-4efa-9526-75b30fa221e1",
+          "pulse_name": "news_article",
+          "pulse_pit_address": {
+            "pit_id": "5f82c4c9-ac00-587c-9e43-547557081ab6",
+            "plazas": [
+              "http://127.0.0.1:8011"
+            ]
+          },
+          "pulser_name": "AlphaVantageApiPulser",
+          "pulser_pit_address": {
+            "pit_id": "a68a31a1-d03e-49f9-8183-a974078fb727",
+            "plazas": [
+              "http://127.0.0.1:8011"
+            ]
+          },
+          "params": {
+            "symbol": "",
+            "number_of_articles": 1
+          },
+          "fetch": {
+            "started_at": "2026-03-26T11:19:06.922784+00:00",
+            "ended_at": "2026-03-26T11:19:20.465211+00:00",
+            "duration_ms": 13542.483791010454,
+            "cost": 0.0,
+            "cache_hit": false
+          },
+          "data": {
+            "symbol": "",
+            "number_of_articles": 1,
+            "articles": [
+              {
+                "headline": "MDRR Stock News Today | Earnings, Events & Price Alerts",
+                "published_at": "20260326T104028",
+                "publisher": "Intellectia AI",
+                "summary": "This article provides recent news and dividend information for Medalist Diversified REIT (MDRR). It lists quarterly dividend declarations from December 2025 back to April 2025, alongside mentions of insider buying and ex-dividend dates. The page also offers current stock price data for MDRR.",
+                "url": "https://intellectia.ai/en/stock/MDRR/news",
+                "sentiment_label": "Neutral"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "resolution_mode": "static",
+  "cache_ttl_seconds": 300,
+  "expires_at": "2026-03-26T11:24:20.466622+00:00",
+  "meta": {
+    "source_phema_id": "841bd99a-5a65-5b80-9625-8298033d6a96",
+    "source_phema_name": "Simple Report 2",
+    "source_phema_address": "plaza://phema/841bd99a-5a65-5b80-9625-8298033d6a96",
+    "cache_ttl_seconds": 300
+  },
+  "created_at": "2026-03-26T11:19:20.466622+00:00",
+  "updated_at": "2026-03-26T11:19:20.466622+00:00"
+}

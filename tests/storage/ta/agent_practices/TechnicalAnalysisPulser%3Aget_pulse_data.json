@@ -1,0 +1,189 @@
+{
+  "id": "TechnicalAnalysisPulser:get_pulse_data",
+  "agent_name": "TechnicalAnalysisPulser",
+  "practice_id": "get_pulse_data",
+  "practice_name": "Get Pulse Data",
+  "practice_description": "Fetch or transform pulse payloads for the agent's supported pulses.",
+  "practice_data": {
+    "name": "Get Pulse Data",
+    "description": "Fetch or transform pulse payloads for the agent's supported pulses.",
+    "id": "get_pulse_data",
+    "cost": 0,
+    "tags": [
+      "pulser",
+      "pulse",
+      "data"
+    ],
+    "examples": [
+      "POST /get_pulse_data {'pulse_name': 'last_price', 'params': {'symbol': 'AAPL'}}"
+    ],
+    "inputModes": [
+      "http-post",
+      "json"
+    ],
+    "outputModes": [
+      "json"
+    ],
+    "parameters": {
+      "pulse_name": {
+        "type": "string",
+        "description": "Optional pulse identifier. Defaults to the pulser's primary pulse.",
+        "enum": [
+          "sma",
+          "ema",
+          "wma",
+          "dema",
+          "tema",
+          "trima",
+          "kama",
+          "zlema",
+          "hma",
+          "t3",
+          "vwma",
+          "midpoint",
+          "midprice",
+          "rsi",
+          "stochastic_k",
+          "stochastic_d",
+          "williams_r",
+          "cci",
+          "roc",
+          "momentum",
+          "trix",
+          "macd_line",
+          "macd_signal",
+          "macd_histogram",
+          "ppo",
+          "ppo_signal",
+          "ppo_histogram",
+          "awesome_oscillator",
+          "ultimate_oscillator",
+          "tsi",
+          "stoch_rsi",
+          "mfi",
+          "obv",
+          "chaikin_money_flow",
+          "accumulation_distribution",
+          "chaikin_oscillator",
+          "atr",
+          "natr",
+          "true_range",
+          "adx",
+          "plus_di",
+          "minus_di",
+          "aroon_up",
+          "aroon_down",
+          "aroon_oscillator",
+          "bollinger_percent_b",
+          "bollinger_bandwidth",
+          "donchian_position",
+          "keltner_percent_b",
+          "ichimoku_conversion_line",
+          "ichimoku_base_line",
+          "vortex_plus",
+          "vortex_minus",
+          "chande_momentum_oscillator"
+        ]
+      },
+      "pulse_address": {
+        "type": "string",
+        "description": "Optional pulse address override."
+      },
+      "params": {
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "description": "Optional instrument symbol for the supplied time series."
+          },
+          "interval": {
+            "type": "string",
+            "enum": [
+              "1m",
+              "5m",
+              "15m",
+              "30m",
+              "1h",
+              "4h",
+              "1d",
+              "1wk",
+              "1mo"
+            ],
+            "description": "Bar interval used by the supplied OHLC series."
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Upper-bound bar timestamp for the returned indicator series; include bars up to and including this bar."
+          },
+          "ohlc_series": {
+            "type": "array",
+            "minItems": 2,
+            "description": "Ordered OHLC bar series sorted ascending by timestamp.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "timestamp": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "open": {
+                  "type": "number"
+                },
+                "high": {
+                  "type": "number"
+                },
+                "low": {
+                  "type": "number"
+                },
+                "close": {
+                  "type": "number"
+                },
+                "volume": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              },
+              "required": [
+                "timestamp",
+                "open",
+                "high",
+                "low",
+                "close"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "window": {
+            "type": "integer",
+            "minimum": 1,
+            "default": 20
+          },
+          "price_field": {
+            "type": "string",
+            "enum": [
+              "open",
+              "high",
+              "low",
+              "close",
+              "hl2",
+              "hlc3",
+              "ohlc4"
+            ],
+            "default": "close"
+          }
+        },
+        "required": [
+          "ohlc_series",
+          "timestamp",
+          "interval",
+          "window"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "path": "/get_pulse_data"
+  },
+  "is_deleted": false,
+  "updated_at": "2026-03-27T12:14:13.136453+00:00"
+}

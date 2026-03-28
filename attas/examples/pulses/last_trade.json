@@ -1,0 +1,164 @@
+{
+  "pds_version": "0.1.0",
+  "resource_type": "pulse_definition",
+  "id": "ai.attas.finance.price.last_trade",
+  "namespace": "ai.attas.finance.price",
+  "name": "last_trade",
+  "version": "1.0.0",
+  "title": "Last Trade Price",
+  "description": "Most recent executed trade price for a financial instrument on a specified venue or consolidated feed.",
+  "pulse_class": "fact",
+  "status": "stable",
+  "concept": {
+    "definition": "Most recent executed trade price for a financial instrument on a specified venue or consolidated feed.",
+    "entity_types": [
+      "financial_instrument"
+    ],
+    "tags": [
+      "pricing",
+      "market-data"
+    ],
+    "dimensions": [
+      "venue",
+      "currency",
+      "session"
+    ],
+    "identifiers": [
+      "symbol",
+      "lseg_ric",
+      "bloomberg_ticker"
+    ],
+    "units": {
+      "value_type": "currency_amount",
+      "currency_required": true
+    },
+    "time_semantics": {
+      "kind": "point_in_time",
+      "timestamp_field": "observed_at",
+      "modes": [
+        "realtime",
+        "delayed",
+        "eod"
+      ]
+    },
+    "quality_rules": [
+      "value >= 0",
+      "currency is required when value is present"
+    ]
+  },
+  "interface": {
+    "schema_language": "json-schema-2020-12",
+    "request_schema": {
+      "type": "object",
+      "properties": {
+        "symbol": {
+          "type": "string"
+        },
+        "lseg_ric": {
+          "type": "string"
+        },
+        "bloomberg_ticker": {
+          "type": "string"
+        },
+        "venue": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "anyOf": [
+        {
+          "required": [
+            "symbol"
+          ]
+        },
+        {
+          "required": [
+            "lseg_ric"
+          ]
+        },
+        {
+          "required": [
+            "bloomberg_ticker"
+          ]
+        }
+      ]
+    },
+    "response_schema": {
+      "type": "object",
+      "properties": {
+        "value": {
+          "type": "number"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "observed_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "venue": {
+          "type": "string"
+        },
+        "session": {
+          "type": "string"
+        },
+        "source_mode": {
+          "type": "string",
+          "enum": [
+            "realtime",
+            "delayed",
+            "eod"
+          ]
+        }
+      },
+      "required": [
+        "value",
+        "currency",
+        "observed_at"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "interop": {
+    "aliases": [
+      "last_price",
+      "trade_price_last"
+    ],
+    "external_refs": [
+      {
+        "system": "fibo",
+        "ref": "fibo:close_match:last_trade_price",
+        "relation": "close_match",
+        "confidence": 0.8,
+        "notes": "Attas last_trade aligns closely with FIBO trading and price concepts but is modeled here as an application-neutral Pulse."
+      }
+    ],
+    "related_pulses": [
+      "ai.attas.finance.price.bid_ask_quote",
+      "ai.attas.finance.price.daily_ohlcv_bar"
+    ]
+  },
+  "governance": {
+    "owner": "Attas Core Team",
+    "license": "Apache-2.0",
+    "created_at": "2026-03-26T00:00:00Z",
+    "updated_at": "2026-03-26T00:00:00Z",
+    "change_notes": "Initial example pulse_definition for pricing domain."
+  },
+  "examples": [
+    {
+      "request": {
+        "symbol": "AAPL",
+        "venue": "XNAS"
+      },
+      "response": {
+        "value": 187.42,
+        "currency": "USD",
+        "observed_at": "2026-03-26T14:31:05Z",
+        "venue": "XNAS",
+        "session": "regular",
+        "source_mode": "realtime"
+      }
+    }
+  ]
+}

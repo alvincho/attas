@@ -1,0 +1,215 @@
+{
+  "pds_version": "0.1.0",
+  "resource_type": "pulse_definition",
+  "id": "ai.attas.finance.technical.rsi",
+  "namespace": "ai.attas.finance.technical",
+  "name": "rsi",
+  "version": "1.0.0",
+  "title": "Relative Strength Index",
+  "description": "Momentum oscillator derived from recent price changes over a defined lookback window, commonly used to assess overbought or oversold conditions.",
+  "pulse_class": "analytic",
+  "status": "stable",
+  "concept": {
+    "definition": "Relative Strength Index is a derived momentum measure calculated from recent gains and losses of an instrument over a specified lookback period.",
+    "entity_types": [
+      "financial_instrument"
+    ],
+    "tags": [
+      "technical-analysis",
+      "momentum",
+      "indicator"
+    ],
+    "dimensions": [
+      "lookback_window",
+      "price_basis",
+      "sampling_frequency"
+    ],
+    "identifiers": [
+      "symbol",
+      "lseg_ric",
+      "bloomberg_ticker"
+    ],
+    "units": {
+      "value_type": "ratio_index",
+      "unit_required": false
+    },
+    "time_semantics": {
+      "kind": "point_in_time",
+      "timestamp_field": "observed_at",
+      "modes": [
+        "intraday",
+        "eod"
+      ]
+    },
+    "quality_rules": [
+      "value >= 0",
+      "value <= 100",
+      "window must be >= 1"
+    ]
+  },
+  "interface": {
+    "schema_language": "json-schema-2020-12",
+    "request_schema": {
+      "type": "object",
+      "properties": {
+        "symbol": {
+          "type": "string"
+        },
+        "lseg_ric": {
+          "type": "string"
+        },
+        "bloomberg_ticker": {
+          "type": "string"
+        },
+        "window": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 14
+        },
+        "price_basis": {
+          "type": "string",
+          "enum": [
+            "close",
+            "last_trade"
+          ],
+          "default": "close"
+        },
+        "sampling_frequency": {
+          "type": "string",
+          "enum": [
+            "1m",
+            "5m",
+            "15m",
+            "1h",
+            "1d"
+          ],
+          "default": "1d"
+        }
+      },
+      "additionalProperties": false,
+      "anyOf": [
+        {
+          "required": [
+            "symbol"
+          ]
+        },
+        {
+          "required": [
+            "lseg_ric"
+          ]
+        },
+        {
+          "required": [
+            "bloomberg_ticker"
+          ]
+        }
+      ]
+    },
+    "response_schema": {
+      "type": "object",
+      "properties": {
+        "value": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "observed_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "window": {
+          "type": "integer"
+        },
+        "price_basis": {
+          "type": "string"
+        },
+        "sampling_frequency": {
+          "type": "string"
+        },
+        "method_ref": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "value",
+        "observed_at",
+        "window"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "interop": {
+    "aliases": [
+      "relative_strength_index",
+      "rsi_14"
+    ],
+    "related_pulses": [
+      "ai.attas.finance.price.daily_ohlcv_bar",
+      "ai.attas.finance.price.last_trade"
+    ]
+  },
+  "derivation": {
+    "input_pulse_ids": [
+      "ai.attas.finance.price.daily_ohlcv_bar"
+    ],
+    "method_type": "formula",
+    "method_ref": "wilder-rsi",
+    "parameters_schema": {
+      "type": "object",
+      "properties": {
+        "window": {
+          "type": "integer",
+          "default": 14
+        },
+        "price_basis": {
+          "type": "string",
+          "enum": [
+            "close",
+            "last_trade"
+          ],
+          "default": "close"
+        },
+        "sampling_frequency": {
+          "type": "string",
+          "enum": [
+            "1m",
+            "5m",
+            "15m",
+            "1h",
+            "1d"
+          ],
+          "default": "1d"
+        }
+      },
+      "required": [
+        "window"
+      ]
+    },
+    "notes": "RSI is derived from recent positive and negative price changes and is not a raw sourced fact."
+  },
+  "governance": {
+    "owner": "Attas Core Team",
+    "license": "Apache-2.0",
+    "created_at": "2026-03-26T00:00:00Z",
+    "updated_at": "2026-03-26T00:00:00Z",
+    "change_notes": "Initial example pulse_definition for analytic technical indicator domain."
+  },
+  "examples": [
+    {
+      "request": {
+        "symbol": "AAPL",
+        "window": 14,
+        "price_basis": "close",
+        "sampling_frequency": "1d"
+      },
+      "response": {
+        "value": 62.4,
+        "observed_at": "2026-03-26T20:00:00Z",
+        "window": 14,
+        "price_basis": "close",
+        "sampling_frequency": "1d",
+        "method_ref": "wilder-rsi"
+      }
+    }
+  ]
+}

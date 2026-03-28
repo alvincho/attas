@@ -4,23 +4,29 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ agent_name }} Config</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/attas_ui_shared.css?v=20260327a">
+    <script defer src="/static/attas_theme.js?v=20260327a"></script>
+    <script defer src="/static/agent_connection.js?v=20260327a"></script>
     <style>
         :root {
             color-scheme: light;
-            --bg: #eef4f8;
-            --panel: rgba(255, 255, 255, 0.86);
-            --panel-strong: rgba(255, 255, 255, 0.96);
-            --line: rgba(11, 61, 145, 0.14);
-            --line-strong: rgba(11, 61, 145, 0.26);
-            --text: #132033;
-            --muted: #607089;
-            --accent: #0b61d1;
-            --accent-soft: rgba(11, 97, 209, 0.08);
-            --success: #12805c;
-            --danger: #bf3656;
-            --shadow: 0 18px 48px rgba(14, 35, 67, 0.10);
-            --mono: "SFMono-Regular", "SF Mono", "IBM Plex Mono", monospace;
-            --sans: "Segoe UI", "Helvetica Neue", sans-serif;
+            --bg: #f8fafc;
+            --panel: #ffffff;
+            --panel-strong: #ffffff;
+            --line: #e2e8f0;
+            --line-strong: #cbd5e1;
+            --text: #0f172a;
+            --muted: #475569;
+            --accent: #0f172a;
+            --accent-soft: rgba(15, 23, 42, 0.08);
+            --success: #166534;
+            --danger: #991b1b;
+            --shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --mono: var(--ui-font-mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace);
+            --sans: var(--ui-font-body, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif);
         }
 
         * { box-sizing: border-box; }
@@ -28,10 +34,10 @@
         body {
             margin: 0;
             font-family: var(--sans);
-            color: var(--text);
-            background:
-                radial-gradient(circle at top left, rgba(11, 97, 209, 0.16), transparent 30%),
-                linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+            font-size: var(--ui-content-size);
+            font-weight: var(--ui-content-weight);
+            color: var(--ui-content-color);
+            background: var(--bg);
             min-height: 100vh;
         }
 
@@ -40,29 +46,78 @@
         }
 
         .shell {
-            max-width: 1480px;
+            max-width: 1400px;
             margin: 0 auto;
-            padding: 32px 24px 40px;
+            padding: 1.5rem 1.5rem 2.5rem;
         }
 
         .hero,
         .panel {
             background: var(--panel);
             border: 1px solid var(--line);
-            border-radius: 24px;
+            border-radius: 8px;
             box-shadow: var(--shadow);
-            backdrop-filter: blur(18px);
         }
 
         .hero {
-            padding: 28px;
-            margin-bottom: 20px;
+            padding: 1.25rem 1.5rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .hero.is-sticky {
+            padding-top: 0.9rem;
+            padding-bottom: 0.9rem;
+        }
+
+        .hero.is-sticky .hero-topline {
+            align-items: center;
+        }
+
+        .hero.is-sticky .hero-copy h1 {
+            margin-bottom: 0;
+        }
+
+        .hero.is-sticky .hero-status {
+            gap: 0;
         }
 
         .hero h1 {
-            margin: 0 0 8px;
-            font-size: clamp(2rem, 4vw, 3rem);
-            line-height: 1;
+            margin: 0 0 0.25rem;
+            font-size: var(--ui-title-size);
+            color: var(--ui-title-color);
+            line-height: 1.2;
+            font-weight: var(--ui-title-weight);
+        }
+
+        .hero-topline {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 1.25rem;
+        }
+
+        .hero-copy {
+            min-width: 0;
+            flex: 1 1 auto;
+        }
+
+        .hero-status {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 0.35rem;
+            max-width: min(100%, 28rem);
+            flex: 0 0 auto;
+        }
+
+        .hero-status .agent-plaza-status {
+            margin-top: 0;
+            justify-content: flex-end;
+        }
+
+        .hero-status .agent-plaza-note {
+            margin-top: 0;
+            text-align: right;
         }
 
         .subtitle,
@@ -96,7 +151,7 @@
         }
 
         .panel {
-            padding: 20px;
+            padding: 1rem;
         }
 
         .modal-backdrop {
@@ -117,9 +172,9 @@
             overflow: auto;
             background: var(--panel-strong);
             border: 1px solid var(--line);
-            border-radius: 28px;
-            box-shadow: 0 32px 72px rgba(14, 35, 67, 0.26);
-            padding: 22px;
+            border-radius: 8px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            padding: 1.25rem;
         }
 
         .panel-head {
@@ -137,6 +192,9 @@
         .panel-head h2,
         .panel-head h3 {
             margin: 0;
+            font-size: var(--ui-header-size);
+            color: var(--ui-header-color);
+            font-weight: var(--ui-header-weight);
         }
 
         .panel-head-main {
@@ -207,12 +265,13 @@
         select {
             width: 100%;
             border: 1px solid var(--line);
-            border-radius: 16px;
-            padding: 12px 14px;
-            background: var(--panel-strong);
+            border-radius: 6px;
+            padding: 0.5rem 0.75rem;
+            background: #ffffff;
             color: var(--text);
             outline: none;
-            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+            transition: all 0.2s ease;
+            font-size: 0.9rem;
         }
 
         input:focus,
@@ -237,16 +296,20 @@
         }
 
         button {
-            border: 0;
-            border-radius: 999px;
-            padding: 11px 16px;
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            padding: 0.5rem 0.85rem;
             cursor: pointer;
+            font-weight: 600;
+            background: #ffffff;
+            color: var(--text);
+            transition: all 0.2s ease;
         }
 
         .primary-btn {
-            background: linear-gradient(135deg, #0b61d1, #0e8cc8);
+            background: #0f172a;
             color: white;
-            box-shadow: 0 10px 28px rgba(11, 97, 209, 0.24);
+            border-color: #0f172a;
         }
 
         .ghost-btn {
@@ -292,19 +355,18 @@
 
         .pulse-card {
             border: 1px solid var(--line);
-            border-radius: 14px;
-            padding: 9px 12px;
-            background: rgba(255, 255, 255, 0.76);
+            border-radius: 8px;
+            padding: 0.5rem 0.75rem;
+            background: #ffffff;
             cursor: pointer;
-            transition: border-color 0.2s ease, transform 0.2s ease, background 0.2s ease;
+            transition: all 0.2s ease;
             text-align: left;
             min-width: 0;
         }
 
         .pulse-card.active {
-            border-color: var(--accent);
+            border-color: var(--text);
             background: var(--accent-soft);
-            transform: translateY(-1px);
         }
 
         .pulse-card-line {
@@ -369,9 +431,9 @@
 
         .picker-item {
             border: 1px solid var(--line);
-            border-radius: 18px;
-            padding: 14px 16px;
-            background: rgba(255, 255, 255, 0.82);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            background: #ffffff;
         }
 
         .picker-item-head {
@@ -422,15 +484,15 @@
 
         pre {
             margin: 0;
-            border-radius: 18px;
-            padding: 16px;
-            background: #102033;
-            color: #e8f0f8;
+            border-radius: 8px;
+            padding: 1rem;
+            background: #0f172a;
+            color: #f8fafc;
             overflow: auto;
             font-family: var(--mono);
-            font-size: 0.87rem;
+            font-size: 0.85rem;
             line-height: 1.5;
-            min-height: 280px;
+            min-height: 200px;
         }
 
         pre.compact-pre {
@@ -445,17 +507,17 @@
 
         .json-tree-shell {
             margin: 0;
-            border-radius: 18px;
-            padding: 16px;
-            background: #102033;
-            color: #e8f0f8;
+            border-radius: 8px;
+            padding: 1rem;
+            background: #0f172a;
+            color: #f8fafc;
             overflow: auto;
             resize: vertical;
             font-family: var(--mono);
-            font-size: 0.87rem;
+            font-size: 0.85rem;
             line-height: 1.5;
-            min-height: 280px;
-            height: 280px;
+            min-height: 200px;
+            height: 200px;
         }
 
         .json-tree-shell.compact {
@@ -501,7 +563,7 @@
 
         .json-tree-toggle::before {
             content: "▾";
-            color: #7fb8ff;
+            color: #94a3b8;
             font-size: 0.8rem;
             line-height: 1.4;
             margin-top: 1px;
@@ -512,33 +574,50 @@
         }
 
         .json-tree-key {
-            color: #7fb8ff;
+            color: #cbd5e1;
         }
 
         .json-tree-string {
-            color: #9be9a8;
+            color: #94a3b8;
         }
 
         .json-tree-number {
-            color: #f6c177;
+            color: #e2e8f0;
         }
 
         .json-tree-boolean {
-            color: #f38ba8;
+            color: #94a3b8;
         }
 
         .json-tree-null {
-            color: #a6adc8;
+            color: #64748b;
             font-style: italic;
         }
 
         .json-tree-note {
-            color: #8ea4c0;
+            color: #475569;
         }
 
         @media (max-width: 1080px) {
             .layout {
                 grid-template-columns: 1fr;
+            }
+
+            .hero-topline {
+                flex-direction: column;
+            }
+
+            .hero-status {
+                align-items: flex-start;
+                max-width: none;
+            }
+
+            .hero-status .agent-plaza-status {
+                justify-content: flex-start;
+            }
+
+            .hero-status .agent-plaza-note {
+                text-align: left;
             }
         }
 
@@ -569,10 +648,21 @@
 </head>
 <body>
     <main class="shell">
-        <section class="hero">
-            <h1>{{ agent_name }} Config</h1>
-            <div class="subtitle">{% block subtitle %}Dedicated editor for supported pulses, API mappings, and test data. Saves directly back to this pulser’s config file.{% endblock %}</div>
-            <div class="hero-meta">
+        <section class="hero agent-sticky-header">
+            <div class="hero-topline">
+                <div class="hero-copy">
+                    <h1>{{ agent_name }} Config</h1>
+                    <div class="subtitle" data-sticky-hide="condensed">{% block subtitle %}Dedicated editor for supported pulses, API mappings, and test data. Saves directly back to this pulser’s config file.{% endblock %}</div>
+                </div>
+                <div class="hero-status">
+                    <div class="agent-plaza-status">
+                        <span id="agent-plaza-pill" class="agent-plaza-pill agent-plaza-pill-not_configured">Checking Plaza</span>
+                        <span id="agent-plaza-meta" class="agent-plaza-meta">Loading connection details...</span>
+                    </div>
+                    <p id="agent-plaza-note" class="agent-plaza-note" data-sticky-hide="condensed">Checking the current plaza heartbeat for this agent.</p>
+                </div>
+            </div>
+            <div class="hero-meta" data-sticky-hide="condensed">
                 <span class="chip">{{ agent_name }}</span>
                 <span class="chip">{{ config_path or "No config file attached" }}</span>
                 {% block hero_meta_extra %}{% endblock %}
@@ -583,10 +673,10 @@
             <aside class="panel">
                 <div class="panel-head">
                     <div>
-                        <h2>Supported Pulses</h2>
-                        <div class="muted">Compact list with search, filter, and sort.</div>
-                    </div>
-                    <button id="add-pulse-btn" class="ghost-btn" type="button">Add Pulse</button>
+                            <h2>Supported Pulses</h2>
+                            <div class="muted">Compact list with search, filter, and sort.</div>
+                        </div>
+                    <button id="add-pulse-btn" class="ghost-btn" type="button" data-tooltip="Add a new supported pulse entry to this pulser configuration.">Add Pulse</button>
                 </div>
                 <div class="stack">
                     <div class="pulse-controls">
@@ -629,8 +719,8 @@
                             </div>
                         </div>
                         <div class="toolbar">
-                            <button id="reload-btn" class="ghost-btn" type="button">Reload</button>
-                            <button id="save-btn" class="primary-btn" type="button">Save Config</button>
+                            <button id="reload-btn" class="ghost-btn" type="button" data-tooltip="Reload the config from disk and discard unsaved in-browser edits.">Reload</button>
+                            <button id="save-btn" class="primary-btn" type="button" data-tooltip="Persist the current config payload back to the pulser config file.">Save Config</button>
                         </div>
                     </div>
                     <div id="pulser-details-content" class="collapsible-content collapsed">
@@ -679,7 +769,7 @@
                             </div>
                         </div>
                         <div class="toolbar">
-                            <button id="test-pulse-btn" class="ghost-btn" type="button">Test Data</button>
+                            <button id="test-pulse-btn" class="ghost-btn" type="button" data-tooltip="Run the selected pulse with its test data and inspect the returned payload.">Test Data</button>
                             <button id="delete-pulse-btn" class="ghost-btn" type="button">Delete Pulse</button>
                         </div>
                     </div>
@@ -752,6 +842,8 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
+            window.attasAgentConnection?.mount({ pollMs: 15000 });
+            window.attasAgentConnection?.mountStickyHeader({ selector: '.hero.agent-sticky-header', topOffset: 12 });
             bindEvents();
             loadConfig();
         });
@@ -1164,12 +1256,39 @@
             renderTestPanel();
         }
 
+        function resolvePulseTestData(pulse, index) {
+            const candidates = [];
+            if (pulse && typeof pulse === 'object') {
+                candidates.push(pulse);
+            }
+            const sourcePulse = state.config?.supported_pulses?.[index];
+            if (sourcePulse && sourcePulse !== pulse && typeof sourcePulse === 'object') {
+                candidates.push(sourcePulse);
+            }
+
+            for (const candidate of candidates) {
+                if (candidate.test_data && typeof candidate.test_data === 'object' && !Array.isArray(candidate.test_data)) {
+                    return candidate.test_data;
+                }
+                if (candidate.test_payload && typeof candidate.test_payload === 'object' && !Array.isArray(candidate.test_payload)) {
+                    return candidate.test_payload;
+                }
+                if (candidate.sample_input && typeof candidate.sample_input === 'object' && !Array.isArray(candidate.sample_input)) {
+                    return candidate.sample_input;
+                }
+                if (candidate.resolved_test_data && typeof candidate.resolved_test_data === 'object' && !Array.isArray(candidate.resolved_test_data)) {
+                    return candidate.resolved_test_data;
+                }
+            }
+            return {};
+        }
+
         function ensureTestDraft(index, pulse) {
             if (state.testDrafts[index]) return state.testDrafts[index];
 
             const schema = pulse?.input_schema || {};
             const properties = schema.properties && typeof schema.properties === 'object' ? schema.properties : {};
-            const testData = pulse?.test_data && typeof pulse.test_data === 'object' ? pulse.test_data : {};
+            const testData = resolvePulseTestData(pulse, index);
             const fieldValues = {};
             const extraParams = {};
 
@@ -1208,13 +1327,17 @@
                 return;
             }
 
+            const pulse = state.config.supported_pulses[state.selectedPulseIndex];
+            const pulseName = pulse?.name || `pulse_${state.selectedPulseIndex + 1}`;
+            const pulserName = state.config?.name || 'Pulser';
+            const testTitle = pulse ? `${pulseName} | ${pulserName}` : `Test Runner | ${pulserName}`;
+
             root.innerHTML = `
                 <div id="test-runner-modal" class="modal-backdrop">
                     <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="test-runner-title">
                         <div class="panel-head">
                             <div>
-                                <h3 id="test-runner-title">Pulse Test Runner</h3>
-                                <div class="muted">Fill in parameters from the input schema, run the selected pulse, and review the API result below.</div>
+                                <h3 id="test-runner-title">${escapeHtml(testTitle)}</h3>
                             </div>
                             <button class="ghost-btn" type="button" data-modal-close="true">Close</button>
                         </div>
@@ -1234,8 +1357,6 @@
             const form = root.querySelector('#test-runner-form');
             const result = root.querySelector('#test-runner-result');
             const status = root.querySelector('#test-runner-status');
-
-            const pulse = state.config.supported_pulses[state.selectedPulseIndex];
             if (!pulse) {
                 form.innerHTML = '<div class="muted">Select a pulse to test it.</div>';
                 renderJsonTreeInto(result, {});
@@ -1359,6 +1480,25 @@
             const label = escapeHtml(schema.title || name);
             const description = schema.description ? `<div class="muted">${escapeHtml(schema.description)}</div>` : '';
             const requiredLabel = required ? ' <span class="muted">(required)</span>' : '';
+            const enumValues = Array.isArray(schema.enum) ? schema.enum : [];
+
+            if (enumValues.length && type !== 'object' && type !== 'array') {
+                const placeholderLabel = required ? 'Choose…' : 'Unset';
+                const options = enumValues.map((option) => {
+                    const optionValue = formatSchemaFieldValue(option, schema);
+                    return `<option value="${escapeAttribute(optionValue)}" ${rawValue === optionValue ? 'selected' : ''}>${escapeHtml(optionValue)}</option>`;
+                }).join('');
+                return `
+                    <div class="field">
+                        <label>${label}${requiredLabel}</label>
+                        <select data-test-field="${escapeAttribute(name)}" data-test-type="${escapeAttribute(type)}">
+                            <option value="" ${rawValue === '' ? 'selected' : ''} ${required ? 'disabled' : ''}>${placeholderLabel}</option>
+                            ${options}
+                        </select>
+                        ${description}
+                    </div>
+                `;
+            }
 
             if (type === 'boolean') {
                 return `
@@ -1402,6 +1542,17 @@
             return String(value);
         }
 
+        function valuesMatchSchemaType(left, right, schema) {
+            const type = schema?.type || 'string';
+            if (type === 'integer' || type === 'number') {
+                return Number(left) === Number(right);
+            }
+            if (type === 'boolean') {
+                return Boolean(left) === Boolean(right);
+            }
+            return String(left) === String(right);
+        }
+
         function buildTestParams(index, compiledPulse) {
             const draft = ensureTestDraft(index, compiledPulse);
             const schema = compiledPulse.input_schema || {};
@@ -1438,13 +1589,24 @@
                 if (!Number.isFinite(value)) {
                     throw new Error(`${name} must be numeric.`);
                 }
-                return type === 'integer' ? Math.trunc(value) : value;
+                const numericValue = type === 'integer' ? Math.trunc(value) : value;
+                if (Array.isArray(schema.enum) && schema.enum.length && !schema.enum.some((candidate) => valuesMatchSchemaType(candidate, numericValue, schema))) {
+                    throw new Error(`${name} must be one of: ${schema.enum.join(', ')}.`);
+                }
+                return numericValue;
             }
 
             if (type === 'boolean') {
-                if (trimmed === 'true') return true;
-                if (trimmed === 'false') return false;
-                throw new Error(`${name} must be true or false.`);
+                let booleanValue;
+                if (trimmed === 'true') booleanValue = true;
+                if (trimmed === 'false') booleanValue = false;
+                if (booleanValue === undefined) {
+                    throw new Error(`${name} must be true or false.`);
+                }
+                if (Array.isArray(schema.enum) && schema.enum.length && !schema.enum.some((candidate) => valuesMatchSchemaType(candidate, booleanValue, schema))) {
+                    throw new Error(`${name} must be one of: ${schema.enum.join(', ')}.`);
+                }
+                return booleanValue;
             }
 
             if (type === 'object' || type === 'array') {
@@ -1462,6 +1624,9 @@
                 }
             }
 
+            if (Array.isArray(schema.enum) && schema.enum.length && !schema.enum.some((candidate) => valuesMatchSchemaType(candidate, rawValue, schema))) {
+                throw new Error(`${name} must be one of: ${schema.enum.join(', ')}.`);
+            }
             return rawValue;
         }
 
@@ -1800,6 +1965,8 @@
             delete extra.test_data;
             delete extra.test_payload;
             delete extra.sample_input;
+            delete extra.resolved_test_data;
+            delete extra.resolved_test_data_error;
 
             state.pulseDrafts[index] = {
                 name: pulse.name || `pulse_${index + 1}`,

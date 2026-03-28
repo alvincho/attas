@@ -1,0 +1,304 @@
+{
+  "id": "f5f8f90c-bc75-4ab7-b67d-2ae2dd582876",
+  "phema_id": "841bd99a-5a65-5b80-9625-8298033d6a96",
+  "phema_name": "Simple Report 2",
+  "params_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+  "params": {},
+  "tags": [
+    "static",
+    "snapshot"
+  ],
+  "snapshot": {
+    "id": "f5f8f90c-bc75-4ab7-b67d-2ae2dd582876",
+    "phema_id": "f5f8f90c-bc75-4ab7-b67d-2ae2dd582876",
+    "name": "Simple Report 2 Static Snapshot",
+    "description": "Simple report contains 2 sections",
+    "owner": "StockReportPhemar",
+    "address": "plaza://phema/f5f8f90c-bc75-4ab7-b67d-2ae2dd582876",
+    "pit_type": "Phema",
+    "pit_address": {
+      "pit_id": "f5f8f90c-bc75-4ab7-b67d-2ae2dd582876",
+      "plazas": []
+    },
+    "tags": [
+      "static",
+      "snapshot"
+    ],
+    "input_schema": {
+      "type": "object",
+      "required": [
+        "symbol"
+      ],
+      "properties": {
+        "symbol": {
+          "type": "string"
+        }
+      }
+    },
+    "sections": [
+      {
+        "name": "Company Info 2",
+        "description": "",
+        "modifier": "",
+        "content": [
+          {
+            "name": "company_profile:sector",
+            "static": true,
+            "value": {
+              "field_path": "sector",
+              "fetch": "dbd4bfa1-d29e-439b-b9c6-cffe9d4b0935",
+              "data": "TECHNOLOGY"
+            }
+          },
+          {
+            "name": "company_profile:symbol",
+            "static": true,
+            "value": {
+              "field_path": "symbol",
+              "fetch": "dbd4bfa1-d29e-439b-b9c6-cffe9d4b0935",
+              "data": "IBM"
+            }
+          },
+          {
+            "name": "company_profile:website",
+            "static": true,
+            "value": {
+              "field_path": "website",
+              "fetch": "dbd4bfa1-d29e-439b-b9c6-cffe9d4b0935",
+              "data": "https://www.ibm.com"
+            }
+          },
+          {
+            "name": "company_profile:industry",
+            "static": true,
+            "value": {
+              "field_path": "industry",
+              "fetch": "dbd4bfa1-d29e-439b-b9c6-cffe9d4b0935",
+              "data": "INFORMATION TECHNOLOGY SERVICES"
+            }
+          }
+        ]
+      },
+      {
+        "name": "Prices",
+        "description": "",
+        "modifier": "",
+        "content": [
+          {
+            "name": "last_price:source",
+            "static": true,
+            "value": {
+              "field_path": "source",
+              "fetch": "125a68a4-104b-42bc-9c7d-f0ca159583dc",
+              "data": null
+            }
+          },
+          {
+            "name": "last_price:symbol",
+            "static": true,
+            "value": {
+              "field_path": "symbol",
+              "fetch": "125a68a4-104b-42bc-9c7d-f0ca159583dc",
+              "data": null
+            }
+          },
+          {
+            "name": "last_price:timestamp",
+            "static": true,
+            "value": {
+              "field_path": "timestamp",
+              "fetch": "125a68a4-104b-42bc-9c7d-f0ca159583dc",
+              "data": null
+            }
+          },
+          {
+            "name": "last_price:last_price",
+            "static": true,
+            "value": {
+              "field_path": "last_price",
+              "fetch": "125a68a4-104b-42bc-9c7d-f0ca159583dc",
+              "data": null
+            }
+          }
+        ]
+      },
+      {
+        "name": "News Summary",
+        "description": "latest news article with headline, summary, and source link.",
+        "modifier": "",
+        "content": [
+          {
+            "type": "text",
+            "text": "Headline:"
+          },
+          {
+            "name": "news_article:articles.0.headline",
+            "static": true,
+            "value": {
+              "field_path": "articles.0.headline",
+              "fetch": "972afeb2-0148-491a-baa4-1039e76e3da8",
+              "data": "Bunge Global Stock Analysis: Strong Gains Amid Debt & Cash Flow Concerns - News and Statistics"
+            }
+          },
+          {
+            "type": "text",
+            "text": "\nSummary:"
+          },
+          {
+            "name": "news_article:articles.0.summary",
+            "static": true,
+            "value": {
+              "field_path": "articles.0.summary",
+              "fetch": "972afeb2-0148-491a-baa4-1039e76e3da8",
+              "data": "Bunge Global's shares have significantly increased to $119.94 over the last six months, despite analyst caution regarding its financial health. The company's sales growth has been modest, and its earnings per share have declined substantially, while its debt exceeds cash reserves. Analysts suggest the company may need to raise additional capital if core business performance doesn't improve, maintaining a cautious stance despite recent stock gains and a \"reasonable\" forward P/E multiple."
+            }
+          },
+          {
+            "type": "text",
+            "text": "\nSource:"
+          },
+          {
+            "name": "news_article:articles.0.url",
+            "static": true,
+            "value": {
+              "field_path": "articles.0.url",
+              "fetch": "972afeb2-0148-491a-baa4-1039e76e3da8",
+              "data": "https://www.indexbox.io/blog/bunge-global-shares-gain-despite-analyst-caution-on-financial-health/"
+            }
+          }
+        ]
+      }
+    ],
+    "resolution_mode": "static",
+    "snapshot_cache_time": 0,
+    "meta": {
+      "resolution_mode": "static",
+      "source_phema_id": "841bd99a-5a65-5b80-9625-8298033d6a96",
+      "source_phema_name": "Simple Report 2",
+      "source_phema_address": "plaza://phema/841bd99a-5a65-5b80-9625-8298033d6a96",
+      "static_snapshot": true,
+      "snapshot_generated_at": "2026-03-26T13:36:56.070322+00:00",
+      "snapshot_input": {},
+      "fetches": [
+        {
+          "id": "dbd4bfa1-d29e-439b-b9c6-cffe9d4b0935",
+          "pulse_name": "company_profile",
+          "pulse_pit_address": {
+            "pit_id": "5adbfd9a-c59f-5b85-a19f-565525d5712d",
+            "plazas": [
+              "http://127.0.0.1:8011"
+            ]
+          },
+          "pulser_name": "AlphaVantageApiPulser",
+          "pulser_pit_address": {
+            "pit_id": "a68a31a1-d03e-49f9-8183-a974078fb727",
+            "plazas": [
+              "http://127.0.0.1:8011"
+            ]
+          },
+          "params": {
+            "symbol": "IBM"
+          },
+          "fetch": {
+            "started_at": "2026-03-26T13:36:46.665066+00:00",
+            "ended_at": "2026-03-26T13:36:49.947997+00:00",
+            "duration_ms": 3283.097125007771,
+            "cost": 0.0,
+            "cache_hit": false
+          },
+          "data": {
+            "sector": "TECHNOLOGY",
+            "symbol": "IBM",
+            "website": "https://www.ibm.com",
+            "industry": "INFORMATION TECHNOLOGY SERVICES",
+            "company_name": "International Business Machines",
+            "headquarters_country": "USA"
+          }
+        },
+        {
+          "id": "125a68a4-104b-42bc-9c7d-f0ca159583dc",
+          "pulse_name": "last_price",
+          "pulse_pit_address": {
+            "pit_id": "37dbc0b8-2677-4b29-8aea-dd097b652c8e",
+            "plazas": [
+              "http://127.0.0.1:8011"
+            ]
+          },
+          "pulser_name": "MarketstackApiPulser",
+          "pulser_pit_address": {
+            "pit_id": "2a0c1f8f-7320-463e-8661-203fe15d24cb",
+            "plazas": [
+              "http://127.0.0.1:8011"
+            ]
+          },
+          "params": {
+            "symbol": "IBM"
+          },
+          "fetch": {
+            "started_at": "2026-03-26T13:36:49.952534+00:00",
+            "ended_at": "2026-03-26T13:36:49.987461+00:00",
+            "duration_ms": 35.06033401936293,
+            "cost": 0.0,
+            "cache_hit": false
+          },
+          "data": {
+            "error": "Missing API key value for registry 'marketstack' (MARKETSTACK_API_KEY)"
+          }
+        },
+        {
+          "id": "972afeb2-0148-491a-baa4-1039e76e3da8",
+          "pulse_name": "news_article",
+          "pulse_pit_address": {
+            "pit_id": "5f82c4c9-ac00-587c-9e43-547557081ab6",
+            "plazas": [
+              "http://127.0.0.1:8011"
+            ]
+          },
+          "pulser_name": "AlphaVantageApiPulser",
+          "pulser_pit_address": {
+            "pit_id": "a68a31a1-d03e-49f9-8183-a974078fb727",
+            "plazas": [
+              "http://127.0.0.1:8011"
+            ]
+          },
+          "params": {
+            "symbol": "",
+            "number_of_articles": 1
+          },
+          "fetch": {
+            "started_at": "2026-03-26T13:36:50.000364+00:00",
+            "ended_at": "2026-03-26T13:36:56.070207+00:00",
+            "duration_ms": 6070.149749983102,
+            "cost": 0.0,
+            "cache_hit": false
+          },
+          "data": {
+            "symbol": "",
+            "number_of_articles": 1,
+            "articles": [
+              {
+                "headline": "Bunge Global Stock Analysis: Strong Gains Amid Debt & Cash Flow Concerns - News and Statistics",
+                "published_at": "20260326T130710",
+                "publisher": "IndexBox",
+                "summary": "Bunge Global's shares have significantly increased to $119.94 over the last six months, despite analyst caution regarding its financial health. The company's sales growth has been modest, and its earnings per share have declined substantially, while its debt exceeds cash reserves. Analysts suggest the company may need to raise additional capital if core business performance doesn't improve, maintaining a cautious stance despite recent stock gains and a \"reasonable\" forward P/E multiple.",
+                "url": "https://www.indexbox.io/blog/bunge-global-shares-gain-despite-analyst-caution-on-financial-health/",
+                "sentiment_label": "Somewhat-Bearish"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "resolution_mode": "static",
+  "cache_ttl_seconds": 300,
+  "expires_at": "2026-03-26T13:41:56.070460+00:00",
+  "meta": {
+    "source_phema_id": "841bd99a-5a65-5b80-9625-8298033d6a96",
+    "source_phema_name": "Simple Report 2",
+    "source_phema_address": "plaza://phema/841bd99a-5a65-5b80-9625-8298033d6a96",
+    "cache_ttl_seconds": 300
+  },
+  "created_at": "2026-03-26T13:36:56.070460+00:00",
+  "updated_at": "2026-03-26T13:36:56.070460+00:00"
+}

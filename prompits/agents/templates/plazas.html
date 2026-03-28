@@ -7,29 +7,180 @@
     <title>attas | Neural Registry</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Space+Mono&display=swap"
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600&family=Manrope:wght@400;500;600;700;800&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/attas_ui_shared.css?v=20260327a">
+    <script defer src="/static/attas_theme.js?v=20260327a"></script>
     <style>
         :root {
-            --plaza-panel: rgba(255, 255, 255, 0.74);
-            --plaza-panel-strong: rgba(255, 255, 255, 0.92);
-            --plaza-panel-soft: rgba(31, 122, 255, 0.08);
-            --plaza-border: rgba(31, 122, 255, 0.12);
-            --plaza-border-strong: rgba(31, 122, 255, 0.24);
-            --plaza-text-dim: #5f7392;
-            --plaza-text-faint: #8598b4;
-            --plaza-schema: #10b981;
-            --plaza-pulse: #f59e0b;
-            --plaza-phema: #0f766e;
-            --plaza-agent: #1f7aff;
-            --plaza-danger: #e45477;
-            --plaza-warning: #ef8f34;
+            --plaza-panel: var(--ui-panel, rgba(255, 255, 255, 0.74));
+            --plaza-panel-strong: var(--ui-panel-strong, rgba(255, 255, 255, 0.92));
+            --plaza-panel-soft: var(--ui-accent-soft, rgba(31, 122, 255, 0.08));
+            --plaza-border: var(--ui-border, rgba(31, 122, 255, 0.12));
+            --plaza-border-strong: var(--ui-border-strong, rgba(31, 122, 255, 0.24));
+            --plaza-text-dim: var(--ui-text-secondary, #5f7392);
+            --plaza-text-faint: var(--ui-text-faint, #8598b4);
+            --plaza-schema: var(--ui-success, #10b981);
+            --plaza-pulse: var(--ui-warning, #f59e0b);
+            --plaza-phema: var(--ui-accent, #0f766e);
+            --plaza-agent: var(--ui-accent, #1f7aff);
+            --plaza-danger: var(--ui-danger, #e45477);
+            --plaza-warning: var(--ui-warning, #ef8f34);
+        }
+
+        body {
+            --plaza-sidebar-width: 220px;
+            --plaza-sidebar-collapsed-width: 88px;
         }
 
         .content-area.plaza-app {
             max-width: none;
-            padding: 3rem 3rem 4rem;
+            margin-left: var(--plaza-sidebar-width);
+            padding: 1.5rem 2rem 2rem;
+            transition: margin-left 0.22s ease, padding 0.22s ease;
+        }
+
+        .sidebar {
+            width: var(--plaza-sidebar-width);
+            overflow: visible;
+            transition: width 0.22s ease, padding 0.22s ease, box-shadow 0.22s ease;
+        }
+
+        .sidebar-header {
+            justify-content: space-between;
+            gap: 0.85rem;
+        }
+
+        .sidebar-brand {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            min-width: 0;
+        }
+
+        .sidebar-wordmark {
+            min-width: 0;
+            overflow: hidden;
+            transition: opacity 0.18s ease, transform 0.18s ease;
+        }
+
+        .sidebar-toggle {
+            position: absolute;
+            top: 2.15rem;
+            right: -0.48rem;
+            width: 0.96rem;
+            height: 0.96rem;
+            flex: 0 0 0.96rem;
+            padding: 0;
+            border-radius: 999px;
+            border: 1px solid rgba(31, 122, 255, 0.16);
+            background: linear-gradient(180deg, rgba(249, 252, 255, 0.96), rgba(237, 247, 255, 0.92));
+            color: #21456d;
+            box-shadow: 0 4px 10px rgba(31, 122, 255, 0.14);
+            z-index: 3;
+        }
+
+        .sidebar-toggle:hover {
+            transform: translateY(-1px) scale(1.03);
+            box-shadow: 0 6px 12px rgba(31, 122, 255, 0.18);
+        }
+
+        .sidebar-toggle:focus-visible {
+            outline: none;
+            box-shadow: 0 0 0 4px rgba(31, 122, 255, 0.12);
+        }
+
+        .sidebar-toggle-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 0.34rem;
+            font-family: var(--font-mono);
+            font-size: 0.52rem;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .sidebar-toggle-icon::before {
+            content: "<";
+        }
+
+        .nav-links li {
+            white-space: nowrap;
+        }
+
+        .nav-label {
+            display: inline-block;
+            overflow: hidden;
+            transition: opacity 0.16s ease, transform 0.16s ease;
+        }
+
+        .sidebar-footer {
+            max-height: 80px;
+            overflow: hidden;
+            transition:
+                opacity 0.16s ease,
+                transform 0.16s ease,
+                max-height 0.18s ease,
+                padding-top 0.18s ease,
+                border-color 0.18s ease;
+        }
+
+        @media (min-width: 861px) {
+            body.sidebar-collapsed {
+                --plaza-sidebar-width: var(--plaza-sidebar-collapsed-width);
+            }
+
+            body.sidebar-collapsed .sidebar {
+                padding-inline: 0.8rem;
+            }
+
+            body.sidebar-collapsed .sidebar-header {
+                flex-direction: column;
+                align-items: center;
+                gap: 0.85rem;
+            }
+
+            body.sidebar-collapsed .sidebar-brand {
+                justify-content: center;
+            }
+
+            body.sidebar-collapsed .sidebar-header::after {
+                width: 28px;
+                margin-top: 0.65rem;
+            }
+
+            body.sidebar-collapsed .sidebar-wordmark,
+            body.sidebar-collapsed .nav-label {
+                width: 0;
+                opacity: 0;
+                visibility: hidden;
+                pointer-events: none;
+                transform: translateX(-8px);
+            }
+
+            body.sidebar-collapsed .nav-links li {
+                width: 56px;
+                margin-inline: auto;
+                justify-content: center;
+                gap: 0;
+                padding-inline: 0;
+            }
+
+            body.sidebar-collapsed .sidebar-footer {
+                max-height: 0;
+                padding-top: 0;
+                border-top-color: transparent;
+                opacity: 0;
+                visibility: hidden;
+                pointer-events: none;
+                transform: translateY(8px);
+            }
+
+            body.sidebar-collapsed .sidebar-toggle-icon::before {
+                content: ">";
+            }
         }
 
         .page-shell {
@@ -47,20 +198,17 @@
         .node-card,
         .plaza-card,
         .draft-note {
-            background: linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(240, 248, 255, 0.8));
+            background: #ffffff;
             border: 1px solid var(--plaza-border);
-            backdrop-filter: blur(18px);
-            box-shadow:
-                0 22px 60px rgba(31, 122, 255, 0.09),
-                inset 0 1px 0 rgba(255, 255, 255, 0.82);
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            border-radius: 8px;
         }
 
         .toolbar-card {
-            border-radius: 20px;
-            padding: 1rem;
+            padding: 0.75rem;
             display: flex;
             flex-wrap: wrap;
-            gap: 0.85rem;
+            gap: 0.75rem;
             align-items: center;
         }
 
@@ -129,13 +277,12 @@
 
         .summary-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 1rem;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 0.75rem;
         }
 
         .summary-card {
-            border-radius: 20px;
-            padding: 1.25rem 1.4rem;
+            padding: 1rem;
             position: relative;
             overflow: hidden;
         }
@@ -149,22 +296,11 @@
         .users-panel::before,
         .user-table-card::before,
         .auth-status-card::before {
-            content: "";
-            position: absolute;
-            inset: 0 0 auto 0;
-            height: 1px;
-            background: linear-gradient(90deg, rgba(31, 122, 255, 0.24), rgba(103, 232, 249, 0.06), transparent 85%);
-            pointer-events: none;
+            display: none;
         }
 
         .summary-card::after {
-            content: "";
-            position: absolute;
-            inset: auto -30px -30px auto;
-            width: 90px;
-            height: 90px;
-            border-radius: 50%;
-            background: radial-gradient(circle, rgba(99, 213, 255, 0.26), transparent 68%);
+            display: none;
         }
 
         .summary-label {
@@ -178,10 +314,10 @@
 
         .summary-value {
             display: block;
-            font-size: 2rem;
-            font-weight: 800;
-            line-height: 1;
-            margin-bottom: 0.45rem;
+            font-size: 1.5rem;
+            font-weight: 700;
+            line-height: 1.2;
+            margin-bottom: 0.25rem;
         }
 
         .summary-meta {
@@ -207,17 +343,12 @@
         .map-board {
             position: relative;
             overflow: hidden;
-            border-radius: 28px;
-            padding: 1.5rem;
-            min-height: 620px;
-            background:
-                radial-gradient(circle at top, rgba(71, 194, 255, 0.16), transparent 32%),
-                radial-gradient(circle at bottom, rgba(31, 122, 255, 0.12), transparent 40%),
-                linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(236, 246, 255, 0.86));
+            border-radius: 12px;
+            padding: 1rem;
+            min-height: 500px;
+            background: #f1f5f9;
             border: 1px solid var(--plaza-border);
-            box-shadow:
-                0 22px 60px rgba(31, 122, 255, 0.1),
-                inset 0 1px 0 rgba(255, 255, 255, 0.82);
+            box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.05);
         }
 
         .map-grid {
@@ -228,14 +359,12 @@
 
         .map-graph-card {
             position: relative;
-            border-radius: 24px;
-            padding: 1.2rem;
-            min-height: 760px;
-            background: linear-gradient(180deg, rgba(255, 255, 255, 0.84), rgba(240, 248, 255, 0.8));
+            border-radius: 12px;
+            padding: 1rem;
+            min-height: 600px;
+            background: #ffffff;
             border: 1px solid var(--plaza-border);
-            box-shadow:
-                0 18px 40px rgba(31, 122, 255, 0.08),
-                inset 0 1px 0 rgba(255, 255, 255, 0.78);
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
         }
 
         .map-graph-header {
@@ -254,13 +383,11 @@
 
         .map-graph-stage {
             position: relative;
-            min-height: 640px;
-            border-radius: 22px;
+            min-height: 500px;
+            border-radius: 8px;
             overflow: hidden;
-            background:
-                radial-gradient(circle at center, rgba(31, 122, 255, 0.08), rgba(31, 122, 255, 0) 48%),
-                linear-gradient(180deg, rgba(247, 251, 255, 0.92), rgba(231, 243, 255, 0.84));
-            border: 1px solid rgba(31, 122, 255, 0.1);
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
         }
 
         .map-orbit,
@@ -285,18 +412,19 @@
         }
 
         .map-line {
-            stroke: rgba(31, 122, 255, 0.28);
-            stroke-width: 2.4;
+            stroke: #cbd5e1;
+            stroke-width: 1.5;
             stroke-linecap: round;
         }
 
         .map-line.inactive {
-            stroke: rgba(132, 148, 180, 0.3);
-            stroke-dasharray: 6 8;
+            stroke: #e2e8f0;
+            stroke-dasharray: 4 4;
         }
 
         .map-line.active {
-            filter: drop-shadow(0 0 12px rgba(31, 122, 255, 0.18));
+            stroke: #334155;
+            stroke-width: 2;
         }
 
         .map-node {
@@ -329,15 +457,13 @@
         .map-node-core {
             display: grid;
             place-items: center;
-            width: 88px;
-            height: 88px;
-            border-radius: 24px;
-            background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(229, 241, 255, 0.92));
-            border: 1px solid rgba(31, 122, 255, 0.16);
-            box-shadow:
-                0 16px 34px rgba(31, 122, 255, 0.12),
-                inset 0 1px 0 rgba(255, 255, 255, 0.9);
-            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+            width: 48px;
+            height: 48px;
+            border-radius: 8px;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            transition: transform 0.2s ease, border-color 0.2s ease;
             margin: 0 auto;
         }
 
@@ -350,13 +476,11 @@
         }
 
         .map-node.plaza-node .map-node-core {
-            width: 136px;
-            height: 136px;
-            border-radius: 34px;
-            background:
-                radial-gradient(circle at top, rgba(99, 213, 255, 0.28), transparent 56%),
-                linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(223, 238, 255, 0.94));
-            border-color: rgba(31, 122, 255, 0.22);
+            width: 64px;
+            height: 64px;
+            border-radius: 12px;
+            background: #f1f5f9;
+            border-color: #cbd5e1;
         }
 
         .map-node.agent-node .map-node-core {
@@ -379,38 +503,36 @@
         }
 
         .map-avatar {
-            width: 70px;
-            height: 70px;
+            width: 36px;
+            height: 36px;
             object-fit: cover;
-            border-radius: 18px;
+            border-radius: 6px;
             display: block;
-            box-shadow: 0 10px 24px rgba(31, 122, 255, 0.14);
         }
 
         .map-node.plaza-node .map-avatar {
-            width: 98px;
-            height: 98px;
-            border-radius: 26px;
+            width: 52px;
+            height: 52px;
+            border-radius: 8px;
         }
 
         .map-avatar-fallback {
-            width: 70px;
-            height: 70px;
-            border-radius: 18px;
+            width: 36px;
+            height: 36px;
+            border-radius: 6px;
             display: none;
             place-items: center;
-            background: linear-gradient(135deg, rgba(31, 122, 255, 0.16), rgba(99, 213, 255, 0.22));
-            color: var(--plaza-agent);
-            font-size: 1.15rem;
-            font-weight: 800;
-            letter-spacing: 0.06em;
+            background: #f1f5f9;
+            color: #475569;
+            font-size: 0.85rem;
+            font-weight: 700;
         }
 
         .map-node.plaza-node .map-avatar-fallback {
-            width: 98px;
-            height: 98px;
-            border-radius: 26px;
-            font-size: 1.5rem;
+            width: 52px;
+            height: 52px;
+            border-radius: 8px;
+            font-size: 1rem;
         }
 
         .map-avatar.hidden,
@@ -530,11 +652,10 @@
 
         .plaza-card {
             position: relative;
-            border-radius: 24px;
-            padding: 1.4rem;
+            padding: 1.25rem;
             display: flex;
             flex-direction: column;
-            gap: 1.2rem;
+            gap: 1rem;
         }
 
         .plaza-card-header,
@@ -721,6 +842,12 @@
             background: rgba(31, 122, 255, 0.1);
         }
 
+        .type-pill.AgentConfig {
+            color: #8b5cf6;
+            border-color: rgba(139, 92, 246, 0.2);
+            background: rgba(139, 92, 246, 0.1);
+        }
+
         .type-pill.Other {
             color: #5879a6;
             border-color: rgba(99, 213, 255, 0.2);
@@ -729,18 +856,30 @@
 
         .nodes-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(285px, 1fr));
-            gap: 1rem;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 0.85rem;
         }
 
         .node-card {
             position: relative;
-            border-radius: 20px;
-            padding: 1.1rem;
+            padding: 1rem;
             display: flex;
             flex-direction: column;
-            gap: 0.9rem;
-            min-height: 220px;
+            gap: 0.75rem;
+            min-height: auto;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+        }
+
+        .node-card.simple-node {
+            padding: 0.85rem;
+            gap: 0.65rem;
+            border-radius: 10px;
+        }
+
+        .node-card.simple-node:hover {
+            border-color: var(--plaza-agent);
+            transform: translateY(-2px);
+            box-shadow: 0 12px 24px rgba(31, 122, 255, 0.08);
         }
 
         .node-card-header,
@@ -751,12 +890,30 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 0.75rem;
+            gap: 0.5rem;
+        }
+
+        .simple-node .node-card-footer {
+            margin-top: auto;
+            padding-top: 0.5rem;
+            border-top: 1px solid rgba(0, 0, 0, 0.03);
         }
 
         .node-title {
             font-size: 1.05rem;
             font-weight: 700;
+        }
+
+        .node-content-compact {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .simple-node .node-title {
+            font-size: 0.95rem;
+            line-height: 1.35;
         }
 
         .node-description {
@@ -770,6 +927,19 @@
             display: flex;
             flex-wrap: wrap;
             gap: 0.5rem;
+        }
+
+        .node-detail-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 0.45rem;
+        }
+
+        .node-detail-meta {
+            color: var(--plaza-text-dim);
+            font-size: 0.82rem;
+            line-height: 1.45;
+            word-break: break-word;
         }
 
         .heartbeat-pill {
@@ -997,6 +1167,142 @@
             padding: 1rem;
         }
 
+        #settings-page .editor-grid {
+            max-width: none;
+            margin: 0;
+            grid-template-columns: repeat(2, 1fr);
+        }
+        
+        .settings-layout {
+            display: grid;
+            grid-template-columns: minmax(0, 550px) 1fr;
+            gap: 2rem;
+            align-items: start;
+            margin-top: 1rem;
+        }
+        
+        .settings-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+        
+        .settings-preview {
+            position: sticky;
+            top: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        
+        .section-label {
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 1.1px;
+            font-weight: 700;
+            color: var(--plaza-text-faint);
+            margin-bottom: 0.25rem;
+        }
+
+        @media (max-width: 1200px) {
+            .settings-layout {
+                grid-template-columns: 1fr;
+            }
+            .settings-preview {
+                position: static;
+            }
+        }
+        
+        #settings-page .field {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            padding: 1.25rem;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.65);
+            border: 1px solid var(--plaza-border);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);
+            transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+        }
+        
+        #settings-page .field:hover {
+            border-color: var(--plaza-agent);
+            background: rgba(255, 255, 255, 0.9);
+            box-shadow: 0 10px 15px -3px rgba(31, 122, 255, 0.08);
+        }
+        
+        #settings-page .field label {
+            display: block;
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 1.1px;
+            font-weight: 700;
+            color: var(--plaza-text-faint);
+        }
+        
+        #settings-page input[type="text"] {
+            width: 100%;
+            padding: 0.65rem 0.85rem;
+            border-radius: 12px;
+            border: 1px solid var(--plaza-border);
+            background: white;
+            font-size: 0.95rem;
+            color: var(--plaza-text);
+            transition: border-color 0.2s ease;
+        }
+        
+        #settings-page input[type="text"]:focus {
+            outline: none;
+            border-color: var(--plaza-agent);
+            box-shadow: 0 0 0 3px rgba(31, 122, 255, 0.1);
+        }
+        
+        #settings-page input[type="color"] {
+            width: 100%;
+            height: 42px;
+            border: 1px solid var(--plaza-border);
+            border-radius: 12px;
+            background: white;
+            padding: 2px;
+            cursor: pointer;
+        }
+        
+        #settings-page input[type="color"]::-webkit-color-swatch-wrapper {
+            padding: 2px;
+        }
+        
+        #settings-page input[type="color"]::-webkit-color-swatch {
+            border: 1px solid rgba(0,0,0,0.1);
+            border-radius: 8px;
+        }
+        
+        .ui-preview-card {
+            margin-top: 0.5rem;
+            padding: 2.5rem;
+            border-radius: 24px;
+            background: var(--plaza-canvas);
+            border: 1px solid var(--plaza-border);
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+        
+        .ui-preview-card h1 {
+            margin: 0;
+            line-height: 1.1;
+        }
+        
+        .ui-preview-card h2 {
+            margin: 0;
+            line-height: 1.2;
+        }
+        
+        .ui-preview-card p {
+            margin: 0;
+            max-width: 600px;
+        }
+
         .field-card label,
         .inspector-label {
             display: block;
@@ -1071,14 +1377,17 @@
         }
 
         .users-layout {
-            display: block;
+            display: grid;
+            grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
+            gap: 1rem;
+            align-items: start;
         }
 
         .sidebar-auth-shell {
             display: flex;
             flex-direction: column;
             gap: 0.85rem;
-            margin-top: 1rem;
+            margin-top: 0;
         }
 
         .sidebar-auth-shell .auth-status-card,
@@ -1111,6 +1420,21 @@
             font-size: 0.9rem;
         }
 
+        .auth-shell-card {
+            position: sticky;
+            top: 1rem;
+        }
+
+        .auth-summary-line {
+            color: var(--plaza-text-dim);
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .auth-summary-line strong {
+            color: #183b63;
+        }
+
         .sidebar-auth-actions {
             display: flex;
             gap: 0.6rem;
@@ -1118,6 +1442,36 @@
 
         .sidebar-auth-actions button {
             flex: 1;
+        }
+
+        .oauth-divider {
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+            color: var(--plaza-text-faint);
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 1.1px;
+        }
+
+        .oauth-divider::before,
+        .oauth-divider::after {
+            content: "";
+            flex: 1;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(31, 122, 255, 0.18), transparent);
+        }
+
+        .oauth-btn-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 0.6rem;
+        }
+
+        .oauth-btn {
+            justify-content: center;
+            font-size: 0.84rem;
+            padding-inline: 0.7rem;
         }
 
         .users-panel,
@@ -1167,7 +1521,7 @@
 
         .user-row {
             display: grid;
-            grid-template-columns: minmax(0, 1.3fr) 140px 140px 120px;
+            grid-template-columns: minmax(0, 1.5fr) minmax(140px, 1fr) minmax(150px, 1fr) 120px;
             gap: 0.75rem;
             align-items: center;
             padding: 0.95rem;
@@ -1235,12 +1589,6 @@
             background: rgba(214, 79, 113, 0.1);
         }
 
-        .session-pill.role-moderator {
-            color: var(--plaza-pulse);
-            border-color: rgba(245, 158, 11, 0.2);
-            background: rgba(245, 158, 11, 0.1);
-        }
-
         .session-pill.role-user {
             color: var(--plaza-agent);
             border-color: rgba(31, 122, 255, 0.18);
@@ -1291,6 +1639,137 @@
             flex-wrap: wrap;
         }
 
+        .profile-layout {
+            display: grid;
+            grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+            gap: 1rem;
+            align-items: start;
+        }
+
+        .profile-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .profile-card {
+            position: relative;
+            border-radius: 24px;
+            padding: 1.2rem;
+            background: linear-gradient(160deg, rgba(255, 255, 255, 0.9), rgba(237, 247, 255, 0.84));
+            border: 1px solid var(--plaza-border);
+            backdrop-filter: blur(18px);
+            box-shadow:
+                0 22px 60px rgba(31, 122, 255, 0.09),
+                inset 0 1px 0 rgba(255, 255, 255, 0.82);
+        }
+
+        .profile-identity {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .profile-hero {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            align-items: flex-start;
+            padding: 1.1rem;
+            border-radius: 20px;
+            border: 1px solid rgba(31, 122, 255, 0.14);
+            background:
+                radial-gradient(circle at top left, rgba(87, 184, 255, 0.16), transparent 55%),
+                linear-gradient(180deg, rgba(249, 252, 255, 0.98), rgba(241, 248, 255, 0.88));
+        }
+
+        .profile-eyebrow {
+            display: block;
+            margin-bottom: 0.4rem;
+            font-size: 0.72rem;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: var(--plaza-text-faint);
+        }
+
+        .profile-name {
+            margin: 0;
+            font-size: 1.45rem;
+            line-height: 1.1;
+        }
+
+        .profile-handle {
+            margin-top: 0.4rem;
+            color: var(--plaza-text-dim);
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+        }
+
+        .profile-details-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.8rem;
+        }
+
+        .profile-detail-card {
+            border-radius: 18px;
+            border: 1px solid var(--plaza-border);
+            background: linear-gradient(180deg, rgba(250, 253, 255, 0.92), rgba(243, 249, 255, 0.82));
+            padding: 0.9rem 1rem;
+        }
+
+        .profile-detail-label {
+            display: block;
+            margin-bottom: 0.45rem;
+            font-size: 0.72rem;
+            letter-spacing: 1.2px;
+            text-transform: uppercase;
+            color: var(--plaza-text-faint);
+        }
+
+        .profile-detail-value {
+            color: #183b63;
+            font-size: 0.95rem;
+            font-weight: 600;
+            word-break: break-word;
+        }
+
+        .profile-form-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .profile-form-stack .field-card {
+            margin: 0;
+        }
+
+        .profile-form-actions {
+            display: flex;
+            gap: 0.7rem;
+            flex-wrap: wrap;
+        }
+
+        .profile-form-actions button {
+            flex: 1;
+            min-width: 180px;
+        }
+
+        .profile-help {
+            color: var(--plaza-text-dim);
+            font-size: 0.88rem;
+            line-height: 1.55;
+        }
+
+        .profile-password-note {
+            border-radius: 16px;
+            padding: 0.95rem 1rem;
+            border: 1px dashed rgba(31, 122, 255, 0.22);
+            background: rgba(246, 251, 255, 0.72);
+            color: var(--plaza-text-dim);
+            line-height: 1.55;
+        }
+
         .hidden {
             display: none !important;
         }
@@ -1311,6 +1790,10 @@
             }
 
             .editor-layout {
+                grid-template-columns: 1fr;
+            }
+
+            .users-layout {
                 grid-template-columns: 1fr;
             }
 
@@ -1342,6 +1825,14 @@
                 margin-bottom: 0;
             }
 
+            .sidebar-brand {
+                flex: 1 1 auto;
+            }
+
+            .sidebar-toggle {
+                display: none;
+            }
+
             .nav-links {
                 display: flex;
                 gap: 0.5rem;
@@ -1362,7 +1853,12 @@
             .editor-grid,
             .nodes-grid,
             .user-row,
+            .profile-details-grid,
             .pulser-builder {
+                grid-template-columns: 1fr;
+            }
+
+            .profile-layout {
                 grid-template-columns: 1fr;
             }
 
@@ -1379,6 +1875,10 @@
             .toolbar-actions button {
                 flex: 1 1 160px;
             }
+
+            .oauth-btn-grid {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
@@ -1389,54 +1889,22 @@
 
     <nav class="sidebar">
         <div class="sidebar-header">
-            <div class="logo-icon"></div>
-            <h3>at<span>tas</span></h3>
+            <div class="sidebar-brand">
+                <div class="logo-icon"></div>
+                <h3 class="sidebar-wordmark">at<span>tas</span></h3>
+            </div>
+            <button id="sidebar-toggle-btn" class="sidebar-toggle" type="button" aria-label="Collapse left panel" aria-expanded="true" data-tooltip="Collapse left panel">
+                <span class="sidebar-toggle-icon" aria-hidden="true"></span>
+            </button>
         </div>
         <ul class="nav-links">
-            <li class="active" data-page="monitor"><span class="icon-grid"></span> Monitor</li>
-            <li data-page="map"><span class="icon-grid"></span> Map</li>
-            <li data-page="editor"><span class="icon-layout"></span> Editor</li>
-            <li data-page="users"><span class="icon-piece"></span> Users</li>
+            <li class="active" data-page="monitor" data-tooltip="Review the live Plaza directory, search nodes, and monitor heartbeat status."><span class="icon-grid"></span><span class="nav-label">Monitor</span></li>
+            <li data-page="map" data-tooltip="See Plaza and agent relationships as a graph with draggable nodes."><span class="icon-grid"></span><span class="nav-label">Map</span></li>
+            <li data-page="editor" data-tooltip="Draft schemas, pulses, and Phemas in the local editor workspace."><span class="icon-layout"></span><span class="nav-label">Editor</span></li>
+            <li data-page="profile" data-tooltip="Review your account details and change your Plaza password."><span class="icon-piece"></span><span class="nav-label">Profile</span></li>
+            <li data-page="users" data-tooltip="Manage sign-in state and role-based user access."><span class="icon-piece"></span><span class="nav-label">Users</span></li>
+            <li data-page="settings" data-tooltip="Configure global sitewide typography and styling."><span class="icon-layout"></span><span class="nav-label">Settings</span></li>
         </ul>
-        <div id="sidebar-auth-shell" class="sidebar-auth-shell hidden">
-            <section class="auth-status-card">
-                <div class="panel-title">
-                    <h3>Session</h3>
-                    <span id="auth-config-badge" class="chip">Checking</span>
-                </div>
-                <div id="auth-status-body" class="users-panel-stack"></div>
-            </section>
-
-            <section class="users-panel">
-                <div class="panel-title">
-                    <h3>Access</h3>
-                    <span class="chip">Password</span>
-                </div>
-                <div class="auth-mode-tabs">
-                    <button id="auth-mode-signin" class="ghost-btn auth-mode-btn">Sign In</button>
-                    <button id="auth-mode-signup" class="ghost-btn auth-mode-btn">Sign Up</button>
-                </div>
-                <form id="auth-form" class="auth-form-stack">
-                    <div class="field-card">
-                        <label>Email</label>
-                        <input id="auth-email" class="editor-input" type="email" autocomplete="email" required>
-                    </div>
-                    <div class="field-card">
-                        <label>Password</label>
-                        <input id="auth-password" class="editor-input" type="password" autocomplete="current-password" required>
-                    </div>
-                    <div id="auth-display-name-card" class="field-card hidden">
-                        <label>Display Name</label>
-                        <input id="auth-display-name" class="editor-input" type="text" autocomplete="name">
-                    </div>
-                    <div class="sidebar-auth-actions">
-                        <button id="auth-submit-btn" class="primary-btn" type="submit">Sign In</button>
-                        <button id="auth-signout-btn" class="ghost-btn hidden" type="button">Sign Out</button>
-                    </div>
-                    <div id="auth-message" class="muted-line"></div>
-                </form>
-            </section>
-        </div>
         <div class="sidebar-footer">
             <div class="status-badge"><span class="pulsar"></span> {{ agent_name.split('Agent')[0] }}</div>
         </div>
@@ -1451,7 +1919,7 @@
                         <p class="subtitle">Plaza monitor, searchable directory, and live drafting handoff</p>
                     </div>
                     <div class="header-actions">
-                        <button id="jump-editor-btn" class="page-link-btn">Open Editor</button>
+                        <button id="jump-editor-btn" class="page-link-btn" data-tooltip="Jump directly into the artifact editor workspace.">Open Editor</button>
                     </div>
                 </header>
 
@@ -1461,17 +1929,20 @@
                             placeholder="Search nodes, owners, descriptions, or addresses">
                     </div>
                     <div class="toolbar-select-wrap">
-                        {% set pit_type_options = supported_pit_types if supported_pit_types is defined and supported_pit_types else ['Agent', 'Pulser', 'Schema', 'Pulse'] %}
-                        {% set type_state = namespace(agent_rendered=false) %}
+                        {% set pit_type_options = supported_pit_types if supported_pit_types is defined and supported_pit_types else ['Agent', 'Pulser', 'AgentConfig', 'Schema', 'Pulse', 'Phema', 'Party'] %}
+                        {% set ordered_monitor_types = ['Agent', 'AgentConfig', 'Schema', 'Pulse', 'Phema', 'Party'] %}
                         <select id="type-filter" class="toolbar-select">
                             <option value="">All PIT types</option>
-                            {% for pit_type in pit_type_options %}
-                            {% if pit_type in ['Agent', 'Pulser'] %}
-                            {% if not type_state.agent_rendered %}
+                            {% if 'Agent' in pit_type_options or 'Pulser' in pit_type_options %}
                             <option value="Agent">Agent</option>
-                            {% set type_state.agent_rendered = true %}
                             {% endif %}
-                            {% else %}
+                            {% for pit_type in ordered_monitor_types %}
+                            {% if pit_type != 'Agent' and pit_type in pit_type_options %}
+                            <option value="{{ pit_type }}">{{ pit_type }}</option>
+                            {% endif %}
+                            {% endfor %}
+                            {% for pit_type in pit_type_options %}
+                            {% if pit_type not in ['Agent', 'Pulser'] and pit_type not in ordered_monitor_types %}
                             <option value="{{ pit_type }}">{{ pit_type }}</option>
                             {% endif %}
                             {% endfor %}
@@ -1482,7 +1953,8 @@
                         Show inactive agents
                     </label>
                     <div class="toolbar-actions">
-                        <button id="refresh-btn" class="primary-btn"><span class="icon-refresh"></span> Sync Nodes</button>
+                        <button id="launch-agent-btn" class="ghost-btn" data-tooltip="Open the popup flow to launch a new agent or relaunch a saved AgentConfig.">Launch Agent</button>
+                        <button id="refresh-btn" class="primary-btn" data-tooltip="Refresh the Plaza directory and heartbeat-derived availability."><span class="icon-refresh"></span> Sync Nodes</button>
                     </div>
                 </section>
 
@@ -1505,13 +1977,13 @@
 
                 <section class="toolbar-card">
                     <div class="toolbar-actions">
-                        <button class="ghost-btn" data-create-kind="Schema">New Schema</button>
-                        <button class="ghost-btn" data-create-kind="Pulse">New Pulse</button>
-                        <button class="ghost-btn" data-create-kind="Phema">New Phema</button>
-                        <button class="ghost-btn" data-create-kind="Custom">New Custom</button>
+                        <button class="ghost-btn" data-create-kind="Schema" data-tooltip="Start a new schema draft that can be saved locally or exported.">New Schema</button>
+                        <button class="ghost-btn" data-create-kind="Pulse" data-tooltip="Create a new pulse definition for Plaza-aware runtimes.">New Pulse</button>
+                        <button class="ghost-btn" data-create-kind="Phema" data-tooltip="Create a new Phema and sync it back to the Plaza directory.">New Phema</button>
+                        <button class="ghost-btn" data-create-kind="Custom" data-tooltip="Open a local draft for future artifact types or ad hoc JSON work.">New Custom</button>
                     </div>
                     <div class="toolbar-actions">
-                        <button id="save-draft-btn" class="primary-btn">Save Draft</button>
+                        <button id="save-draft-btn" class="primary-btn" data-tooltip="Save the current draft into browser storage and sync eligible Phemas.">Save Draft</button>
                         <button id="delete-draft-btn" class="ghost-btn">Delete</button>
                         <button id="export-draft-btn" class="ghost-btn">Export JSON</button>
                         <button id="reset-draft-btn" class="ghost-btn">Reset Draft</button>
@@ -1532,6 +2004,7 @@
                                 <button class="chip-btn" data-kind-filter="Schema">Schema</button>
                                 <button class="chip-btn" data-kind-filter="Pulse">Pulse</button>
                                 <button class="chip-btn" data-kind-filter="Phema">Phema</button>
+                                <button class="chip-btn" data-kind-filter="AgentConfig">AgentConfig</button>
                                 <button class="chip-btn" data-kind-filter="Other">Other</button>
                             </div>
                         </div>
@@ -1561,6 +2034,91 @@
             </div>
         </section>
 
+        <section id="settings-page" class="page">
+            <div class="page-shell">
+                <header class="page-header">
+                    <div class="header-info">
+                        <h1>Site <span>Settings</span></h1>
+                        <p class="subtitle">Global styling and typography configuration for Plaza and connected agents</p>
+                    </div>
+                </header>
+
+                <section class="panel">
+                    <div class="panel-head">
+                        <div>
+                            <h3>Site Typography</h3>
+                            <div class="muted">Override the default font sizes and colors across all components.</div>
+                        </div>
+                        <div class="toolbar">
+                            <button id="save-site-settings-btn" class="primary-btn" type="button">Save Settings</button>
+                        </div>
+                    </div>
+
+                    <div class="settings-layout">
+                        <div class="settings-form">
+                            <div class="editor-grid">
+                                <div class="field">
+                                    <label>Title Size (h1)</label>
+                                    <input id="setting-title-size" type="text" placeholder="e.g. 1.75rem">
+                                </div>
+                                <div class="field">
+                                    <label>Title Color</label>
+                                    <input id="setting-title-color" type="color">
+                                </div>
+                                <div class="field">
+                                    <label>Header Size (h2/h3)</label>
+                                    <input id="setting-header-size" type="text" placeholder="e.g. 1.25rem">
+                                </div>
+                                <div class="field">
+                                    <label>Header Color</label>
+                                    <input id="setting-header-color" type="color">
+                                </div>
+                                <div class="field">
+                                    <label>Content Size (Body)</label>
+                                    <input id="setting-content-size" type="text" placeholder="e.g. 1rem">
+                                </div>
+                                <div class="field">
+                                    <label>Content Color</label>
+                                    <input id="setting-content-color" type="color">
+                                </div>
+                                <div class="field">
+                                    <label>Global Theme</label>
+                                    <select id="setting-theme" class="toolbar-select">
+                                        <option value="paper">Enterprise (Light)</option>
+                                        <option value="graphite">Graphite (Gray)</option>
+                                        <option value="midnight">Midnight (Dark)</option>
+                                    </select>
+                                </div>
+                                <div class="field">
+                                    <label>Global Accent</label>
+                                    <select id="setting-accent" class="toolbar-select">
+                                        <option value="cobalt">Cobalt (Blue)</option>
+                                        <option value="indigo">Indigo (Purple)</option>
+                                        <option value="forest">Forest (Green)</option>
+                                        <option value="crimson">Crimson (Red)</option>
+                                        <option value="slate">Slate (Dark)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="settings-preview">
+                            <label class="section-label">Live Preview Sample</label>
+                            <div class="ui-preview-card">
+                                <h1>The Quick Brown Fox</h1>
+                                <h2>Intelligence & Automation Layer</h2>
+                                <p>This sample demonstrates how your global typography settings (size, color, and weight) will appear across all connected agents and the Plaza dashboard. These changes apply instantly to your current session for preview and will propagate ecosystem-wide once saved.</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <div class="draft-note">
+                    <p>Changes saved here will propagate to all connected agents via heartbeat synchronization and will be applied to their web interfaces automatically.</p>
+                </div>
+            </div>
+        </section>
+
         <section id="map-page" class="page">
             <div class="page-shell">
                 <header class="page-header">
@@ -1586,12 +2144,80 @@
             </div>
         </section>
 
+        <section id="profile-page" class="page">
+            <div class="page-shell">
+                <header class="page-header">
+                    <div class="header-info">
+                        <h1>Account <span>Profile</span></h1>
+                        <p class="subtitle">Review your Plaza identity, update your display name, and rotate your password.</p>
+                    </div>
+                    <div class="header-actions inline-actions">
+                        <button id="profile-refresh-btn" class="ghost-btn">Refresh Profile</button>
+                    </div>
+                </header>
+
+                <div class="profile-layout">
+                    <section class="profile-card">
+                        <div class="panel-title">
+                            <h3>Identity Snapshot</h3>
+                            <span id="profile-role-chip" class="chip">Profile</span>
+                        </div>
+                        <div id="profile-summary-wrap" class="profile-identity"></div>
+                    </section>
+
+                    <div class="profile-stack">
+                        <section class="profile-card">
+                            <div class="panel-title">
+                                <h3>Profile Details</h3>
+                            </div>
+                            <form id="profile-form" class="profile-form-stack">
+                                <div class="field-card">
+                                    <label>Display Name</label>
+                                    <input id="profile-display-name" class="editor-input" type="text" autocomplete="name">
+                                </div>
+                                <div class="profile-help">Your username, role, and identity provider stay fixed here. Display name is the profile field you can personalize.</div>
+                                <div class="profile-form-actions">
+                                    <button id="profile-save-btn" class="primary-btn" type="submit">Save Profile</button>
+                                </div>
+                                <div id="profile-message" class="muted-line"></div>
+                            </form>
+                        </section>
+
+                        <section class="profile-card">
+                            <div class="panel-title">
+                                <h3>Password</h3>
+                            </div>
+                            <div id="password-unsupported" class="profile-password-note hidden"></div>
+                            <form id="password-form" class="profile-form-stack">
+                                <div class="field-card">
+                                    <label>Current Password</label>
+                                    <input id="profile-current-password" class="editor-input" type="password" autocomplete="current-password">
+                                </div>
+                                <div class="field-card">
+                                    <label>New Password</label>
+                                    <input id="profile-new-password" class="editor-input" type="password" autocomplete="new-password">
+                                </div>
+                                <div class="field-card">
+                                    <label>Confirm New Password</label>
+                                    <input id="profile-confirm-password" class="editor-input" type="password" autocomplete="new-password">
+                                </div>
+                                <div class="profile-form-actions">
+                                    <button id="password-save-btn" class="primary-btn" type="submit">Change Password</button>
+                                </div>
+                                <div id="password-message" class="muted-line"></div>
+                            </form>
+                        </section>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <section id="users-page" class="page">
             <div class="page-shell">
                 <header class="page-header">
                     <div class="header-info">
                         <h1>User <span>Management</span></h1>
-                        <p class="subtitle">Role-based access for admin, moderator, and user</p>
+                        <p class="subtitle">Role-based access for admin and user accounts</p>
                     </div>
                     <div class="header-actions inline-actions">
                         <button id="users-refresh-btn" class="ghost-btn">Refresh Users</button>
@@ -1599,7 +2225,46 @@
                 </header>
 
                 <div class="users-layout">
-                    <section class="user-table-card">
+                    <aside id="sidebar-auth-shell" class="sidebar-auth-shell hidden">
+                        <section class="users-panel auth-shell-card">
+                            <div class="panel-title">
+                                <h3>Plaza Access</h3>
+                                <span id="auth-config-badge" class="chip">Checking</span>
+                            </div>
+                            <div id="auth-status-body" class="users-panel-stack"></div>
+                            <div class="auth-mode-tabs">
+                                <button id="auth-mode-signin" class="ghost-btn auth-mode-btn">Sign In</button>
+                                <button id="auth-mode-signup" class="ghost-btn auth-mode-btn">Sign Up</button>
+                            </div>
+                            <form id="auth-form" class="auth-form-stack">
+                                <div class="field-card">
+                                    <label id="auth-identifier-label">Username or Email</label>
+                                    <input id="auth-identifier" class="editor-input" type="text" autocomplete="username" required>
+                                </div>
+                                <div class="field-card">
+                                    <label>Password</label>
+                                    <input id="auth-password" class="editor-input" type="password" autocomplete="current-password" required>
+                                </div>
+                                <div id="auth-display-name-card" class="field-card hidden">
+                                    <label>Display Name</label>
+                                    <input id="auth-display-name" class="editor-input" type="text" autocomplete="name">
+                                </div>
+                                <div class="sidebar-auth-actions">
+                                    <button id="auth-submit-btn" class="primary-btn" type="submit">Sign In</button>
+                                    <button id="auth-signout-btn" class="ghost-btn hidden" type="button">Sign Out</button>
+                                </div>
+                                <div class="oauth-divider">or continue with</div>
+                                <div class="oauth-btn-grid">
+                                    <button class="ghost-btn oauth-btn" type="button" data-oauth-provider="google">Google</button>
+                                    <button class="ghost-btn oauth-btn" type="button" data-oauth-provider="github">GitHub</button>
+                                    <button class="ghost-btn oauth-btn" type="button" data-oauth-provider="apple">Apple</button>
+                                </div>
+                                <div id="auth-message" class="muted-line"></div>
+                            </form>
+                        </section>
+                    </aside>
+
+                    <section id="users-directory-card" class="user-table-card">
                         <div class="users-toolbar">
                             <div>
                                 <h3 style="font-size:1rem;font-weight:700;">Directory</h3>
@@ -1618,6 +2283,8 @@
         const HEARTBEAT_ACTIVE_WINDOW_SEC = 60;
         const STORAGE_KEYS = {
             activePage: 'plaza.ui.activePage',
+            postAuthPage: 'plaza.ui.postAuthPage',
+            sidebarCollapsed: 'plaza.ui.sidebarCollapsed',
             monitorSearch: 'plaza.ui.monitorSearch',
             typeFilter: 'plaza.ui.typeFilter',
             showInactive: 'plaza.ui.showInactive',
@@ -1771,6 +2438,8 @@
             editorSearch: '',
             editorKindFilter: 'All',
             activePage: 'monitor',
+            postAuthPage: 'monitor',
+            sidebarCollapsed: false,
             drafts: [],
             activeDraftId: '',
             authMode: 'signin',
@@ -1780,26 +2449,39 @@
             users: [],
             authMessage: '',
             usersMessage: '',
+            profileMessage: '',
+            passwordMessage: '',
+            authBusy: false,
+            profileBusy: false,
+            passwordBusy: false,
+            authRedirectReady: false,
             mapSearch: '',
             mapLayouts: {}
         };
+        let authRefreshPromise = null;
 
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
             restoreUiState();
             bindStaticEvents();
+            applySidebarState();
             setActivePage(state.activePage);
             renderAll();
-            fetchStatus();
-            loadAuthState();
+            await loadAuthState();
+            if (hasProtectedUiAccess()) {
+                await fetchStatus();
+            }
         });
 
         function bindStaticEvents() {
+            document.getElementById('sidebar-toggle-btn').addEventListener('click', toggleSidebarCollapse);
+
             document.querySelectorAll('.nav-links li[data-page]').forEach((item) => {
                 item.addEventListener('click', () => setActivePage(item.dataset.page));
             });
 
             document.getElementById('jump-editor-btn').addEventListener('click', () => setActivePage('editor'));
             document.getElementById('back-monitor-btn').addEventListener('click', () => setActivePage('monitor'));
+            document.getElementById('launch-agent-btn').addEventListener('click', () => openAgentLaunchWindow({ sourceKey: '', source: null }));
             document.getElementById('refresh-btn').addEventListener('click', fetchStatus);
             document.getElementById('back-monitor-from-map-btn').addEventListener('click', () => setActivePage('monitor'));
             document.getElementById('refresh-map-btn').addEventListener('click', fetchStatus);
@@ -1850,8 +2532,15 @@
             document.getElementById('delete-draft-btn').addEventListener('click', deleteActiveDraft);
             document.getElementById('export-draft-btn').addEventListener('click', exportActiveDraft);
             document.getElementById('reset-draft-btn').addEventListener('click', resetActiveDraft);
+            document.getElementById('save-site-settings-btn').addEventListener('click', saveSiteSettings);
 
             document.getElementById('monitor-plazas').addEventListener('click', (event) => {
+                const launchBtn = event.target.closest('[data-open-agent-launch]');
+                if (launchBtn) {
+                    openAgentLaunchWindow({ sourceKey: launchBtn.dataset.openAgentLaunch || '' });
+                    return;
+                }
+
                 const openBtn = event.target.closest('[data-open-source]');
                 if (openBtn) {
                     const source = findItem(openBtn.dataset.openSource);
@@ -1883,6 +2572,12 @@
             });
 
             document.getElementById('catalog-list').addEventListener('click', (event) => {
+                const launchBtn = event.target.closest('[data-open-agent-launch]');
+                if (launchBtn) {
+                    openAgentLaunchWindow({ sourceKey: launchBtn.dataset.openAgentLaunch || '' });
+                    return;
+                }
+
                 const openBtn = event.target.closest('[data-open-source]');
                 if (!openBtn) return;
                 const source = findItem(openBtn.dataset.openSource);
@@ -1916,8 +2611,14 @@
             document.getElementById('auth-mode-signin').addEventListener('click', () => setAuthMode('signin'));
             document.getElementById('auth-mode-signup').addEventListener('click', () => setAuthMode('signup'));
             document.getElementById('auth-form').addEventListener('submit', handleAuthSubmit);
+            document.getElementById('profile-refresh-btn').addEventListener('click', refreshProfileView);
+            document.getElementById('profile-form').addEventListener('submit', saveProfileDetails);
+            document.getElementById('password-form').addEventListener('submit', changeProfilePassword);
             document.getElementById('users-refresh-btn').addEventListener('click', loadUsersDirectory);
             document.getElementById('auth-signout-btn').addEventListener('click', signOutUiUser);
+            document.querySelectorAll('[data-oauth-provider]').forEach((button) => {
+                button.addEventListener('click', () => startOAuthSignIn(button.dataset.oauthProvider || ''));
+            });
             document.getElementById('users-table-wrap').addEventListener('click', async (event) => {
                 const saveBtn = event.target.closest('[data-save-user]');
                 if (!saveBtn) return;
@@ -1928,13 +2629,53 @@
             });
         }
 
+        function normalizeUiPage(page) {
+            const allowedPages = new Set(['monitor', 'map', 'editor', 'profile', 'users', 'settings']);
+            return allowedPages.has(page) ? page : 'monitor';
+        }
+
+        function applySidebarState() {
+            document.body.classList.toggle('sidebar-collapsed', !!state.sidebarCollapsed);
+            const toggleBtn = document.getElementById('sidebar-toggle-btn');
+            if (!toggleBtn) return;
+            const isCollapsed = !!state.sidebarCollapsed;
+            toggleBtn.setAttribute('aria-expanded', String(!isCollapsed));
+            toggleBtn.setAttribute('aria-label', isCollapsed ? 'Expand left panel' : 'Collapse left panel');
+            toggleBtn.dataset.tooltip = isCollapsed ? 'Expand left panel' : 'Collapse left panel';
+        }
+
+        function toggleSidebarCollapse() {
+            state.sidebarCollapsed = !state.sidebarCollapsed;
+            applySidebarState();
+            persistUiState();
+        }
+
+        function isProtectedPage(page) {
+            return page === 'monitor' || page === 'map' || page === 'editor' || page === 'profile' || page === 'settings';
+        }
+
+        function hasProtectedUiAccess() {
+            return !!state.authSession?.access_token;
+        }
+
+        function clearProtectedUiData() {
+            state.plazas = [];
+            state.items = [];
+        }
+
         function restoreUiState() {
             state.monitorSearch = localStorage.getItem(STORAGE_KEYS.monitorSearch) || '';
             state.typeFilter = localStorage.getItem(STORAGE_KEYS.typeFilter) || '';
             state.showInactive = localStorage.getItem(STORAGE_KEYS.showInactive) === '1';
             state.editorSearch = localStorage.getItem(STORAGE_KEYS.editorSearch) || '';
             state.editorKindFilter = localStorage.getItem(STORAGE_KEYS.editorKindFilter) || 'All';
-            state.activePage = localStorage.getItem(STORAGE_KEYS.activePage) || 'monitor';
+            state.sidebarCollapsed = localStorage.getItem(STORAGE_KEYS.sidebarCollapsed) === '1';
+            const savedPage = normalizeUiPage(localStorage.getItem(STORAGE_KEYS.activePage) || 'monitor');
+            const savedPostAuthPage = normalizeUiPage(localStorage.getItem(STORAGE_KEYS.postAuthPage) || savedPage);
+            state.activePage = savedPage;
+            state.postAuthPage = isProtectedPage(savedPostAuthPage)
+                ? savedPostAuthPage
+                : (isProtectedPage(savedPage) ? savedPage : 'monitor');
             state.activeDraftId = localStorage.getItem(STORAGE_KEYS.activeDraftId) || '';
             state.authMode = localStorage.getItem(STORAGE_KEYS.authMode) || 'signin';
 
@@ -1961,6 +2702,7 @@
             document.getElementById('type-filter').value = state.typeFilter;
             document.getElementById('show-inactive').checked = state.showInactive;
             document.getElementById('editor-search').value = state.editorSearch;
+            consumeAuthFlash();
         }
 
         function persistUiState() {
@@ -1970,6 +2712,8 @@
             localStorage.setItem(STORAGE_KEYS.editorSearch, state.editorSearch);
             localStorage.setItem(STORAGE_KEYS.editorKindFilter, state.editorKindFilter);
             localStorage.setItem(STORAGE_KEYS.activePage, state.activePage);
+            localStorage.setItem(STORAGE_KEYS.postAuthPage, state.postAuthPage);
+            localStorage.setItem(STORAGE_KEYS.sidebarCollapsed, state.sidebarCollapsed ? '1' : '0');
             localStorage.setItem(STORAGE_KEYS.activeDraftId, state.activeDraftId || '');
             localStorage.setItem(STORAGE_KEYS.drafts, JSON.stringify(state.drafts));
             localStorage.setItem(STORAGE_KEYS.authMode, state.authMode);
@@ -1980,9 +2724,80 @@
             }
         }
 
-        function setActivePage(page) {
-            const allowedPages = new Set(['monitor', 'map', 'editor', 'users']);
-            state.activePage = allowedPages.has(page) ? page : 'monitor';
+        function clearUiAuthState(message = '') {
+            authRefreshPromise = null;
+            state.authSession = null;
+            state.currentUser = null;
+            state.users = [];
+            state.usersMessage = '';
+            state.profileMessage = '';
+            state.passwordMessage = '';
+            state.authMessage = message;
+            clearProtectedUiData();
+            persistUiState();
+            setActivePage('users', { force: true, silent: true });
+            renderAll();
+        }
+
+        async function refreshAuthSession() {
+            const refreshToken = String(state.authSession?.refresh_token || '').trim();
+            if (!refreshToken) {
+                return null;
+            }
+            if (authRefreshPromise) {
+                return authRefreshPromise;
+            }
+
+            authRefreshPromise = (async () => {
+                try {
+                    const response = await fetch('/api/ui_auth/refresh', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ refresh_token: refreshToken })
+                    });
+                    const data = await readJsonResponse(response);
+                    if (!response.ok) {
+                        throw new Error(formatUiError(data.detail || data.message || data, 'Session refresh failed'));
+                    }
+                    state.authSession = data.session || null;
+                    state.currentUser = data.user || state.currentUser;
+                    persistUiState();
+                    renderProfilePage();
+                    renderUsersPage();
+                    return state.authSession;
+                } catch (error) {
+                    clearUiAuthState(formatUiError(error?.message || error, 'Session expired. Please sign in again.'));
+                    return null;
+                } finally {
+                    authRefreshPromise = null;
+                }
+            })();
+
+            return authRefreshPromise;
+        }
+
+        async function ensureAuthSession() {
+            if (state.authSession?.access_token) {
+                return state.authSession;
+            }
+            if (state.authSession?.refresh_token) {
+                return refreshAuthSession();
+            }
+            return null;
+        }
+
+        function setActivePage(page, options = {}) {
+            const requestedPage = normalizeUiPage(page);
+            if (isProtectedPage(requestedPage)) {
+                state.postAuthPage = requestedPage;
+            }
+
+            const blockedByAuth = isProtectedPage(requestedPage) && !hasProtectedUiAccess() && !options.force;
+            if (blockedByAuth && !options.silent && !state.authMessage) {
+                state.authMessage = 'Sign in to access the Plaza UI.';
+            }
+
+            state.activePage = blockedByAuth ? 'users' : requestedPage;
             document.querySelectorAll('.nav-links li[data-page]').forEach((item) => {
                 item.classList.toggle('active', item.dataset.page === state.activePage);
             });
@@ -1990,23 +2805,168 @@
                 pageNode.classList.toggle('active', pageNode.id === `${state.activePage}-page`);
             });
             document.getElementById('sidebar-auth-shell').classList.toggle('hidden', state.activePage !== 'users');
+            if (state.activePage === 'profile') {
+                renderProfilePage();
+            }
             if (state.activePage === 'users') {
                 renderUsersPage();
                 if (state.authSession?.access_token) {
                     loadUsersDirectory();
                 }
             }
+            if (state.activePage === 'settings') {
+                loadSiteSettings();
+            }
             persistUiState();
         }
 
+        // Periodically sync site settings to keep the Plaza UI consistent with global changes
+        setInterval(() => {
+            if (state.activePage !== 'settings') {
+                loadSiteSettings();
+            }
+        }, 30000);
+
+        async function loadSiteSettings() {
+            try {
+                const response = await authFetch('/api/site-settings');
+                const data = await response.json();
+                if (data.status === 'success' && data.settings) {
+                    const s = data.settings;
+                    const typo = s.typography || {};
+                    
+                    document.getElementById('setting-title-size').value = typo.title?.size || '';
+                    document.getElementById('setting-title-color').value = typo.title?.color || '#0f172a';
+                    document.getElementById('setting-header-size').value = typo.header?.size || '';
+                    document.getElementById('setting-header-color').value = typo.header?.color || '#1e293b';
+                    document.getElementById('setting-content-size').value = typo.content?.size || '';
+                    document.getElementById('setting-content-color').value = typo.content?.color || '#334155';
+                    
+                    if (s.theme) document.getElementById('setting-theme').value = s.theme;
+                    if (s.accent) document.getElementById('setting-accent').value = s.accent;
+                    
+                    updateSitePreview();
+                }
+            } catch (error) {
+                console.error('Failed to load site settings:', error);
+            }
+        }
+
+        function updateSitePreview() {
+            const root = document.querySelector('.ui-preview-card');
+            if (!root) return;
+            
+            const tSize = document.getElementById('setting-title-size').value;
+            const tColor = document.getElementById('setting-title-color').value;
+            const hSize = document.getElementById('setting-header-size').value;
+            const hColor = document.getElementById('setting-header-color').value;
+            const cSize = document.getElementById('setting-content-size').value;
+            const cColor = document.getElementById('setting-content-color').value;
+            
+            const h1 = root.querySelector('h1');
+            const h2 = root.querySelector('h2');
+            const p = root.querySelector('p');
+            
+            if (h1) {
+                if (tSize) h1.style.fontSize = tSize;
+                if (tColor) h1.style.color = tColor;
+            }
+            if (h2) {
+                if (hSize) h2.style.fontSize = hSize;
+                if (hColor) h2.style.color = hColor;
+            }
+            if (p) {
+                if (cSize) p.style.fontSize = cSize;
+                if (cColor) p.style.color = cColor;
+            }
+
+            // Theme/Accent Preview (Immediate for Plaza)
+            if (window.attasTheme) {
+                window.attasTheme.applyPreferences({
+                    theme: document.getElementById('setting-theme').value,
+                    accent: document.getElementById('setting-accent').value
+                });
+            }
+        }
+
+        async function saveSiteSettings() {
+            const settings = {
+                typography: {
+                    title: {
+                        size: document.getElementById('setting-title-size').value,
+                        color: document.getElementById('setting-title-color').value,
+                        weight: '700'
+                    },
+                    header: {
+                        size: document.getElementById('setting-header-size').value,
+                        color: document.getElementById('setting-header-color').value,
+                        weight: '600'
+                    },
+                    content: {
+                        size: document.getElementById('setting-content-size').value,
+                        color: document.getElementById('setting-content-color').value,
+                        weight: '400'
+                    }
+                },
+                theme: document.getElementById('setting-theme').value,
+                accent: document.getElementById('setting-accent').value
+            };
+
+            const btn = document.getElementById('save-site-settings-btn');
+            const originalText = btn.textContent;
+            btn.textContent = 'Saving...';
+            btn.disabled = true;
+            try {
+                const response = await authFetch('/api/site-settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(settings)
+                });
+                const data = await response.json();
+                if (data.status === 'success') {
+                    btn.textContent = 'Saved!';
+                    if (window.attasTheme && window.attasTheme.syncGlobalSettings) {
+                        window.attasTheme.syncGlobalSettings();
+                    }
+                } else {
+                    alert('Failed to save settings: ' + data.message);
+                }
+            } catch (error) {
+                console.error('Failed to save site settings:', error);
+                alert('Error saving settings');
+            } finally {
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.disabled = false;
+                }, 2000);
+            }
+        }
+
+        // Bind events
+        ['setting-title-size', 'setting-title-color', 'setting-header-size', 'setting-header-color', 
+         'setting-content-size', 'setting-content-color', 'setting-theme', 'setting-accent'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.oninput = updateSitePreview;
+                el.onchange = updateSitePreview;
+            }
+        });
+        document.getElementById('save-site-settings-btn').onclick = saveSiteSettings;
+
         async function fetchStatus() {
+            if (!hasProtectedUiAccess()) {
+                clearProtectedUiData();
+                renderAll();
+                return;
+            }
+
             const container = document.getElementById('monitor-plazas');
             if (!state.plazas.length) {
                 container.innerHTML = '<div class="empty-state-card"><div><div class="loader" style="display:block;margin:0 auto 1rem;"></div><p class="empty-note">Syncing Plaza monitor...</p></div></div>';
             }
 
             try {
-                const response = await fetch('/api/plazas_status');
+                const response = await authFetch('/api/plazas_status');
                 const data = await response.json();
                 if (data.status !== 'success') throw new Error(data.message || 'Unexpected response');
                 state.plazas = Array.isArray(data.plazas) ? data.plazas : [];
@@ -2023,6 +2983,7 @@
             plazas.forEach((plaza, plazaIndex) => {
                 (plaza.agents || []).forEach((entry, entryIndex) => {
                     const card = entry.card || {};
+                    const meta = normalizeMeta(entry.meta || card.meta || {});
                     const kind = normalizeKind(entry.pit_type || card.pit_type || entry.type || 'Agent');
                     const sourceKey = String(entry.agent_id || card.agent_id || `${plaza.url || 'plaza'}::${kind}::${entry.name || entryIndex}`);
                     if (deduped.has(sourceKey)) return;
@@ -2037,7 +2998,10 @@
                         description: entry.description || card.description || '',
                         owner: entry.owner || card.owner || entry.name || '',
                         address: card.address || entry.address || '',
-                        meta: normalizeMeta(entry.meta || card.meta || {}),
+                        meta,
+                        config: kind === 'AgentConfig' && meta.config && typeof meta.config === 'object' && !Array.isArray(meta.config)
+                            ? clone(meta.config)
+                            : {},
                         card,
                         raw: entry,
                         last_active: Number(entry.last_active || 0),
@@ -2084,6 +3048,7 @@
             renderTabStrip();
             renderWorkspaceBody();
             renderInspector();
+            renderProfilePage();
             renderUsersPage();
         }
 
@@ -2091,10 +3056,25 @@
             await fetchAuthConfig();
             setAuthMode(state.authMode);
             renderUsersPage();
+            await ensureAuthSession();
             if (state.authSession?.access_token) {
-                await fetchCurrentUiUser();
-                await loadUsersDirectory();
+                const currentUser = await fetchCurrentUiUser();
+                if (currentUser) {
+                    await loadUsersDirectory();
+                    if (state.authRedirectReady && state.activePage === 'users' && isProtectedPage(state.postAuthPage)) {
+                        setActivePage(state.postAuthPage, { silent: true });
+                    }
+                } else {
+                    clearProtectedUiData();
+                    setActivePage(state.activePage, { silent: true });
+                    renderAll();
+                }
+            } else {
+                clearProtectedUiData();
+                setActivePage(state.activePage, { silent: true });
+                renderAll();
             }
+            state.authRedirectReady = false;
         }
 
         async function fetchAuthConfig() {
@@ -2105,10 +3085,37 @@
                     state.authConfig = data;
                 }
             } catch (error) {
-                state.authConfig = { auth_enabled: false, service_role_enabled: false, roles: ['admin', 'moderator', 'user'] };
+                state.authConfig = { auth_enabled: false, service_role_enabled: false, default_admin_ready: false, default_admin_error: '', roles: ['admin', 'user'], oauth_providers: [] };
                 state.authMessage = `Failed to load auth config: ${error.message}`;
             }
             renderUsersPage();
+        }
+
+        function consumeAuthFlash() {
+            const flash = sessionStorage.getItem('plaza.ui.flash');
+            if (!flash) return;
+            state.authMessage = flash;
+            state.authRedirectReady = true;
+            sessionStorage.removeItem('plaza.ui.flash');
+        }
+
+        function updateAuthControls() {
+            const authEnabled = state.authConfig ? !!state.authConfig.auth_enabled : true;
+            const submitBtn = document.getElementById('auth-submit-btn');
+            const signoutBtn = document.getElementById('auth-signout-btn');
+            const identifierInput = document.getElementById('auth-identifier');
+            const passwordInput = document.getElementById('auth-password');
+            const displayNameInput = document.getElementById('auth-display-name');
+            const isBusy = !!state.authBusy;
+
+            submitBtn.textContent = state.authMode === 'signup'
+                ? (isBusy ? 'Creating Account...' : 'Create Account')
+                : (isBusy ? 'Signing In...' : 'Sign In');
+            submitBtn.disabled = isBusy || !authEnabled;
+            signoutBtn.disabled = isBusy;
+            identifierInput.disabled = isBusy;
+            passwordInput.disabled = isBusy;
+            displayNameInput.disabled = isBusy;
         }
 
         function setAuthMode(mode) {
@@ -2117,21 +3124,81 @@
             document.getElementById('auth-mode-signup').classList.toggle('active', state.authMode === 'signup');
             document.getElementById('auth-display-name-card').classList.toggle('hidden', state.authMode !== 'signup');
             document.getElementById('auth-submit-btn').textContent = state.authMode === 'signup' ? 'Create Account' : 'Sign In';
+            document.getElementById('auth-identifier-label').textContent = state.authMode === 'signup' ? 'Username' : 'Username or Email';
+            document.getElementById('auth-identifier').placeholder = state.authMode === 'signup' ? 'Choose a username' : 'Enter username or email';
+            document.getElementById('auth-identifier').autocomplete = state.authMode === 'signup' ? 'username' : 'username';
+            document.getElementById('auth-password').autocomplete = state.authMode === 'signup' ? 'new-password' : 'current-password';
+            updateAuthControls();
             persistUiState();
+        }
+
+        async function readJsonResponse(response) {
+            const contentType = String(response.headers.get('content-type') || '').toLowerCase();
+            if (contentType.includes('application/json')) {
+                return response.json();
+            }
+            const text = await response.text();
+            return { detail: text || response.statusText || 'Unexpected response' };
+        }
+
+        function formatUiError(value, fallback = 'Unexpected response') {
+            if (!value) return fallback;
+            if (typeof value === 'string') return value;
+            if (Array.isArray(value)) {
+                const parts = value
+                    .map((item) => formatUiError(item, ''))
+                    .filter(Boolean);
+                return parts.join(' • ') || fallback;
+            }
+            if (typeof value === 'object') {
+                if (typeof value.message === 'string' && value.message.trim()) {
+                    return value.message.trim();
+                }
+                if (typeof value.detail === 'string' && value.detail.trim()) {
+                    return value.detail.trim();
+                }
+                if (Array.isArray(value.reasons) && value.reasons.length) {
+                    return value.reasons.join(' • ');
+                }
+                if (value.loc && value.msg) {
+                    const location = Array.isArray(value.loc) ? value.loc.filter((part) => part !== 'body').join('.') : '';
+                    return location ? `${location}: ${value.msg}` : value.msg;
+                }
+                try {
+                    return JSON.stringify(value);
+                } catch (_) {
+                    return fallback;
+                }
+            }
+            return String(value);
         }
 
         async function handleAuthSubmit(event) {
             event.preventDefault();
+            if (state.authConfig && !state.authConfig.auth_enabled) {
+                state.authMessage = 'Authentication is not configured for this Plaza instance.';
+                renderUsersPage();
+                return;
+            }
             const endpoint = state.authMode === 'signup' ? '/api/ui_auth/signup' : '/api/ui_auth/signin';
-            const payload = {
-                email: document.getElementById('auth-email').value.trim(),
-                password: document.getElementById('auth-password').value,
-            };
+            const identifier = document.getElementById('auth-identifier').value.trim();
+            const password = document.getElementById('auth-password').value;
+            const payload = { password };
+            if (!identifier || !password) {
+                state.authMessage = 'Enter your username and password to continue.';
+                renderUsersPage();
+                return;
+            }
             if (state.authMode === 'signup') {
+                payload.username = identifier;
                 payload.display_name = document.getElementById('auth-display-name').value.trim();
+            } else {
+                payload.identifier = identifier;
             }
 
-            state.authMessage = '';
+            state.authBusy = true;
+            state.usersMessage = '';
+            state.authMessage = state.authMode === 'signup' ? 'Creating account...' : 'Signing in...';
             renderUsersPage();
 
             try {
@@ -2140,9 +3207,9 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
-                const data = await response.json();
+                const data = await readJsonResponse(response);
                 if (!response.ok) {
-                    throw new Error(data.detail || data.message || 'Authentication request failed');
+                    throw new Error(formatUiError(data.detail || data.message || data, 'Authentication request failed'));
                 }
                 state.authSession = data.session || null;
                 state.currentUser = data.user || null;
@@ -2152,15 +3219,27 @@
                 persistUiState();
                 renderUsersPage();
                 await loadUsersDirectory();
+                setActivePage(state.postAuthPage, { silent: true });
+                await fetchStatus();
             } catch (error) {
-                state.authMessage = error.message;
+                state.authMessage = formatUiError(error?.message || error, 'Authentication request failed');
+            } finally {
+                state.authBusy = false;
                 renderUsersPage();
             }
         }
 
+        function startOAuthSignIn(provider) {
+            const normalized = String(provider || '').trim().toLowerCase();
+            if (!normalized) return;
+            window.location.assign(`/api/ui_auth/oauth/${encodeURIComponent(normalized)}/start?next=${encodeURIComponent('/plazas')}`);
+        }
+
         async function fetchCurrentUiUser() {
-            if (!state.authSession?.access_token) {
+            const session = await ensureAuthSession();
+            if (!session?.access_token) {
                 state.currentUser = null;
+                renderProfilePage();
                 renderUsersPage();
                 return null;
             }
@@ -2174,14 +3253,11 @@
                 const data = await response.json();
                 state.currentUser = data.user || null;
                 persistUiState();
+                renderProfilePage();
                 renderUsersPage();
                 return state.currentUser;
             } catch (error) {
-                state.currentUser = null;
-                state.authSession = null;
-                state.authMessage = error.message;
-                persistUiState();
-                renderUsersPage();
+                clearUiAuthState(formatUiError(error?.message || error, 'Session expired. Please sign in again.'));
                 return null;
             }
         }
@@ -2189,6 +3265,7 @@
         async function loadUsersDirectory() {
             if (!state.authSession?.access_token) {
                 state.users = [];
+                renderProfilePage();
                 renderUsersPage();
                 return;
             }
@@ -2207,24 +3284,131 @@
                 state.usersMessage = error.message;
             }
             persistUiState();
+            renderProfilePage();
             renderUsersPage();
         }
 
         async function signOutUiUser() {
-            state.authSession = null;
-            state.currentUser = null;
-            state.users = [];
-            state.authMessage = 'Signed out.';
-            persistUiState();
-            renderUsersPage();
+            try {
+                await fetch('/api/ui_auth/signout', { method: 'POST' });
+            } catch (_) {
+                // Local sign-out still proceeds even if the network is unavailable.
+            }
+            clearUiAuthState('Signed out.');
+        }
+
+        async function refreshProfileView() {
+            state.profileMessage = '';
+            state.passwordMessage = '';
+            renderProfilePage();
+            const currentUser = await fetchCurrentUiUser();
+            if (currentUser) {
+                await loadUsersDirectory();
+            }
+            renderProfilePage();
+        }
+
+        async function saveProfileDetails(event) {
+            event.preventDefault();
+            if (!state.authSession?.access_token || !state.currentUser) {
+                state.profileMessage = 'Sign in to update your profile.';
+                renderProfilePage();
+                return;
+            }
+
+            const displayName = document.getElementById('profile-display-name').value.trim();
+            state.profileBusy = true;
+            state.profileMessage = 'Saving profile...';
+            renderProfilePage();
+
+            try {
+                const response = await authFetch('/api/ui_auth/profile', {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ display_name: displayName })
+                });
+                const data = await readJsonResponse(response);
+                if (!response.ok) {
+                    throw new Error(formatUiError(data.detail || data.message || data, 'Failed to save profile'));
+                }
+                state.currentUser = data.user || state.currentUser;
+                state.profileMessage = 'Profile saved.';
+                state.authMessage = 'Profile updated.';
+                persistUiState();
+                await loadUsersDirectory();
+            } catch (error) {
+                state.profileMessage = formatUiError(error?.message || error, 'Failed to save profile');
+            } finally {
+                state.profileBusy = false;
+                renderProfilePage();
+            }
+        }
+
+        async function changeProfilePassword(event) {
+            event.preventDefault();
+            if (!state.authSession?.access_token || !state.currentUser) {
+                state.passwordMessage = 'Sign in to change your password.';
+                renderProfilePage();
+                return;
+            }
+
+            const currentPassword = document.getElementById('profile-current-password').value;
+            const newPassword = document.getElementById('profile-new-password').value;
+            const confirmPassword = document.getElementById('profile-confirm-password').value;
+
+            if (!currentPassword || !newPassword || !confirmPassword) {
+                state.passwordMessage = 'Enter your current password and confirm the new password.';
+                renderProfilePage();
+                return;
+            }
+            if (newPassword !== confirmPassword) {
+                state.passwordMessage = 'New password and confirmation do not match.';
+                renderProfilePage();
+                return;
+            }
+
+            state.passwordBusy = true;
+            state.passwordMessage = 'Updating password...';
+            renderProfilePage();
+
+            try {
+                const response = await authFetch('/api/ui_auth/password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        current_password: currentPassword,
+                        new_password: newPassword
+                    })
+                });
+                const data = await readJsonResponse(response);
+                if (!response.ok) {
+                    throw new Error(formatUiError(data.detail || data.message || data, 'Failed to change password'));
+                }
+                state.currentUser = data.user || state.currentUser;
+                state.passwordMessage = formatUiError(data.message || 'Password updated.');
+                state.authMessage = state.passwordMessage;
+                document.getElementById('profile-current-password').value = '';
+                document.getElementById('profile-new-password').value = '';
+                document.getElementById('profile-confirm-password').value = '';
+                persistUiState();
+                renderUsersPage();
+            } catch (error) {
+                state.passwordMessage = formatUiError(error?.message || error, 'Failed to change password');
+            } finally {
+                state.passwordBusy = false;
+                renderProfilePage();
+            }
         }
 
         async function saveUserRow(row, userId) {
             try {
+                const displayNameInput = row.querySelector('[data-user-display-name]');
+                const roleInput = row.querySelector('[data-user-role]');
+                const statusInput = row.querySelector('[data-user-status]');
                 const payload = {
-                    display_name: row.querySelector('[data-user-display-name]')?.value ?? undefined,
-                    role: row.querySelector('[data-user-role]')?.value ?? undefined,
-                    status: row.querySelector('[data-user-status]')?.value ?? undefined,
+                    display_name: displayNameInput && !displayNameInput.disabled ? displayNameInput.value : undefined,
+                    role: roleInput && !roleInput.disabled ? roleInput.value : undefined,
+                    status: statusInput && !statusInput.disabled ? statusInput.value : undefined,
                 };
                 const response = await authFetch(`/api/ui_users/${encodeURIComponent(userId)}`, {
                     method: 'PATCH',
@@ -2244,11 +3428,119 @@
         }
 
         async function authFetch(url, options = {}) {
-            const headers = new Headers(options.headers || {});
-            if (state.authSession?.access_token) {
-                headers.set('Authorization', `Bearer ${state.authSession.access_token}`);
+            const { _retryAfterRefresh = false, ...requestOptions } = options;
+            const session = await ensureAuthSession();
+            const headers = new Headers(requestOptions.headers || {});
+            if (session?.access_token) {
+                headers.set('Authorization', `Bearer ${session.access_token}`);
             }
-            return fetch(url, { ...options, headers });
+            const response = await fetch(url, { ...requestOptions, headers });
+            if (
+                response.status === 401
+                && !_retryAfterRefresh
+                && state.authSession?.refresh_token
+            ) {
+                const refreshedSession = await refreshAuthSession();
+                if (refreshedSession?.access_token) {
+                    const retryHeaders = new Headers(requestOptions.headers || {});
+                    retryHeaders.set('Authorization', `Bearer ${refreshedSession.access_token}`);
+                    return fetch(url, { ...requestOptions, headers: retryHeaders });
+                }
+            }
+            return response;
+        }
+
+        function renderProfileDetail(label, value) {
+            return `
+                <div class="profile-detail-card">
+                    <span class="profile-detail-label">${escapeHtml(label)}</span>
+                    <div class="profile-detail-value">${escapeHtml(value || 'Not available')}</div>
+                </div>
+            `;
+        }
+
+        function renderProfilePage() {
+            const summaryWrap = document.getElementById('profile-summary-wrap');
+            if (!summaryWrap) return;
+
+            const currentUser = state.currentUser;
+            const hasSession = !!state.authSession?.access_token;
+            const roleChip = document.getElementById('profile-role-chip');
+            const displayNameInput = document.getElementById('profile-display-name');
+            const profileSaveBtn = document.getElementById('profile-save-btn');
+            const profileMessage = document.getElementById('profile-message');
+            const passwordForm = document.getElementById('password-form');
+            const passwordNote = document.getElementById('password-unsupported');
+            const passwordMessage = document.getElementById('password-message');
+            const passwordSaveBtn = document.getElementById('password-save-btn');
+            const currentPasswordInput = document.getElementById('profile-current-password');
+            const newPasswordInput = document.getElementById('profile-new-password');
+            const confirmPasswordInput = document.getElementById('profile-confirm-password');
+
+            roleChip.textContent = currentUser ? (currentUser.role || 'Profile') : 'Profile';
+            roleChip.classList.toggle('active', !!currentUser);
+            profileMessage.textContent = state.profileMessage || '';
+            passwordMessage.textContent = state.passwordMessage || '';
+
+            if (!hasSession || !currentUser) {
+                summaryWrap.innerHTML = '<div class="empty-note">Sign in to review your account profile and change your password.</div>';
+                displayNameInput.value = '';
+                displayNameInput.disabled = true;
+                profileSaveBtn.disabled = true;
+                passwordForm.classList.remove('hidden');
+                passwordForm.querySelectorAll('input').forEach((input) => {
+                    input.value = '';
+                    input.disabled = true;
+                });
+                passwordSaveBtn.disabled = true;
+                passwordNote.classList.add('hidden');
+                return;
+            }
+
+            const role = currentUser.role || 'user';
+            const provider = currentUser.auth_provider || 'password';
+            const displayName = currentUser.display_name || '';
+            const headline = displayName || currentUser.username || currentUser.email || 'Plaza User';
+
+            summaryWrap.innerHTML = `
+                <div class="profile-hero">
+                    <div>
+                        <span class="profile-eyebrow">Plaza Identity</span>
+                        <h2 class="profile-name">${escapeHtml(headline)}</h2>
+                        <div class="profile-handle">@${escapeHtml(currentUser.username || 'unknown')}</div>
+                    </div>
+                    <div class="auth-session-meta">
+                        <span class="session-pill role-${escapeHtml(role)}">${escapeHtml(role)}</span>
+                        <span class="session-pill">${escapeHtml(provider)}</span>
+                    </div>
+                </div>
+                <div class="profile-details-grid">
+                    ${renderProfileDetail('Email', currentUser.email || 'No email')}
+                    ${renderProfileDetail('Display Name', displayName || 'Not set')}
+                    ${renderProfileDetail('Created', currentUser.created_at || 'n/a')}
+                    ${renderProfileDetail('Last Sign-In', currentUser.last_sign_in_at || 'never')}
+                </div>
+            `;
+
+            displayNameInput.value = displayName;
+            displayNameInput.disabled = !!state.profileBusy;
+            profileSaveBtn.disabled = !!state.profileBusy;
+            profileSaveBtn.textContent = state.profileBusy ? 'Saving...' : 'Save Profile';
+
+            const passwordSupported = provider === 'password';
+            passwordNote.classList.toggle('hidden', passwordSupported);
+            passwordForm.classList.toggle('hidden', !passwordSupported);
+            if (!passwordSupported) {
+                passwordNote.textContent = `This account signs in with ${provider}. Password changes are only available for password-based accounts.`;
+            } else {
+                passwordNote.textContent = '';
+            }
+
+            [currentPasswordInput, newPasswordInput, confirmPasswordInput].forEach((input) => {
+                input.disabled = !!state.passwordBusy || !passwordSupported;
+            });
+            passwordSaveBtn.disabled = !!state.passwordBusy || !passwordSupported;
+            passwordSaveBtn.textContent = state.passwordBusy ? 'Updating...' : 'Change Password';
         }
 
         function renderUsersPage() {
@@ -2257,13 +3549,27 @@
             document.getElementById('auth-message').textContent = state.authMessage || '';
             document.getElementById('auth-signout-btn').classList.toggle('hidden', !state.authSession?.access_token);
             document.getElementById('users-refresh-btn').classList.toggle('hidden', !state.authSession?.access_token);
+            document.getElementById('users-directory-card').classList.toggle('hidden', !state.authSession?.access_token);
+            const enabledProviders = new Set((state.authConfig?.oauth_providers || []).map((provider) => String(provider).toLowerCase()));
+            document.querySelectorAll('[data-oauth-provider]').forEach((button) => {
+                const provider = String(button.dataset.oauthProvider || '').toLowerCase();
+                const enabled = !!state.authConfig?.auth_enabled && enabledProviders.has(provider) && !state.authBusy;
+                button.disabled = !enabled;
+            });
+            updateAuthControls();
         }
 
         function renderAuthStatus() {
             const badge = document.getElementById('auth-config-badge');
             const body = document.getElementById('auth-status-body');
-            const config = state.authConfig || {};
-            badge.textContent = config.auth_enabled ? 'Access Ready' : 'Auth Unavailable';
+            const config = state.authConfig;
+            if (!config) {
+                badge.textContent = 'Checking';
+                badge.classList.remove('active');
+                body.innerHTML = '<div class="empty-note">Checking Plaza access settings...</div>';
+                return;
+            }
+            badge.textContent = config.auth_enabled ? 'Login Required' : 'Auth Unavailable';
             badge.classList.toggle('active', !!config.auth_enabled);
 
             if (!config.auth_enabled) {
@@ -2273,24 +3579,27 @@
 
             const currentUser = state.currentUser;
             if (!currentUser) {
+                const loginHint = config.default_admin_ready
+                    ? 'Sign in to unlock the Plaza monitor, map, and editor.'
+                    : config.service_role_enabled
+                    ? `Built-in admin bootstrap is not ready yet. ${formatUiError(config.default_admin_error, 'Check the Plaza service-role key or create the first account manually.')}`
+                    : 'Sign in with an existing account, or create the first account to seed admin access on this Plaza.';
                 body.innerHTML = `
-                    <div class="empty-note">No active session. Sign in or create an account to access role-aware user management.</div>
-                    <div class="auth-session-meta">
-                        <span class="session-pill">${config.service_role_enabled ? 'Managed access ready' : 'Standard access flow'}</span>
+                    <div class="auth-summary-line">
+                        ${escapeHtml(loginHint)}
                     </div>
                 `;
                 return;
             }
 
+            badge.textContent = 'Signed In';
             body.innerHTML = `
-                <div>
-                    <div class="user-email">${escapeHtml(currentUser.email || currentUser.id)}</div>
-                    <div class="user-detail">${escapeHtml(currentUser.display_name || 'No display name')}</div>
+                <div class="auth-summary-line">
+                    Signed in as <strong>${escapeHtml(currentUser.username || currentUser.email || currentUser.id)}</strong>.
                 </div>
                 <div class="auth-session-meta">
                     <span class="session-pill role-${escapeHtml(currentUser.role)}">${escapeHtml(currentUser.role)}</span>
-                    <span class="session-pill">${escapeHtml(currentUser.status || 'active')}</span>
-                    ${config.service_role_enabled ? '<span class="session-pill">Managed access ready</span>' : '<span class="session-pill">Role directory enabled</span>'}
+                    <span class="session-pill">${escapeHtml(currentUser.auth_provider || 'password')}</span>
                 </div>
             `;
         }
@@ -2309,7 +3618,7 @@
             }
 
             if (!state.authSession?.access_token) {
-                wrap.innerHTML = '<div class="empty-note">Sign in to load the user directory.</div>';
+                wrap.innerHTML = '<div class="empty-note">The user directory appears after you sign in.</div>';
                 return;
             }
 
@@ -2337,13 +3646,10 @@
         }
 
         function renderUserRow(user, currentUser, viewerRole) {
-            const canEditRole = viewerRole === 'admin' || (viewerRole === 'moderator' && user.role !== 'admin');
+            const canEditRole = viewerRole === 'admin';
             const canEditStatus = canEditRole;
-            const canEditName = viewerRole === 'admin' || viewerRole === 'moderator' || currentUser?.id === user.id;
-            const allowedRoles = ['admin', 'moderator', 'user'].filter((role) => {
-                if (role === user.role) return true;
-                return !(viewerRole !== 'admin' && role === 'admin');
-            });
+            const canEditName = viewerRole === 'admin' || currentUser?.id === user.id;
+            const allowedRoles = ['admin', 'user'];
             const roleOptions = allowedRoles
                 .map((role) => `<option value="${role}" ${user.role === role ? 'selected' : ''}>${role}</option>`)
                 .join('');
@@ -2351,7 +3657,9 @@
             return `
                 <div class="user-row" data-user-row="${escapeHtml(user.id)}">
                     <div class="user-identity">
-                        <div class="user-email">${escapeHtml(user.email || user.id)}</div>
+                        <div class="user-email">${escapeHtml(user.username || user.email || user.id)}</div>
+                        <div class="user-detail">${escapeHtml(user.email || 'No email')}</div>
+                        <div class="user-detail">Provider ${escapeHtml(user.auth_provider || 'password')}</div>
                         <div class="user-detail">Created ${escapeHtml(user.created_at || 'n/a')}</div>
                         <div class="user-detail">Last sign-in ${escapeHtml(user.last_sign_in_at || 'never')}</div>
                     </div>
@@ -2505,6 +3813,7 @@
                     rows: [
                         `Plaza: ${plaza.url || 'Unavailable'}`,
                         `Agent address: ${card.address || agent.address || 'Unavailable'}`,
+                        renderDirectCallLabel(agent, card),
                         `Practices: ${Array.isArray(card.practices) ? card.practices.length : 0}`,
                         `Heartbeat: ${renderHeartbeatCopy(Number(agent.last_active || 0))}`
                     ]
@@ -2526,6 +3835,7 @@
                         `Type: ${rawKind}`,
                         `Owner: ${card.owner || agent.owner || 'Unknown'}`,
                         `Address: ${card.address || agent.address || 'Unavailable'}`,
+                        renderDirectCallLabel(agent, card),
                         `Heartbeat: ${renderHeartbeatCopy(Number(agent.last_active || 0))}`,
                         `Practices: ${Array.isArray(card.practices) ? card.practices.length : 0}`,
                         rawKind === 'Pulser' ? `Supported pulses: ${supportedPulseCount}` : ''
@@ -2776,6 +4086,7 @@
             const sourceKey = String(agent.agent_id || card.agent_id || `${plaza.url || 'plaza'}::${kind}::${agent.name || index}`);
             const item = findItem(sourceKey);
             const hasEditor = !!item;
+            const isAgentConfig = kind === 'AgentConfig';
             const lastActive = Number(agent.last_active || 0);
             const status = lastActive ? heartbeatState(lastActive) : 'registered';
             const tracksAgentHeartbeat = tracksHeartbeat(kind);
@@ -2788,40 +4099,59 @@
                 : Array.isArray(item?.availablePulsers)
                     ? item.availablePulsers
                     : [];
+            
+            const pulseDefinition = canLookupPulsers
+                ? resolvePulseSummaryDefinition(item || {
+                    name: agent.name || card.name || '',
+                    description: agent.description || card.description || '',
+                    address: card.address || agent.address || '',
+                    meta: agent.meta || card.meta || {},
+                    raw: { card, meta: agent.meta || card.meta || {} },
+                }, availablePulsers, pulseName, pulseAddress)
+                : {};
+            
+            const pulseCardTitle = canLookupPulsers
+                ? (pulseDefinition.title || agent.name || card.name || `${kind} ${index + 1}`)
+                : (agent.name || card.name || `${kind} ${index + 1}`);
+            
+            const pulseCardDescription = canLookupPulsers
+                ? (pulseDefinition.description || agent.description || card.description || 'No description registered.')
+                : (agent.description || card.description || 'No description registered.');
+            
             const activePulserCount = availablePulsers.filter((pulser) => popupHeartbeatState(Number(pulser.last_active || 0)) === 'active').length;
-            const availablePulserCount = activePulserCount;
-            const phemaModeBadge = rawKind === 'Phema' ? renderPhemaModeBadge(agent, card) : '';
-            const nonHeartbeatStatusLabel = rawKind === 'Phema'
-                ? (renderPhemaModeLabel(agent, card) || 'Registered')
-                : 'Registered';
+            const nonHeartbeatStatusLabel = rawKind === 'Phema' ? (renderPhemaModeLabel(agent, card) || 'Registered') : 'Registered';
+            
+            // Generate Tooltip Content
+            const tooltipLines = [
+                `Kind: ${kind}`,
+                `Description: ${pulseCardDescription}`,
+                card.owner || agent.owner ? `Owner: ${card.owner || agent.owner}` : '',
+                card.address ? `Address: ${card.address}` : '',
+                `${practiceCount} practices registered`
+            ].filter(Boolean);
+            const tooltip = tooltipLines.join('\n');
 
             return `
-                <article class="node-card">
+                <article class="node-card simple-node" data-tooltip="${escapeAttribute(tooltip)}">
                     <div class="node-card-header">
                         <span class="type-pill ${escapeHtml(rawKind === 'Pulser' ? 'Pulser' : kind)}">${escapeHtml(rawKind === 'Pulser' ? 'Pulser' : kind)}</span>
-                        <span class="status-pill">${practiceCount} practices</span>
-                    </div>
-                    <div>
-                        <div class="node-title">${escapeHtml(agent.name || card.name || `${kind} ${index + 1}`)}</div>
-                        <div class="node-description">${escapeHtml(agent.description || card.description || 'No description registered.')}</div>
-                    </div>
-                    <div class="node-meta-line">
-                        ${card.owner || agent.owner ? `<span class="chip">${escapeHtml(card.owner || agent.owner)}</span>` : ''}
-                        ${phemaModeBadge}
-                        ${card.address ? `<span class="chip">${escapeHtml(card.address)}</span>` : ''}
-                    </div>
-                    <div class="node-card-footer">
                         ${tracksAgentHeartbeat
-                    ? `<span class="heartbeat-pill ${status}" data-last-active="${lastActive}">
+                            ? `<span class="heartbeat-pill ${status}" data-last-active="${lastActive}">
                                 <span class="heartbeat-dot"></span>
                                 <span class="heartbeat-copy">${escapeHtml(renderHeartbeatCopy(lastActive))}</span>
-                            </span>`
-                    : `<span class="status-pill">${escapeHtml(nonHeartbeatStatusLabel)}</span>`}
+                               </span>`
+                            : `<span class="status-pill">${escapeHtml(nonHeartbeatStatusLabel)}</span>`}
+                    </div>
+                    <div class="node-content-compact">
+                        <div class="node-title">${escapeHtml(pulseCardTitle)}</div>
+                    </div>
+                    <div class="node-card-footer">
                         <div class="inline-actions">
                             ${canLookupPulsers
-                    ? `<button class="ghost-btn" data-open-pulsers="1" data-open-pulsers-source="${escapeAttribute(sourceKey)}" data-pulser-payload="${escapeAttribute(JSON.stringify(availablePulsers))}" data-pulse-name="${escapeAttribute(pulseName)}" data-pulse-address="${escapeAttribute(pulseAddress)}" data-pulse-description="${escapeAttribute(agent.description || card.description || '')}">Pulsers (${availablePulserCount})</button>`
-                    : ''}
-                            ${hasEditor ? `<button class="ghost-btn" data-open-source="${escapeHtml(sourceKey)}">Open Editor</button>` : ''}
+                                ? `<button class="ghost-btn" data-open-pulsers="1" data-open-pulsers-source="${escapeAttribute(sourceKey)}" data-pulser-payload="${escapeAttribute(JSON.stringify(availablePulsers))}" data-pulse-name="${escapeAttribute(pulseName)}" data-pulse-address="${escapeAttribute(pulseAddress)}" data-pulse-description="${escapeAttribute(agent.description || card.description || '')}">Pulsers (${activePulserCount})</button>`
+                                : ''}
+                            ${isAgentConfig ? `<button class="ghost-btn" data-open-agent-launch="${escapeHtml(sourceKey)}">Launch</button>` : ''}
+                            ${hasEditor ? `<button class="ghost-btn" data-open-source="${escapeHtml(sourceKey)}">${isAgentConfig ? 'Inspect' : 'Edit'}</button>` : ''}
                         </div>
                     </div>
                 </article>
@@ -2842,10 +4172,709 @@
                 pulseAddress,
                 pulseDescription,
                 baseUrl: window.location.origin,
-                body: '<div class="popup-note">Loading available pulsers...</div>'
+                availableBody: '<div class="popup-note">Loading available pulsers...</div>',
+                batchBody: '<div class="popup-note">Preparing batch tester...</div>'
             }));
             popup.document.close();
             loadPulserLookupResults({ popup, sourceKey, pulseName, pulseAddress, pulseDescription, pulsers });
+        }
+
+        function sameOriginAgentConfigRef(left, right) {
+            const normalize = (value) => String(value || '').trim().replace(/\/+$/, '').toLowerCase();
+            const leftValue = normalize(left);
+            const rightValue = normalize(right);
+            if (!leftValue || !rightValue) return false;
+            return leftValue === rightValue;
+        }
+
+        function serializeForInlineScript(value) {
+            return JSON.stringify(value ?? null)
+                .replace(/</g, '\\u003c')
+                .replace(/>/g, '\\u003e')
+                .replace(/&/g, '\\u0026');
+        }
+
+        function inferAgentConfigPoolDraft(config = {}) {
+            const pools = Array.isArray(config?.pools) ? config.pools.filter((entry) => entry && typeof entry === 'object') : [];
+            const pool = pools[0] || {};
+            const keys = ['root_path', 'db_path', 'path', 'file_path', 'sqlite_path', 'url', 'project_url', 'supabase_url', 'location', 'directory', 'bucket'];
+            const poolLocation = keys
+                .map((key) => String(pool?.[key] || '').trim())
+                .find(Boolean)
+                || '';
+            return {
+                poolType: String(pool?.type || '').trim(),
+                poolLocation,
+            };
+        }
+
+        function normalizeAgentConfigLaunchSource(item) {
+            if (!item || normalizeKind(item.kind || rawPitType(item.raw || item)) !== 'AgentConfig') {
+                return null;
+            }
+            const raw = item.raw && typeof item.raw === 'object' ? item.raw : {};
+            const meta = item.meta && typeof item.meta === 'object'
+                ? item.meta
+                : raw.meta && typeof raw.meta === 'object'
+                    ? raw.meta
+                    : {};
+            const card = item.card && typeof item.card === 'object'
+                ? item.card
+                : raw.card && typeof raw.card === 'object'
+                    ? raw.card
+                    : {};
+            const config = item.config && typeof item.config === 'object' && !Array.isArray(item.config)
+                ? clone(item.config)
+                : meta.config && typeof meta.config === 'object' && !Array.isArray(meta.config)
+                    ? clone(meta.config)
+                    : {};
+            const poolDraft = inferAgentConfigPoolDraft(config);
+            const tags = Array.isArray(item.tags)
+                ? item.tags
+                : Array.isArray(card.tags)
+                    ? card.tags
+                    : Array.isArray(meta.tags)
+                        ? meta.tags
+                        : [];
+            return {
+                sourceKey: String(item.sourceKey || raw.agent_id || raw.id || '').trim(),
+                id: String(raw.id || raw.agent_id || card?.meta?.config_id || meta.config_id || item.sourceKey || '').trim(),
+                name: String(item.name || raw.name || card.name || '').trim(),
+                description: String(item.description || raw.description || card.description || '').trim(),
+                owner: String(item.owner || raw.owner || card.owner || '').trim(),
+                plazaUrl: String(item.plazaUrl || raw.plaza_url || '').trim(),
+                plazaName: String(item.plazaName || raw.plaza_name || '').trim(),
+                role: String(card.role || raw.role || meta.role || '').trim(),
+                agentType: String(meta.agent_type || card?.meta?.agent_type || config.type || '').trim(),
+                tags: tags.map((tag) => String(tag || '').trim()).filter(Boolean),
+                config,
+                defaultAgentName: String(config.name || card.name || item.name || raw.name || '').trim(),
+                poolType: poolDraft.poolType,
+                poolLocation: poolDraft.poolLocation,
+            };
+        }
+
+        function collectAgentConfigLaunchSources({ source = null } = {}) {
+            const currentOrigin = String(window.location.origin || '').trim();
+            const candidates = [];
+            state.items.forEach((item) => {
+                if (item.kind !== 'AgentConfig') return;
+                if (item.plazaUrl && !sameOriginAgentConfigRef(item.plazaUrl, currentOrigin)) return;
+                const normalized = normalizeAgentConfigLaunchSource(item);
+                if (normalized) candidates.push(normalized);
+            });
+            if (source) {
+                const normalizedSource = normalizeAgentConfigLaunchSource(source);
+                if (normalizedSource && !candidates.some((entry) => entry.id === normalizedSource.id)) {
+                    candidates.unshift(normalizedSource);
+                }
+            }
+            candidates.sort((left, right) => {
+                const leftName = `${left.name} ${left.plazaName || left.plazaUrl}`.trim().toLowerCase();
+                const rightName = `${right.name} ${right.plazaName || right.plazaUrl}`.trim().toLowerCase();
+                return leftName.localeCompare(rightName);
+            });
+            return candidates;
+        }
+
+        function renderAgentLaunchPopupDocument({ title = 'Launch Agent', subtitle = '', configs = [], initialConfigId = '', accessToken = '', baseUrl = '' }) {
+            return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    ${baseUrl ? `<base href="${escapeAttribute(baseUrl)}/">` : ''}
+    <title>${escapeHtml(title)}</title>
+    <style>
+        :root {
+            color-scheme: light;
+            --launch-bg: linear-gradient(180deg, #f7fbff 0%, #eef6ff 100%);
+            --launch-surface: rgba(255, 255, 255, 0.92);
+            --launch-border: rgba(31, 122, 255, 0.16);
+            --launch-text: #14243d;
+            --launch-dim: #5f7392;
+            --launch-accent: #1f7aff;
+            --launch-accent-soft: rgba(31, 122, 255, 0.12);
+            --launch-success: #0f9f68;
+            --launch-warning: #c96a2b;
+            --launch-danger: #c24b6c;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            padding: 1.25rem;
+            font-family: "Manrope", sans-serif;
+            color: var(--launch-text);
+            background: var(--launch-bg);
+        }
+        .launch-shell {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .launch-header,
+        .launch-panel {
+            border: 1px solid var(--launch-border);
+            background: var(--launch-surface);
+            border-radius: 20px;
+            padding: 1rem 1.1rem;
+            box-shadow: 0 18px 44px rgba(31, 122, 255, 0.08);
+        }
+        .launch-header h1,
+        .launch-panel h2 {
+            margin: 0;
+            letter-spacing: -0.03em;
+            font-family: "Fraunces", serif;
+            font-weight: 600;
+        }
+        .launch-header h1 { font-size: 1.35rem; }
+        .launch-panel h2 { font-size: 1.02rem; margin-bottom: 0.8rem; }
+        .launch-copy,
+        .launch-note,
+        .launch-meta {
+            color: var(--launch-dim);
+            line-height: 1.55;
+            font-size: 0.92rem;
+        }
+        .launch-layout {
+            display: grid;
+            grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+            gap: 1rem;
+            align-items: start;
+        }
+        .launch-search {
+            width: 100%;
+            border: 1px solid var(--launch-border);
+            border-radius: 14px;
+            padding: 0.85rem 0.95rem;
+            font: inherit;
+            color: var(--launch-text);
+            background: rgba(255, 255, 255, 0.98);
+        }
+        .launch-search:focus,
+        .launch-select:focus,
+        .launch-input:focus,
+        .launch-textarea:focus {
+            outline: none;
+            border-color: var(--launch-accent);
+            box-shadow: 0 0 0 4px rgba(31, 122, 255, 0.12);
+        }
+        .launch-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            margin-top: 0.9rem;
+            max-height: 560px;
+            overflow: auto;
+        }
+        .launch-config-btn {
+            width: 100%;
+            text-align: left;
+            border: 1px solid var(--launch-border);
+            border-radius: 16px;
+            padding: 0.9rem;
+            background: rgba(255, 255, 255, 0.96);
+            color: inherit;
+            cursor: pointer;
+            transition: transform 140ms ease, border-color 140ms ease, background 140ms ease;
+        }
+        .launch-config-btn:hover {
+            transform: translateY(-1px);
+        }
+        .launch-config-btn.active {
+            border-color: rgba(31, 122, 255, 0.32);
+            background: linear-gradient(135deg, rgba(31, 122, 255, 0.12), rgba(255, 255, 255, 0.98));
+        }
+        .launch-config-name {
+            font-weight: 800;
+            font-size: 0.98rem;
+        }
+        .launch-chip-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+        }
+        .launch-chip {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.34rem 0.7rem;
+            border-radius: 999px;
+            background: rgba(31, 122, 255, 0.08);
+            border: 1px solid rgba(31, 122, 255, 0.12);
+            color: var(--launch-accent);
+            font-size: 0.74rem;
+            font-weight: 700;
+        }
+        .launch-chip.subtle {
+            background: rgba(255, 255, 255, 0.82);
+            color: var(--launch-dim);
+        }
+        .launch-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 0.85rem;
+        }
+        .launch-detail-card,
+        .launch-form-card {
+            border: 1px solid var(--launch-border);
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.82);
+            padding: 0.9rem;
+        }
+        .launch-field {
+            display: grid;
+            gap: 0.42rem;
+            margin-top: 0.8rem;
+        }
+        .launch-field label {
+            font-size: 0.76rem;
+            text-transform: uppercase;
+            letter-spacing: 0.14em;
+            color: var(--launch-dim);
+            font-weight: 700;
+        }
+        .launch-input,
+        .launch-select,
+        .launch-textarea {
+            width: 100%;
+            border: 1px solid var(--launch-border);
+            border-radius: 14px;
+            padding: 0.8rem 0.9rem;
+            font: inherit;
+            color: var(--launch-text);
+            background: rgba(255, 255, 255, 0.98);
+        }
+        .launch-textarea {
+            min-height: 220px;
+            resize: vertical;
+            font: 0.82rem/1.45 "IBM Plex Mono", monospace;
+            white-space: pre;
+        }
+        .launch-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+        .launch-btn {
+            border: 0;
+            border-radius: 999px;
+            padding: 0.86rem 1.2rem;
+            font: inherit;
+            font-weight: 800;
+            cursor: pointer;
+            transition: transform 140ms ease, opacity 140ms ease;
+        }
+        .launch-btn:hover {
+            transform: translateY(-1px);
+        }
+        .launch-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .launch-btn.primary {
+            background: linear-gradient(135deg, #1f7aff 0%, #47c2ff 100%);
+            color: #fff;
+        }
+        .launch-btn.secondary {
+            background: rgba(31, 122, 255, 0.08);
+            color: var(--launch-text);
+        }
+        .launch-result {
+            display: none;
+            margin-top: 1rem;
+            border-radius: 16px;
+            padding: 0.95rem 1rem;
+            border: 1px solid rgba(31, 122, 255, 0.16);
+            background: rgba(31, 122, 255, 0.06);
+        }
+        .launch-result.visible { display: block; }
+        .launch-result.success {
+            border-color: rgba(15, 159, 104, 0.24);
+            background: rgba(15, 159, 104, 0.1);
+        }
+        .launch-result.warning {
+            border-color: rgba(201, 106, 43, 0.22);
+            background: rgba(201, 106, 43, 0.1);
+        }
+        .launch-result.error {
+            border-color: rgba(194, 75, 108, 0.22);
+            background: rgba(194, 75, 108, 0.1);
+        }
+        .launch-result-title {
+            font-weight: 800;
+            margin-bottom: 0.35rem;
+        }
+        .launch-empty {
+            border: 1px dashed rgba(31, 122, 255, 0.22);
+            border-radius: 16px;
+            padding: 1rem;
+            color: var(--launch-dim);
+            background: rgba(255, 255, 255, 0.7);
+        }
+        @media (max-width: 900px) {
+            body { padding: 0.8rem; }
+            .launch-layout { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="launch-shell">
+        <section class="launch-header">
+            <h1>${escapeHtml(title)}</h1>
+            <p class="launch-copy">${escapeHtml(subtitle || 'Choose an AgentConfig directory entry, review the saved template, then launch it with runtime-only host, port, and pool overrides.')}</p>
+        </section>
+        <section class="launch-layout">
+            <section class="launch-panel">
+                <h2>AgentConfig Directory</h2>
+                <input id="config-search" class="launch-search" type="text" placeholder="Search by name, role, type, or owner">
+                <div id="config-list" class="launch-list"></div>
+            </section>
+            <section class="launch-panel">
+                <h2>Launch Detail</h2>
+                <div id="config-detail"></div>
+                <div id="launch-result" class="launch-result"></div>
+            </section>
+        </section>
+    </div>
+    <script>
+        const ACCESS_TOKEN = ${serializeForInlineScript(accessToken)};
+        const CONFIGS = ${serializeForInlineScript(configs)};
+        let selectedConfigId = ${serializeForInlineScript(initialConfigId || (configs[0]?.id || ''))};
+
+        function popupEscapeHtml(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function popupPrettyJson(value) {
+            try {
+                return JSON.stringify(value || {}, null, 2);
+            } catch (error) {
+                return '{}';
+            }
+        }
+
+        function filteredConfigs() {
+            const query = String(document.getElementById('config-search')?.value || '').trim().toLowerCase();
+            return CONFIGS.filter((entry) => {
+                const haystack = [
+                    entry.name,
+                    entry.description,
+                    entry.owner,
+                    entry.role,
+                    entry.agentType,
+                    entry.plazaName,
+                    entry.plazaUrl,
+                    JSON.stringify(entry.tags || []),
+                ].join(' ').toLowerCase();
+                return !query || haystack.includes(query);
+            });
+        }
+
+        function currentConfig() {
+            return CONFIGS.find((entry) => entry.id === selectedConfigId) || null;
+        }
+
+        function setLaunchResult({ tone = '', title = '', body = '', meta = [] } = {}) {
+            const node = document.getElementById('launch-result');
+            if (!node) return;
+            if (!title && !body) {
+                node.className = 'launch-result';
+                node.innerHTML = '';
+                return;
+            }
+            node.className = 'launch-result visible ' + (tone || '');
+            node.innerHTML = '<div class="launch-result-title">' + popupEscapeHtml(title || 'Launch Result') + '</div>'
+                + (body ? '<div class="launch-meta">' + popupEscapeHtml(body) + '</div>' : '')
+                + (Array.isArray(meta) && meta.length
+                    ? '<div class="launch-chip-row">' + meta.map((entry) => '<span class="launch-chip subtle">' + popupEscapeHtml(entry) + '</span>').join('') + '</div>'
+                    : '');
+        }
+
+        function renderConfigList() {
+            const listNode = document.getElementById('config-list');
+            if (!listNode) return;
+            const items = filteredConfigs();
+            if (!items.length) {
+                listNode.innerHTML = '<div class="launch-empty">No AgentConfig entries match this search.</div>';
+                return;
+            }
+            if (!items.some((entry) => entry.id === selectedConfigId)) {
+                selectedConfigId = items[0].id;
+            }
+            listNode.innerHTML = items.map((entry) => {
+                const chips = [
+                    entry.role,
+                    entry.agentType,
+                    entry.owner,
+                    entry.plazaName || entry.plazaUrl,
+                ].filter(Boolean).slice(0, 4);
+                return '<button class="launch-config-btn ' + (entry.id === selectedConfigId ? 'active' : '') + '" type="button" data-select-config="1" data-config-id="'
+                    + popupEscapeHtml(entry.id) + '">'
+                    + '<div class="launch-config-name">' + popupEscapeHtml(entry.name || 'Unnamed AgentConfig') + '</div>'
+                    + '<div class="launch-meta">' + popupEscapeHtml(entry.description || 'No description registered.') + '</div>'
+                    + (chips.length ? '<div class="launch-chip-row">' + chips.map((chip) => '<span class="launch-chip subtle">' + popupEscapeHtml(chip) + '</span>').join('') + '</div>' : '')
+                    + '</button>';
+            }).join('');
+        }
+
+        function renderConfigDetail() {
+            const detailNode = document.getElementById('config-detail');
+            if (!detailNode) return;
+            const selected = currentConfig();
+            if (!selected) {
+                detailNode.innerHTML = '<div class="launch-empty">Choose an AgentConfig entry to inspect its saved template and launch it.</div>';
+                return;
+            }
+
+            const seedId = String(detailNode.dataset.seedConfigId || '').trim();
+            const shouldSeedDefaults = seedId !== selected.id;
+            if (shouldSeedDefaults) {
+                detailNode.dataset.seedConfigId = selected.id;
+            }
+
+            detailNode.innerHTML = ''
+                + '<div class="launch-detail-card">'
+                + '  <div class="launch-grid">'
+                + '    <div><div class="launch-meta">Name</div><div><strong>' + popupEscapeHtml(selected.name || 'Unnamed AgentConfig') + '</strong></div></div>'
+                + '    <div><div class="launch-meta">Agent Type</div><div><strong>' + popupEscapeHtml(selected.agentType || 'Unknown') + '</strong></div></div>'
+                + '    <div><div class="launch-meta">Role</div><div><strong>' + popupEscapeHtml(selected.role || 'unspecified') + '</strong></div></div>'
+                + '    <div><div class="launch-meta">Owner</div><div><strong>' + popupEscapeHtml(selected.owner || 'unassigned') + '</strong></div></div>'
+                + '  </div>'
+                + (selected.description ? '<p class="launch-copy" style="margin:0.9rem 0 0;">' + popupEscapeHtml(selected.description) + '</p>' : '')
+                + '  <div class="launch-chip-row">'
+                +        (selected.tags || []).map((tag) => '<span class="launch-chip">' + popupEscapeHtml(tag) + '</span>').join('')
+                +        ((selected.plazaName || selected.plazaUrl) ? '<span class="launch-chip subtle">' + popupEscapeHtml(selected.plazaName || selected.plazaUrl) + '</span>' : '')
+                + '  </div>'
+                + '</div>'
+                + '<div class="launch-form-card">'
+                + '  <div class="launch-field">'
+                + '    <label for="launch-agent-name">Agent Name</label>'
+                + '    <input id="launch-agent-name" class="launch-input" type="text" placeholder="runtime agent name">'
+                + '  </div>'
+                + '  <div class="launch-grid">'
+                + '    <div class="launch-field">'
+                + '      <label for="launch-host">IP Address</label>'
+                + '      <input id="launch-host" class="launch-input" type="text" placeholder="127.0.0.1">'
+                + '    </div>'
+                + '    <div class="launch-field">'
+                + '      <label for="launch-port">Port</label>'
+                + '      <input id="launch-port" class="launch-input" type="number" min="1" step="1" placeholder="dynamic">'
+                + '    </div>'
+                + '  </div>'
+                + '  <div class="launch-grid">'
+                + '    <div class="launch-field">'
+                + '      <label for="launch-pool-type">Pool Type</label>'
+                + '      <select id="launch-pool-type" class="launch-select">'
+                + '        <option value="">Use saved pool</option>'
+                + '        <option value="FileSystemPool">FileSystemPool</option>'
+                + '        <option value="SQLitePool">SQLitePool</option>'
+                + '        <option value="SupabasePool">SupabasePool</option>'
+                + '      </select>'
+                + '    </div>'
+                + '    <div class="launch-field">'
+                + '      <label for="launch-pool-location">Pool Location</label>'
+                + '      <input id="launch-pool-location" class="launch-input" type="text" placeholder="filesystem path, db path, or URL">'
+                + '    </div>'
+                + '  </div>'
+                + '  <div class="launch-field">'
+                + '    <label for="launch-config-json">Stored Config</label>'
+                + '    <textarea id="launch-config-json" class="launch-textarea" readonly></textarea>'
+                + '  </div>'
+                + '  <div class="launch-actions">'
+                + '    <button id="launch-submit" class="launch-btn primary" type="button">Launch Agent</button>'
+                + '    <button id="launch-reset" class="launch-btn secondary" type="button">Reset Runtime Fields</button>'
+                + '  </div>'
+                + '</div>';
+
+            const agentNameInput = document.getElementById('launch-agent-name');
+            const hostInput = document.getElementById('launch-host');
+            const portInput = document.getElementById('launch-port');
+            const poolTypeInput = document.getElementById('launch-pool-type');
+            const poolLocationInput = document.getElementById('launch-pool-location');
+            const configJsonInput = document.getElementById('launch-config-json');
+            if (configJsonInput) {
+                configJsonInput.value = popupPrettyJson(selected.config || {});
+            }
+            if (shouldSeedDefaults) {
+                if (agentNameInput) agentNameInput.value = selected.defaultAgentName || selected.name || '';
+                if (hostInput) hostInput.value = '';
+                if (portInput) portInput.value = '';
+                if (poolTypeInput) poolTypeInput.value = selected.poolType || '';
+                if (poolLocationInput) poolLocationInput.value = selected.poolLocation || '';
+            }
+        }
+
+        function renderPopup() {
+            renderConfigList();
+            renderConfigDetail();
+        }
+
+        async function launchSelectedConfig() {
+            const selected = currentConfig();
+            if (!selected) {
+                setLaunchResult({
+                    tone: 'error',
+                    title: 'Choose An AgentConfig',
+                    body: 'Select one directory entry before launching.',
+                });
+                return;
+            }
+
+            const submitButton = document.getElementById('launch-submit');
+            const agentName = String(document.getElementById('launch-agent-name')?.value || '').trim();
+            const host = String(document.getElementById('launch-host')?.value || '').trim();
+            const portRaw = String(document.getElementById('launch-port')?.value || '').trim();
+            const poolType = String(document.getElementById('launch-pool-type')?.value || '').trim();
+            const poolLocation = String(document.getElementById('launch-pool-location')?.value || '').trim();
+
+            if (!agentName) {
+                setLaunchResult({
+                    tone: 'error',
+                    title: 'Agent Name Required',
+                    body: 'Enter the runtime agent name before launching.',
+                });
+                return;
+            }
+
+            setLaunchResult({
+                tone: '',
+                title: 'Launching Agent',
+                body: 'Checking Plaza credentials, active registrations, and runtime health.',
+            });
+            if (submitButton) {
+                submitButton.disabled = true;
+                submitButton.textContent = 'Launching...';
+            }
+
+            try {
+                const headers = new Headers({ 'Content-Type': 'application/json' });
+                if (ACCESS_TOKEN) {
+                    headers.set('Authorization', 'Bearer ' + ACCESS_TOKEN);
+                }
+                const response = await fetch('/api/agent_configs/launch', {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify({
+                        config_id: selected.id,
+                        agent_name: agentName,
+                        host: host || null,
+                        port: portRaw ? Number(portRaw) : null,
+                        pool_type: poolType || null,
+                        pool_location: poolLocation || null,
+                    }),
+                });
+                const payload = await response.json();
+                if (!response.ok) {
+                    throw new Error(payload.detail || payload.message || 'Could not launch agent');
+                }
+                const launch = payload.launch && typeof payload.launch === 'object' ? payload.launch : {};
+                const existing = launch.existing_agent && typeof launch.existing_agent === 'object' ? launch.existing_agent : {};
+                const meta = [];
+                if (launch.requested_agent_name) meta.push('Agent: ' + launch.requested_agent_name);
+                if (launch.address) meta.push('Address: ' + launch.address);
+                if (existing.address) meta.push('Address: ' + existing.address);
+                if (launch.used_existing_identity) meta.push('Used saved plaza credential');
+                setLaunchResult({
+                    tone: launch.status === 'already_running' ? 'warning' : 'success',
+                    title: launch.status === 'already_running' ? 'Agent Already Running' : 'Agent Running',
+                    body: launch.status === 'already_running'
+                        ? 'A matching registered agent is already active on this plaza, so no duplicate process was started.'
+                        : 'The agent became healthy and is now running with the requested runtime overrides.',
+                    meta,
+                });
+                if (window.opener && !window.opener.closed) {
+                    window.opener.postMessage({
+                        type: 'plaza-agent-config-launch',
+                        launch,
+                    }, window.location.origin);
+                }
+            } catch (error) {
+                setLaunchResult({
+                    tone: 'error',
+                    title: 'Launch Failed',
+                    body: error?.message || 'Unknown launch error.',
+                });
+            } finally {
+                if (submitButton) {
+                    submitButton.disabled = false;
+                    submitButton.textContent = 'Launch Agent';
+                }
+            }
+        }
+
+        document.addEventListener('click', (event) => {
+            const configButton = event.target.closest('[data-select-config]');
+            if (configButton) {
+                selectedConfigId = String(configButton.dataset.configId || '').trim();
+                setLaunchResult();
+                renderPopup();
+                return;
+            }
+
+            const resetButton = event.target.closest('#launch-reset');
+            if (resetButton) {
+                const selected = currentConfig();
+                if (!selected) return;
+                document.getElementById('launch-agent-name').value = selected.defaultAgentName || selected.name || '';
+                document.getElementById('launch-host').value = '';
+                document.getElementById('launch-port').value = '';
+                document.getElementById('launch-pool-type').value = selected.poolType || '';
+                document.getElementById('launch-pool-location').value = selected.poolLocation || '';
+                setLaunchResult();
+                return;
+            }
+
+            const submitButton = event.target.closest('#launch-submit');
+            if (submitButton) {
+                launchSelectedConfig();
+            }
+        });
+
+        document.getElementById('config-search')?.addEventListener('input', () => {
+            renderConfigList();
+        });
+
+        renderPopup();
+    ${'</scr' + 'ipt>'}
+</body>
+</html>`;
+        }
+
+        function openAgentLaunchWindow({ sourceKey = '', source = null }) {
+            const resolvedSource = source || (sourceKey ? findItem(sourceKey) : null);
+            if (resolvedSource?.plazaUrl && !sameOriginAgentConfigRef(resolvedSource.plazaUrl, window.location.origin)) {
+                window.alert(`Launch this AgentConfig from ${resolvedSource.plazaUrl} or from a UserAgent that can target remote plazas.`);
+                return;
+            }
+            const configs = collectAgentConfigLaunchSources({ source: resolvedSource });
+            const initialConfigId = normalizeAgentConfigLaunchSource(resolvedSource)?.id || configs[0]?.id || '';
+            const popupTitle = normalizeAgentConfigLaunchSource(resolvedSource)?.name || 'agent-launch';
+            const popup = window.open('', `agent-launch-${sanitizeFilename(popupTitle)}`, 'popup=yes,width=1040,height=860,resizable=yes,scrollbars=yes');
+            if (!popup) {
+                state.authMessage = 'Popup blocked. Allow popups to launch saved AgentConfig entries.';
+                renderUsersPage();
+                return;
+            }
+            popup.document.write(renderAgentLaunchPopupDocument({
+                title: 'Launch Agent',
+                subtitle: configs.length
+                    ? 'Saved AgentConfig entries live in the Plaza directory. Runtime IP, port, and pool overrides are applied only at launch time.'
+                    : 'No local AgentConfig entries are available yet. Save one to the Plaza directory first, then return here to launch it.',
+                configs,
+                initialConfigId,
+                accessToken: state.authSession?.access_token || '',
+                baseUrl: window.location.origin,
+            }));
+            popup.document.close();
         }
 
         async function loadPulserLookupResults({ popup, sourceKey = '', pulseName = '', pulseAddress = '', pulseDescription = '', pulsers = [] }) {
@@ -2859,16 +4888,29 @@
                             ? pulseItem.raw.available_pulsers
                             : [];
                 const pulseDefinition = resolvePulseSummaryDefinition(pulseItem, resolvedPulsers, pulseName, pulseAddress);
+                const resolvedTitle = pulseDefinition.title || pulseName || pulseAddress || 'Pulse';
+                const resolvedAddress = pulseDefinition.pulse_address || pulseAddress;
+                const resolvedDescription = pulseDefinition.description || pulseDescription;
                 if (popup.closed) return;
                 popup.document.open();
                 popup.document.write(renderPulserLookupDocument({
-                    title: pulseName || pulseAddress || 'Pulse',
-                    pulseAddress,
-                    pulseDescription,
+                    title: resolvedTitle,
+                    pulseAddress: resolvedAddress,
+                    pulseDescription: resolvedDescription,
                     pulseDefinition,
                     baseUrl: window.location.origin,
-                    availableBody: renderPulserLookupBody(resolvedPulsers, pulseName, pulseAddress),
-                    batchBody: renderPulserBatchBody(resolvedPulsers, pulseDefinition, pulseName, pulseAddress)
+                    availableBody: renderPulserLookupBody(
+                        resolvedPulsers,
+                        pulseDefinition.pulse_name || pulseName,
+                        resolvedAddress,
+                        pulseDefinition.pulse_id || ''
+                    ),
+                    batchBody: renderPulserBatchBody(
+                        resolvedPulsers,
+                        pulseDefinition,
+                        pulseDefinition.pulse_name || pulseName,
+                        resolvedAddress
+                    )
                 }));
                 popup.document.close();
             } catch (error) {
@@ -2887,6 +4929,218 @@
             }
         }
 
+        function normalizePulseDefinitionShape(payload = {}, fallback = {}) {
+            const base = payload && typeof payload === 'object' && !Array.isArray(payload) ? payload : {};
+            const nested = base.pulse_definition && typeof base.pulse_definition === 'object' && !Array.isArray(base.pulse_definition)
+                ? base.pulse_definition
+                : {};
+            const concept = nested.concept && typeof nested.concept === 'object' && !Array.isArray(nested.concept)
+                ? nested.concept
+                : base.concept && typeof base.concept === 'object' && !Array.isArray(base.concept)
+                    ? base.concept
+                    : fallback.concept && typeof fallback.concept === 'object' && !Array.isArray(fallback.concept)
+                        ? fallback.concept
+                        : {};
+            const interfaceValue = nested.interface && typeof nested.interface === 'object' && !Array.isArray(nested.interface)
+                ? nested.interface
+                : base.interface && typeof base.interface === 'object' && !Array.isArray(base.interface)
+                    ? base.interface
+                    : fallback.interface && typeof fallback.interface === 'object' && !Array.isArray(fallback.interface)
+                        ? fallback.interface
+                        : {};
+            const requestSchema = nested.input_schema && typeof nested.input_schema === 'object' && !Array.isArray(nested.input_schema)
+                ? nested.input_schema
+                : base.input_schema && typeof base.input_schema === 'object' && !Array.isArray(base.input_schema)
+                    ? base.input_schema
+                    : interfaceValue.request_schema && typeof interfaceValue.request_schema === 'object' && !Array.isArray(interfaceValue.request_schema)
+                        ? interfaceValue.request_schema
+                        : fallback.input_schema && typeof fallback.input_schema === 'object' && !Array.isArray(fallback.input_schema)
+                            ? fallback.input_schema
+                            : {};
+            const responseSchema = nested.output_schema && typeof nested.output_schema === 'object' && !Array.isArray(nested.output_schema)
+                ? nested.output_schema
+                : base.output_schema && typeof base.output_schema === 'object' && !Array.isArray(base.output_schema)
+                    ? base.output_schema
+                    : interfaceValue.response_schema && typeof interfaceValue.response_schema === 'object' && !Array.isArray(interfaceValue.response_schema)
+                        ? interfaceValue.response_schema
+                        : fallback.output_schema && typeof fallback.output_schema === 'object' && !Array.isArray(fallback.output_schema)
+                            ? fallback.output_schema
+                            : {};
+            const pulseId = String(nested.id || base.pulse_id || base.resource_id || fallback.pulse_id || fallback.id || '').trim();
+            const pulseName = String(nested.name || base.pulse_name || base.name || fallback.pulse_name || fallback.name || '').trim();
+            const fallbackTitle = pulseName || pulseId.split('.').filter(Boolean).pop() || fallback.pulse_address || 'Pulse';
+            return {
+                pds_version: String(nested.pds_version || base.pds_version || fallback.pds_version || '').trim(),
+                resource_type: String(nested.resource_type || base.resource_type || fallback.resource_type || '').trim(),
+                pulse_id: pulseId,
+                id: pulseId,
+                version: String(nested.version || base.version || fallback.version || '').trim(),
+                pulse_name: pulseName,
+                name: pulseName,
+                title: String(nested.title || base.title || fallback.title || '').trim() || humanizePulseLabel(fallbackTitle),
+                description: String(nested.description || base.description || fallback.description || concept.definition || '').trim(),
+                pulse_address: String(base.pulse_address || fallback.pulse_address || fallback.address || '').trim(),
+                pulse_class: String(nested.pulse_class || base.pulse_class || fallback.pulse_class || '').trim(),
+                status: String(nested.status || base.status || fallback.status || '').trim(),
+                concept,
+                interface: {
+                    ...interfaceValue,
+                    request_schema: requestSchema,
+                    response_schema: responseSchema,
+                },
+                input_schema: requestSchema,
+                output_schema: responseSchema,
+            };
+        }
+
+        function hasPulseDefinitionData(definition = {}) {
+            return Boolean(
+                definition.pulse_id
+                || definition.pulse_name
+                || definition.description
+                || definition.pulse_class
+                || definition.status
+                || Object.keys(definition.input_schema || {}).length
+                || Object.keys(definition.output_schema || {}).length
+            );
+        }
+
+        function hasStructuredPulseDefinition(definition = {}) {
+            return Boolean(
+                definition.resource_type
+                || definition.version
+                || definition.pds_version
+                || definition.pulse_class
+                || definition.status
+                || Object.keys(definition.concept || {}).length
+                || Object.keys(definition.input_schema || {}).length
+                || Object.keys(definition.output_schema || {}).length
+            );
+        }
+
+        function matchesPulseDefinition(definition = {}, pulseName = '', pulseAddress = '', pulseId = '') {
+            if (!hasPulseDefinitionData(definition)) return false;
+            if (pulseId && definition.pulse_id && String(definition.pulse_id).trim() !== String(pulseId).trim()) {
+                return false;
+            }
+            if (pulseName && definition.pulse_name && !containsText(definition.pulse_name, pulseName) && !containsText(pulseName, definition.pulse_name)) {
+                return false;
+            }
+            if (pulseAddress && definition.pulse_address && !samePitRef(definition.pulse_address, pulseAddress)) {
+                return false;
+            }
+            return true;
+        }
+
+        function humanizePulseLabel(value) {
+            const text = String(value || '').trim();
+            if (!text) return 'Pulse';
+            return text
+                .split(/[.:/_-]+/)
+                .filter(Boolean)
+                .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+                .join(' ');
+        }
+
+        function countPulseSchemaFields(schema = {}) {
+            if (!schema || typeof schema !== 'object' || Array.isArray(schema)) return 0;
+            if (schema.properties && typeof schema.properties === 'object' && !Array.isArray(schema.properties)) {
+                return Object.keys(schema.properties).length;
+            }
+            return Object.keys(schema).length;
+        }
+
+        function formatPulseSchemaSummary(definition = {}) {
+            const parts = [];
+            const requestCount = countPulseSchemaFields(definition.input_schema || {});
+            const responseCount = countPulseSchemaFields(definition.output_schema || {});
+            if (requestCount) {
+                parts.push(`Request ${requestCount} field${requestCount === 1 ? '' : 's'}`);
+            }
+            if (responseCount) {
+                parts.push(`Response ${responseCount} field${responseCount === 1 ? '' : 's'}`);
+            }
+            return parts.join(' • ');
+        }
+
+        function buildPulseDefinitionLabels(definition = {}) {
+            return [
+                definition.resource_type,
+                definition.pulse_class,
+                definition.status,
+            ].filter(Boolean);
+        }
+
+        function renderPulseDefinitionItem(label, value) {
+            if (!value) return '';
+            return `
+                <div class="popup-definition-item">
+                    <div class="popup-section-title">${escapeHtml(label)}</div>
+                    <div class="popup-definition-value">${escapeHtml(value)}</div>
+                </div>
+            `;
+        }
+
+        function renderPulseDefinitionDetails(pulseDefinition = {}, title = '', pulseAddress = '') {
+            const definition = normalizePulseDefinitionShape(pulseDefinition, {
+                title,
+                pulse_address: pulseAddress,
+            });
+            const conceptDefinition = String(definition.concept?.definition || '').trim();
+            const description = String(definition.description || '').trim();
+            const schemaSummary = formatPulseSchemaSummary(definition);
+            const chipLabels = buildPulseDefinitionLabels(definition);
+            const conceptTags = Array.isArray(definition.concept?.tags) ? definition.concept.tags.filter(Boolean) : [];
+            const requestSchema = definition.input_schema && Object.keys(definition.input_schema || {}).length
+                ? JSON.stringify(definition.input_schema, null, 2)
+                : '';
+            const responseSchema = definition.output_schema && Object.keys(definition.output_schema || {}).length
+                ? JSON.stringify(definition.output_schema, null, 2)
+                : '';
+
+            if (!hasPulseDefinitionData(definition)) {
+                return '<div class="popup-note">No structured pulse definition is registered.</div>';
+            }
+
+            return `
+                ${chipLabels.length ? `<div class="popup-chip-row">${chipLabels.map((label) => `<span class="popup-pill subtle">${escapeHtml(label)}</span>`).join('')}</div>` : ''}
+                <div class="popup-definition-grid">
+                    ${renderPulseDefinitionItem('Title', definition.title || title || 'Pulse')}
+                    ${renderPulseDefinitionItem('Name', definition.pulse_name)}
+                    ${renderPulseDefinitionItem('Pulse ID', definition.pulse_id)}
+                    ${renderPulseDefinitionItem('Pulse Address', definition.pulse_address || pulseAddress)}
+                    ${renderPulseDefinitionItem('Version', definition.version)}
+                    ${renderPulseDefinitionItem('Schema Summary', schemaSummary)}
+                </div>
+                ${description ? `
+                    <div class="popup-section">
+                        <div class="popup-section-title">Description</div>
+                        <div class="popup-definition-value">${escapeHtml(description)}</div>
+                    </div>
+                ` : ''}
+                ${conceptDefinition && conceptDefinition !== description ? `
+                    <div class="popup-section">
+                        <div class="popup-section-title">Concept Definition</div>
+                        <div class="popup-definition-value">${escapeHtml(conceptDefinition)}</div>
+                    </div>
+                ` : ''}
+                ${conceptTags.length ? `<div class="popup-chip-row">${conceptTags.map((tag) => `<span class="popup-pill subtle">${escapeHtml(tag)}</span>`).join('')}</div>` : ''}
+                ${requestSchema ? `
+                    <div class="popup-section">
+                        <div class="popup-section-title">Request Schema</div>
+                        <pre class="popup-json">${escapeHtml(requestSchema)}</pre>
+                    </div>
+                ` : ''}
+                ${responseSchema ? `
+                    <div class="popup-section">
+                        <div class="popup-section-title">Response Schema</div>
+                        <pre class="popup-json">${escapeHtml(responseSchema)}</pre>
+                    </div>
+                ` : ''}
+                ${!requestSchema && !responseSchema ? '<div class="popup-note">No request or response schema is registered for this pulse.</div>' : ''}
+            `;
+        }
+
         function resolvePulseSummaryDefinition(pulseItem, pulsers = [], pulseName = '', pulseAddress = '') {
             const pulseMeta = pulseItem && typeof pulseItem.meta === 'object' && !Array.isArray(pulseItem.meta)
                 ? pulseItem.meta
@@ -2896,37 +5150,58 @@
             const pulseCard = pulseItem && pulseItem.raw && typeof pulseItem.raw.card === 'object' && !Array.isArray(pulseItem.raw.card)
                 ? pulseItem.raw.card
                 : {};
-            const definition = {
-                pulse_id: pulseAddress || pulseMeta.pulse_address || pulseCard.address || pulseItem?.address || '',
-                pulse_name: pulseName || pulseItem?.name || '',
-                input_schema: pulseMeta.input_schema,
-                output_schema: pulseMeta.output_schema,
-            };
-            if (definition.pulse_id || definition.input_schema || definition.output_schema) {
+            const definition = normalizePulseDefinitionShape(
+                pulseMeta.pulse_definition || pulseItem?.pulse_definition || pulseItem?.raw?.pulse_definition || {},
+                {
+                    pulse_id: pulseMeta.pulse_id || '',
+                    pulse_name: pulseName || pulseItem?.name || pulseCard.name || '',
+                    title: pulseItem?.name || pulseCard.name || pulseName || '',
+                    description: pulseItem?.description || pulseCard.description || '',
+                    pulse_address: pulseAddress || pulseMeta.pulse_address || pulseCard.address || pulseItem?.address || '',
+                    input_schema: pulseMeta.input_schema,
+                    output_schema: pulseMeta.output_schema,
+                    concept: pulseMeta.concept,
+                    interface: pulseMeta.interface,
+                    pulse_class: pulseMeta.pulse_class,
+                    status: pulseMeta.status,
+                    resource_type: pulseMeta.resource_type,
+                }
+            );
+            if (hasStructuredPulseDefinition(definition)) {
                 return definition;
             }
             const fallback = Array.isArray(pulsers)
-                ? pulsers.map((pulser) => resolvePulserDefinition(pulser, pulseName, pulseAddress)).find((entry) => entry && Object.keys(entry).length)
+                ? pulsers
+                    .map((pulser) => resolvePulserDefinition(pulser, pulseName, pulseAddress, definition.pulse_id || ''))
+                    .find((entry) => hasPulseDefinitionData(entry))
                 : null;
-            return fallback || {};
+            return fallback ? normalizePulseDefinitionShape(fallback, definition) : definition;
         }
 
-        function resolvePulserDefinition(pulser, pulseName = '', pulseAddress = '') {
-            const direct = pulser && typeof pulser.pulse_definition === 'object' && !Array.isArray(pulser.pulse_definition)
-                ? pulser.pulse_definition
-                : {};
-            if (Object.keys(direct).length) return direct;
+        function resolvePulserDefinition(pulser, pulseName = '', pulseAddress = '', pulseId = '') {
+            const fallback = {
+                pulse_id: pulseId,
+                pulse_name: pulseName,
+                title: pulseName || '',
+                pulse_address: pulseAddress,
+            };
+            const direct = normalizePulseDefinitionShape(
+                pulser && typeof pulser.pulse_definition === 'object' && !Array.isArray(pulser.pulse_definition)
+                    ? pulser.pulse_definition
+                    : {},
+                fallback
+            );
+            if (hasStructuredPulseDefinition(direct) && matchesPulseDefinition(direct, pulseName, pulseAddress, pulseId)) {
+                return direct;
+            }
 
             const meta = pulser && typeof pulser.meta === 'object' && !Array.isArray(pulser.meta) ? pulser.meta : {};
             const supported = Array.isArray(meta.supported_pulses) ? meta.supported_pulses : [];
-            return supported.find((entry) => {
-                if (!entry || typeof entry !== 'object') return false;
-                const entryName = entry.pulse_name || entry.name || '';
-                const entryAddress = entry.pulse_address || '';
-                if (pulseName && !containsText(entryName, pulseName)) return false;
-                if (pulseAddress && entryAddress && !samePitRef(entryAddress, pulseAddress)) return false;
-                return true;
-            }) || {};
+            const matchedSupported = supported
+                .map((entry) => normalizePulseDefinitionShape(entry, fallback))
+                .find((entry) => matchesPulseDefinition(entry, pulseName, pulseAddress, pulseId))
+                || null;
+            return matchedSupported ? normalizePulseDefinitionShape(matchedSupported, direct) : direct;
         }
 
         function derivePulserTestPayload(definition) {
@@ -2994,7 +5269,7 @@
             return `${stateLabel} • ${seconds}s ago`;
         }
 
-        function renderPulserLookupBody(pulsers, pulseName = '', pulseAddress = '') {
+        function renderPulserLookupBody(pulsers, pulseName = '', pulseAddress = '', pulseId = '') {
             if (!pulsers.length) {
                 return '<div class="popup-note">No available pulser is registered for this pulse yet.</div>';
             }
@@ -3010,7 +5285,7 @@
                     <div class="popup-list">
                         ${pulsers.map((pulser) => {
                 const meta = pulser.meta || {};
-                const definition = resolvePulserDefinition(pulser, pulseName, pulseAddress);
+                const definition = resolvePulserDefinition(pulser, pulseName, pulseAddress, pulseId);
                 const practices = selectPulsePractices(pulser.practices);
                 const defaultInput = derivePulserTestPayload(definition);
                 const lastActive = Number(pulser.last_active || 0);
@@ -3028,6 +5303,7 @@
                                 <div class="popup-chip-row">
                                     ${pulser.owner ? `<span class="popup-pill subtle">${escapeHtml(pulser.owner)}</span>` : ''}
                                     ${(pulser.plazaName || pulser.plaza_name) ? `<span class="popup-pill subtle">${escapeHtml(pulser.plazaName || pulser.plaza_name)}</span>` : ''}
+                                    <span class="popup-pill subtle">${escapeHtml(renderDirectCallLabel(pulser, pulser))}</span>
                                     <span class="popup-pill subtle">${escapeHtml(renderPopupHeartbeatCopy(lastActive))}</span>
                                 </div>
                                 <div class="popup-section">
@@ -3055,15 +5331,19 @@
 
         function renderPulserBatchBody(pulsers = [], pulseDefinition = {}, pulseName = '', pulseAddress = '') {
             const allPulsers = Array.isArray(pulsers) ? pulsers : [];
+            const resolvedPulseDefinition = normalizePulseDefinitionShape(pulseDefinition, {
+                pulse_name: pulseName,
+                pulse_address: pulseAddress,
+            });
             const firstPulserDefinition = allPulsers.length
-                ? resolvePulserDefinition(allPulsers[0], pulseName, pulseAddress)
+                ? resolvePulserDefinition(allPulsers[0], pulseName, pulseAddress, resolvedPulseDefinition.pulse_id || '')
                 : {};
             const defaultInput = derivePulserTestPayload(
                 firstPulserDefinition && Object.keys(firstPulserDefinition || {}).length
                     ? firstPulserDefinition
-                    : pulseDefinition && Object.keys(pulseDefinition || {}).length
-                        ? pulseDefinition
-                    : resolvePulseSummaryDefinition(null, allPulsers, pulseName, pulseAddress)
+                    : resolvedPulseDefinition && Object.keys(resolvedPulseDefinition || {}).length
+                        ? resolvedPulseDefinition
+                        : resolvePulseSummaryDefinition(null, allPulsers, pulseName, pulseAddress)
             );
 
             if (!allPulsers.length) {
@@ -3071,7 +5351,7 @@
             }
 
             return `
-                <section class="popup-batch-shell" data-batch-test-panel="1" data-inactive-scope="batch" data-batch-pulse-name="${escapeAttribute(pulseDefinition.pulse_name || pulseName || '')}" data-batch-pulse-address="${escapeAttribute(pulseDefinition.pulse_id || pulseDefinition.pulse_address || pulseAddress || '')}" data-batch-output-schema="${escapeAttribute(JSON.stringify(pulseDefinition.output_schema || {}))}">
+                <section class="popup-batch-shell" data-batch-test-panel="1" data-inactive-scope="batch" data-batch-pulse-name="${escapeAttribute(resolvedPulseDefinition.pulse_name || pulseName || '')}" data-batch-pulse-address="${escapeAttribute(resolvedPulseDefinition.pulse_id || resolvedPulseDefinition.pulse_address || pulseAddress || '')}" data-batch-output-schema="${escapeAttribute(JSON.stringify(resolvedPulseDefinition.output_schema || {}))}">
                     <div class="popup-section">
                         <div class="popup-section-title">Input Parameters</div>
                         <textarea class="popup-input" data-batch-test-input>${escapeHtml(JSON.stringify(defaultInput, null, 2))}</textarea>
@@ -3086,11 +5366,11 @@
                         <div class="popup-section-title">Pulsers</div>
                         <div class="popup-batch-list">
                             ${allPulsers.map((pulser) => {
-                const definition = resolvePulserDefinition(pulser, pulseName, pulseAddress);
+                const definition = resolvePulserDefinition(pulser, pulseName, pulseAddress, resolvedPulseDefinition.pulse_id || '');
                 const practice = selectPulsePractices(pulser.practices)[0] || {};
                 const isActive = popupHeartbeatState(Number(pulser.last_active || 0)) === 'active';
                 return `
-                                <label class="popup-batch-item ${isActive ? '' : 'hidden-inactive'}" data-batch-pulser="1" data-batch-heartbeat-state="${escapeAttribute(isActive ? 'active' : 'inactive')}" data-pulser-id="${escapeAttribute(pulser.agent_id || '')}" data-pulser-name="${escapeAttribute(pulser.name || '')}" data-pulser-address="${escapeAttribute(pulser.address || '')}" data-practice-id="${escapeAttribute(practice.id || 'get_pulse_data')}" data-pulse-name="${escapeAttribute(definition.pulse_name || definition.name || pulseDefinition.pulse_name || pulseName || '')}" data-pulse-address="${escapeAttribute(definition.pulse_address || pulseDefinition.pulse_id || pulseDefinition.pulse_address || pulseAddress || '')}" data-pulse-output-schema="${escapeAttribute(JSON.stringify(definition.output_schema || pulseDefinition.output_schema || {}))}">
+                                <label class="popup-batch-item ${isActive ? '' : 'hidden-inactive'}" data-batch-pulser="1" data-batch-heartbeat-state="${escapeAttribute(isActive ? 'active' : 'inactive')}" data-pulser-id="${escapeAttribute(pulser.agent_id || '')}" data-pulser-name="${escapeAttribute(pulser.name || '')}" data-pulser-address="${escapeAttribute(pulser.address || '')}" data-practice-id="${escapeAttribute(practice.id || 'get_pulse_data')}" data-pulse-name="${escapeAttribute(definition.pulse_name || definition.name || resolvedPulseDefinition.pulse_name || pulseName || '')}" data-pulse-address="${escapeAttribute(definition.pulse_address || resolvedPulseDefinition.pulse_id || resolvedPulseDefinition.pulse_address || pulseAddress || '')}" data-pulse-output-schema="${escapeAttribute(JSON.stringify(definition.output_schema || resolvedPulseDefinition.output_schema || {}))}">
                                     <input type="checkbox" ${isActive ? 'checked' : ''}>
                                     <span class="popup-batch-main">
                                         <span class="popup-batch-name">${escapeHtml(pulser.name || 'Unnamed Pulser')}</span>
@@ -3162,6 +5442,26 @@
             font-size: 0.92rem;
         }
         .popup-copy { margin: 0.7rem 0; }
+        .popup-definition-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 0.75rem;
+        }
+        .popup-definition-item {
+            border: 1px solid rgba(31, 122, 255, 0.14);
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.72);
+            padding: 0.75rem 0.85rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.32rem;
+        }
+        .popup-definition-value {
+            color: var(--popup-text);
+            font-size: 0.92rem;
+            line-height: 1.45;
+            word-break: break-word;
+        }
         .popup-tab-bar {
             display: flex;
             gap: 0.6rem;
@@ -3408,17 +5708,7 @@
             <details class="popup-disclosure">
                 <summary>Pulse Information</summary>
                 <div class="popup-disclosure-body">
-                    <div class="popup-section">
-                        <div class="popup-section-title">Pulse ID</div>
-                        <pre class="popup-json">${escapeHtml(pulseDefinition.pulse_id || pulseAddress || 'Unavailable')}</pre>
-                    </div>
-                    <div class="popup-section">
-                        <div class="popup-section-title">Pulse Definition</div>
-                        <div class="popup-meta">${escapeHtml(pulseDefinition.pulse_name || title || 'Pulse')}</div>
-                        ${pulseDefinition.input_schema ? `<pre class="popup-json">${escapeHtml(JSON.stringify(pulseDefinition.input_schema, null, 2))}</pre>` : ''}
-                        ${pulseDefinition.output_schema ? `<pre class="popup-json">${escapeHtml(JSON.stringify(pulseDefinition.output_schema, null, 2))}</pre>` : ''}
-                        ${!pulseDefinition.input_schema && !pulseDefinition.output_schema ? '<div class="popup-note">No structured pulse definition is registered.</div>' : ''}
-                    </div>
+                    ${renderPulseDefinitionDetails(pulseDefinition, title, pulseAddress)}
                 </div>
             </details>
         </section>
@@ -3580,7 +5870,7 @@
                 }
                 try {
                     setBatchPulserProgress(row, 'running', 'Requesting data...');
-                    const response = await fetch('/api/pulsers/test', {
+                    const response = await authFetch('/api/pulsers/test', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -3642,7 +5932,7 @@
                 } catch (error) {
                     outputSchema = {};
                 }
-                const response = await fetch('/api/pulsers/test', {
+                const response = await authFetch('/api/pulsers/test', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -3684,7 +5974,7 @@
 
             const filtered = state.items.filter((item) => {
                 const haystack = [item.name, item.description, item.owner, item.address, JSON.stringify(item.meta || {})].join(' ').toLowerCase();
-                const kind = item.kind === 'Schema' || item.kind === 'Pulse' || item.kind === 'Phema' ? item.kind : 'Other';
+                const kind = ['Schema', 'Pulse', 'Phema', 'AgentConfig'].includes(item.kind) ? item.kind : 'Other';
                 if (state.editorKindFilter !== 'All' && kind !== state.editorKindFilter) return false;
                 if (query && !haystack.includes(query)) return false;
                 return true;
@@ -3701,7 +5991,9 @@
                 <article class="catalog-item">
                     <div class="catalog-item-header">
                         <span class="type-pill ${escapeHtml(item.kind)}">${escapeHtml(item.kind)}</span>
-                        <button class="ghost-btn" data-open-source="${escapeHtml(item.sourceKey)}">Open</button>
+                        ${item.kind === 'AgentConfig'
+                            ? `<button class="ghost-btn" data-open-agent-launch="${escapeHtml(item.sourceKey)}">Launch</button>`
+                            : `<button class="ghost-btn" data-open-source="${escapeHtml(item.sourceKey)}">Open</button>`}
                     </div>
                     <div class="catalog-name">${escapeHtml(item.name)}</div>
                     <div class="catalog-meta">${escapeHtml(item.description || 'No description registered.')}</div>
@@ -4038,7 +6330,7 @@
 
             if (draft.kind === 'Phema') {
                 try {
-                    const response = await fetch('/api/phemas', {
+                    const response = await authFetch('/api/phemas', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ phema: compiled.payload })
@@ -4078,7 +6370,7 @@
                     return;
                 }
                 try {
-                    const response = await fetch(`/api/phemas/${encodeURIComponent(draft.sourceKey)}`, {
+                    const response = await authFetch(`/api/phemas/${encodeURIComponent(draft.sourceKey)}`, {
                         method: 'DELETE'
                     });
                     const data = await response.json();
@@ -4308,9 +6600,16 @@
             });
         }
 
+        window.addEventListener('message', (event) => {
+            if (event.origin !== window.location.origin) return;
+            if (event.data?.type !== 'plaza-agent-config-launch') return;
+            fetchStatus();
+        });
+
         function normalizeKind(kind) {
             const normalized = String(kind || 'Agent').trim();
-            if (normalized === 'Pulser') return 'Agent';
+            if (!normalized) return 'Agent';
+            if (normalized.toLowerCase() === 'agentconfig') return 'AgentConfig';
             return normalized || 'Agent';
         }
 
@@ -4357,6 +6656,31 @@
             return registrationMode === 'info_only' ? 'Info Only' : 'Hosted';
         }
 
+        function resolveDirectCallState(entry, card = {}) {
+            const entryMeta = entry?.meta && typeof entry.meta === 'object' ? entry.meta : {};
+            const cardMeta = card?.meta && typeof card.meta === 'object' ? card.meta : {};
+            const candidates = [
+                entry?.accepts_direct_call,
+                card?.accepts_direct_call,
+                entryMeta.accepts_direct_call,
+                cardMeta.accepts_direct_call,
+                entry?.accepts_inbound_from_plaza,
+                card?.accepts_inbound_from_plaza,
+                entryMeta.accepts_inbound_from_plaza,
+                cardMeta.accepts_inbound_from_plaza
+            ];
+            const chosen = candidates.find((value) => typeof value === 'boolean');
+            return chosen === undefined ? true : chosen;
+        }
+
+        function renderDirectCallLabel(entry, card = {}) {
+            return resolveDirectCallState(entry, card) ? 'Direct Call: Yes' : 'Direct Call: No';
+        }
+
+        function renderDirectCallChip(entry, card = {}) {
+            return `<span class="chip">${escapeHtml(renderDirectCallLabel(entry, card))}</span>`;
+        }
+
         function containsText(haystack, needle) {
             if (!needle) return true;
             return String(haystack || '').toLowerCase().includes(String(needle || '').toLowerCase());
@@ -4368,7 +6692,8 @@
         }
 
         function tracksHeartbeat(kind) {
-            return normalizeKind(kind) === 'Agent';
+            const normalized = normalizeKind(kind);
+            return normalized === 'Agent' || normalized === 'Pulser';
         }
 
         function normalizeMeta(meta) {

@@ -4,6 +4,9 @@
     "host": "127.0.0.1",
     "port": 8014,
     "plaza_url": "http://127.0.0.1:8011",
+    "plaza_urls": [
+        "http://127.0.0.1:8011"
+    ],
     "pools": [
         {
             "type": "FileSystemPool",

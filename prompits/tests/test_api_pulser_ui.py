@@ -1,6 +1,8 @@
 import json
 import os
 import sys
+import time
+from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
@@ -17,6 +19,16 @@ class FakeHttpResponse:
         return {"data": {"quote": {"price": 214.37}}}
 
 
+class FakeResponse:
+    def __init__(self, payload, status_code=200):
+        self._payload = payload
+        self.status_code = status_code
+        self.content = json.dumps(payload).encode("utf-8")
+
+    def json(self):
+        return self._payload
+
+
 class FakeHttpClient:
     def __enter__(self):
         return self
@@ -31,6 +43,8 @@ class FakeHttpClient:
 def test_api_pulser_has_dedicated_ui_and_saves_config_file(tmp_path, monkeypatch):
     pool_dir = tmp_path / "storage"
     config_path = tmp_path / "demo_api_pulser.config"
+    monkeypatch.setenv("UPDATED_PULSE_KEY", "updated-pulse-key")
+    monkeypatch.setenv("UPDATED_MARKET_KEY", "updated-market-key")
     monkeypatch.setattr(
         "phemacast.pulsers.api_pulser.httpx.Client",
         lambda timeout=10.0: FakeHttpClient(),
@@ -187,3 +201,86 @@ def test_api_pulser_has_dedicated_ui_and_saves_config_file(tmp_path, monkeypatch
     assert written["supported_pulses"][1]["name"] == "trade_volume"
     assert written["supported_pulses"][1]["api"]["api_key_id"] == "news"
     assert agent.supported_pulses[1]["test_data"]["symbol"] == "NVDA"
+
+
+def test_api_pulser_ui_shows_baseagent_plaza_connection_status(tmp_path, monkeypatch):
+    config_path = tmp_path / "connected_api_pulser.config"
+    pool_dir = tmp_path / "storage"
+    monkeypatch.setattr(
+        "phemacast.pulsers.api_pulser.httpx.Client",
+        lambda timeout=10.0: FakeHttpClient(),
+    )
+    config_path.write_text(
+        json.dumps(
+            {
+                "name": "ConnectedApiPulser",
+                "type": "phemacast.pulsers.api_pulser.ApiPulser",
+                "host": "127.0.0.1",
+                "port": 8125,
+                "plaza_url": "http://127.0.0.1:8011",
+                "supported_pulses": [
+                    {
+                        "name": "last_price",
+                        "pulse_address": "plaza://pulse/last_price",
+                        "api": {
+                            "url": "https://example.test/quote/{symbol}",
+                            "method": "GET",
+                        },
+                        "mapping": {"last_price": "price"},
+                    }
+                ],
+                "pools": [
+                    {
+                        "type": "FileSystemPool",
+                        "name": "demo_pool",
+                        "description": "test pool",
+                        "root_path": str(pool_dir),
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    agent = build_agent_from_config(str(config_path))
+    agent.agent_id = "pulser-123"
+    agent.last_plaza_heartbeat_at = time.time() - 5
+
+    def fake_plaza_get(path, **kwargs):
+        if path == "/health":
+            return FakeResponse({"status": "ok"}, 200)
+        if path == "/search":
+            return FakeResponse(
+                [
+                    {
+                        "agent_id": "pulser-123",
+                        "name": "ConnectedApiPulser",
+                        "last_active": time.time() - 4,
+                    }
+                ],
+                200,
+            )
+        raise AssertionError(f"Unexpected path: {path}")
+
+    with (
+        patch.object(agent, "_ensure_token_valid", return_value={"Authorization": "Bearer token"}),
+        patch.object(agent, "_plaza_get", side_effect=fake_plaza_get),
+    ):
+        with TestClient(agent.app) as client:
+            root = client.get("/")
+            assert root.status_code == 200
+            assert 'src="/static/agent_connection.js' in root.text
+            assert 'class="hero agent-sticky-header"' in root.text
+            assert "mountStickyHeader" in root.text
+            assert 'id="agent-plaza-pill"' in root.text
+            assert 'id="agent-plaza-note"' in root.text
+
+            response = client.get("/api/plaza_connection_status")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["plaza_url"] == "http://127.0.0.1:8011"
+    assert payload["agent_id"] == "pulser-123"
+    assert payload["online"] is True
+    assert payload["authenticated"] is True
+    assert payload["connection_status"] == "connected"

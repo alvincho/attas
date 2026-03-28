@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>attas | User Agent</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Space+Mono&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body class="dark-theme">
+    <div class="glass-background"></div>
+    <div class="noise-overlay"></div>
+
+    <nav class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo-icon"></div>
+            <h3>at<span>tas</span></h3>
+        </div>
+        <ul class="nav-links">
+            <li class="active" data-page="dashboard"><span class="icon-dashboard"></span> Dashboard</li>
+            <li data-page="layouts"><span class="icon-layout"></span> Layouts</li>
+            <li data-page="pieces"><span class="icon-piece"></span> Pieces</li>
+            <li data-page="templates"><span class="icon-reports"></span> Report Templates</li>
+            <li><a href="/plazas" style="text-decoration: none; color: inherit;"><span class="icon-grid"></span>
+                    Plazas</a></li>
+        </ul>
+        <div class="sidebar-footer">
+            <div class="status-badge" id="agent-status">
+                <span class="pulsar"></span>
+                {{ agent_name.split('Agent')[0] }}
+            </div>
+        </div>
+    </nav>
+
+    <main class="content-area">
+        <!-- Page: Dashboard -->
+        <section id="dashboard-page" class="page active">
+            <header class="page-header">
+                <div class="header-info">
+                    <h1>Market <span>Analysis</span></h1>
+                    <p class="subtitle">Real-time multi-agent data synthesis</p>
+                </div>
+                <div class="header-actions">
+                    <button id="settings-toggle" class="icon-btn" title="AI Settings">
+                        <span class="icon-settings"></span>
+                    </button>
+                </div>
+            </header>
+
+            <section id="settings-panel" class="settings-panel hidden">
+                <h3>AI Configuration</h3>
+                <div class="settings-grid">
+                    <div class="form-group">
+                        <label>LLM Provider</label>
+                        <select id="llm-provider">
+                            <option value="ollama" selected>Ollama (Local)</option>
+                            <option value="openai">OpenAI</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Model</label>
+                        <select id="llm-model">
+                            <option value="gemma3:27b" selected>gemma3:27b (Default)</option>
+                        </select>
+                    </div>
+                </div>
+            </section>
+
+            <section class="search-section">
+                <div class="input-group">
+                    <input type="text" id="ticker-input" placeholder="Enter Ticker (e.g. BTC, AAPL, NVDA)"
+                        maxlength="10">
+                    <button id="fetch-btn">
+                        <span class="btn-text">Analyze</span>
+                        <span class="countdown-text hidden"></span>
+                        <span class="loader"></span>
+                    </button>
+                </div>
+            </section>
+
+            <section class="results-section" id="results-container">
+                <div class="empty-state">
+                    <div class="icon-search"></div>
+                    <p>Waiting for ticker input...</p>
+                </div>
+
+                <div class="info-card hidden" id="stock-card">
+                    <div class="card-header">
+                        <h2 id="display-ticker">--</h2>
+                        <div class="price-tag">
+                            <span class="currency">$</span>
+                            <span id="display-price">0.00</span>
+                        </div>
+                    </div>
+
+                    <div class="card-body">
+                        <div class="stat">
+                            <label>24h Change</label>
+                            <span id="display-change">0.00%</span>
+                        </div>
+                        <div class="stat">
+                            <label>Volume</label>
+                            <span id="display-volume">0</span>
+                        </div>
+                        <div class="stat">
+                            <label>Last Updated</label>
+                            <span id="display-time">--</span>
+                        </div>
+                    </div>
+
+                    <div class="ai-insight-section" id="ai-insight-container">
+                        <div class="insight-header">
+                            <span class="insight-label">AI Insight</span>
+                            <button id="refresh-insight-btn" class="mini-btn">Regenerate</button>
+                        </div>
+                        <div class="insight-content" id="display-insight">
+                            <div class="insight-placeholder">Analyzing market sentiment...</div>
+                        </div>
+                    </div>
+
+                    <div class="card-footer">
+                        <div class="agent-trail">
+                            <span class="trail-label">Processed by:</span>
+                            <div class="agent-chips" id="agent-chips">
+                                <span class="chip">MarketData</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </section>
+
+        <!-- Page: Layouts -->
+        <section id="layouts-page" class="page">
+            <header class="page-header">
+                <div class="header-info">
+                    <h1>Report <span>Layouts</span></h1>
+                    <p class="subtitle">Design and manage report structures</p>
+                </div>
+                <div class="header-actions">
+                    <button id="create-layout-btn" class="primary-btn">
+                        <span class="icon-add"></span> Create Layout
+                    </button>
+                </div>
+            </header>
+
+            <div class="layouts-container">
+                <div class="search-bar">
+                    <input type="text" id="layout-search" placeholder="Search layouts...">
+                </div>
+
+                <div id="layouts-grid" class="layouts-grid">
+                    <!-- Layouts will be rendered here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Layout Editor Modal -->
+        <div id="layout-editor-modal" class="modal" style="display: none;">
+            <div class="modal-content layout-editor">
+                <div class="modal-header">
+                    <h2 id="editor-title">Layout Editor</h2>
+                    <button class="close-modal">&times;</button>
+                </div>
+
+                <div class="editor-body">
+                    <div class="editor-sidebar">
+                        <h3>Available Pieces</h3>
+                        <div id="pieces-library" class="pieces-library">
+                            <!-- Pieces will be loaded here -->
+                        </div>
+                    </div>
+
+                    <div class="editor-canvas">
+                        <div class="canvas-toolbar">
+                            <input type="text" id="layout-name-input" placeholder="Layout Name"
+                                class="layout-name-input">
+                            <div class="canvas-controls">
+                                <button id="toggle-grid-btn" class="icon-btn" title="Toggle Grid">
+                                    <span class="icon-grid"></span>
+                                </button>
+                            </div>
+                        </div>
+                        <div id="layout-canvas" class="layout-canvas show-grid">
+                            <!-- Layout items will be placed here -->
+                        </div>
+                    </div>
+
+                    <div class="editor-properties">
+                        <h3>Properties</h3>
+                        <div id="properties-panel" class="properties-panel">
+                            <p class="placeholder-text">Select an item to edit properties</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button id="save-layout-btn" class="primary-btn">Save Layout</button>
+                    <button class="secondary-btn close-modal">Cancel</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Page: Pieces -->
+        <section id="pieces-page" class="page">
+            <header class="page-header">
+                <div class="header-info">
+                    <h1>Report <span>Pieces</span></h1>
+                    <p class="subtitle">Manage reusable report components</p>
+                </div>
+                <div class="header-actions">
+                    <button id="create-piece-btn" class="primary-btn">
+                        <span class="icon-add"></span> Create Piece
+                    </button>
+                </div>
+            </header>
+
+            <div class="pieces-container">
+                <div class="search-bar">
+                    <input type="text" id="piece-search" placeholder="Search pieces...">
+                </div>
+
+                <div id="pieces-grid" class="pieces-grid">
+                    <!-- Pieces will be rendered here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Piece Editor Modal -->
+        <div id="piece-editor-modal" class="modal" style="display: none;">
+            <div class="modal-content piece-editor">
+                <div class="modal-header">
+                    <h2 id="piece-editor-title">Piece Editor</h2>
+                    <button class="close-piece-modal">&times;</button>
+                </div>
+
+                <div class="piece-editor-body">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Name *</label>
+                            <input type="text" id="piece-name" placeholder="e.g., Market Overview">
+                        </div>
+
+                        <div class="form-group full-width">
+                            <label>Description *</label>
+                            <textarea id="piece-description" rows="2"
+                                placeholder="Brief description of this piece"></textarea>
+                        </div>
+
+                        <div class="form-group full-width">
+                            <label>Detail of Processing *</label>
+                            <textarea id="piece-processing" rows="3"
+                                placeholder="Technical details of how this piece is generated"></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Input Schema (JSON)</label>
+                            <textarea id="piece-input-schema" rows="4" placeholder='{"ticker": "string"}'></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Output Schema (JSON)</label>
+                            <textarea id="piece-output-schema" rows="4" placeholder='{"price": "number"}'></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Example Input (JSON)</label>
+                            <textarea id="piece-example-input" rows="3" placeholder='{"ticker": "AAPL"}'></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Example Data (JSON)</label>
+                            <textarea id="piece-example-data" rows="3" placeholder='{"price": 150.25}'></textarea>
+                        </div>
+
+                        <div class="form-group full-width">
+                            <label>Recommended Display Types</label>
+                            <div class="checkbox-group">
+                                <label><input type="checkbox" class="display-type" value="text"> Text</label>
+                                <label><input type="checkbox" class="display-type" value="table"> Table</label>
+                                <label><input type="checkbox" class="display-type" value="chart"> Chart</label>
+                                <label><input type="checkbox" class="display-type" value="list"> List</label>
+                                <label><input type="checkbox" class="display-type" value="insight"> Insight</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button id="save-piece-btn" class="primary-btn">Save Piece</button>
+                    <button class="secondary-btn close-piece-modal">Cancel</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Page: Templates -->
+        <section id="templates-page" class="page">
+            <header class="page-header">
+                <div class="header-info">
+                    <h1>Report <span>Templates</span></h1>
+                    <p class="subtitle">AI-generated structured reporting</p>
+                </div>
+            </header>
+
+            <div class="template-layout">
+                <div class="template-sidebar">
+                    <div class="card">
+                        <h3>Saved Templates</h3>
+                        <select id="saved-templates-select" class="full-width">
+                            <option value="">Select a template...</option>
+                        </select>
+                    </div>
+
+                    <div class="card">
+                        <h3>Target Analyst</h3>
+                        <div class="form-group">
+                            <select id="analyst-select" class="full-width">
+                                <option value="">Searching analysts...</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="card chat-card">
+                        <div class="chat-header">
+                            <h3>Analyst Chat</h3>
+                            <button id="clear-chat-btn" class="mini-btn">New Session</button>
+                        </div>
+                        <div id="template-chat-messages" class="chat-messages">
+                            <div class="message assistant">
+                                <p>Select an analyst and tell me what kind of report you need.</p>
+                            </div>
+                        </div>
+                        <div class="chat-footer">
+                            <input type="text" id="template-prompt"
+                                placeholder="Ask to add news, charts, or change structure...">
+                            <button id="generate-template-btn" class="icon-btn primary">
+                                <span class="icon-send"></span>
+                                <span class="countdown-text hidden"></span>
+                                <span class="loader"></span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="template-main">
+                    <div class="preview-card" id="template-preview-container">
+                        <div class="card-header">
+                            <div class="header-main">
+                                <span class="icon-reports"></span>
+                                <h2>Template Preview</h2>
+                            </div>
+                            <div class="preview-tabs">
+                                <button class="tab-btn active" data-tab="structure">Structure</button>
+                                <button class="tab-btn" data-tab="simulation">Simulated Report</button>
+                            </div>
+                        </div>
+                        <div class="preview-actions hidden" id="save-actions">
+                            <input type="text" id="save-name" placeholder="Template Name">
+                            <button id="save-template-btn" class="mini-btn accent">Save Template</button>
+                        </div>
+                        <div id="preview-content" class="preview-content tab-pane active" data-pane="structure">
+                            <div class="empty-preview">
+                                <span class="icon-reports"></span>
+                                <p>Select or generate a template to preview</p>
+                            </div>
+                        </div>
+                        <div id="simulation-container" class="preview-content tab-pane" data-pane="simulation">
+                            <div class="empty-preview">
+                                <span class="icon-eye"></span>
+                                <p>Switch to "Simulated" to see a live preview</p>
+                            </div>
+                        </div>
+                        <div id="simulation-controls" class="preview-actions hidden">
+                            <button id="regenerate-sim-btn" class="mini-btn">
+                                <span class="icon-refresh"></span>
+                                Regenerate Simulation
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <footer class="footer">
+            <p>&copy; 2026 attas Protocol. All system communications encrypted.</p>
+        </footer>
+    </main>
+
+    <script src="/static/script.js"></script>
+</body>
+
+</html>

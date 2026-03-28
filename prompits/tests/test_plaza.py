@@ -664,7 +664,7 @@ def test_plaza_bootstraps_builtin_schema_pits_on_startup():
 def test_plaza_bootstraps_init_files_on_startup_without_duplicates(tmp_path):
     init_dir = tmp_path / "init_files"
     init_dir.mkdir()
-    (init_dir / "init_pulse.json").write_text(json.dumps({
+    (init_dir / "init_pulse_market.json").write_text(json.dumps({
         "PitType": "Pulse",
         "data": [
             {
@@ -741,10 +741,49 @@ def test_plaza_bootstraps_init_files_on_startup_without_duplicates(tmp_path):
     assert len(pool.tables[PlazaPractice.DIRECTORY_TABLE]) == first_count
 
 
+def test_plaza_bootstrap_skips_imported_init_files(tmp_path):
+    init_dir = tmp_path / "init_files"
+    init_dir.mkdir()
+    (init_dir / "init_pulse_imported.json").write_text(json.dumps({
+        "PitType": "Pulse",
+        "data": [
+            {
+                "name": "last_price",
+                "description": "Latest traded price for the stock.",
+            }
+        ]
+    }))
+
+    pool = InMemoryPool()
+    app = FastAPI()
+    practice = PlazaPractice(init_files=[str(init_dir)])
+    practice.bind(SimpleNamespace(
+        name="Plaza",
+        pool=pool,
+        host="127.0.0.1",
+        port=8011,
+        agent_card={
+            "name": "Plaza",
+            "role": "coordinator",
+            "tags": ["mediator"],
+            "address": "http://127.0.0.1:8011",
+            "pit_type": "Agent",
+            "agent_id": "plaza-self"
+        }
+    ))
+    practice.mount(app)
+
+    pulse_rows = [
+        row for row in pool.tables.get(PlazaPractice.DIRECTORY_TABLE, {}).values()
+        if row.get("type") == "Pulse"
+    ]
+    assert pulse_rows == []
+
+
 def test_plaza_bootstrap_refreshes_existing_seeded_pulse_schema(tmp_path):
     init_dir = tmp_path / "init_files"
     init_dir.mkdir()
-    init_file = init_dir / "init_pulse.json"
+    init_file = init_dir / "init_pulse_news.json"
     init_file.write_text(json.dumps({
         "PitType": "Pulse",
         "data": [
@@ -831,7 +870,7 @@ def test_plaza_bootstrap_refreshes_existing_seeded_pulse_schema(tmp_path):
 def test_plaza_bootstraps_init_files_with_single_directory_fetch(tmp_path):
     init_dir = tmp_path / "init_files"
     init_dir.mkdir()
-    (init_dir / "init_pulse.json").write_text(json.dumps({
+    (init_dir / "init_pulse_prices.json").write_text(json.dumps({
         "PitType": "Pulse",
         "data": [
             {"name": "last_price", "description": "Latest traded price."},
@@ -865,6 +904,55 @@ def test_plaza_bootstraps_init_files_with_single_directory_fetch(tmp_path):
     ]
     assert len(directory_reads) in {1, 2}
     assert all(call == (PlazaPractice.DIRECTORY_TABLE, None) for call in directory_reads)
+
+
+def test_plaza_bootstraps_all_tagged_init_pulse_files_from_directory(tmp_path):
+    init_dir = tmp_path / "init_files"
+    init_dir.mkdir()
+    (init_dir / "init_pulse_market.json").write_text(json.dumps({
+        "PitType": "Pulse",
+        "data": [
+            {"name": "last_price", "description": "Latest traded price."},
+        ]
+    }))
+    (init_dir / "init_pulse_news.json").write_text(json.dumps({
+        "PitType": "Pulse",
+        "data": [
+            {"name": "news_article", "description": "Latest news item."},
+        ]
+    }))
+    (init_dir / "init_schema.json").write_text(json.dumps({
+        "PitType": "Schema",
+        "name": "ignored_schema",
+        "rowSchema": {"id": {"type": "string"}},
+    }))
+
+    pool = InMemoryPool()
+    app = FastAPI()
+    practice = PlazaPractice(init_files=[str(init_dir)])
+    practice.bind(SimpleNamespace(
+        name="Plaza",
+        pool=pool,
+        host="127.0.0.1",
+        port=8011,
+        agent_card={
+            "name": "Plaza",
+            "role": "coordinator",
+            "tags": ["mediator"],
+            "address": "http://127.0.0.1:8011",
+            "pit_type": "Agent",
+            "agent_id": "plaza-self"
+        }
+    ))
+    practice.mount(app)
+
+    pulse_names = {
+        row.get("name")
+        for row in pool.tables.get(PlazaPractice.DIRECTORY_TABLE, {}).values()
+        if row.get("type") == "Pulse"
+    }
+
+    assert pulse_names == {"last_price", "news_article"}
 
 
 def test_plaza_registers_pulser_entry_with_supported_pulse_details():
@@ -940,15 +1028,21 @@ def test_plaza_registers_pulser_entry_with_supported_pulse_details():
     assert results[0]["meta"]["pulse_address"] == "plaza://pulse/last_price"
     assert results[0]["meta"]["input_schema"]["properties"]["symbol"]["type"] == "string"
     assert len(results[0]["meta"]["supported_pulses"]) == 1
+    assert results[0]["meta"]["supported_pulses"][0]["pulse_id"] == "urn:plaza:pulse:last.price"
+    assert results[0]["meta"]["supported_pulses"][0]["pulse_definition"]["resource_type"] == "pulse_definition"
     assert results[0]["meta"]["supported_pulses"][0]["pulse_address"] == "plaza://pulse/last_price"
     assert results[0]["meta"]["supported_pulses"][0]["output_schema"]["properties"]["last_price"]["type"] == "number"
 
     assert PlazaPractice.PULSE_PULSER_TABLE in pool.tables
     pulse_pair_rows = list(pool.tables[PlazaPractice.PULSE_PULSER_TABLE].values())
     assert len(pulse_pair_rows) == 1
+    assert pulse_pair_rows[0]["pulse_id"] == "urn:plaza:pulse:last.price"
+    assert pulse_pair_rows[0]["pulse_directory_id"] == practice.state.stable_pulse_id("last_price")
     assert pulse_pair_rows[0]["pulse_name"] == "last_price"
     assert pulse_pair_rows[0]["pulse_address"] == "plaza://pulse/last_price"
     assert pulse_pair_rows[0]["pulser_address"] == register.json()["agent_id"]
+    assert pulse_pair_rows[0]["pulser_directory_id"] == register.json()["agent_id"]
+    assert pulse_pair_rows[0]["pulse_definition"]["resource_type"] == "pulse_definition"
     assert pulse_pair_rows[0]["input_schema"]["properties"]["symbol"]["type"] == "string"
 
     pulse_search = client.get("/search", params={"pulse_name": "last_price"}, headers=headers)
@@ -957,6 +1051,12 @@ def test_plaza_registers_pulser_entry_with_supported_pulse_details():
     assert len(pulse_results) == 1
     assert pulse_results[0]["name"] == "YFinancePulser"
     assert pulse_results[0]["pit_type"] == "Pulser"
+
+    pulse_id_search = client.get("/search", params={"pulse_id": "urn:plaza:pulse:last.price"}, headers=headers)
+    assert pulse_id_search.status_code == 200
+    pulse_id_results = pulse_id_search.json()
+    assert len(pulse_id_results) == 1
+    assert pulse_id_results[0]["name"] == "YFinancePulser"
 
 
 def test_plaza_register_accepts_multiple_pulse_pulser_pairs_in_single_request():
@@ -1017,8 +1117,14 @@ def test_plaza_register_accepts_multiple_pulse_pulser_pairs_in_single_request():
     assert PlazaPractice.PULSE_PULSER_TABLE in pool.tables
     pulse_pair_rows = list(pool.tables[PlazaPractice.PULSE_PULSER_TABLE].values())
     assert len(pulse_pair_rows) == 2
+    assert {row["pulse_id"] for row in pulse_pair_rows} == {"urn:plaza:pulse:last.price", "urn:plaza:pulse:trade.volume"}
+    assert {row["pulse_directory_id"] for row in pulse_pair_rows} == {
+        practice.state.stable_pulse_id("last_price"),
+        practice.state.stable_pulse_id("trade_volume"),
+    }
     assert {row["pulse_name"] for row in pulse_pair_rows} == {"last_price", "trade_volume"}
     assert all(row["pulser_id"] == register.json()["agent_id"] for row in pulse_pair_rows)
+    assert all(row["pulser_directory_id"] == register.json()["agent_id"] for row in pulse_pair_rows)
 
     price_search = client.get("/search", params={"pulse_name": "last_price"}, headers=headers)
     assert price_search.status_code == 200
@@ -1031,6 +1137,61 @@ def test_plaza_register_accepts_multiple_pulse_pulser_pairs_in_single_request():
     volume_results = volume_search.json()
     assert len(volume_results) == 1
     assert volume_results[0]["name"] == "BatchPulser"
+
+
+def test_plaza_can_restore_missing_pulse_directory_rows_from_pairs():
+    pool = InMemoryPool()
+    pool._CreateTable(PlazaPractice.DIRECTORY_TABLE, None)
+    pool._CreateTable(PlazaPractice.PULSE_PULSER_TABLE, None)
+    pool._Insert(
+        PlazaPractice.PULSE_PULSER_TABLE,
+        {
+            "id": "pair-1",
+            "pulse_id": "urn:plaza:pulse:last.price",
+            "pulse_name": "last_price",
+            "pulse_address": "plaza://pulse/last_price",
+            "pulse_definition": {
+                "resource_type": "pulse_definition",
+                "id": "urn:plaza:pulse:last.price",
+                "name": "last_price",
+                "description": "Latest traded price for the stock.",
+                "status": "stable",
+                "interface": {
+                    "request_schema": {
+                        "type": "object",
+                        "properties": {"symbol": {"type": "string"}},
+                        "required": ["symbol"],
+                    },
+                    "response_schema": {
+                        "type": "object",
+                        "properties": {"symbol": {"type": "string"}, "last_price": {"type": "number"}},
+                        "required": ["symbol", "last_price"],
+                    },
+                },
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {"symbol": {"type": "string"}},
+                "required": ["symbol"],
+            },
+            "pulser_id": "pulser-1",
+            "pulser_name": "YFinancePulser",
+            "pulser_address": "http://127.0.0.1:8020",
+        },
+    )
+
+    practice = PlazaPractice()
+    practice.state.directory_pool = pool
+    practice.state.plaza_url_for_store = "http://127.0.0.1:8011"
+
+    restored = practice.state.ensure_pulse_directory_entries_from_pair_rows()
+    pulse_row = pool.tables[PlazaPractice.DIRECTORY_TABLE][practice.state.stable_pulse_id("last_price")]
+
+    assert restored == 1
+    assert pulse_row["type"] == "Pulse"
+    assert pulse_row["name"] == "last_price"
+    assert pulse_row["meta"]["pulse_id"] == "urn:plaza:pulse:last.price"
+    assert pulse_row["meta"]["pulse_definition"]["resource_type"] == "pulse_definition"
 
 
 def test_plaza_status_exposes_available_pulsers_when_pair_id_differs_from_directory_id():
@@ -1335,6 +1496,63 @@ def test_plaza_register_batches_pulse_pulser_pair_persistence():
     assert len(pair_table_exists_checks) == 1
 
 
+def test_plaza_register_batches_new_pulse_directory_persistence():
+    pool = CountingBatchInMemoryPool()
+    app = FastAPI()
+    practice = PlazaPractice()
+    practice.bind(SimpleNamespace(
+        name="Plaza",
+        pool=pool,
+        host="127.0.0.1",
+        port=8011,
+        agent_card={
+            "name": "Plaza",
+            "role": "coordinator",
+            "tags": ["mediator"],
+            "address": "http://127.0.0.1:8011",
+            "pit_type": "Agent",
+            "agent_id": "plaza-self"
+        }
+    ))
+    practice.mount(app)
+
+    client = TestClient(app)
+    register = client.post("/register", json={
+        "agent_name": "batch-pulser",
+        "address": "http://127.0.0.1:8025",
+        "pit_type": "Pulser",
+        "card": {
+            "name": "BatchPulser",
+            "pit_type": "Pulser",
+            "role": "pulser",
+            "meta": {}
+        },
+        "pulse_pulser_pairs": [
+            {"pulse_name": "last_price", "pulse_address": "plaza://pulse/last_price"},
+            {"pulse_name": "trade_volume", "pulse_address": "plaza://pulse/trade_volume"},
+            {"pulse_name": "company_profile", "pulse_address": "plaza://pulse/company_profile"},
+        ]
+    })
+    assert register.status_code == 200
+
+    pulse_directory_batch_calls = [
+        call for call in pool.insert_many_calls
+        if call[0] == PlazaPractice.DIRECTORY_TABLE and {row.get("type") for row in call[1]} == {"Pulse"}
+    ]
+    assert len(pulse_directory_batch_calls) == 1
+    assert {row["name"] for row in pulse_directory_batch_calls[0][1]} == {
+        "last_price",
+        "trade_volume",
+        "company_profile",
+    }
+
+    pulse_directory_single_calls = [
+        call for call in pool.insert_calls
+        if call[0] == PlazaPractice.DIRECTORY_TABLE and call[1].get("type") == "Pulse"
+    ]
+    assert pulse_directory_single_calls == []
+
+
 def test_plaza_register_does_not_block_on_slow_pool_persistence():
     pool = SlowInsertInMemoryPool(delay=0.3)
     app = FastAPI()
@@ -1602,10 +1820,13 @@ def test_plaza_registration_marks_agents_that_do_not_accept_inbound_from_plaza()
     assert search.status_code == 200
     entry = next(item for item in search.json() if item["agent_id"] == agent_id)
     assert entry["accepts_inbound_from_plaza"] is False
+    assert entry["accepts_direct_call"] is False
     assert entry["connectivity_mode"] == "outbound-only"
     assert entry["card"]["accepts_inbound_from_plaza"] is False
+    assert entry["card"]["accepts_direct_call"] is False
     assert entry["card"]["connectivity_mode"] == "outbound-only"
     assert entry["card"]["meta"]["accepts_inbound_from_plaza"] is False
+    assert entry["card"]["meta"]["accepts_direct_call"] is False
     assert entry["card"]["meta"]["deployment"] == "private-subnet"
 
 

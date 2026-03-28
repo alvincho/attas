@@ -1,0 +1,22 @@
+{
+  "name": "plaza",
+  "role": "coordinator",
+  "tags": ["registry", "coordinator"],
+  "host": "127.0.0.1",
+  "port": 8211,
+  "pools": [
+    {
+      "type": "FileSystemPool",
+      "name": "plaza_pool",
+      "description": "Local Plaza storage",
+      "root_path": "prompits/examples/storage/plaza"
+    }
+  ],
+  "type": "prompits.core.plaza.PlazaAgent",
+  "practices": [
+    {
+      "type": "prompits.practices.plaza.PlazaPractice",
+      "params": {}
+    }
+  ]
+}

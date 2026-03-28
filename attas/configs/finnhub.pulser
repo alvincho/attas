@@ -570,6 +570,50 @@
         },
         {
             "party": "attas",
+            "pulse_name": "market_cap",
+            "name": "market_cap",
+            "description": "Current market capitalization from Finnhub profile2.",
+            "pulse_address": "b23d5fb7-c2f3-4e55-9f5e-9bc7199ef9f7",
+            "tags": [
+                "valuation",
+                "market-data",
+                "source-data",
+                "fundamentals",
+                "market-cap"
+            ],
+            "cost": 0,
+            "api": {
+                "url": "https://finnhub.io/api/v1/stock/profile2?symbol={symbol}",
+                "method": "GET",
+                "root_path": "",
+                "headers": {},
+                "api_key_id": "finnhub"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "symbol"
+                ]
+            },
+            "mapping": {
+                "symbol": "ticker",
+                "market_cap": "marketCapitalization",
+                "shares_outstanding": "shareOutstanding",
+                "source": {
+                    "value": "finnhub"
+                }
+            },
+            "test_data": {
+                "symbol": "AAPL"
+            }
+        },
+        {
+            "party": "attas",
             "pulse_name": "fifty_two_week_range",
             "name": "fifty_two_week_range",
             "description": "52-week trading range from Finnhub stock metric.",
@@ -717,6 +761,49 @@
         },
         {
             "party": "attas",
+            "pulse_name": "valuation_multiples",
+            "name": "valuation_multiples",
+            "description": "Grouped valuation multiples from Finnhub stock metric.",
+            "pulse_address": "80796193-9add-4b58-8407-cc0ab4ca1db4",
+            "tags": [
+                "valuation",
+                "analysis",
+                "source-data",
+                "fundamentals",
+                "multiples"
+            ],
+            "cost": 0,
+            "api": {
+                "url": "https://finnhub.io/api/v1/stock/metric?symbol={symbol}&metric=all",
+                "method": "GET",
+                "root_path": "",
+                "headers": {},
+                "api_key_id": "finnhub"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "symbol"
+                ]
+            },
+            "mapping": {
+                "symbol": "_input.symbol",
+                "trailing_pe": "metric.peBasicExclExtraTTM",
+                "source": {
+                    "value": "finnhub"
+                }
+            },
+            "test_data": {
+                "symbol": "AAPL"
+            }
+        },
+        {
+            "party": "attas",
             "pulse_name": "profitability_ratios",
             "name": "profitability_ratios",
             "description": "Profitability ratios from Finnhub stock metric.",
@@ -763,6 +850,95 @@
             "test_data": {
                 "symbol": "AAPL",
                 "as_of_date": "2026-03-19"
+            }
+        },
+        {
+            "party": "attas",
+            "pulse_name": "profitability_metrics",
+            "name": "profitability_metrics",
+            "description": "Grouped profitability metrics from Finnhub stock metric.",
+            "pulse_address": "3b9791ca-7447-4819-85a3-28090175eeee",
+            "tags": [
+                "analysis",
+                "profitability",
+                "source-data",
+                "fundamentals",
+                "quality"
+            ],
+            "cost": 0,
+            "api": {
+                "url": "https://finnhub.io/api/v1/stock/metric?symbol={symbol}&metric=all",
+                "method": "GET",
+                "root_path": "",
+                "headers": {},
+                "api_key_id": "finnhub"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "symbol"
+                ]
+            },
+            "mapping": {
+                "symbol": "_input.symbol",
+                "gross_margin": "metric.grossMarginAnnual",
+                "operating_margin": "metric.operatingMarginAnnual",
+                "profit_margin": "metric.netMarginAnnual",
+                "return_on_equity": "metric.roeTTM",
+                "return_on_assets": "metric.roaTTM",
+                "source": {
+                    "value": "finnhub"
+                }
+            },
+            "test_data": {
+                "symbol": "AAPL"
+            }
+        },
+        {
+            "party": "attas",
+            "pulse_name": "beta_and_volatility",
+            "name": "beta_and_volatility",
+            "description": "Systematic risk metrics from Finnhub stock metric.",
+            "pulse_address": "625bfb46-335a-4947-a222-6f436769cc26",
+            "tags": [
+                "risk",
+                "volatility",
+                "source-data",
+                "fundamentals"
+            ],
+            "cost": 0,
+            "api": {
+                "url": "https://finnhub.io/api/v1/stock/metric?symbol={symbol}&metric=all",
+                "method": "GET",
+                "root_path": "",
+                "headers": {},
+                "api_key_id": "finnhub"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "symbol"
+                ]
+            },
+            "mapping": {
+                "symbol": "_input.symbol",
+                "beta": "metric.beta",
+                "source": {
+                    "value": "finnhub"
+                }
+            },
+            "test_data": {
+                "symbol": "AAPL"
             }
         },
         {

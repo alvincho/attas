@@ -1,0 +1,80 @@
+{
+  "id": "Plaza:search",
+  "agent_name": "Plaza",
+  "practice_id": "search",
+  "practice_name": "Plaza Search",
+  "practice_description": "Search plaza directory and in-memory registry.",
+  "practice_data": {
+    "name": "Plaza Search",
+    "description": "Search plaza directory and in-memory registry.",
+    "id": "search",
+    "cost": 0,
+    "tags": [
+      "core",
+      "plaza"
+    ],
+    "examples": [
+      "GET /search?name=alice&practice=chat-practice"
+    ],
+    "inputModes": [
+      "http-get",
+      "query"
+    ],
+    "outputModes": [
+      "json"
+    ],
+    "parameters": {
+      "name": {
+        "type": "string",
+        "description": "Filter by name substring."
+      },
+      "agent_id": {
+        "type": "string",
+        "description": "Filter by exact agent id."
+      },
+      "type": {
+        "type": "string",
+        "description": "Alias for pit_type filter."
+      },
+      "description": {
+        "type": "string",
+        "description": "Filter by description substring."
+      },
+      "owner": {
+        "type": "string",
+        "description": "Filter by owner substring."
+      },
+      "meta": {
+        "type": "string",
+        "description": "Filter by metadata substring."
+      },
+      "role": {
+        "type": "string",
+        "description": "Filter by agent card role."
+      },
+      "practice": {
+        "type": "string",
+        "description": "Filter by practice id in agent card."
+      },
+      "pit_type": {
+        "type": "string",
+        "description": "Agent type filter."
+      },
+      "pulse_name": {
+        "type": "string",
+        "description": "Filter pulsers by supported pulse name."
+      },
+      "pulse_address": {
+        "type": "string",
+        "description": "Filter pulsers by supported pulse address."
+      },
+      "party": {
+        "type": "string",
+        "description": "Filter by party name."
+      }
+    },
+    "path": "/search"
+  },
+  "is_deleted": false,
+  "updated_at": "2026-03-25T01:27:54.234201+00:00"
+}

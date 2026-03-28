@@ -1,0 +1,39 @@
+{
+    "name": "attas-user",
+    "type": "prompits.agents.user.UserAgent",
+    "host": "127.0.0.1",
+    "port": 8034,
+    "plaza_url": "http://127.0.0.1:8011",
+    "plaza_urls": [
+        "http://127.0.0.1:8011"
+    ],
+    "pools": [
+        {
+            "type": "FileSystemPool",
+            "name": "attas_user_pool",
+            "description": "Local pool for the attas user-agent UI.",
+            "root_path": "tests/storage/attas_user"
+        }
+    ],
+    "agent_card": {
+        "name": "attas-user",
+        "description": "attas orchestration UI for multi-plaza application discovery and result generation.",
+        "role": "frontend",
+        "tags": ["attas", "ui", "dashboard", "orchestration"]
+    },
+    "user_agent": {
+        "plaza_urls": [
+            "http://127.0.0.1:8011"
+        ],
+        "applications": [
+            {
+                "name": "Stock Report",
+                "description": "Stock report application routed through StockReportPhemar and PdfCastr.",
+                "preferred_phema_name": "Simple Report 2",
+                "preferred_phemar_name": "StockReportPhemar",
+                "preferred_castr_name": "PdfCastr",
+                "party": "attas"
+            }
+        ]
+    }
+}

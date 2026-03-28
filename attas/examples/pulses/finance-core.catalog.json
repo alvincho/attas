@@ -1,0 +1,42 @@
+{
+  "pds_version": "0.1.0",
+  "resource_type": "pulse_catalog",
+  "id": "ai.attas.catalog.finance_core",
+  "version": "1.0.0",
+  "title": "Attas Finance Core",
+  "description": "Core Attas finance catalog containing foundational pulse definitions, example mappings, and an equity research profile.",
+  "imports": [
+    "ai.attas.catalog.common"
+  ],
+  "items": [
+    {
+      "ref": "ai.attas.finance.price.last_trade"
+    },
+    {
+      "ref": "ai.attas.finance.fundamentals.revenue"
+    },
+    {
+      "ref": "ai.attas.finance.technical.rsi"
+    },
+    {
+      "ref": "ai.attas.finance.research.rating_summary"
+    },
+    {
+      "ref": "ai.attas.mapping.lseg.last_trade"
+    },
+    {
+      "ref": "ai.attas.profile.equity_research.last_trade"
+    }
+  ],
+  "extensions": {
+    "ai.attas": {
+      "domain": "finance_core",
+      "intended_use": [
+        "equity research",
+        "screening",
+        "market monitoring"
+      ],
+      "notes": "This catalog is a starter bundle for PDS examples and should be expanded as more canonical pulses and mappings are added."
+    }
+  }
+}

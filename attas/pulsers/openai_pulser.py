@@ -168,9 +168,9 @@ class OpenAIPulser(Pulser):
         @self.app.get("/")
         async def editor_ui(request: Request):
             return self.templates.TemplateResponse(
-                request,
-                "attas/pulsers/templates/openai_pulser_editor.html",
-                {
+                request=request,
+                name="attas/pulsers/templates/openai_pulser_editor.html",
+                context={
                     "agent_name": self.agent_card.get("name", self.name),
                     "config_path": str(self.config_path) if self.config_path else "",
                 },

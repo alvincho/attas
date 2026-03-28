@@ -25,9 +25,12 @@ async def test_user_agent_dashboard(setup_plaza_and_user):
     assert "Neural Registry" in resp.text, "Plaza UI HTML missing core templates."
     assert "Plaza <span>Map</span>" in resp.text, "Plaza map page heading missing from Plaza UI."
     assert 'data-page="map"' in resp.text, "Map navigation entry missing from Plaza UI."
+    assert 'data-page="profile"' in resp.text, "Profile navigation entry missing from Plaza UI."
+    assert "Account <span>Profile</span>" in resp.text, "Profile page heading missing from Plaza UI."
     assert 'data-draggable="true"' in resp.text, "Map agent nodes are not draggable in Plaza UI."
     assert "Schema &amp; Pulse" in resp.text, "Editor workspace heading missing from Plaza UI."
     assert '<option value="Agent">Agent</option>' in resp.text, "Type filter is missing the grouped Agent option."
+    assert '<option value="AgentConfig">AgentConfig</option>' in resp.text, "Type filter is missing the AgentConfig option."
     assert '<option value="Pulser">Pulser</option>' not in resp.text, "Pulser should be grouped under Agent in the monitor filter."
     print("Plaza root UI loaded successfully.")
     

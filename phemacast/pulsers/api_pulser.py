@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import socket
 from pathlib import Path
 from typing import Any, Dict
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
@@ -31,9 +32,9 @@ class ApiPulser(Pulser):
         @self.app.get("/")
         async def api_pulser_ui(request: Request):
             return self.templates.TemplateResponse(
-                request,
-                "phemacast/pulsers/templates/api_pulser_editor.html",
-                {
+                request=request,
+                name="phemacast/pulsers/templates/api_pulser_editor.html",
+                context={
                     "agent_name": self.agent_card.get("name", self.name),
                     "config_path": str(self.config_path) if self.config_path else "",
                 },
@@ -327,6 +328,21 @@ class ApiPulser(Pulser):
             str(inline_param or self.config.get("api_key_param")) if (inline_param or self.config.get("api_key_param")) else None,
         )
 
+    @staticmethod
+    def _normalize_fetch_error(exc: Exception) -> str:
+        if isinstance(exc, socket.gaierror):
+            return "DNS resolution failed for the upstream API host. Outbound internet/DNS may be unavailable."
+        cause = getattr(exc, "__cause__", None)
+        if isinstance(cause, socket.gaierror):
+            return "DNS resolution failed for the upstream API host. Outbound internet/DNS may be unavailable."
+        context = getattr(exc, "__context__", None)
+        if isinstance(context, socket.gaierror):
+            return "DNS resolution failed for the upstream API host. Outbound internet/DNS may be unavailable."
+        text = str(exc)
+        if "nodename nor servname provided" in text or "Name or service not known" in text:
+            return "DNS resolution failed for the upstream API host. Outbound internet/DNS may be unavailable."
+        return text
+
     def fetch_pulse_payload(self, pulse_name: str, input_data: Dict[str, Any], pulse_definition: Dict[str, Any]) -> Dict[str, Any]:
         """Fetch payload from an external API defined in pulse_definition."""
         self.last_fetch_debug = {
@@ -346,6 +362,20 @@ class ApiPulser(Pulser):
         method = api_config.get("method", "GET").upper()
         headers = dict(api_config.get("headers", {}))
         api_key, api_key_header, api_key_prefix, api_key_param = self._resolve_api_key_binding(api_config)
+        if not api_key:
+            registry_id = api_config.get("api_key_id")
+            if registry_id:
+                registry_entry = self._lookup_registered_api_key(registry_id) or {}
+                source = registry_entry.get("env") or registry_entry.get("id") or registry_id
+                message = f"Missing API key value for registry '{registry_id}'"
+                if source:
+                    message += f" ({source})"
+                self.last_fetch_debug["error"] = message
+                return {"error": message}
+            if api_config.get("api_key") is not None:
+                message = f"Missing inline API key value for pulse '{pulse_name}'"
+                self.last_fetch_debug["error"] = message
+                return {"error": message}
         if api_key and api_key_param:
             url = self._append_query_param(url, api_key_param, api_key)
         elif api_key and api_key_header and api_key_header.lower() not in {k.lower() for k in headers}:
@@ -372,9 +402,10 @@ class ApiPulser(Pulser):
                     "json": data,
                 }
         except Exception as e:
-            self.logger.error(f"Error fetching API for pulse '{pulse_name}': {e}")
-            self.last_fetch_debug["error"] = str(e)
-            return {"error": str(e)}
+            message = self._normalize_fetch_error(e)
+            self.logger.error(f"Error fetching API for pulse '{pulse_name}': {message}")
+            self.last_fetch_debug["error"] = message
+            return {"error": message}
 
         # Optional: extract root to avoid dict indexing issues mapping on arrays
         root_path = api_config.get("root_path")

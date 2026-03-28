@@ -1,0 +1,80 @@
+{
+  "id": "AlphaVantageMCPPulser:get_pulse_data",
+  "agent_name": "AlphaVantageMCPPulser",
+  "practice_id": "get_pulse_data",
+  "practice_name": "Get Pulse Data",
+  "practice_description": "Fetch or transform pulse payloads for the agent's supported pulses.",
+  "practice_data": {
+    "name": "Get Pulse Data",
+    "description": "Fetch or transform pulse payloads for the agent's supported pulses.",
+    "id": "get_pulse_data",
+    "cost": 0,
+    "tags": [
+      "pulser",
+      "pulse",
+      "data"
+    ],
+    "examples": [
+      "POST /get_pulse_data {'pulse_name': 'last_price', 'params': {'symbol': 'AAPL'}}"
+    ],
+    "inputModes": [
+      "http-post",
+      "json"
+    ],
+    "outputModes": [
+      "json"
+    ],
+    "parameters": {
+      "pulse_name": {
+        "type": "string",
+        "description": "Optional pulse identifier. Defaults to the pulser's primary pulse.",
+        "enum": [
+          "last_price",
+          "previous_close",
+          "open_price",
+          "day_high_low",
+          "trade_volume",
+          "price_change_summary",
+          "intraday_ohlcv_bar",
+          "daily_ohlcv_bar",
+          "company_profile",
+          "business_description",
+          "valuation_pe",
+          "fifty_two_week_range",
+          "dividend_info",
+          "news_article",
+          "earnings_surprise_history",
+          "income_statement_revenue",
+          "income_statement_gross_profit",
+          "income_statement_operating_income",
+          "income_statement_net_income",
+          "income_statement_eps",
+          "balance_sheet_cash",
+          "balance_sheet_total_assets",
+          "balance_sheet_total_debt",
+          "balance_sheet_shareholder_equity",
+          "cash_flow_operating_cash_flow",
+          "cash_flow_capex"
+        ]
+      },
+      "pulse_address": {
+        "type": "string",
+        "description": "Optional pulse address override."
+      },
+      "params": {
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol"
+        ]
+      }
+    },
+    "path": "/get_pulse_data"
+  },
+  "is_deleted": false,
+  "updated_at": "2026-03-25T01:58:47.149001+00:00"
+}

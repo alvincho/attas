@@ -1,0 +1,101 @@
+{
+  "id": "d8a3c4c9-68d1-447f-9f50-cb65d5762446",
+  "agent_id": "d8a3c4c9-68d1-447f-9f50-cb65d5762446",
+  "name": "Schema: agent_practices",
+  "type": "Schema",
+  "description": "Built-in table schema for persisted agent practice metadata.",
+  "owner": "Plaza",
+  "address": "",
+  "meta": {
+    "schema_name": "agent_practices",
+    "schema_kind": "table",
+    "schema": {
+      "name": "agent_practices",
+      "description": "Persisted practice metadata by agent and practice id",
+      "primary_key": [
+        "id"
+      ],
+      "rowSchema": {
+        "id": {
+          "type": "string"
+        },
+        "agent_name": {
+          "type": "string"
+        },
+        "practice_id": {
+          "type": "string"
+        },
+        "practice_name": {
+          "type": "string"
+        },
+        "practice_description": {
+          "type": "string"
+        },
+        "practice_data": {
+          "type": "json"
+        },
+        "is_deleted": {
+          "type": "boolean"
+        },
+        "updated_at": {
+          "type": "datetime"
+        }
+      }
+    }
+  },
+  "card": {
+    "name": "Schema: agent_practices",
+    "description": "Built-in table schema for persisted agent practice metadata.",
+    "pit_type": "Schema",
+    "owner": "Plaza",
+    "tags": [
+      "schema",
+      "system",
+      "table"
+    ],
+    "pit_address": {
+      "pit_id": "d8a3c4c9-68d1-447f-9f50-cb65d5762446",
+      "plazas": [
+        "http://127.0.0.1:8211"
+      ]
+    },
+    "meta": {
+      "schema_name": "agent_practices",
+      "schema_kind": "table",
+      "schema": {
+        "name": "agent_practices",
+        "description": "Persisted practice metadata by agent and practice id",
+        "primary_key": [
+          "id"
+        ],
+        "rowSchema": {
+          "id": {
+            "type": "string"
+          },
+          "agent_name": {
+            "type": "string"
+          },
+          "practice_id": {
+            "type": "string"
+          },
+          "practice_name": {
+            "type": "string"
+          },
+          "practice_description": {
+            "type": "string"
+          },
+          "practice_data": {
+            "type": "json"
+          },
+          "is_deleted": {
+            "type": "boolean"
+          },
+          "updated_at": {
+            "type": "datetime"
+          }
+        }
+      }
+    }
+  },
+  "updated_at": "2026-03-25T01:27:54.192621+00:00"
+}

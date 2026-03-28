@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import json
+import os
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Union
 
+from attas.pds import normalize_runtime_pulse_entry
+from fastapi.staticfiles import StaticFiles
 from prompits.agents.standby import StandbyAgent
 from prompits.core.message import Message
 from prompits.core.pit import PitAddress
@@ -116,6 +119,22 @@ def _coerce_positive_limit(value: Any) -> Optional[int]:
     return limit if limit >= 0 else None
 
 
+def _coerce_number(value: Any) -> Optional[float]:
+    if value is None or isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, str):
+        text = value.strip().replace(",", "")
+        if not text:
+            return None
+        try:
+            return float(text)
+        except ValueError:
+            return None
+    return None
+
+
 class Pulser(StandbyAgent):
     """
     Standby agent specialized for pulse payload delivery.
@@ -192,6 +211,14 @@ class Pulser(StandbyAgent):
             agent_card_overrides=card,
         )
 
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        shared_static_dir = os.path.abspath(os.path.join(current_dir, "..", "..", "prompits", "agents", "static"))
+        try:
+            self.app.mount("/static", StaticFiles(directory=shared_static_dir), name="static")
+        except Exception:
+            # Pulser subclasses may already expose this mount.
+            pass
+
         self.add_practice(GetPulseDataPractice())
 
         if self.plaza_url and auto_register:
@@ -252,6 +279,7 @@ class Pulser(StandbyAgent):
         pit_type: Optional[str] = None,
         pit_id: Optional[str] = None,
         api_key: Optional[str] = None,
+        accepts_inbound_from_plaza: Optional[bool] = None,
     ) -> Dict[str, Any]:
         payload = super().build_register_payload(
             plaza_url=plaza_url,
@@ -261,18 +289,27 @@ class Pulser(StandbyAgent):
             pit_type=pit_type,
             pit_id=pit_id,
             api_key=api_key,
+            accepts_inbound_from_plaza=accepts_inbound_from_plaza,
         )
         supported_pulses = self.supported_pulses if isinstance(getattr(self, "supported_pulses", None), list) else []
         if supported_pulses:
-            payload["pulse_pulser_pairs"] = [
-                {
+            pairs = []
+            for pulse in supported_pulses:
+                if not isinstance(pulse, dict) or not (pulse.get("pulse_id") or pulse.get("pulse_name") or pulse.get("name")):
+                    continue
+                pair = {
+                    "pulse_id": pulse.get("pulse_id"),
                     "pulse_name": pulse.get("pulse_name") or pulse.get("name"),
                     "pulse_address": pulse.get("pulse_address"),
+                    "pulse_definition": pulse.get("pulse_definition"),
                     "input_schema": pulse.get("input_schema"),
                 }
-                for pulse in supported_pulses
-                if isinstance(pulse, dict) and (pulse.get("pulse_name") or pulse.get("name"))
-            ]
+                for key in ("is_complete", "completion_status", "completion_errors"):
+                    if key in pulse:
+                        pair[key] = pulse.get(key)
+                pair["status"] = pulse.get("completion_status") or pulse.get("status")
+                pairs.append(pair)
+            payload["pulse_pulser_pairs"] = pairs
         return payload
 
     def _normalize_pulse_definition(self, pulse: Mapping[str, Any]) -> Dict[str, Any]:
@@ -283,6 +320,12 @@ class Pulser(StandbyAgent):
             default_pulse_address = normalized.get("pit_address") or normalized.get("pulse_pit_address") or normalized.get("shared_pulse_address")
         if default_pulse_address:
             normalized.setdefault("pulse_address", self._compact_pit_ref(default_pulse_address))
+        normalized = normalize_runtime_pulse_entry(
+            normalized,
+            default_name=str(normalized.get("name") or "default_pulse"),
+            default_description=str(normalized.get("description") or ""),
+            default_pulse_address=normalized.get("pulse_address"),
+        )
         normalized["input_schema"] = dict(normalized.get("input_schema") or {})
         normalized["mapping"] = dict(normalized.get("mapping") or {})
         normalized["output_schema"] = dict(normalized.get("output_schema") or {})
@@ -383,6 +426,11 @@ class Pulser(StandbyAgent):
         normalized["tags"] = self._merge_tags(shared_card.get("tags"), shared_meta.get("tags"), normalized.get("tags"))
         if not normalized.get("output_schema") and isinstance(shared_meta.get("output_schema"), dict):
             normalized["output_schema"] = dict(shared_meta["output_schema"])
+        if not normalized.get("pulse_id"):
+            normalized["pulse_id"] = shared_meta.get("pulse_id")
+        shared_definition = shared_meta.get("pulse_definition")
+        if isinstance(shared_definition, dict):
+            normalized["pulse_definition"] = dict(shared_definition)
         return self._normalize_pulse_definition(normalized)
 
     def apply_pulser_config(
@@ -446,6 +494,8 @@ class Pulser(StandbyAgent):
         meta["pulse_address"] = self.pulse_address
         meta["input_schema"] = self.input_schema
         meta["supported_pulses"] = self.supported_pulses
+        meta["pulse_id"] = primary_pulse.get("pulse_id")
+        meta["pulse_definition"] = dict(primary_pulse.get("pulse_definition") or {})
         card["meta"] = meta
         self.agent_card = card
         self.app.title = self.name
@@ -534,6 +584,8 @@ class Pulser(StandbyAgent):
         raw_payload = self.fetch_pulse_payload(active_name, input_data, pulse_definition) or {}
         if not isinstance(raw_payload, dict):
             raise TypeError("fetch_pulse_payload() must return a dict.")
+        if raw_payload.get("error"):
+            return raw_payload
 
         mapping_rules = pulse_definition.get("mapping") or self.mapping
         if mapping_rules:
@@ -572,6 +624,9 @@ class Pulser(StandbyAgent):
                     return rule["default"], True
                 return None, False
 
+            if rule.get("op") or rule.get("operation"):
+                return self._resolve_mapping_operation(rule, input_data)
+
             if "value" in rule:
                 return rule["value"], True
 
@@ -586,6 +641,98 @@ class Pulser(StandbyAgent):
             return None, False
 
         return rule, rule is not None
+
+    def _resolve_mapping_operation(self, rule: Mapping[str, Any], input_data: Dict[str, Any]) -> tuple[Any, bool]:
+        operation = str(rule.get("op") or rule.get("operation") or "").strip().lower()
+        if not operation:
+            if "default" in rule:
+                return rule["default"], True
+            return None, False
+
+        operands = rule.get("args")
+        if operands is None:
+            operands = []
+            if "left" in rule:
+                operands.append(rule["left"])
+            if "right" in rule:
+                operands.append(rule["right"])
+        elif not isinstance(operands, list):
+            operands = [operands]
+
+        resolved_values: List[Any] = []
+        for operand in operands:
+            value, found = self._resolve_mapping_operand(operand, input_data)
+            if not found:
+                if "default" in rule:
+                    return rule["default"], True
+                return None, False
+            resolved_values.append(value)
+
+        numeric_values: List[float] = []
+        for value in resolved_values:
+            numeric = _coerce_number(value)
+            if numeric is None:
+                if "default" in rule:
+                    return rule["default"], True
+                return None, False
+            numeric_values.append(numeric)
+
+        try:
+            if operation == "abs":
+                if len(numeric_values) != 1:
+                    raise ValueError("abs expects exactly one operand")
+                result = abs(numeric_values[0])
+            elif operation == "add":
+                result = sum(numeric_values)
+            elif operation == "subtract":
+                if not numeric_values:
+                    raise ValueError("subtract expects at least one operand")
+                result = numeric_values[0]
+                for value in numeric_values[1:]:
+                    result -= value
+            elif operation == "subtract_abs":
+                if not numeric_values:
+                    raise ValueError("subtract_abs expects at least one operand")
+                result = numeric_values[0]
+                for value in numeric_values[1:]:
+                    result -= abs(value)
+            elif operation in {"multiply", "product"}:
+                if not numeric_values:
+                    raise ValueError("multiply expects at least one operand")
+                result = 1.0
+                for value in numeric_values:
+                    result *= value
+            elif operation in {"divide", "ratio"}:
+                if len(numeric_values) < 2:
+                    raise ValueError("divide expects at least two operands")
+                result = numeric_values[0]
+                for value in numeric_values[1:]:
+                    if value == 0:
+                        if "default" in rule:
+                            return rule["default"], True
+                        return None, False
+                    result /= value
+            else:
+                raise ValueError(f"Unsupported mapping operation: {operation}")
+        except (TypeError, ValueError):
+            if "default" in rule:
+                return rule["default"], True
+            return None, False
+
+        if "round" in rule:
+            try:
+                result = round(result, int(rule["round"]))
+            except (TypeError, ValueError):
+                if "default" in rule:
+                    return rule["default"], True
+                return None, False
+
+        return result, True
+
+    def _resolve_mapping_operand(self, operand: Any, input_data: Dict[str, Any]) -> tuple[Any, bool]:
+        if isinstance(operand, Mapping) and (operand.get("op") or operand.get("operation")):
+            return self._resolve_mapping_operation(operand, input_data)
+        return self._resolve_mapping_value(operand, input_data)
 
     def receive(self, message: Message):
         if message.msg_type == "get_pulse":

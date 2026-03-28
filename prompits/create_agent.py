@@ -11,8 +11,17 @@ import uvicorn
 import requests
 import importlib
 import inspect
+try:
+    from dotenv import load_dotenv
+except ImportError:  # pragma: no cover - optional local convenience
+    load_dotenv = None
 from prompits.agents.standby import StandbyAgent
 from prompits.core.message import Message
+
+if load_dotenv is not None:
+    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    load_dotenv(os.path.join(project_root, ".env"))
+    load_dotenv()
 
 class AgentNameFilter(logging.Filter):
     def filter(self, record):
@@ -113,6 +122,8 @@ def resolve_practice_params(config, practice_info):
         for source in extracted.get("init_files", []):
             if source not in init_sources:
                 init_sources.append(source)
+        if config_dir and "config_dir" not in practice_params:
+            practice_params["config_dir"] = str(config_dir)
 
     if init_sources:
         practice_params["init_files"] = init_sources
@@ -135,11 +146,14 @@ def instantiate_practice_from_config(config, practice_info):
 def _resolve_config_value(value):
     if isinstance(value, dict):
         env_name = value.get("env") or value.get("name")
+        fallback = value.get("value")
         if env_name:
-            return os.getenv(str(env_name))
+            resolved = os.getenv(str(env_name))
+            if resolved not in (None, ""):
+                return resolved
+            return None if fallback is None else str(fallback)
         if "value" in value:
-            literal = value.get("value")
-            return None if literal is None else str(literal)
+            return None if fallback is None else str(fallback)
         return None
 
     if isinstance(value, str):
@@ -298,6 +312,51 @@ def create_agent_from_config(config):
             agent_kwargs["config_path"] = config["config_path"]
          return agent_cls(**agent_kwargs)
 
+
+def _apply_runtime_overrides(config):
+    if not isinstance(config, dict):
+        return config
+
+    plaza_url = str(os.getenv("PROMPITS_PLAZA_URL") or "").strip().rstrip("/")
+    if plaza_url:
+        config["plaza_url"] = plaza_url
+
+    bind_host = str(os.getenv("PROMPITS_BIND_HOST") or "").strip()
+    if bind_host:
+        config["host"] = bind_host
+
+    bind_port = str(os.getenv("PROMPITS_PORT") or os.getenv("PORT") or "").strip()
+    if bind_port:
+        try:
+            config["port"] = int(bind_port)
+        except ValueError as exc:
+            raise ValueError(f"Invalid port override: {bind_port}") from exc
+
+    return config
+
+
+def build_agent(config):
+    resolved_config = _apply_runtime_overrides(dict(config))
+    agent = create_agent_from_config(resolved_config)
+
+    public_url = str(os.getenv("PROMPITS_PUBLIC_URL") or "").strip().rstrip("/")
+    if public_url:
+        agent.agent_card["address"] = public_url
+    else:
+        agent.agent_card["address"] = agent.agent_card.get("address") or f"http://{agent.host}:{agent.port}"
+
+    if hasattr(agent, "_refresh_pit_address"):
+        agent._refresh_pit_address()
+
+    practices_config = resolved_config.get("practices", [])
+    for practice_info in practices_config:
+        practice_instance = instantiate_practice_from_config(resolved_config, practice_info)
+        if practice_instance is None:
+            continue
+        agent.add_practice(practice_instance)
+
+    return agent
+
 def main():
     parser = argparse.ArgumentParser(description="Create and Run a Distributed Agent.")
     parser.add_argument("--name", help="Name of the agent")
@@ -350,19 +409,7 @@ def main():
         print(f"--- Loaded Config for: {config['name']} ---")
         print(f"Config: {config}")
 
-        agent = create_agent_from_config(config)
-        
-        # Load Dynamic Practices from config
-        practices_config = config.get("practices", [])
-        for practice_info in practices_config:
-            try:
-                practice_instance = instantiate_practice_from_config(config, practice_info)
-                if practice_instance is None:
-                    continue
-                agent.add_practice(practice_instance)
-                print(f"Added custom practice: {practice_info.get('type')}")
-            except Exception as e:
-                print(f"Error loading practice {practice_info}: {e}")
+        agent = build_agent(config)
 
         print(f"Starting agent {agent.name} on {agent.host}:{agent.port}...")
         

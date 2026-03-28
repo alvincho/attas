@@ -1,0 +1,55 @@
+{
+    "name": "OllamaPulser",
+    "type": "attas.pulsers.openai_pulser.OpenAIPulser",
+    "host": "127.0.0.1",
+    "port": 8030,
+    "plaza_url": "http://127.0.0.1:8011",
+    "role": "pulser",
+    "description": "Local Ollama pulser for chat completions and embeddings.",
+    "tags": [
+        "llm",
+        "ollama",
+        "chat",
+        "embeddings"
+    ],
+    "pools": [
+        {
+            "type": "FileSystemPool",
+            "name": "ollama_pool",
+            "description": "Ollama local pool",
+            "root_path": "tests/storage/ollama"
+        }
+    ],
+    "model": "qwen3:8b",
+    "base_url": "http://localhost:11434/api/generate",
+    "supported_pulses": [
+        {
+            "name": "llm_chat",
+            "description": "Chat completion pulse via local Ollama.",
+            "tags": [
+                "llm",
+                "chat"
+            ],
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "prompt": {
+                        "type": "string"
+                    },
+                    "model": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "prompt"
+                ]
+            },
+            "mapping": {
+                "response": "response",
+                "model": "model",
+                "provider": "provider"
+            },
+            "party": "System"
+        }
+    ]
+}

@@ -1,4 +1,5 @@
 import os
+import socket
 import sys
 from pathlib import Path
 
@@ -146,6 +147,67 @@ def test_api_pulser_resolves_api_key_from_pulser_registry_to_query_param(monkeyp
     assert "Authorization" not in capture["headers"]
 
 
+def test_api_pulser_returns_clear_error_when_registry_api_key_is_missing(monkeypatch):
+    monkeypatch.delenv("FINNHUB_API_KEY", raising=False)
+
+    pulser = ApiPulser(
+        config={
+            "name": "MissingRegistryApiKeyPulser",
+            "api_keys": [
+                {"id": "finnhub", "env": "FINNHUB_API_KEY", "param": "token"},
+            ],
+            "supported_pulses": [
+                {
+                    "name": "company_profile",
+                    "pulse_address": "plaza://pulse/company_profile",
+                    "api": {
+                        "url": "https://finnhub.io/api/v1/stock/profile2?symbol={symbol}",
+                        "method": "GET",
+                        "api_key_id": "finnhub",
+                    },
+                }
+            ],
+        },
+        auto_register=False,
+    )
+
+    payload = pulser.fetch_pulse_payload("company_profile", {"symbol": "IBM"}, pulser.supported_pulses[0])
+
+    assert payload == {"error": "Missing API key value for registry 'finnhub' (FINNHUB_API_KEY)"}
+
+
+def test_api_pulser_returns_clear_error_when_dns_resolution_fails(monkeypatch):
+    monkeypatch.setattr(
+        "phemacast.pulsers.api_pulser.httpx.Client",
+        lambda timeout=10.0: (_ for _ in ()).throw(socket.gaierror(8, "nodename nor servname provided, or not known")),
+    )
+
+    pulser = ApiPulser(
+        config={
+            "name": "DnsFailurePulser",
+            "api_keys": [
+                {"id": "finnhub", "value": "demo-token", "param": "token"},
+            ],
+            "supported_pulses": [
+                {
+                    "name": "company_profile",
+                    "pulse_address": "plaza://pulse/company_profile",
+                    "api": {
+                        "url": "https://finnhub.io/api/v1/stock/profile2?symbol={symbol}",
+                        "method": "GET",
+                        "api_key_id": "finnhub",
+                    },
+                }
+            ],
+        },
+        auto_register=False,
+    )
+
+    payload = pulser.fetch_pulse_payload("company_profile", {"symbol": "IBM"}, pulser.supported_pulses[0])
+
+    assert payload == {"error": "DNS resolution failed for the upstream API host. Outbound internet/DNS may be unavailable."}
+
+
 def test_api_pulser_prefers_pulse_level_literal_api_key(monkeypatch):
     capture = {}
     monkeypatch.setenv("DEMO_MARKET_KEY", "secret-from-env")
@@ -228,6 +290,62 @@ def test_api_pulser_root_path_supports_templates_and_keeps_input(monkeypatch):
         "trade_date": "2024-12-31",
         "open": "100.0",
         "close": "101.4",
+    }
+
+
+def test_api_pulser_supports_arithmetic_mapping_after_root_path(monkeypatch):
+    capture = {}
+    payload = {
+        "annualReports": [
+            {
+                "fiscalDateEnding": "2024-12-31",
+                "reportedCurrency": "USD",
+                "operatingCashflow": "1000",
+                "capitalExpenditures": "-200",
+            }
+        ]
+    }
+    monkeypatch.setattr(
+        "phemacast.pulsers.api_pulser.httpx.Client",
+        lambda timeout=10.0: FakeHttpClient(capture, payload),
+    )
+
+    pulser = ApiPulser(
+        config={
+            "name": "FinancialStatementApiPulser",
+            "supported_pulses": [
+                {
+                    "name": "cash_flow_free_cash_flow",
+                    "pulse_address": "3856dcb9-8be9-56d3-bd78-38f4865586f9",
+                    "api": {
+                        "url": "https://example.test/query?function=CASH_FLOW&symbol={symbol}",
+                        "method": "GET",
+                        "root_path": "annualReports.0",
+                    },
+                    "mapping": {
+                        "symbol": "_input.symbol",
+                        "period_end": "fiscalDateEnding",
+                        "period_type": {"value": "annual"},
+                        "free_cash_flow": {
+                            "op": "subtract_abs",
+                            "args": ["operatingCashflow", "capitalExpenditures"],
+                        },
+                        "currency": "reportedCurrency",
+                    },
+                }
+            ],
+        },
+        auto_register=False,
+    )
+
+    result = pulser.get_pulse_data({"symbol": "IBM"}, pulse_name="cash_flow_free_cash_flow")
+
+    assert result == {
+        "symbol": "IBM",
+        "period_end": "2024-12-31",
+        "period_type": "annual",
+        "free_cash_flow": 800.0,
+        "currency": "USD",
     }
 
 
@@ -437,9 +555,97 @@ def test_alpha_vantage_config_uses_registry_query_param_and_defines_multiple_pul
     assert len(pulser.supported_pulses) >= 10
     assert any(pulse["name"] == "news_article" for pulse in pulser.supported_pulses)
     assert any(pulse["name"] == "income_statement_revenue" for pulse in pulser.supported_pulses)
+    assert any(pulse["name"] == "cash_flow_free_cash_flow" for pulse in pulser.supported_pulses)
+    assert any(pulse["name"] == "balance_sheet_strength" for pulse in pulser.supported_pulses)
+    assert any(pulse["name"] == "market_cap" for pulse in pulser.supported_pulses)
+    assert any(pulse["name"] == "valuation_multiples" for pulse in pulser.supported_pulses)
+    assert any(pulse["name"] == "profitability_metrics" for pulse in pulser.supported_pulses)
+    assert any(pulse["name"] == "revenue_and_growth" for pulse in pulser.supported_pulses)
+    assert any(pulse["name"] == "eps_metrics" for pulse in pulser.supported_pulses)
+    assert any(pulse["name"] == "dividend_profile" for pulse in pulser.supported_pulses)
+    assert any(pulse["name"] == "beta_and_volatility" for pulse in pulser.supported_pulses)
     assert all("apikey=demo" not in pulse["api"]["url"] for pulse in pulser.supported_pulses)
     assert all("output_schema" not in pulse for pulse in pulser.config["supported_pulses"])
     assert all(len(str(pulse["pulse_address"])) == 36 for pulse in pulser.config["supported_pulses"])
+
+
+def test_alpha_vantage_overview_config_exposes_grouped_overview_metrics():
+    config_path = Path(__file__).resolve().parents[2] / "attas" / "configs" / "alpha_vantage.pulser"
+
+    pulser = ApiPulser(config=str(config_path), auto_register=False)
+    overview_pulses = [
+        pulse for pulse in pulser.config["supported_pulses"]
+        if "function=OVERVIEW" in pulse.get("api", {}).get("url", "")
+    ]
+
+    overview_names = {pulse["name"] for pulse in overview_pulses}
+    assert {
+        "market_cap",
+        "valuation_multiples",
+        "profitability_metrics",
+        "revenue_and_growth",
+        "eps_metrics",
+        "dividend_profile",
+        "beta_and_volatility",
+    } <= overview_names
+
+    mapped_fields = {
+        str(rule)
+        for pulse in overview_pulses
+        for rule in (pulse.get("mapping") or {}).values()
+        if isinstance(rule, str)
+    }
+    assert {
+        "MarketCapitalization",
+        "SharesOutstanding",
+        "TrailingPE",
+        "ForwardPE",
+        "PEGRatio",
+        "PriceToSalesRatioTTM",
+        "PriceToBookRatio",
+        "EVToRevenue",
+        "EVToEBITDA",
+        "OperatingMarginTTM",
+        "ProfitMargin",
+        "ReturnOnAssetsTTM",
+        "ReturnOnEquityTTM",
+        "RevenueTTM",
+        "QuarterlyRevenueGrowthYOY",
+        "QuarterlyEarningsGrowthYOY",
+        "DilutedEPSTTM",
+        "AnalystTargetPrice",
+        "DividendPerShare",
+        "DividendYield",
+        "ExDividendDate",
+        "Beta",
+    } <= mapped_fields
+
+
+def test_alpha_vantage_config_exposes_all_shared_financial_statement_pulses():
+    config_path = Path(__file__).resolve().parents[2] / "attas" / "configs" / "alpha_vantage.pulser"
+
+    pulser = ApiPulser(config=str(config_path), auto_register=False)
+    statement_names = {
+        pulse["name"]
+        for pulse in pulser.config["supported_pulses"]
+        if pulse["name"].startswith(("income_statement_", "balance_sheet_", "cash_flow_"))
+    }
+
+    assert {
+        "income_statement_revenue",
+        "income_statement_gross_profit",
+        "income_statement_operating_income",
+        "income_statement_net_income",
+        "income_statement_eps",
+        "balance_sheet_cash",
+        "balance_sheet_total_assets",
+        "balance_sheet_total_debt",
+        "balance_sheet_shareholder_equity",
+        "balance_sheet_strength",
+        "cash_flow_operating_cash_flow",
+        "cash_flow_capex",
+        "cash_flow_free_cash_flow",
+    } <= statement_names
 
 
 def test_finnhub_config_uses_registry_query_param_and_defines_shared_pulses():
@@ -452,8 +658,43 @@ def test_finnhub_config_uses_registry_query_param_and_defines_shared_pulses():
     assert len(pulser.supported_pulses) >= 10
     assert any(pulse["name"] == "news_article" for pulse in pulser.supported_pulses)
     assert any(pulse["name"] == "earnings_event" for pulse in pulser.supported_pulses)
+    assert any(pulse["name"] == "market_cap" for pulse in pulser.supported_pulses)
+    assert any(pulse["name"] == "valuation_multiples" for pulse in pulser.supported_pulses)
+    assert any(pulse["name"] == "profitability_metrics" for pulse in pulser.supported_pulses)
+    assert any(pulse["name"] == "beta_and_volatility" for pulse in pulser.supported_pulses)
     assert all("output_schema" not in pulse for pulse in pulser.config["supported_pulses"])
     assert all(len(str(pulse["pulse_address"])) == 36 for pulse in pulser.config["supported_pulses"])
+
+
+def test_finnhub_config_exposes_grouped_profile_and_metric_fields():
+    config_path = Path(__file__).resolve().parents[2] / "attas" / "configs" / "finnhub.pulser"
+
+    pulser = ApiPulser(config=str(config_path), auto_register=False)
+    grouped_pulses = [
+        pulse for pulse in pulser.config["supported_pulses"]
+        if pulse["name"] in {"market_cap", "valuation_multiples", "profitability_metrics", "beta_and_volatility"}
+    ]
+
+    grouped_names = {pulse["name"] for pulse in grouped_pulses}
+    assert {"market_cap", "valuation_multiples", "profitability_metrics", "beta_and_volatility"} <= grouped_names
+
+    mapped_fields = {
+        str(rule)
+        for pulse in grouped_pulses
+        for rule in (pulse.get("mapping") or {}).values()
+        if isinstance(rule, str)
+    }
+    assert {
+        "marketCapitalization",
+        "shareOutstanding",
+        "metric.peBasicExclExtraTTM",
+        "metric.grossMarginAnnual",
+        "metric.operatingMarginAnnual",
+        "metric.netMarginAnnual",
+        "metric.roeTTM",
+        "metric.roaTTM",
+        "metric.beta",
+    } <= mapped_fields
 
 
 def test_marketstack_config_uses_registry_query_param_and_defines_shared_pulses():
@@ -466,5 +707,36 @@ def test_marketstack_config_uses_registry_query_param_and_defines_shared_pulses(
     assert len(pulser.supported_pulses) >= 10
     assert any(pulse["name"] == "company_profile" for pulse in pulser.supported_pulses)
     assert any(pulse["name"] == "corporate_action_event" for pulse in pulser.supported_pulses)
+    assert any(pulse["name"] == "bid_ask_quote" for pulse in pulser.supported_pulses)
+    assert any(pulse["name"] == "business_description" for pulse in pulser.supported_pulses)
     assert all("output_schema" not in pulse for pulse in pulser.config["supported_pulses"])
     assert all(len(str(pulse["pulse_address"])) == 36 for pulse in pulser.config["supported_pulses"])
+
+
+def test_marketstack_config_exposes_intraday_quote_and_tickerinfo_fields():
+    config_path = Path(__file__).resolve().parents[2] / "attas" / "configs" / "market_stack.pulser"
+
+    pulser = ApiPulser(config=str(config_path), auto_register=False)
+    grouped_pulses = [
+        pulse for pulse in pulser.config["supported_pulses"]
+        if pulse["name"] in {"bid_ask_quote", "business_description"}
+    ]
+
+    grouped_names = {pulse["name"] for pulse in grouped_pulses}
+    assert {"bid_ask_quote", "business_description"} <= grouped_names
+
+    mapped_fields = {
+        str(rule)
+        for pulse in grouped_pulses
+        for rule in (pulse.get("mapping") or {}).values()
+        if isinstance(rule, str)
+    }
+    assert {
+        "bid_price",
+        "bid_size",
+        "ask_price",
+        "ask_size",
+        "mid",
+        "date",
+        "about",
+    } <= mapped_fields

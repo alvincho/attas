@@ -7,21 +7,24 @@
     <title>attas | {{ agent_name }}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Space+Mono&display=swap"
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600&family=Manrope:wght@400;500;600;700;800&display=swap"
         rel="stylesheet">
+    <link rel="stylesheet" href="/static/attas_ui_shared.css?v=20260327a">
+    <script defer src="/static/attas_theme.js?v=20260327a"></script>
+    <script defer src="/static/agent_connection.js?v=20260327a"></script>
     <style>
         :root {
-            --bg: #f0f4f8;
-            --panel: rgba(255, 255, 255, 0.7);
-            --panel-strong: rgba(255, 255, 255, 0.95);
-            --border: rgba(15, 118, 110, 0.1);
-            --border-strong: rgba(15, 118, 110, 0.2);
-            --text: #1a2e35;
-            --muted: #64748b;
-            --accent: #0d9488;
-            --accent-glow: rgba(13, 148, 136, 0.3);
-            --shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-            --glass: blur(12px);
+            --bg: #f8fafc;
+            --panel: #ffffff;
+            --panel-strong: #ffffff;
+            --border: #e2e8f0;
+            --border-strong: #cbd5e1;
+            --text: #0f172a;
+            --muted: #475569;
+            --accent: #0f172a;
+            --accent-glow: rgba(15, 23, 42, 0.08);
+            --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+            --glass: none;
         }
 
         * {
@@ -32,15 +35,14 @@
         body {
             margin: 0;
             min-height: 100vh;
-            font-family: 'Outfit', sans-serif;
-            color: var(--text);
-            background: 
-                radial-gradient(circle at 0% 0%, rgba(13, 148, 136, 0.15), transparent 40%),
-                radial-gradient(circle at 100% 100%, rgba(59, 130, 246, 0.1), transparent 40%),
-                var(--bg);
+            font-family: var(--ui-font-body, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif);
+            font-size: var(--ui-content-size);
+            font-weight: var(--ui-content-weight);
+            color: var(--ui-content-color, var(--text));
+            background: var(--bg);
             display: flex;
             justify-content: center;
-            padding: 2rem;
+            padding: 1.5rem;
         }
 
         .container {
@@ -53,55 +55,100 @@
 
         .header {
             background: var(--panel);
-            backdrop-filter: var(--glass);
             border: 1px solid var(--border);
-            border-radius: 24px;
-            padding: 2rem;
+            border-radius: 8px;
+            padding: 1rem 1.5rem;
             box-shadow: var(--shadow);
             display: flex;
-            align-items: center;
+            align-items: flex-start;
             justify-content: space-between;
+            gap: 1rem;
+        }
+
+        .header.is-sticky {
+            align-items: center;
+            padding-top: 0.9rem;
+            padding-bottom: 0.9rem;
+        }
+
+        .header.is-sticky .header-side {
+            gap: 0.55rem;
         }
 
         .header h1 {
             margin: 0;
-            font-size: 2rem;
-            font-weight: 800;
-            background: linear-gradient(135deg, #0d9488, #3b82f6);
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
+            font-size: var(--ui-title-size);
+            color: var(--ui-title-color);
+            font-weight: var(--ui-title-weight);
+        }
+
+        .header-main {
+            min-width: 0;
+            flex: 1 1 auto;
+        }
+
+        .header-tagline {
+            margin: 0.5rem 0 0;
+            color: var(--muted);
+            font-size: 0.9rem;
+        }
+
+        .header-side {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 0.85rem;
+            flex: 0 0 auto;
+        }
+
+        .header-side .agent-plaza-status {
+            margin-top: 0;
+            justify-content: flex-end;
+        }
+
+        .header-side .agent-plaza-note {
+            margin: 0;
+            text-align: right;
+            max-width: 24rem;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+            justify-content: flex-end;
         }
 
         .badge {
-            background: var(--accent);
-            color: white;
-            padding: 0.5rem 1rem;
+            background: #f1f5f9;
+            color: #475569;
+            padding: 0.25rem 0.75rem;
             border-radius: 999px;
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.05em;
+            border: 1px solid #e2e8f0;
         }
 
         .main-card {
             background: var(--panel);
-            backdrop-filter: var(--glass);
             border: 1px solid var(--border);
-            border-radius: 32px;
-            padding: 2.5rem;
+            border-radius: 12px;
+            padding: 1.5rem;
             box-shadow: var(--shadow);
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 2.5rem;
+            gap: 1.5rem;
         }
 
         .section-title {
-            font-size: 0.8rem;
-            font-weight: 800;
+            font-size: var(--ui-header-size);
+            color: var(--ui-header-color);
+            font-weight: var(--ui-header-weight);
             text-transform: uppercase;
             letter-spacing: 0.1em;
-            color: var(--muted);
             margin-bottom: 1.5rem;
         }
 
@@ -119,35 +166,34 @@
         }
 
         select, input {
-            background: var(--panel-strong);
+            background: #ffffff;
             border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 0.75rem 1rem;
+            border-radius: 6px;
+            padding: 0.5rem 0.75rem;
             font-family: inherit;
-            font-size: 1rem;
+            font-size: 0.95rem;
             color: var(--text);
             outline: none;
         }
 
         select:focus, input:focus {
-            border-color: var(--accent);
-            box-shadow: 0 0 0 4px var(--accent-glow);
+            border-color: #94a3b8;
+            box-shadow: 0 0 0 2px rgba(148, 163, 184, 0.1);
         }
 
         .btn {
-            background: var(--accent);
+            background: #0f172a;
             color: white;
             border: none;
-            border-radius: 12px;
-            padding: 1rem 2rem;
-            font-size: 1rem;
-            font-weight: 700;
+            border-radius: 6px;
+            padding: 0.65rem 1.25rem;
+            font-size: 0.9rem;
+            font-weight: 600;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 0.5rem;
-            box-shadow: 0 4px 12px var(--accent-glow);
         }
 
         .btn:hover {
@@ -176,14 +222,14 @@
         }
 
         .phema-item {
-            background: var(--panel-strong);
+            background: #f8fafc;
             border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 1rem;
+            border-radius: 8px;
+            padding: 0.75rem;
             cursor: pointer;
             display: flex;
             flex-direction: column;
-            gap: 0.5rem;
+            gap: 0.25rem;
         }
 
         .phema-item:hover {
@@ -234,10 +280,10 @@
         }
 
         .output-title {
-            font-weight: 800;
-            font-size: 0.9rem;
+            font-weight: var(--ui-header-weight);
+            font-size: var(--ui-header-size);
             text-transform: uppercase;
-            color: var(--accent);
+            color: var(--ui-header-color);
         }
 
         .result-box {
@@ -275,25 +321,55 @@
             background: var(--border-strong);
             border-radius: 10px;
         }
+
+        @media (max-width: 760px) {
+            body {
+                padding: 1rem;
+            }
+
+            .header {
+                flex-direction: column;
+            }
+
+            .header-side {
+                width: 100%;
+                align-items: flex-start;
+            }
+
+            .header-side .agent-plaza-status {
+                justify-content: flex-start;
+            }
+
+            .header-side .agent-plaza-note {
+                text-align: left;
+            }
+
+            .header-actions {
+                justify-content: flex-start;
+            }
+        }
     </style>
 </head>
 
 <body>
     <div class="container">
-        <div class="header">
-            <div>
+        <div class="header agent-sticky-header">
+            <div class="header-main">
                 <h1>{{ agent_name }}</h1>
-                <p style="margin: 0.5rem 0 0; color: var(--muted); font-size: 0.9rem;">Cast Phema into professional media outputs.</p>
-                <div style="margin-top: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
-                    <span style="font-size: 0.7rem; font-weight: 800; color: var(--accent); opacity: 0.6; text-transform: uppercase;">Plaza</span>
-                    <span style="font-size: 0.75rem; font-family: 'Space Mono', monospace; color: var(--muted);">{{ plaza_url }}</span>
-                </div>
+                <p class="header-tagline" data-sticky-hide="condensed">Cast Phema into professional media outputs.</p>
             </div>
-            <div style="display: flex; align-items: center; gap: 1rem;">
-                <button class="btn" id="refresh-btn" style="padding: 0.5rem 1rem; font-size: 0.8rem; background: transparent; border: 1px solid var(--accent); color: var(--accent); box-shadow: none;">
-                    Refresh Plaza
-                </button>
-                <div class="badge">{{ media_type }} Castr</div>
+            <div class="header-side">
+                <div class="agent-plaza-status">
+                    <span id="agent-plaza-pill" class="agent-plaza-pill agent-plaza-pill-not_configured">Checking Plaza</span>
+                    <span id="agent-plaza-meta" class="agent-plaza-meta">Loading connection details...</span>
+                </div>
+                <p id="agent-plaza-note" class="agent-plaza-note" data-sticky-hide="condensed">Checking the current plaza heartbeat for this agent.</p>
+                <div class="header-actions">
+                    <button class="btn" id="refresh-btn" data-tooltip="Reload available Phemas from the connected Plaza before casting." style="padding: 0.5rem 1rem; font-size: 0.8rem; background: transparent; border: 1px solid var(--accent); color: var(--accent); box-shadow: none;">
+                        Refresh Plaza
+                    </button>
+                    <div class="badge">{{ media_type }} Castr</div>
+                </div>
             </div>
         </div>
 
@@ -309,7 +385,7 @@
             <div>
                 <div class="section-title">2. Configuration</div>
                 <div class="form-group">
-                    <label>Audience Type</label>
+                    <label data-tooltip="Choose the intended reader so the renderer can bias tone and structure.">Audience Type</label>
                     <select id="audience-type">
                         <option value="executive">Executive / C-Level</option>
                         <option value="analyst">Technical Analyst</option>
@@ -329,7 +405,7 @@
                 </div>
 
                 <div class="form-group">
-                    <label>Preferences (Optional)</label>
+                    <label data-tooltip="Optional free-form instructions that will be passed with the cast request.">Preferences (Optional)</label>
                     <input type="text" id="preferences" placeholder="e.g. Dark mode, summarize sections...">
                 </div>
 
@@ -343,7 +419,7 @@
                 </div>
 
                 <div style="margin-top: 2rem;">
-                    <button class="btn" id="generate-btn" disabled>
+                    <button class="btn" id="generate-btn" disabled data-tooltip="Generate the selected output format using the chosen Phema and render preferences.">
                         <span class="loader" id="loader"></span>
                         <span id="btn-text">Generate Output</span>
                     </button>
@@ -465,7 +541,11 @@
             loadPhemas();
         };
 
-        window.onload = loadPhemas;
+        window.addEventListener('load', () => {
+            window.attasAgentConnection?.mount({ pollMs: 15000 });
+            window.attasAgentConnection?.mountStickyHeader({ selector: '.header.agent-sticky-header', topOffset: 12 });
+            loadPhemas();
+        });
     </script>
 </body>
 

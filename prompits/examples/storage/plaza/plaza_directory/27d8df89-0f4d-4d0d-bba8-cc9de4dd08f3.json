@@ -1,0 +1,113 @@
+{
+  "id": "27d8df89-0f4d-4d0d-bba8-cc9de4dd08f3",
+  "agent_id": "27d8df89-0f4d-4d0d-bba8-cc9de4dd08f3",
+  "name": "Schema: plaza_directory",
+  "type": "Schema",
+  "description": "Built-in table schema for the Plaza searchable directory.",
+  "owner": "Plaza",
+  "address": "",
+  "meta": {
+    "schema_name": "plaza_directory",
+    "schema_kind": "table",
+    "schema": {
+      "name": "plaza_directory",
+      "description": "Plaza directory entries",
+      "primary_key": [
+        "id"
+      ],
+      "rowSchema": {
+        "id": {
+          "type": "string"
+        },
+        "agent_id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "owner": {
+          "type": "string"
+        },
+        "address": {
+          "type": "string"
+        },
+        "meta": {
+          "type": "json"
+        },
+        "card": {
+          "type": "json"
+        },
+        "updated_at": {
+          "type": "datetime"
+        }
+      }
+    }
+  },
+  "card": {
+    "name": "Schema: plaza_directory",
+    "description": "Built-in table schema for the Plaza searchable directory.",
+    "pit_type": "Schema",
+    "owner": "Plaza",
+    "tags": [
+      "schema",
+      "system",
+      "table"
+    ],
+    "pit_address": {
+      "pit_id": "27d8df89-0f4d-4d0d-bba8-cc9de4dd08f3",
+      "plazas": [
+        "http://127.0.0.1:8211"
+      ]
+    },
+    "meta": {
+      "schema_name": "plaza_directory",
+      "schema_kind": "table",
+      "schema": {
+        "name": "plaza_directory",
+        "description": "Plaza directory entries",
+        "primary_key": [
+          "id"
+        ],
+        "rowSchema": {
+          "id": {
+            "type": "string"
+          },
+          "agent_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "owner": {
+            "type": "string"
+          },
+          "address": {
+            "type": "string"
+          },
+          "meta": {
+            "type": "json"
+          },
+          "card": {
+            "type": "json"
+          },
+          "updated_at": {
+            "type": "datetime"
+          }
+        }
+      }
+    }
+  },
+  "updated_at": "2026-03-25T01:27:54.192497+00:00"
+}

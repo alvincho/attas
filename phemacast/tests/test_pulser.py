@@ -72,6 +72,26 @@ def test_pulser_loads_config_and_maps_input_to_output_schema(tmp_path):
     }
 
 
+def test_pulser_get_pulse_data_preserves_fetch_errors():
+    class ErrorPulser(Pulser):
+        def fetch_pulse_payload(self, pulse_name, input_data, pulse_definition):
+            return {"error": "upstream failed"}
+
+    pulser = ErrorPulser(
+        name="ErrorPulser",
+        pulse_name="last_price",
+        pulse_address="plaza://pulse/last_price",
+        input_schema={"type": "object", "properties": {"symbol": {"type": "string"}}},
+        output_schema={"type": "object", "properties": {"last_price": {"type": "number"}}},
+        mapping={"last_price": "price"},
+        auto_register=False,
+    )
+
+    result = pulser.get_pulse_data({"symbol": "IBM"}, pulse_name="last_price")
+
+    assert result == {"error": "upstream failed"}
+
+
 def test_pulser_registers_on_plaza_and_advertises_pulse_practice():
     sent_payloads = []
 
@@ -113,13 +133,17 @@ def test_pulser_registers_on_plaza_and_advertises_pulse_practice():
     assert len(register_calls) == 1
     assert register_calls[0]["payload"]["pit_type"] == "Pulser"
     assert len(register_calls[0]["payload"]["pulse_pulser_pairs"]) == 1
+    assert register_calls[0]["payload"]["pulse_pulser_pairs"][0]["pulse_id"] == "urn:plaza:pulse:last.price"
     assert register_calls[0]["payload"]["pulse_pulser_pairs"][0]["pulse_name"] == "last_price"
     assert register_calls[0]["payload"]["pulse_pulser_pairs"][0]["pulse_address"] == "plaza://pulse/last_price"
 
     supported_pulses = pulser.agent_card["meta"]["supported_pulses"]
     assert pulser.agent_card["pit_type"] == "Pulser"
     assert pulser.agent_card["meta"]["pulse_address"] == "plaza://pulse/last_price"
+    assert pulser.agent_card["meta"]["pulse_id"] == "urn:plaza:pulse:last.price"
     assert pulser.agent_card["meta"]["input_schema"]["properties"]["ticker"]["type"] == "string"
+    assert supported_pulses[0]["pulse_id"] == "urn:plaza:pulse:last.price"
+    assert supported_pulses[0]["pulse_definition"]["resource_type"] == "pulse_definition"
     assert supported_pulses[0]["pulse_address"] == "plaza://pulse/last_price"
     assert supported_pulses[0]["input_schema"]["properties"]["ticker"]["type"] == "string"
 
@@ -170,6 +194,10 @@ def test_pulser_register_batches_multiple_pulse_pairs_in_single_request():
     register_calls = [entry for entry in sent_payloads if entry["url"] == "http://127.0.0.1:8011/register"]
     assert len(register_calls) == 1
     assert len(register_calls[0]["payload"]["pulse_pulser_pairs"]) == 2
+    assert {entry["pulse_id"] for entry in register_calls[0]["payload"]["pulse_pulser_pairs"]} == {
+        "urn:plaza:pulse:last.price",
+        "urn:plaza:pulse:trade.volume",
+    }
     assert {entry["pulse_name"] for entry in register_calls[0]["payload"]["pulse_pulser_pairs"]} == {"last_price", "trade_volume"}
 
 
@@ -311,6 +339,65 @@ def test_pulser_transform_supports_dotted_keys_and_list_indexes():
         "symbol": "IBM",
         "last_price": "249.12",
         "headline": "IBM wins new contract",
+    }
+
+
+def test_pulser_transform_supports_arithmetic_operations():
+    pulser = Pulser(
+        pulse_address="plaza://pulse/financial_statement_metrics",
+        output_schema={
+            "type": "object",
+            "properties": {
+                "free_cash_flow": {"type": "number"},
+                "current_ratio": {"type": "number"},
+                "quick_ratio": {"type": "number"},
+                "debt_to_equity": {"type": "number"},
+            },
+        },
+        mapping={
+            "free_cash_flow": {
+                "op": "subtract_abs",
+                "args": ["operatingCashflow", "capitalExpenditures"],
+            },
+            "current_ratio": {
+                "op": "divide",
+                "args": ["totalCurrentAssets", "totalCurrentLiabilities"],
+            },
+            "quick_ratio": {
+                "op": "divide",
+                "args": [
+                    {
+                        "op": "subtract",
+                        "args": ["totalCurrentAssets", "inventory"],
+                    },
+                    "totalCurrentLiabilities",
+                ],
+            },
+            "debt_to_equity": {
+                "op": "divide",
+                "args": ["shortLongTermDebtTotal", "totalShareholderEquity"],
+                "round": 4,
+            },
+        },
+    )
+
+    result = pulser.transform(
+        {
+            "operatingCashflow": "1000",
+            "capitalExpenditures": "-200",
+            "totalCurrentAssets": "600",
+            "totalCurrentLiabilities": "300",
+            "inventory": "150",
+            "shortLongTermDebtTotal": "400",
+            "totalShareholderEquity": "1000",
+        }
+    )
+
+    assert result == {
+        "free_cash_flow": 800.0,
+        "current_ratio": 2.0,
+        "quick_ratio": 1.5,
+        "debt_to_equity": 0.4,
     }
 
 

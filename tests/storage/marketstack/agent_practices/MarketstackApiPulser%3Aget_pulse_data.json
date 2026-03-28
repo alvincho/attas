@@ -36,9 +36,11 @@
           "trade_volume",
           "daily_ohlcv_bar",
           "intraday_ohlcv_bar",
+          "bid_ask_quote",
           "dividend_info",
           "corporate_action_event",
-          "company_profile"
+          "company_profile",
+          "business_description"
         ]
       },
       "pulse_address": {
@@ -60,5 +62,5 @@
     "path": "/get_pulse_data"
   },
   "is_deleted": false,
-  "updated_at": "2026-03-23T13:21:11.902967+00:00"
+  "updated_at": "2026-03-27T05:59:48.218989+00:00"
 }

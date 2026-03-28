@@ -76,3 +76,22 @@ def test_castr_list_plaza_phemas_without_plaza_url():
     response = client.get("/api/plazas/phemas")
     assert response.status_code == 200
     assert response.json()["phemas"] == []
+
+
+def test_castr_ui_mounts_shared_plaza_connection_status():
+    castr = Castr(
+        name="UiCastr",
+        plaza_url="http://127.0.0.1:8011",
+        auto_register=False,
+    )
+
+    with TestClient(castr.app) as client:
+        root = client.get("/")
+
+    assert root.status_code == 200
+    assert 'src="/static/agent_connection.js' in root.text
+    assert "agent-sticky-header" in root.text
+    assert "mountStickyHeader" in root.text
+    assert 'id="agent-plaza-pill"' in root.text
+    assert 'id="agent-plaza-meta"' in root.text
+    assert 'id="agent-plaza-note"' in root.text

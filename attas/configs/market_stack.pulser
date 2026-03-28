@@ -358,6 +358,79 @@
             "party": "attas"
         },
         {
+            "name": "bid_ask_quote",
+            "pulse_address": "ada48b17-6ec2-4e1e-8bcc-d98149d1b00e",
+            "description": "Latest intraday bid and ask quote from Marketstack.",
+            "tags": [
+                "intraday",
+                "quote",
+                "market-microstructure"
+            ],
+            "api": {
+                "url": "https://api.marketstack.com/v2/intraday/{trade_date}?symbols={symbol}&interval={interval}&limit=1&sort=DESC&after_hours={after_hours}",
+                "method": "GET",
+                "root_path": "data.0",
+                "api_key_id": "marketstack"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    },
+                    "trade_date": {
+                        "type": "string",
+                        "description": "Intraday trade date in YYYY-MM-DD format."
+                    },
+                    "interval": {
+                        "type": "string",
+                        "enum": [
+                            "1min",
+                            "5min",
+                            "10min",
+                            "15min",
+                            "30min",
+                            "1hour",
+                            "3hour",
+                            "6hour",
+                            "12hour",
+                            "24hour"
+                        ],
+                        "default": "5min"
+                    },
+                    "after_hours": {
+                        "type": "boolean",
+                        "default": false
+                    }
+                },
+                "required": [
+                    "symbol",
+                    "trade_date",
+                    "interval"
+                ]
+            },
+            "mapping": {
+                "symbol": "symbol",
+                "bid_price": "bid_price",
+                "bid_size": "bid_size",
+                "ask_price": "ask_price",
+                "ask_size": "ask_size",
+                "mid_price": "mid",
+                "timestamp": "date",
+                "source": {
+                    "value": "marketstack"
+                }
+            },
+            "test_data": {
+                "symbol": "AAPL",
+                "trade_date": "2024-09-27",
+                "interval": "5min",
+                "after_hours": false
+            },
+            "cost": 0,
+            "party": "attas"
+        },
+        {
             "name": "dividend_info",
             "pulse_address": "d259d4d0-c905-5961-803f-dadd396df483",
             "description": "Latest dividend record from Marketstack.",
@@ -469,6 +542,42 @@
                 "sector": "sector",
                 "industry": "industry",
                 "website": "website"
+            },
+            "test_data": {
+                "symbol": "AAPL"
+            },
+            "cost": 0,
+            "party": "attas"
+        },
+        {
+            "name": "business_description",
+            "pulse_address": "b5f0f95e-9f56-4f2b-88a5-3d1bee87bf5a",
+            "description": "Narrative business description from Marketstack tickerinfo.",
+            "tags": [
+                "fundamentals",
+                "company-profile",
+                "narrative"
+            ],
+            "api": {
+                "url": "https://api.marketstack.com/v2/tickerinfo?ticker={symbol}",
+                "method": "GET",
+                "root_path": "data",
+                "api_key_id": "marketstack"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "symbol"
+                ]
+            },
+            "mapping": {
+                "symbol": "ticker",
+                "short_description": "about"
             },
             "test_data": {
                 "symbol": "AAPL"

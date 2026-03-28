@@ -190,8 +190,9 @@ class Castr(StandbyAgent):
         @self.app.get("/")
         async def castr_ui(request: Request):
             return self.templates.TemplateResponse(
-                "castr_ui.html",
-                {
+                request=request,
+                name="castr_ui.html",
+                context={
                     "request": request,
                     "agent_name": self.name,
                     "media_type": self.media_type,

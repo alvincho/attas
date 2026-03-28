@@ -1,0 +1,358 @@
+{
+  "id": "plaza:http://127.0.0.1:8211",
+  "agent_id": "plaza:http://127.0.0.1:8211",
+  "name": "Plaza",
+  "type": "Agent",
+  "description": "",
+  "owner": "Plaza",
+  "address": "http://127.0.0.1:8211",
+  "meta": {
+    "accepts_inbound_from_plaza": true,
+    "accepts_direct_call": true,
+    "connectivity_mode": "plaza-forward"
+  },
+  "card": {
+    "name": "Plaza",
+    "role": "coordinator",
+    "tags": [
+      "mediator"
+    ],
+    "host": "127.0.0.1",
+    "port": 8211,
+    "address": "http://127.0.0.1:8211",
+    "pit_type": "Agent",
+    "meta": {
+      "accepts_inbound_from_plaza": true,
+      "accepts_direct_call": true,
+      "connectivity_mode": "plaza-forward"
+    },
+    "accepts_inbound_from_plaza": true,
+    "accepts_direct_call": true,
+    "connectivity_mode": "plaza-forward",
+    "pit_address": {
+      "pit_id": "",
+      "plazas": []
+    },
+    "practices": [
+      {
+        "name": "Pool Connect",
+        "description": "Initialize the filesystem pool root.",
+        "id": "pool-connect",
+        "cost": 0,
+        "tags": [
+          "pool",
+          "filesystem",
+          "storage",
+          "connect"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {},
+        "path": "/pool_connect"
+      },
+      {
+        "name": "Pool Disconnect",
+        "description": "Mark the filesystem pool as disconnected.",
+        "id": "pool-disconnect",
+        "cost": 0,
+        "tags": [
+          "pool",
+          "filesystem",
+          "storage",
+          "disconnect"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {},
+        "path": "/pool_disconnect"
+      },
+      {
+        "name": "Pool Create Table",
+        "description": "Create a table directory in the filesystem pool.",
+        "id": "pool-create-table",
+        "cost": 0,
+        "tags": [
+          "pool",
+          "filesystem",
+          "storage",
+          "create-table"
+        ],
+        "examples": [
+          {
+            "table_name": "agent_practices",
+            "schema": {
+              "name": "agent_practices"
+            }
+          }
+        ],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {
+          "table_name": {
+            "type": "string",
+            "description": "Logical table name."
+          },
+          "schema": {
+            "type": "object",
+            "description": "Table schema definition."
+          }
+        },
+        "path": "/pool_create_table"
+      },
+      {
+        "name": "Pool Table Exists",
+        "description": "Check whether a filesystem-backed table exists.",
+        "id": "pool-table-exists",
+        "cost": 0,
+        "tags": [
+          "pool",
+          "filesystem",
+          "storage",
+          "table-exists"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {
+          "table_name": {
+            "type": "string",
+            "description": "Logical table name."
+          }
+        },
+        "path": "/pool_table_exists"
+      },
+      {
+        "name": "Pool Insert",
+        "description": "Insert or replace one JSON row in the filesystem pool.",
+        "id": "pool-insert",
+        "cost": 0,
+        "tags": [
+          "pool",
+          "filesystem",
+          "storage",
+          "insert"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {
+          "table_name": {
+            "type": "string",
+            "description": "Logical table name."
+          },
+          "data": {
+            "type": "object",
+            "description": "Row payload to persist."
+          }
+        },
+        "path": "/pool_insert"
+      },
+      {
+        "name": "Pool Query",
+        "description": "Execute a query against the filesystem pool adapter.",
+        "id": "pool-query",
+        "cost": 0,
+        "tags": [
+          "pool",
+          "filesystem",
+          "storage",
+          "query"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {
+          "query": {
+            "type": "string",
+            "description": "Query or operation name."
+          },
+          "params": {
+            "type": "object",
+            "description": "Optional query parameters."
+          }
+        },
+        "path": "/pool_query"
+      },
+      {
+        "name": "Pool Get Table Data",
+        "description": "Read rows from a filesystem-backed table.",
+        "id": "pool-get-table-data",
+        "cost": 0,
+        "tags": [
+          "pool",
+          "filesystem",
+          "storage",
+          "read"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {
+          "table_name": {
+            "type": "string",
+            "description": "Logical table name."
+          },
+          "id_or_where": {
+            "type": "object",
+            "description": "Optional id or equality filter."
+          },
+          "table_schema": {
+            "type": "object",
+            "description": "Optional table schema for decoding."
+          }
+        },
+        "path": "/pool_get_table_data"
+      },
+      {
+        "name": "Pool Store Memory",
+        "description": "Store one memory record in the filesystem pool.",
+        "id": "pool-store-memory",
+        "cost": 0,
+        "tags": [
+          "pool",
+          "filesystem",
+          "memory",
+          "store"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {
+          "content": {
+            "type": "string",
+            "description": "Memory content."
+          },
+          "memory_id": {
+            "type": "string",
+            "description": "Optional stable memory id."
+          },
+          "metadata": {
+            "type": "object",
+            "description": "Optional metadata payload."
+          },
+          "tags": {
+            "type": "array",
+            "description": "Optional string tags."
+          },
+          "memory_type": {
+            "type": "string",
+            "description": "Memory category."
+          },
+          "table_name": {
+            "type": "string",
+            "description": "Optional override table name."
+          }
+        },
+        "path": "/pool_store_memory"
+      },
+      {
+        "name": "Pool Search Memory",
+        "description": "Search stored memory records in the filesystem pool.",
+        "id": "pool-search-memory",
+        "cost": 0,
+        "tags": [
+          "pool",
+          "filesystem",
+          "memory",
+          "search"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {
+          "query": {
+            "type": "string",
+            "description": "Case-insensitive search text."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum number of matches."
+          },
+          "table_name": {
+            "type": "string",
+            "description": "Optional override table name."
+          }
+        },
+        "path": "/pool_search_memory"
+      },
+      {
+        "name": "ChatPractice",
+        "description": "Enables LLM interaction via ollama.",
+        "id": "chat-practice",
+        "cost": 0,
+        "tags": [
+          "llm",
+          "chat",
+          "ollama"
+        ],
+        "examples": [
+          "POST /chat {'prompt': 'Tell me a joke'}"
+        ],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {
+          "prompt": {
+            "type": "text",
+            "description": "Enter your prompt or paragraph for the LLM",
+            "placeholder": "Write a short summary about AI..."
+          }
+        },
+        "path": "/chat_practice"
+      }
+    ],
+    "agent_id": "plaza:http://127.0.0.1:8211"
+  },
+  "updated_at": "2026-03-25T01:27:54.191473+00:00"
+}

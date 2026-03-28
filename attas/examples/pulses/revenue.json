@@ -1,0 +1,198 @@
+{
+  "pds_version": "0.1.0",
+  "resource_type": "pulse_definition",
+  "id": "ai.attas.finance.fundamentals.revenue",
+  "namespace": "ai.attas.finance.fundamentals",
+  "name": "revenue",
+  "version": "1.0.0",
+  "title": "Revenue",
+  "description": "Recognized revenue for an issuer over a stated reporting period, as reported or normalized from financial statements.",
+  "pulse_class": "fact",
+  "status": "stable",
+  "concept": {
+    "definition": "Recognized revenue for an issuer over a stated reporting period, as reported or normalized from financial statements.",
+    "entity_types": [
+      "issuer"
+    ],
+    "tags": [
+      "fundamentals",
+      "financial-statements",
+      "income-statement"
+    ],
+    "dimensions": [
+      "fiscal_period",
+      "fiscal_year",
+      "currency",
+      "accounting_standard"
+    ],
+    "identifiers": [
+      "symbol",
+      "lseg_ric",
+      "bloomberg_ticker"
+    ],
+    "units": {
+      "value_type": "currency_amount",
+      "currency_required": true
+    },
+    "time_semantics": {
+      "kind": "filing_dated",
+      "timestamp_field": "filing_date",
+      "modes": [
+        "reported",
+        "restated",
+        "normalized"
+      ]
+    },
+    "quality_rules": [
+      "currency is required when value is present",
+      "period_end must be after period_start",
+      "fiscal_year must be present when fiscal_period is present"
+    ]
+  },
+  "interface": {
+    "schema_language": "json-schema-2020-12",
+    "request_schema": {
+      "type": "object",
+      "properties": {
+        "symbol": {
+          "type": "string"
+        },
+        "lseg_ric": {
+          "type": "string"
+        },
+        "bloomberg_ticker": {
+          "type": "string"
+        },
+        "fiscal_period": {
+          "type": "string",
+          "enum": [
+            "Q1",
+            "Q2",
+            "Q3",
+            "Q4",
+            "FY",
+            "TTM"
+          ]
+        },
+        "fiscal_year": {
+          "type": "integer"
+        },
+        "normalized": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false,
+      "anyOf": [
+        {
+          "required": [
+            "symbol"
+          ]
+        },
+        {
+          "required": [
+            "lseg_ric"
+          ]
+        },
+        {
+          "required": [
+            "bloomberg_ticker"
+          ]
+        }
+      ]
+    },
+    "response_schema": {
+      "type": "object",
+      "properties": {
+        "value": {
+          "type": "number"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "fiscal_period": {
+          "type": "string"
+        },
+        "fiscal_year": {
+          "type": "integer"
+        },
+        "period_start": {
+          "type": "string",
+          "format": "date"
+        },
+        "period_end": {
+          "type": "string",
+          "format": "date"
+        },
+        "filing_date": {
+          "type": "string",
+          "format": "date"
+        },
+        "accounting_standard": {
+          "type": "string"
+        },
+        "source_mode": {
+          "type": "string",
+          "enum": [
+            "reported",
+            "restated",
+            "normalized"
+          ]
+        }
+      },
+      "required": [
+        "value",
+        "currency",
+        "period_end"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "interop": {
+    "aliases": [
+      "total_revenue",
+      "sales_revenue",
+      "income_statement_revenue"
+    ],
+    "external_refs": [
+      {
+        "system": "fibo",
+        "ref": "fibo:close_match:revenue",
+        "relation": "close_match",
+        "confidence": 0.85,
+        "notes": "Attas revenue is aligned with accounting revenue concepts and periodized issuer reporting."
+      }
+    ],
+    "related_pulses": [
+      "ai.attas.finance.fundamentals.gross_profit",
+      "ai.attas.finance.fundamentals.net_income"
+    ]
+  },
+  "governance": {
+    "owner": "Attas Core Team",
+    "license": "Apache-2.0",
+    "created_at": "2026-03-26T00:00:00Z",
+    "updated_at": "2026-03-26T00:00:00Z",
+    "change_notes": "Initial example pulse_definition for fundamentals domain."
+  },
+  "examples": [
+    {
+      "request": {
+        "symbol": "AAPL",
+        "fiscal_period": "FY",
+        "fiscal_year": 2025,
+        "normalized": false
+      },
+      "response": {
+        "value": 391035000000,
+        "currency": "USD",
+        "fiscal_period": "FY",
+        "fiscal_year": 2025,
+        "period_start": "2024-09-29",
+        "period_end": "2025-09-27",
+        "filing_date": "2025-10-31",
+        "accounting_standard": "US_GAAP",
+        "source_mode": "reported"
+      }
+    }
+  ]
+}

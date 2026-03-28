@@ -1,0 +1,238 @@
+{
+  "pds_version": "0.1.0",
+  "resource_type": "pulse_definition",
+  "id": "ai.attas.finance.research.rating_summary",
+  "namespace": "ai.attas.finance.research",
+  "name": "rating_summary",
+  "version": "1.0.0",
+  "title": "Rating Summary",
+  "description": "Structured narrative summary of an investment rating or recommendation for an issuer or instrument, including the rating label, rationale, and supporting drivers.",
+  "pulse_class": "artifact",
+  "status": "stable",
+  "concept": {
+    "definition": "Rating Summary is a presentation-oriented research artifact that communicates an investment opinion, its headline rating, and the primary reasons supporting that opinion.",
+    "entity_types": [
+      "issuer",
+      "financial_instrument"
+    ],
+    "tags": [
+      "research",
+      "recommendation",
+      "narrative",
+      "artifact"
+    ],
+    "dimensions": [
+      "horizon",
+      "analyst_style",
+      "currency"
+    ],
+    "identifiers": [
+      "symbol",
+      "lseg_ric",
+      "bloomberg_ticker"
+    ],
+    "time_semantics": {
+      "kind": "effective_dated",
+      "timestamp_field": "as_of",
+      "modes": [
+        "initial",
+        "updated",
+        "reviewed"
+      ]
+    },
+    "quality_rules": [
+      "rating must be present",
+      "summary_text must be present",
+      "as_of must be present"
+    ]
+  },
+  "interface": {
+    "schema_language": "json-schema-2020-12",
+    "request_schema": {
+      "type": "object",
+      "properties": {
+        "symbol": {
+          "type": "string"
+        },
+        "lseg_ric": {
+          "type": "string"
+        },
+        "bloomberg_ticker": {
+          "type": "string"
+        },
+        "horizon": {
+          "type": "string",
+          "enum": [
+            "short_term",
+            "medium_term",
+            "long_term"
+          ],
+          "default": "medium_term"
+        },
+        "include_risks": {
+          "type": "boolean",
+          "default": true
+        },
+        "style": {
+          "type": "string",
+          "enum": [
+            "concise",
+            "standard",
+            "detailed"
+          ],
+          "default": "standard"
+        }
+      },
+      "additionalProperties": false,
+      "anyOf": [
+        {
+          "required": [
+            "symbol"
+          ]
+        },
+        {
+          "required": [
+            "lseg_ric"
+          ]
+        },
+        {
+          "required": [
+            "bloomberg_ticker"
+          ]
+        }
+      ]
+    },
+    "response_schema": {
+      "type": "object",
+      "properties": {
+        "rating": {
+          "type": "string"
+        },
+        "rating_scale": {
+          "type": "string"
+        },
+        "summary_text": {
+          "type": "string"
+        },
+        "primary_drivers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "key_risks": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "target_price": {
+          "type": "number"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "horizon": {
+          "type": "string"
+        },
+        "as_of": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "confidence_label": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "rating",
+        "summary_text",
+        "as_of"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "interop": {
+    "aliases": [
+      "recommendation_summary",
+      "research_rating_summary"
+    ],
+    "related_pulses": [
+      "ai.attas.finance.valuation.target_price",
+      "ai.attas.finance.research.investment_thesis_bullets",
+      "ai.attas.finance.research.counter_thesis_bullets"
+    ]
+  },
+  "derivation": {
+    "input_pulse_ids": [
+      "ai.attas.finance.fundamentals.revenue",
+      "ai.attas.finance.price.last_trade",
+      "ai.attas.finance.technical.rsi"
+    ],
+    "method_type": "synthesis",
+    "method_ref": "attas-research-rating-summary-v1",
+    "parameters_schema": {
+      "type": "object",
+      "properties": {
+        "horizon": {
+          "type": "string",
+          "enum": [
+            "short_term",
+            "medium_term",
+            "long_term"
+          ]
+        },
+        "include_risks": {
+          "type": "boolean",
+          "default": true
+        },
+        "style": {
+          "type": "string",
+          "enum": [
+            "concise",
+            "standard",
+            "detailed"
+          ],
+          "default": "standard"
+        }
+      }
+    },
+    "notes": "This artifact synthesizes underlying fact and analytic pulses into a human-readable recommendation summary."
+  },
+  "governance": {
+    "owner": "Attas Core Team",
+    "license": "Apache-2.0",
+    "created_at": "2026-03-26T00:00:00Z",
+    "updated_at": "2026-03-26T00:00:00Z",
+    "change_notes": "Initial example pulse_definition for research artifact domain."
+  },
+  "examples": [
+    {
+      "request": {
+        "symbol": "AAPL",
+        "horizon": "medium_term",
+        "include_risks": true,
+        "style": "standard"
+      },
+      "response": {
+        "rating": "Buy",
+        "rating_scale": "5-point",
+        "summary_text": "Apple remains attractive on resilient cash generation, ecosystem strength, and improving services mix, though valuation leaves less room for execution misses.",
+        "primary_drivers": [
+          "Recurring services revenue supports margin quality",
+          "Large installed base reinforces ecosystem retention",
+          "Strong balance sheet supports capital return"
+        ],
+        "key_risks": [
+          "Premium valuation versus peers",
+          "Hardware demand softness",
+          "Regulatory pressure on platform economics"
+        ],
+        "target_price": 215.0,
+        "currency": "USD",
+        "horizon": "medium_term",
+        "as_of": "2026-03-26T20:00:00Z",
+        "confidence_label": "medium"
+      }
+    }
+  ]
+}

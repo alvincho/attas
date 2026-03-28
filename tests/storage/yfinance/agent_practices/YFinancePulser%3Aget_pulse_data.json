@@ -30,8 +30,10 @@
         "description": "Optional pulse identifier. Defaults to the pulser's primary pulse.",
         "enum": [
           "last_price",
+          "ohlc_bar_series",
           "previous_close",
           "open_price",
+          "market_state",
           "day_high_low",
           "trade_volume",
           "bid_ask",
@@ -41,6 +43,11 @@
           "balance_sheet_strength",
           "cashflow_snapshot",
           "revenue_and_growth",
+          "income_statement_revenue",
+          "income_statement_gross_profit",
+          "income_statement_operating_income",
+          "income_statement_net_income",
+          "income_statement_eps",
           "eps_metrics",
           "dividend_profile",
           "fifty_two_week_range",
@@ -69,5 +76,5 @@
     "path": "/get_pulse_data"
   },
   "is_deleted": false,
-  "updated_at": "2026-03-23T13:21:18.777612+00:00"
+  "updated_at": "2026-03-27T15:39:41.168605+00:00"
 }

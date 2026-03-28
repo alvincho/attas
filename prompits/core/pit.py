@@ -119,7 +119,9 @@ class Pit(ABC):
         if accepts_inbound_from_plaza is not None:
             normalized_accepts = bool(accepts_inbound_from_plaza)
             payload_card["accepts_inbound_from_plaza"] = normalized_accepts
+            payload_card["accepts_direct_call"] = normalized_accepts
             payload_meta["accepts_inbound_from_plaza"] = normalized_accepts
+            payload_meta["accepts_direct_call"] = normalized_accepts
             payload_card.setdefault(
                 "connectivity_mode",
                 "plaza-forward" if normalized_accepts else "outbound-only",
@@ -137,6 +139,7 @@ class Pit(ABC):
         }
         if accepts_inbound_from_plaza is not None:
             payload["accepts_inbound_from_plaza"] = bool(accepts_inbound_from_plaza)
+            payload["accepts_direct_call"] = bool(accepts_inbound_from_plaza)
         if pit_type:
             payload["pit_type"] = pit_type
         if pit_id and api_key:

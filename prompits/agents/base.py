@@ -10,6 +10,7 @@ import time
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from starlette.concurrency import run_in_threadpool
 from prompits.core.message import Message
@@ -53,8 +54,16 @@ class BaseAgent(Pit, ABC):
     PLAZA_REQUEST_TIMEOUT = 30
     PLAZA_REQUEST_RETRIES = 5
     PLAZA_RETRY_STATUS_CODES = {408, 425, 429, 500, 502, 503, 504}
+    PLAZA_HEARTBEAT_INTERVAL = 10
     PLAZA_REJECTED_CREDENTIAL_RETRY_DELAY = 60
-    PLAZA_RECONNECT_INTERVAL = 30
+    PLAZA_RECONNECT_INTERVAL = 60
+    PLAZA_CONNECTION_ACTIVE_WINDOW_SEC = 60
+
+    @staticmethod
+    def _normalize_url(value: Any) -> str:
+        if value is None:
+            return ""
+        return str(value).strip().rstrip("/")
 
     @staticmethod
     def _coerce_optional_bool(value: Any) -> Optional[bool]:
@@ -86,6 +95,9 @@ class BaseAgent(Pit, ABC):
         self.agent_card = seed_card
         self.agent_card.setdefault("pit_type", "Agent")
         self.agent_card.setdefault("meta", {})
+        self.agent_card.setdefault("host", host)
+        self.agent_card.setdefault("port", port)
+        self.agent_card["address"] = self._resolve_advertised_address()
         self.pool = pool
         self.plaza_credential_store = PlazaCredentialStore(pool=pool)
         self.agent_id: Optional[str] = self.agent_card.get("agent_id")
@@ -103,6 +115,8 @@ class BaseAgent(Pit, ABC):
         self.plaza_token: Optional[str] = None
         self.token_expires_at: float = 0.0
         self._credential_retry_after: float = 0.0
+        self.last_plaza_heartbeat_at: float = 0.0
+        self._plaza_connection_error: str = ""
         self._register_lock = threading.Lock()
         self._heartbeat_thread: Optional[threading.Thread] = None
         self._heartbeat_thread_lock = threading.Lock()
@@ -118,8 +132,22 @@ class BaseAgent(Pit, ABC):
         
         # FastAPI App
         self.app = FastAPI(title=name)
+        
         self.practices: List[Practice] = []
         self.logger = logging.LoggerAdapter(logger, {"agent_name": self.name})
+
+        # Static Files mapping
+        from pathlib import Path
+        base_dir = Path(__file__).parent.resolve()
+        static_dir = base_dir / "static"
+        
+        if static_dir.exists():
+            self.app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
+            self.logger.info(f"Mounted static directory: {static_dir}")
+        else:
+            self.logger.warning(f"Static directory NOT FOUND: {static_dir}")
+
+        self.site_settings: Dict[str, Any] = {}
         self._install_request_logging()
 
         self._register_pool_operation_practices()
@@ -156,6 +184,100 @@ class BaseAgent(Pit, ABC):
                 f"with {response.status_code} in {elapsed_ms:.1f}ms"
             )
             return response
+
+    @classmethod
+    def _heartbeat_is_active(cls, last_active: Any) -> bool:
+        try:
+            timestamp = float(last_active or 0)
+        except (TypeError, ValueError):
+            return False
+        if timestamp <= 0:
+            return False
+        return max(0.0, time.time() - timestamp) <= cls.PLAZA_CONNECTION_ACTIVE_WINDOW_SEC
+
+    def _mark_plaza_connection_alive(self, timestamp: Optional[float] = None):
+        self.last_plaza_heartbeat_at = float(timestamp or time.time())
+        self._plaza_connection_error = ""
+
+    def _fetch_remote_plaza_last_active(self, headers: Optional[Dict[str, str]] = None) -> float:
+        if not self.plaza_url or not self.agent_id:
+            return 0.0
+
+        request_headers = headers if isinstance(headers, dict) and headers.get("Authorization") else self._ensure_token_valid()
+        if not request_headers or not request_headers.get("Authorization"):
+            return 0.0
+
+        try:
+            response = self._plaza_get(
+                "/search",
+                params={"agent_id": self.agent_id},
+                headers=request_headers,
+                retries=0,
+            )
+        except Exception as exc:
+            self._plaza_connection_error = self._plaza_connection_error or str(exc)
+            return 0.0
+
+        if response.status_code in (401, 403):
+            self._plaza_connection_error = self._plaza_connection_error or f"Plaza rejected agent lookup ({response.status_code})"
+            return 0.0
+        if response.status_code != 200:
+            return 0.0
+
+        try:
+            payload = response.json() if response.content else []
+        except Exception:
+            return 0.0
+        if not isinstance(payload, list) or not payload:
+            return 0.0
+        first = payload[0] if isinstance(payload[0], dict) else {}
+        return float(first.get("last_active") or 0)
+
+    def get_plaza_connection_status(self) -> Dict[str, Any]:
+        normalized_plaza_url = self._normalize_url(self.plaza_url)
+        base_status = {
+            "status": "success",
+            "plaza_url": normalized_plaza_url,
+            "agent_name": self.name,
+            "agent_id": str(self.agent_id or ""),
+            "online": False,
+            "authenticated": False,
+            "last_active": 0.0,
+            "connection_status": "not_configured",
+            "error": "",
+        }
+
+        if not normalized_plaza_url:
+            return base_status
+
+        try:
+            health = self._plaza_get("/health", plaza_url=normalized_plaza_url, retries=0)
+            base_status["online"] = health.status_code == 200
+        except Exception as exc:
+            self._plaza_connection_error = self._plaza_connection_error or str(exc)
+
+        headers = self._ensure_token_valid()
+        base_status["authenticated"] = bool(headers and headers.get("Authorization"))
+
+        remote_last_active = self._fetch_remote_plaza_last_active(headers=headers)
+        last_active = max(float(self.last_plaza_heartbeat_at or 0), float(remote_last_active or 0))
+        base_status["last_active"] = last_active
+        base_status["connection_status"] = (
+            "connected"
+            if base_status["online"] and self._heartbeat_is_active(last_active)
+            else "disconnected"
+        )
+
+        if self._plaza_connection_error:
+            base_status["error"] = self._plaza_connection_error
+        elif not base_status["online"]:
+            base_status["error"] = "Plaza is unreachable."
+        elif not base_status["authenticated"]:
+            base_status["error"] = "Waiting for Plaza authentication."
+        elif not last_active:
+            base_status["error"] = "No heartbeat reported yet."
+
+        return base_status
 
     def _load_plaza_credentials_from_pool(self):
         if not self.pool or not self.plaza_url:
@@ -198,6 +320,17 @@ class BaseAgent(Pit, ABC):
         self.agent_card["pit_address"] = self.pit_address.to_dict()
         self.agent_card.pop("agent_address", None)
 
+    def _resolve_advertised_address(self) -> str:
+        env_address = self._normalize_url(os.getenv("PROMPITS_PUBLIC_URL"))
+        if env_address:
+            return env_address
+
+        configured_address = self._normalize_url(self.agent_card.get("address"))
+        if configured_address:
+            return configured_address
+
+        return f"http://{self.host}:{self.port}"
+
     def _resolve_accepts_inbound_from_plaza(self) -> bool:
         meta = self.agent_card.get("meta", {})
         if not isinstance(meta, dict):
@@ -226,8 +359,10 @@ class BaseAgent(Pit, ABC):
             connectivity_mode = "outbound-only"
 
         self.agent_card["accepts_inbound_from_plaza"] = accepts_inbound
+        self.agent_card["accepts_direct_call"] = accepts_inbound
         self.agent_card["connectivity_mode"] = connectivity_mode
         meta["accepts_inbound_from_plaza"] = accepts_inbound
+        meta["accepts_direct_call"] = accepts_inbound
         meta["connectivity_mode"] = connectivity_mode
 
     def _save_plaza_credentials_to_pool(self):
@@ -454,14 +589,13 @@ class BaseAgent(Pit, ABC):
                     return resolved
         return [self._default_practice_metadata(practice)]
 
-    def _persist_practice_to_pool(self, practice_metadata: Dict[str, Any], is_deleted: bool = False):
-        if not self.pool or not practice_metadata:
-            return
+    def _build_practice_pool_row(self, practice_metadata: Dict[str, Any], is_deleted: bool = False) -> Optional[Dict[str, Any]]:
+        if not practice_metadata:
+            return None
         practice_id = practice_metadata.get("id")
         if not practice_id:
-            return
-        self._ensure_agent_practices_table()
-        self.pool._Insert(self.AGENT_PRACTICES_TABLE, {
+            return None
+        return {
             "id": self._practice_row_id(practice_id),
             "agent_name": self.name,
             "practice_id": practice_id,
@@ -469,8 +603,27 @@ class BaseAgent(Pit, ABC):
             "practice_description": practice_metadata.get("description", ""),
             "practice_data": practice_metadata,
             "is_deleted": bool(is_deleted),
-            "updated_at": datetime.now(timezone.utc).isoformat()
-        })
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }
+
+    def _persist_practices_to_pool(self, practice_metadata_list: List[Dict[str, Any]], is_deleted: bool = False):
+        if not self.pool or not practice_metadata_list:
+            return
+        rows = []
+        for practice_metadata in practice_metadata_list:
+            row = self._build_practice_pool_row(practice_metadata, is_deleted=is_deleted)
+            if row is not None:
+                rows.append(row)
+        if not rows:
+            return
+        self._ensure_agent_practices_table()
+        if len(rows) == 1:
+            self.pool._Insert(self.AGENT_PRACTICES_TABLE, rows[0])
+            return
+        self.pool._InsertMany(self.AGENT_PRACTICES_TABLE, rows)
+
+    def _persist_practice_to_pool(self, practice_metadata: Dict[str, Any], is_deleted: bool = False):
+        self._persist_practices_to_pool([practice_metadata], is_deleted=is_deleted)
 
     def _load_practices_info_from_pool(self):
         if not self.pool:
@@ -517,9 +670,10 @@ class BaseAgent(Pit, ABC):
         practice.bind(self)
         practice.mount(self.app)
         self.practices.append(practice)
-        for practice_entry in self._resolve_callable_practice_entries(practice):
+        practice_entries = self._resolve_callable_practice_entries(practice)
+        for practice_entry in practice_entries:
             self._upsert_practice_metadata_in_card(practice_entry)
-            self._persist_practice_to_pool(practice_entry, is_deleted=False)
+        self._persist_practices_to_pool(practice_entries, is_deleted=False)
         
         self.logger.info(f"Mounted practice: {practice.name}")
 
@@ -582,6 +736,14 @@ class BaseAgent(Pit, ABC):
         @self.app.get("/health")
         async def health_check():
             return {"status": "ok", "agent": self.name}
+
+        @self.app.get("/api/local-site-settings")
+        async def get_local_site_settings():
+            return {"status": "success", "settings": self.site_settings}
+
+        @self.app.get("/api/plaza_connection_status")
+        async def get_plaza_connection_status():
+            return await run_in_threadpool(self.get_plaza_connection_status)
 
         @self.app.post("/use_practice/{practice_id}")
         async def use_practice(practice_id: str, request: PracticeInvocationRequest):
@@ -647,6 +809,11 @@ class BaseAgent(Pit, ABC):
             reconnect_thread.start()
             return True
 
+    def _has_active_reconnect_thread(self) -> bool:
+        with self._reconnect_thread_lock:
+            current_thread = self._reconnect_thread
+            return bool(current_thread and current_thread.is_alive())
+
     @staticmethod
     def _is_plaza_starting_response(response: Any) -> bool:
         if response is None or getattr(response, "status_code", None) != 503:
@@ -660,6 +827,7 @@ class BaseAgent(Pit, ABC):
         return "starting" in str(getattr(response, "text", "")).lower()
 
     def _schedule_reconnect(self, reason: str, *, initial_delay: Optional[float] = None):
+        self._plaza_connection_error = str(reason or "").strip() or "Plaza connection lost"
         self.plaza_token = None
         self.token_expires_at = 0.0
         started = self._start_reconnect_thread(initial_delay=initial_delay)
@@ -699,7 +867,7 @@ class BaseAgent(Pit, ABC):
             # Ensure our address is known in the card
             self.agent_card["host"] = self.host
             self.agent_card["port"] = self.port
-            self.agent_card["address"] = f"http://{self.host}:{self.port}"
+            self.agent_card["address"] = self._resolve_advertised_address()
 
             try:
                 attempt = 0
@@ -747,6 +915,7 @@ class BaseAgent(Pit, ABC):
                     self.agent_card["agent_id"] = self.agent_id
                     self._refresh_pit_address()
                     self._save_plaza_credentials_to_pool()
+                    self._mark_plaza_connection_alive()
                     self.logger.info(f"Successfully registered with Plaza at {self.plaza_url}. Token expires in {data.get('expires_in', 3600)}s")
                     self._start_heartbeat_thread()
                 elif self._is_plaza_starting_response(response):
@@ -780,6 +949,7 @@ class BaseAgent(Pit, ABC):
                     data = response.json()
                     self.plaza_token = data.get("token")
                     self.token_expires_at = time.time() + data.get("expires_in", 3600)
+                    self._plaza_connection_error = ""
                     self.logger.info(f"Token renewed successfully.")
                 else:
                     self.logger.warning(f"Token renewal failed: {response.text}. Will attempt re-register with existing agent_id.")
@@ -849,16 +1019,20 @@ class BaseAgent(Pit, ABC):
             return False
 
     def _heartbeat_loop(self):
-        """Send a heartbeat to Plaza every 10 seconds."""
+        """Send heartbeats to Plaza while authenticated."""
         self.logger.info(f"Starting heartbeat loop...")
         while True:
             try:
-                time.sleep(10)
+                time.sleep(self.PLAZA_HEARTBEAT_INTERVAL)
                 if not self.plaza_url: break
                 
                 headers = self._ensure_token_valid()
                 if not headers:
-                    self.logger.warning(f"Skipping heartbeat, no valid token.")
+                    if not self._has_active_reconnect_thread():
+                        self._schedule_reconnect(
+                            self._plaza_connection_error or "heartbeat waiting for plaza token",
+                            initial_delay=self.PLAZA_RECONNECT_INTERVAL,
+                        )
                     continue
                 
                 payload = {"agent_id": self.agent_id, "agent_name": self.name}
@@ -866,19 +1040,19 @@ class BaseAgent(Pit, ABC):
                 if response.status_code == 401:
                     self.logger.warning(f"Heartbeat unauthorized (401). Forcing re-register.")
                     self._schedule_reconnect("heartbeat unauthorized (401)")
-                elif response.status_code == 503 and "Starting" in response.text:
-                    self.logger.info(f"Plaza is starting, will retry heartbeat...")
+                elif self._is_plaza_starting_response(response):
+                    self._schedule_reconnect("plaza starting")
+                elif response.status_code == 200:
+                    data = response.json()
+                    self._mark_plaza_connection_alive()
+                    if isinstance(data.get("site_settings"), dict):
+                        self.site_settings = data["site_settings"]
                 elif response.status_code != 200:
                     self.logger.warning(f"Heartbeat failed with status {response.status_code}: {response.text}")
                     self._schedule_reconnect(f"heartbeat failed with status {response.status_code}")
             except Exception as e:
-                # If Plaza is completely down, it might throw ConnectionError which is caught here.
-                # Just log and continue retrying.
-                if "Starting" in str(e) or "503" in str(e):
-                    self.logger.info(f"Plaza is starting or unavailable, waiting...")
-                else:
-                    self.logger.warning(f"Heartbeat failed: {e}")
-                    self._schedule_reconnect(str(e))
+                self.logger.warning(f"Heartbeat failed: {e}")
+                self._schedule_reconnect(str(e))
 
     def lookup_agent_info(self, name: str) -> Optional[Dict[str, Any]]:
         """Resolve agent name to full info (including card) via Plaza."""

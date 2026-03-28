@@ -1,0 +1,15 @@
+{
+  "pds_version": "0.1.0",
+  "resource_type": "pulse_definition",
+  "id": "ai.attas.finance.price.last_trade.invalid_missing_interface",
+  "namespace": "ai.attas.finance.price",
+  "name": "last_trade_invalid_missing_interface",
+  "version": "1.0.0",
+  "title": "Invalid Last Trade Price Example",
+  "description": "Negative test case: missing interface object.",
+  "pulse_class": "fact",
+  "status": "stable",
+  "concept": {
+    "definition": "Most recent executed trade price for a financial instrument on a specified venue or consolidated feed."
+  }
+}

@@ -48,6 +48,77 @@
             "party": "attas"
         },
         {
+            "name": "ohlc_bar_series",
+            "description": "Historical OHLCV bar series from Yahoo Finance for a requested symbol, interval, and date range.",
+            "tags": ["finance", "market-data", "ohlc", "timeseries"],
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string",
+                        "description": "Ticker symbol, for example AAPL."
+                    },
+                    "interval": {
+                        "type": "string",
+                        "enum": ["1m", "5m", "15m", "30m", "1h", "4h", "1d", "1wk", "1mo"],
+                        "description": "Bar interval for the requested time series."
+                    },
+                    "start_date": {
+                        "type": "string",
+                        "description": "Inclusive lower bound for the requested time series, as an ISO date or datetime."
+                    },
+                    "end_date": {
+                        "type": "string",
+                        "description": "Inclusive upper bound for the requested time series, as an ISO date or datetime."
+                    }
+                },
+                "required": ["symbol", "interval", "start_date", "end_date"]
+            },
+            "output_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {"type": "string"},
+                    "interval": {"type": "string"},
+                    "start_date": {"type": "string"},
+                    "end_date": {"type": "string"},
+                    "ohlc_series": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "timestamp": {"type": "string"},
+                                "open": {"type": "number"},
+                                "high": {"type": "number"},
+                                "low": {"type": "number"},
+                                "close": {"type": "number"},
+                                "volume": {"type": "number"}
+                            },
+                            "required": ["timestamp", "open", "high", "low", "close"]
+                        }
+                    },
+                    "source": {"type": "string"}
+                },
+                "required": ["symbol", "interval", "start_date", "end_date", "ohlc_series"]
+            },
+            "mapping": {
+                "symbol": "symbol",
+                "interval": "interval",
+                "start_date": "start_date",
+                "end_date": "end_date",
+                "ohlc_series": "ohlc_series",
+                "source": {"value": "yfinance"}
+            },
+            "test_data": {
+                "symbol": "AAPL",
+                "interval": "1d",
+                "start_date": "2025-01-01",
+                "end_date": "2025-03-31"
+            },
+            "cost": 0,
+            "party": "attas",
+            "pulse_address": "ai.attas.finance.price.ohlc_bar_series"
+        },
+        {
             "name": "previous_close",
             "description": "Previous close from Yahoo Finance.",
             "tags": ["finance", "quote", "close"],
@@ -109,6 +180,40 @@
                 "symbol": "symbol",
                 "open_price": "open_price",
                 "currency": "currency",
+                "source": {"value": "yfinance"}
+            },
+            "test_data": {"symbol": "AAPL"},
+            "cost": 0,
+            "party": "attas"
+        },
+        {
+            "name": "market_state",
+            "description": "Current Yahoo Finance session state for the ticker.",
+            "tags": ["finance", "quote", "session"],
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string",
+                        "description": "Ticker symbol, for example AAPL."
+                    }
+                },
+                "required": ["symbol"]
+            },
+            "output_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {"type": "string"},
+                    "market_state": {"type": "string"},
+                    "exchange": {"type": "string"},
+                    "source": {"type": "string"}
+                },
+                "required": ["symbol", "market_state"]
+            },
+            "mapping": {
+                "symbol": "symbol",
+                "market_state": "market_state",
+                "exchange": "exchange",
                 "source": {"value": "yfinance"}
             },
             "test_data": {"symbol": "AAPL"},
@@ -460,6 +565,214 @@
                 "earnings_growth": "earnings_growth",
                 "earnings_quarterly_growth": "earnings_quarterly_growth",
                 "source": {"value": "yfinance"}
+            },
+            "test_data": {"symbol": "AAPL"},
+            "cost": 0,
+            "party": "attas"
+        },
+        {
+            "name": "income_statement_revenue",
+            "pulse_address": "ffcb1f67-ddbc-5706-903f-73915f91f04a",
+            "pulse_id": "urn:plaza:pulse:income.statement.revenue",
+            "description": "Latest annual revenue line item from Yahoo Finance income statements.",
+            "tags": ["finance", "fundamentals", "income-statement", "annual"],
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string",
+                        "description": "Ticker symbol, for example AAPL."
+                    }
+                },
+                "required": ["symbol"]
+            },
+            "output_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {"type": "string"},
+                    "period_end": {"type": "string"},
+                    "period_type": {"type": "string"},
+                    "revenue": {"type": "number"},
+                    "currency": {"type": "string"},
+                    "year_over_year_growth_percent": {"type": "number"}
+                },
+                "required": ["symbol", "period_end", "revenue"]
+            },
+            "mapping": {
+                "symbol": "symbol",
+                "period_end": "period_end",
+                "period_type": "period_type",
+                "revenue": "revenue",
+                "currency": "currency",
+                "year_over_year_growth_percent": "revenue_year_over_year_growth_percent"
+            },
+            "test_data": {"symbol": "AAPL"},
+            "cost": 0,
+            "party": "attas"
+        },
+        {
+            "name": "income_statement_gross_profit",
+            "pulse_address": "fb9cd669-8f6b-5b5b-953e-8f7f73019e15",
+            "pulse_id": "urn:plaza:pulse:income.statement.gross.profit",
+            "description": "Latest annual gross profit line item from Yahoo Finance income statements.",
+            "tags": ["finance", "fundamentals", "income-statement", "annual"],
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string",
+                        "description": "Ticker symbol, for example AAPL."
+                    }
+                },
+                "required": ["symbol"]
+            },
+            "output_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {"type": "string"},
+                    "period_end": {"type": "string"},
+                    "period_type": {"type": "string"},
+                    "gross_profit": {"type": "number"},
+                    "gross_margin_percent": {"type": "number"},
+                    "currency": {"type": "string"},
+                    "year_over_year_growth_percent": {"type": "number"}
+                },
+                "required": ["symbol", "period_end", "gross_profit"]
+            },
+            "mapping": {
+                "symbol": "symbol",
+                "period_end": "period_end",
+                "period_type": "period_type",
+                "gross_profit": "gross_profit",
+                "gross_margin_percent": "gross_margin_percent",
+                "currency": "currency",
+                "year_over_year_growth_percent": "gross_profit_year_over_year_growth_percent"
+            },
+            "test_data": {"symbol": "AAPL"},
+            "cost": 0,
+            "party": "attas"
+        },
+        {
+            "name": "income_statement_operating_income",
+            "pulse_address": "9a63105a-cd32-5975-bd35-8200ec66ce78",
+            "pulse_id": "urn:plaza:pulse:income.statement.operating.income",
+            "description": "Latest annual operating income line item from Yahoo Finance income statements.",
+            "tags": ["finance", "fundamentals", "income-statement", "annual"],
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string",
+                        "description": "Ticker symbol, for example AAPL."
+                    }
+                },
+                "required": ["symbol"]
+            },
+            "output_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {"type": "string"},
+                    "period_end": {"type": "string"},
+                    "period_type": {"type": "string"},
+                    "operating_income": {"type": "number"},
+                    "operating_margin_percent": {"type": "number"},
+                    "currency": {"type": "string"},
+                    "year_over_year_growth_percent": {"type": "number"}
+                },
+                "required": ["symbol", "period_end", "operating_income"]
+            },
+            "mapping": {
+                "symbol": "symbol",
+                "period_end": "period_end",
+                "period_type": "period_type",
+                "operating_income": "operating_income",
+                "operating_margin_percent": "operating_margin_percent",
+                "currency": "currency",
+                "year_over_year_growth_percent": "operating_income_year_over_year_growth_percent"
+            },
+            "test_data": {"symbol": "AAPL"},
+            "cost": 0,
+            "party": "attas"
+        },
+        {
+            "name": "income_statement_net_income",
+            "pulse_address": "266c85e4-09a8-5b27-9450-46a84eef22d7",
+            "pulse_id": "urn:plaza:pulse:income.statement.net.income",
+            "description": "Latest annual net income line item from Yahoo Finance income statements.",
+            "tags": ["finance", "fundamentals", "income-statement", "annual"],
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string",
+                        "description": "Ticker symbol, for example AAPL."
+                    }
+                },
+                "required": ["symbol"]
+            },
+            "output_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {"type": "string"},
+                    "period_end": {"type": "string"},
+                    "period_type": {"type": "string"},
+                    "net_income": {"type": "number"},
+                    "net_margin_percent": {"type": "number"},
+                    "currency": {"type": "string"},
+                    "year_over_year_growth_percent": {"type": "number"}
+                },
+                "required": ["symbol", "period_end", "net_income"]
+            },
+            "mapping": {
+                "symbol": "symbol",
+                "period_end": "period_end",
+                "period_type": "period_type",
+                "net_income": "net_income",
+                "net_margin_percent": "net_margin_percent",
+                "currency": "currency",
+                "year_over_year_growth_percent": "net_income_year_over_year_growth_percent"
+            },
+            "test_data": {"symbol": "AAPL"},
+            "cost": 0,
+            "party": "attas"
+        },
+        {
+            "name": "income_statement_eps",
+            "pulse_address": "55da0488-949f-5617-900a-0091c54aa5da",
+            "pulse_id": "urn:plaza:pulse:income.statement.eps",
+            "description": "Latest quarterly basic and diluted EPS from Yahoo Finance income statements.",
+            "tags": ["finance", "fundamentals", "income-statement", "quarterly"],
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string",
+                        "description": "Ticker symbol, for example AAPL."
+                    }
+                },
+                "required": ["symbol"]
+            },
+            "output_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {"type": "string"},
+                    "period_end": {"type": "string"},
+                    "period_type": {"type": "string"},
+                    "eps_basic": {"type": "number"},
+                    "eps_diluted": {"type": "number"},
+                    "currency": {"type": "string"},
+                    "year_over_year_growth_percent": {"type": "number"}
+                },
+                "required": ["symbol", "period_end", "eps_diluted"]
+            },
+            "mapping": {
+                "symbol": "symbol",
+                "period_end": "period_end",
+                "period_type": "period_type",
+                "eps_basic": "eps_basic",
+                "eps_diluted": "eps_diluted",
+                "currency": "currency",
+                "year_over_year_growth_percent": "eps_diluted_year_over_year_growth_percent"
             },
             "test_data": {"symbol": "AAPL"},
             "cost": 0,

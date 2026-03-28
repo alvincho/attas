@@ -1,179 +1,338 @@
 # Prompits
-Prompits is a decentralized, modular framework designed to empower collaborative AI agents in executing and optimizing intelligent workflows. It supports flexible communication, distributed coordination, and evolutionary learning, making it ideal for automating complex, multi-step processes in a scalable and transparent way.
 
-### Purpose
+Prompits is a Python infrastructure layer for building networked, multi-agent systems. It gives each agent a FastAPI runtime, a pool-backed local memory, a registry/discovery service called Plaza, and a practice model for mounting capabilities that can be called locally or across agents.
 
-- Enable the creation and optimization of intelligent workflows using AI and human collaboration.
-- Facilitate decentralized problem-solving across multiple agents with reusable Practices.
-- Support open experimentation and innovation with transparent evaluation and incentive mechanisms.
+The older public [`alvincho/prompits`](https://github.com/alvincho/prompits) repository introduced the decentralized multi-agent vision. The implementation in this workspace keeps that direction, but the current code is much more concrete: HTTP-native agents, Plaza-issued identities and tokens, persisted credentials, searchable agent cards, remote `UsePractice` calls, and optional UI surfaces for monitoring and interaction.
 
-### Benefits
+## Status
 
-- Scalable and extensible architecture for distributed AI agents.
-- Modular and composable components for building custom workflows.
-- Decentralized discovery, evaluation, and coordination of practices and agents.
-- Token-based economy (Pondo) for rewarding useful contributions and governing the system.
+Prompits is still an experimental framework. It is appropriate for local development, demos, research prototypes, and internal infrastructure exploration. Treat APIs, config shapes, and built-in practices as evolving until a standalone packaging and release flow is finalized.
 
-## Features
+## What Prompits Provides
 
-- Decentralized multi-agent collaboration
-- Modular and extensible system architecture
-- Graph-based and sequential workflow management
-- AI-human hybrid optimization through Profiler and Pathway evaluations
-- Token-based economy for governance and prioritization
+- A `BaseAgent` runtime that hosts a FastAPI app, mounts practices, and manages Plaza connectivity.
+- Concrete agent roles for worker agents, Plaza coordinators, and browser-facing user agents.
+- A `Practice` abstraction for capabilities such as chat, LLM execution, embeddings, Plaza coordination, and pool operations.
+- A `Pool` abstraction with filesystem, SQLite, and Supabase backends.
+- An identity and discovery layer where agents register, authenticate, renew tokens, heartbeat, search, and relay messages.
+- Direct remote practice invocation through `UsePractice(...)` with Plaza-backed caller verification.
+
+## Architecture
+
+```mermaid
+flowchart LR
+    UI["UserAgent / Browser UI"]
+    P["PlazaAgent + PlazaPractice"]
+    W1["StandbyAgent"]
+    W2["StandbyAgent / LLM Agent"]
+    FS1[("FileSystemPool")]
+    FS2[("SQLitePool or SupabasePool")]
+
+    UI -->|"status + send"| P
+    W1 -->|"register / renew / heartbeat"| P
+    W2 -->|"register / renew / heartbeat"| P
+    P -->|"search / relay / authenticate"| W1
+    W1 -->|"UsePractice"| W2
+    W1 --- FS1
+    P --- FS2
+```
+
+### Runtime Model
+
+1. Each agent starts a FastAPI app and mounts built-in plus configured practices.
+2. Non-Plaza agents register with Plaza and receive:
+   - a stable `agent_id`
+   - a persistent `api_key`
+   - a short-lived bearer token for Plaza requests
+3. Agents persist Plaza credentials to their primary pool and reuse them on restart.
+4. Plaza maintains a searchable directory of agent cards and liveness metadata.
+5. Agents can:
+   - send messages to discovered peers
+   - relay through Plaza
+   - invoke a practice on another agent with caller verification
 
 ## Core Concepts
 
-Prompits is composed of modular components that work together to enable intelligent, decentralized multi-agent workflows. These components can be grouped into the following categories:
+### Agent
 
-### 1. **Agents and Capabilities**
-- **Pit** – The base agent that performs actions.
-- **Practice** – The specific capability or function a Pit can perform.
-- **Plug** – Enables communication between agents or with external systems.
+An agent is a long-running process with an HTTP API, one or more practices, and at least one configured pool. In the current implementation, the main concrete agent types are:
 
-**Relationship:** Each Pit has one or more Practices and communicates via Plugs.
+- `BaseAgent`: shared runtime engine
+- `StandbyAgent`: general worker agent
+- `PlazaAgent`: coordinator and registry host
+- `UserAgent`: browser-facing UI shell over Plaza APIs
 
-### 2. **Workflow Structure**
-- **Pathway** – A full workflow composed of steps (Posts).
-- **Post** – A single step in a Pathway.
-- **Planner** – Creates and organizes Pathways based on Proposals.
-- **Pathfinder** – Executes Pathways by delegating Posts to agents.
-- **Pioneer** – Explores and tests new Pathways or methods.
+### Practice
 
-**Relationship:** Proposals are passed to the Planner, which builds a Pathway of Posts. The Pathfinder then assigns Posts to suitable Pits, and Pioneers can innovate new solutions.
+A practice is a mounted capability. It publishes metadata into the agent card and can expose HTTP endpoints and direct execution logic.
 
-### 3. **Coordination and Discovery**
-- **Plaza** – A decentralized space for agents to advertise their capabilities and discover others.
-- **Proposal** – A request or task needing a workflow.
-- **Pact** – A formal agreement among agents on how to execute tasks.
+Examples in this repository:
 
-**Relationship:** Agents use Plazas to coordinate and respond to Proposals. Pacts form the basis of collaboration.
+- `ChatPractice`: default `/chat` interface, backed by Ollama or OpenAI
+- `LLMPractice`: dedicated `/llm` interface with a separate practice id
+- `EmbeddingsPractice`: embedding generation
+- `PlazaPractice`: register, renew, authenticate, search, heartbeat, relay
+- pool operation practices auto-mounted from the configured pool
 
-### 4. **Data and Integration**
-- **Pool** – A storage space for shared data or resources.
-- **Pouch** – A database interface, acting as a specialized Pool for queries.
+### Pool
 
-**Relationship:** Agents interact with Pools for reading and writing data. Pouches enable structured query access.
+A pool is the persistence layer used by agents and Plaza.
 
-### 5. **Optimization and Incentives**
-- **Profiler** – Scores and ranks agent performance, Practices, and Pathways.
-- **Pondo** – Token system used for rewards, prioritization, and governance.
-- **Pricing** – Mechanism for bidding on task execution using Pondo.
+- `FileSystemPool`: transparent JSON files, great for local development
+- `SQLitePool`: single-node relational storage
+- `SupabasePool`: hosted Postgres/PostgREST integration
 
-**Relationship:** Profiler tracks and ranks contributions. Pondo is earned or spent based on agent performance and pricing agreements.
+The first configured pool is the primary pool. It is used for agent credential persistence and practice metadata, and additional pools can be mounted for other use cases.
 
-## Agent Structure
+### Plaza
 
-In Prompits, an **Agent** can represent a higher-level container for multiple **Pits**, which are the active worker components. Each Pit in turn holds a set of **Practices**, which define the actions or capabilities the Pit can perform. This nested structure allows for scalability and modularity in managing agent behavior and task specialization.
+Plaza is the coordination plane. It is both:
 
-- **Agent** – High-level container or identity and instance of Pits.
-- **Pit** – Basic elements in Prompits.
-- **Practice** – A defined capability or action a Pit can perform.
-- **Plug** - Communication channel between agents.
-- **Plaza** - Bulletin board for agents to advertise status
-- **Pool** - Storage or memory
+- an agent host (`PlazaAgent`)
+- a mounted practice bundle (`PlazaPractice`)
 
-The diagram below illustrates this structure:
+Plaza responsibilities include:
 
-```mermaid
-graph TB
-    PZ[[Plaza]]
-    subgraph agnet1
-    AG1([Agent 1])
-    AG1 --> P1[Pit 1]
-    AG1 --> P2[Pit 2]
-    P1 --> PR1[Practice: OCR]
-    P1 --> PR2[Practice: Translate]
-    P2 --> PR3[Practice: Summarize]
-    P2 --> PR4[Practice: Classify]
-    end
-    subgraph agent2
-    AG2([Agent 2])
-    AG2 --> P3[Pit 3]
-    P3 --> PR5[Practice: Chat]
-    end
-    AG2 --> PZ
-    AG1 --> PZ
-    AG1 == Plug === AG2
-    PZ --> PR6[(Pool)]
-```
+- issuing agent identities
+- authenticating bearer tokens or stored credentials
+- storing searchable directory entries
+- tracking heartbeat activity
+- relaying messages between agents
+- exposing UI endpoints for monitoring
 
-## Architecture Diagram
+### Message and Remote Practice Invocation
 
-The diagram below shows how agents (Pits) interact with central discovery hubs called Plazas. Each agent is connected to one or more Plazas, which serve as decentralized communication spaces for coordination and collaboration. Around each agent, various Practices represent the capabilities they offer.
+Prompits supports two communication styles:
 
-- **Plaza 1 and Plaza 2** sit at the center of the system, connecting agents together.
-- **Agents A to E** represent intelligent workers capable of performing tasks.
-- **Practices** (e.g., OCR, Translate, Classify) are modular functions that agents can execute.
-- This layout emphasizes a decentralized, collaborative system where agents can discover, cooperate, and evolve through shared tasks.
+- Message-style delivery to a peer practice or communication endpoint
+- Remote practice invocation through `UsePractice(...)` and `/use_practice/{practice_id}`
 
-```mermaid
-graph TD
-    %% Plazas at center
-    PZ1[Plaza 1]
-    PZ2[Plaza 2]
-    PZ1 --- PZ2
+The second path is the more structured one. The caller includes its `PitAddress` plus either a Plaza token or a shared direct token. The receiver verifies that identity before executing the practice.
 
-    %% Agents around plazas
-    A1[Agent A] --- PZ1
-    A2[Agent B] --- PZ1
-    A2 --- PZ2
-    A3[Agent C] --- PZ2
-    A4[Agent D] --- PZ2
-    A5[Agent E] --- PZ2
+## Repository Layout
 
-    %% Agent A Practices
-    A1 --> A1P1[🏗 Practice: OCR]
-    A1 --> A1P2[🏗 Practice: Translate]
+```text
+prompits/
+  agents/        Agent runtimes and UI templates
+  core/          Core abstractions such as Pit, Practice, Pool, Plaza, Message
+  pools/         FileSystem, SQLite, and Supabase pool backends
+  practices/     Built-in practices such as chat, llm, embeddings, plaza
+  tests/         Integration and unit tests for the runtime
+  examples/      Minimal local config files for open source quickstarts
 
-    %% Agent B Practices
-    A2 --> A2P1[🏗 Practice: Summarize]
-
-    %% Agent C Practices
-    A3 --> A3P1[🏗 Practice: Extract]
-
-    %% Agent D Practices
-    A4 --> A4P1[🏗 Practice: Classify]
-    A4 --> A4P2[🏗 Practice: Validate]
-
-    %% Agent E Practices
-    A5 --> A5P1[🏗 Practice: Format]
+docs/
+  CONCEPTS_AND_CLASSES.md   Detailed architecture and class reference
 ```
 
 ## Installation
 
+This workspace currently runs Prompits from source. The simplest setup is a virtual environment plus direct dependency installation.
+
 ```bash
-git clone https://github.com/alvincho/prompits.git
-cd prompits/python-sdk
-pip install -r requirements.txt
+cd /path/to/FinMAS
+python3 -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip
+pip install fastapi "uvicorn[standard]" requests httpx pydantic python-dotenv jsonschema jinja2 pytest
 ```
 
-## Usage
+Optional dependencies:
 
-Start a basic agent:
+- `pip install supabase` if you want to use `SupabasePool`
+- a running Ollama instance if you want local LLM-backed chat or `LLMPractice`
+
+## Quickstart
+
+The example configs in [`prompits/examples/`](./examples/README.md) are designed for a local source checkout and use only `FileSystemPool`.
+
+### 1. Start Plaza
+
 ```bash
-python create-agent.py --config agent1_lite.json --refresh
+python3 prompits/create_agent.py --config prompits/examples/plaza.agent
 ```
 
-You can also configure agents via the `agent.json` file or extend functionality by adding new Practices or Pathways.
+This starts Plaza on `http://127.0.0.1:8211`.
 
-## Contributing
+### 2. Start a Worker Agent
 
-Contributions are welcome! Please open an issue or submit a pull request. See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+In a second terminal:
 
-## License
+```bash
+python3 prompits/create_agent.py --config prompits/examples/worker.agent
+```
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for more information.
+The worker auto-registers with Plaza on startup, persists its credentials in the local filesystem pool, and exposes the default `chat-practice`.
 
-## Disclaimer
+### 3. Start the Browser-Facing User Agent
 
-⚠️ **This project is currently in the Proof-of-Concept (PoC) stage.**  
-It is intended for developer review, experimentation, and early feedback only.
+In a third terminal:
 
-- Do not use this system in production environments.
-- APIs, architecture, and components are subject to significant change.
-- Contributions and suggestions are highly welcome as the project evolves.
+```bash
+python3 prompits/create_agent.py --config prompits/examples/user.agent
+```
 
-## Roadmap
+Then open `http://127.0.0.1:8214/` to view the Plaza UI and send messages through the browser workflow.
 
-Curious about where Prompits is headed? Check out the [ROADMAP.md](../ROADMAP.md) for a detailed view of upcoming phases, features, and milestones.
+### 4. Verify the Stack
+
+```bash
+curl http://127.0.0.1:8211/health
+curl http://127.0.0.1:8214/api/plazas_status
+```
+
+The second request should show Plaza plus the registered worker in the directory.
+
+## Configuration
+
+Prompits agents are configured with JSON files, usually using the `.agent` suffix.
+
+### Top-Level Fields
+
+| Field | Required | Description |
+| --- | --- | --- |
+| `name` | yes | Display name and default agent identity label |
+| `type` | yes | Fully-qualified Python class path for the agent |
+| `host` | yes | Host interface to bind |
+| `port` | yes | HTTP port |
+| `plaza_url` | no | Plaza base URL for non-Plaza agents |
+| `role` | no | Role string used in the agent card |
+| `tags` | no | Searchable card tags |
+| `agent_card` | no | Additional card metadata merged into the generated card |
+| `pools` | yes | Non-empty list of configured pool backends |
+| `practices` | no | Dynamically loaded practice classes |
+| `plaza` | no | Plaza-specific options such as `init_files` |
+
+### Minimal Worker Example
+
+```json
+{
+  "name": "worker-a",
+  "role": "worker",
+  "tags": ["demo"],
+  "host": "127.0.0.1",
+  "port": 8212,
+  "plaza_url": "http://127.0.0.1:8211",
+  "pools": [
+    {
+      "type": "FileSystemPool",
+      "name": "worker_pool",
+      "description": "Worker local pool",
+      "root_path": "prompits/examples/storage/worker"
+    }
+  ],
+  "type": "prompits.agents.standby.StandbyAgent"
+}
+```
+
+### Pool Notes
+
+- A config must declare at least one pool.
+- The first pool is the primary pool.
+- `SupabasePool` supports environment references for `url` and `key` values through either:
+  - `{ "env": "SUPABASE_SERVICE_ROLE_KEY" }`
+  - `"env:SUPABASE_SERVICE_ROLE_KEY"`
+  - `"${SUPABASE_SERVICE_ROLE_KEY}"`
+
+## Built-In HTTP Surface
+
+### BaseAgent Endpoints
+
+- `GET /health`: liveness probe
+- `POST /use_practice/{practice_id}`: verified remote practice execution
+
+### Chat and LLM Practices
+
+- `POST /chat`: default chat capability mounted by `BaseAgent`
+- `GET /list_models`: provider model discovery for `ChatPractice`
+- `POST /llm`: dedicated LLM capability if `LLMPractice` is mounted
+- `GET /llm_models`: provider model discovery for `LLMPractice`
+
+### Plaza Endpoints
+
+- `POST /register`
+- `POST /renew`
+- `POST /authenticate`
+- `POST /heartbeat`
+- `GET /search`
+- `POST /relay`
+
+Plaza also serves:
+
+- `GET /`
+- `GET /plazas`
+- `GET /api/plazas_status`
+- `GET /.well-known/agent-card`
+
+## Programmatic Usage
+
+The tests show the most reliable examples of programmatic usage. A typical remote-call flow looks like this:
+
+```python
+from prompits.agents.standby import StandbyAgent
+from prompits.practices.llm import LLMPractice
+
+caller = StandbyAgent(
+    name="caller",
+    host="127.0.0.1",
+    port=9001,
+    plaza_url="http://127.0.0.1:8211",
+    agent_card={"name": "caller", "role": "client", "tags": ["demo"]},
+)
+
+target = StandbyAgent(
+    name="llm-agent",
+    host="127.0.0.1",
+    port=9002,
+    plaza_url="http://127.0.0.1:8211",
+    agent_card={"name": "llm-agent", "role": "llm", "tags": ["demo"]},
+)
+target.add_practice(LLMPractice())
+
+caller.register()
+target.register()
+
+result = caller.UsePractice(
+    "llm",
+    {"prompt": "Return a short greeting."},
+    pit_address=target.pit_address,
+)
+```
+
+If `pit_address` points back to the local agent, `UsePractice(...)` executes locally. Otherwise it resolves the target through Plaza and makes a verified HTTP call.
+
+## Development and Testing
+
+Run the Prompits test suite with:
+
+```bash
+pytest prompits/tests -q
+```
+
+Useful test files to read when onboarding:
+
+- `prompits/tests/test_plaza.py`
+- `prompits/tests/test_plaza_config.py`
+- `prompits/tests/test_agent_pool_credentials.py`
+- `prompits/tests/test_use_practice_remote_llm.py`
+- `prompits/tests/test_user_ui.py`
+
+## Open Source Positioning
+
+Compared with the earlier public `alvincho/prompits` repo, the current implementation is less about abstract terminology and more about a runnable infrastructure surface:
+
+- concrete FastAPI-based agents instead of concept-only architecture
+- real credential persistence and Plaza token renewal
+- searchable agent cards and relay behavior
+- direct remote practice execution with verification
+- built-in UI endpoints for Plaza inspection
+
+That makes this codebase a stronger basis for an open source release, especially if you present Prompits as:
+
+- an infrastructure layer for multi-agent systems
+- a framework for discovery, identity, routing, and practice execution
+- a base runtime that higher-level systems such as `phemacast` build on top of
+
+## Further Reading
+
+- [Detailed Concepts And Class Reference](../docs/CONCEPTS_AND_CLASSES.md)
+- [Example Configs](./examples/README.md)

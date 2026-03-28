@@ -358,8 +358,9 @@ class Phemar(StandbyAgent):
         @self.app.get("/")
         async def phemar_ui(request: Request):
             return self.templates.TemplateResponse(
-                "phema_editor.html",
-                {
+                request=request,
+                name="phema_editor.html",
+                context={
                     "request": request,
                     "agent_name": self.name,
                     "initial_phema_id": "",
@@ -372,8 +373,9 @@ class Phemar(StandbyAgent):
         @self.app.get("/phemas/editor")
         async def phemar_editor(request: Request):
             return self.templates.TemplateResponse(
-                "phema_editor.html",
-                {
+                request=request,
+                name="phema_editor.html",
+                context={
                     "request": request,
                     "agent_name": self.name,
                     "initial_phema_id": "",
@@ -386,8 +388,9 @@ class Phemar(StandbyAgent):
         @self.app.get("/phemas/editor/{phema_id}")
         async def phemar_editor_existing(request: Request, phema_id: str):
             return self.templates.TemplateResponse(
-                "phema_editor.html",
-                {
+                request=request,
+                name="phema_editor.html",
+                context={
                     "request": request,
                     "agent_name": self.name,
                     "initial_phema_id": phema_id,

@@ -1,398 +1,517 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>attas | User Agent</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Space+Mono&display=swap"
-        rel="stylesheet">
-    <link rel="stylesheet" href="/static/style.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/user_agent.css?v=20260327g">
+    <link rel="stylesheet" href="/static/attas_ui_shared.css?v=20260327a">
+    <script defer src="/static/attas_theme.js?v=20260327a"></script>
+    <script defer src="/static/user_agent.js?v=20260327g"></script>
 </head>
+<body data-agent-name="{{ agent_name }}" data-plaza-urls='{{ plaza_urls | tojson | safe }}'>
+    <div class="app-shell">
 
-<body class="dark-theme">
-    <div class="glass-background"></div>
-    <div class="noise-overlay"></div>
-
-    <nav class="sidebar">
-        <div class="sidebar-header">
-            <div class="logo-icon"></div>
-            <h3>at<span>tas</span></h3>
-        </div>
-        <ul class="nav-links">
-            <li class="active" data-page="dashboard"><span class="icon-dashboard"></span> Dashboard</li>
-            <li data-page="layouts"><span class="icon-layout"></span> Layouts</li>
-            <li data-page="pieces"><span class="icon-piece"></span> Pieces</li>
-            <li data-page="templates"><span class="icon-reports"></span> Report Templates</li>
-            <li><a href="/plazas" style="text-decoration: none; color: inherit;"><span class="icon-grid"></span>
-                    Plazas</a></li>
-        </ul>
-        <div class="sidebar-footer">
-            <div class="status-badge" id="agent-status">
-                <span class="pulsar"></span>
-                {{ agent_name.split('Agent')[0] }}
+        <aside class="sidebar">
+            <div class="brand-block">
+                <p class="brand-kicker">attas</p>
+                <h1>User Agent</h1>
+                <p class="brand-copy">
+                    Choose a Phema, pick how it should be delivered, then create and save a result locally.
+                </p>
             </div>
-        </div>
-    </nav>
 
-    <main class="content-area">
-        <!-- Page: Dashboard -->
-        <section id="dashboard-page" class="page active">
-            <header class="page-header">
-                <div class="header-info">
-                    <h1>Market <span>Analysis</span></h1>
-                    <p class="subtitle">Real-time multi-agent data synthesis</p>
-                </div>
-                <div class="header-actions">
-                    <button id="settings-toggle" class="icon-btn" title="AI Settings">
-                        <span class="icon-settings"></span>
-                    </button>
-                </div>
-            </header>
+            <nav class="sidebar-nav">
+                <button class="nav-item active" data-view-target="home-view" type="button" data-tooltip="Create a snapshot from a Phema and package it with a Castr.">
+                    <span class="nav-label">Home</span>
+                    <span class="nav-help">Choose a Phema and generate content</span>
+                </button>
+                <button class="nav-item" data-view-target="saved-view" type="button" data-tooltip="Review results that were saved on this user agent for later reuse.">
+                    <span class="nav-label">Saved</span>
+                    <span class="nav-help">Results stored locally on this user agent</span>
+                </button>
+                <button class="nav-item" data-view-target="plazas-view" type="button" data-tooltip="Inspect connected plazas, health, and catalog availability.">
+                    <span class="nav-label">Plazas</span>
+                    <span class="nav-help">Connected networks and availability</span>
+                </button>
+                <button class="nav-item" data-view-target="settings-view" type="button" data-tooltip="Choose the site theme and accent color used across the interface.">
+                    <span class="nav-label">Settings</span>
+                    <span class="nav-help">Theme, color, and quick preferences</span>
+                </button>
+            </nav>
 
-            <section id="settings-panel" class="settings-panel hidden">
-                <h3>AI Configuration</h3>
-                <div class="settings-grid">
-                    <div class="form-group">
-                        <label>LLM Provider</label>
-                        <select id="llm-provider">
-                            <option value="ollama" selected>Ollama (Local)</option>
-                            <option value="openai">OpenAI</option>
-                        </select>
+            <div class="sidebar-note">
+                <span class="note-title">Plain-language guide</span>
+                <p><strong>Phema</strong> means the template for what to create.</p>
+                <p><strong>Castr</strong> means the output style, such as PDF.</p>
+            </div>
+        </aside>
+
+        <main class="content-window">
+            <section id="home-view" class="view active">
+                <header class="view-header">
+                    <div>
+                        <p class="eyebrow">Home</p>
+                        <h2>Create From A Phema</h2>
+                        <p class="subcopy">
+                            Start with a Phema on the left, reuse or create a snapshot, then choose a Castr to package it.
+                        </p>
                     </div>
-                    <div class="form-group">
-                        <label>Model</label>
-                        <select id="llm-model">
-                            <option value="gemma3:27b" selected>gemma3:27b (Default)</option>
-                        </select>
+                    <div class="status-area">
+                        <span id="catalog-status" class="status-pill">Loading</span>
+                        <button id="refresh-catalog" class="ghost-btn" type="button">Refresh</button>
                     </div>
+                </header>
+
+                <div class="home-grid">
+                    <section class="panel library-panel">
+                        <div class="panel-head">
+                            <div>
+                                <p class="panel-kicker">Step 1</p>
+                                <h3 data-tooltip="Phemas are reusable content blueprints that define what gets assembled and which inputs are needed.">Phema Library</h3>
+                            </div>
+                            <span id="application-count" class="panel-count">0</span>
+                        </div>
+                        <div class="picker-toolbar">
+                            <div class="field compact-field">
+                                <label for="catalog-query">Search Phemas</label>
+                                <input id="catalog-query" type="text" placeholder="Search by name, topic, or owner">
+                            </div>
+                        </div>
+                        <div class="field">
+                            <label for="phema-select">Choose a Phema</label>
+                            <select id="phema-select" class="picker-select" size="14"></select>
+                        </div>
+                        <p id="phema-selection-meta" class="picker-meta">Search and choose one Phema to continue.</p>
+                    </section>
+
+                    <section class="panel builder-panel">
+                        <div class="panel-head">
+                            <div>
+                                <p class="panel-kicker">Step 2</p>
+                                <h3 data-tooltip="Move from blueprint to snapshot, then choose how the finished output should be rendered.">Build Your Result</h3>
+                            </div>
+                        </div>
+
+                        <div id="selected-phema-summary" class="hero-card"></div>
+
+                        <div class="builder-section">
+                            <div class="builder-title-row">
+                                <div>
+                                    <span class="builder-step">Choose A Snapshot Or Input Group</span>
+                                    <p class="builder-help">Use search and filters to find one input set, then choose a snapshot version from the select box.</p>
+                                </div>
+                                <div class="status-area">
+                                    <span id="snapshot-count" class="panel-count">0</span>
+                                    <button id="refresh-snapshots" class="ghost-btn" type="button" data-tooltip="Reload snapshot history for the selected Phema from its host Phemar.">Refresh Snapshots</button>
+                                </div>
+                            </div>
+                            <div class="picker-toolbar snapshot-toolbar">
+                                <div class="field compact-field">
+                                    <label for="snapshot-search">Search Input Sets</label>
+                                    <input id="snapshot-search" type="text" placeholder="Search by input value">
+                                </div>
+                                <div class="field compact-field">
+                                    <label for="snapshot-filter">Filter</label>
+                                    <select id="snapshot-filter">
+                                        <option value="all">All input sets</option>
+                                        <option value="default">Default inputs only</option>
+                                        <option value="custom">Custom inputs only</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="picker-grid">
+                                <div class="field">
+                                    <label for="snapshot-group-select">Input set</label>
+                                    <select id="snapshot-group-select" class="picker-select" size="8"></select>
+                                </div>
+                                <div class="field">
+                                    <label for="snapshot-version-select">Snapshot version</label>
+                                    <select id="snapshot-version-select" class="picker-select" size="8"></select>
+                                </div>
+                            </div>
+                            <p id="snapshot-selection-meta" class="picker-meta">Choose an input set and snapshot version, or start fresh.</p>
+                            <div id="snapshot-actions" class="history-actions"></div>
+                        </div>
+
+                        <div class="builder-section">
+                            <div class="builder-title-row">
+                                <div>
+                                    <span class="builder-step">Choose a Castr</span>
+                                    <p class="builder-help">After a snapshot is ready, pick how it should be packaged for you. Only active Castrs are shown.</p>
+                                </div>
+                                <span id="castr-count" class="panel-count">0</span>
+                            </div>
+                            <div class="field">
+                                <label for="castr-select">Active Castr</label>
+                                <select id="castr-select" class="picker-select" size="6"></select>
+                            </div>
+                            <p id="castr-selection-meta" class="picker-meta">Choose one active Castr to package the selected snapshot.</p>
+                        </div>
+
+                        <div class="builder-section">
+                            <div class="builder-title-row">
+                                <div>
+                                    <span class="builder-step">Details You Will Be Asked For</span>
+                                    <p class="builder-help">Choose a snapshot to cast it, or choose an input group to create a new snapshot with a simple form.</p>
+                                </div>
+                            </div>
+                            <div id="param-form" class="form-stack"></div>
+                        </div>
+
+                        <details class="advanced-panel">
+                            <summary>Delivery options</summary>
+                            <div class="advanced-grid">
+                                <div class="field">
+                                    <label for="party-filter">Party Filter</label>
+                                    <input id="party-filter" type="text" placeholder="attas">
+                                </div>
+                                <div class="field">
+                                    <label for="plaza-filter">Plaza Scope</label>
+                                    <select id="plaza-filter">
+                                        <option value="">All Plazas</option>
+                                    </select>
+                                </div>
+                                <div class="field">
+                                    <label for="cache-time">Reuse recent data (seconds)</label>
+                                    <input id="cache-time" type="number" min="0" step="1" value="300">
+                                </div>
+                                <div class="field">
+                                    <label for="render-format">Output format</label>
+                                    <input id="render-format" type="text" placeholder="PDF">
+                                </div>
+                            </div>
+                        </details>
+
+                        <div class="builder-actions">
+                            <button id="generate-result" class="primary-btn" type="button">Create Snapshot</button>
+                        </div>
+                    </section>
+                </div>
+
+                <section class="panel history-panel">
+                    <div class="panel-head">
+                        <div>
+                            <p class="panel-kicker">Recent</p>
+                            <h3 data-tooltip="Recent runs keep the last parameter sets handy so you can rerun or tweak them quickly.">Recent Runs</h3>
+                        </div>
+                        <span id="history-count" class="panel-count">0</span>
+                    </div>
+                    <div id="history-list" class="history-list"></div>
+                </section>
+
+                <section class="panel result-panel">
+                    <div class="panel-head">
+                        <div>
+                            <p class="panel-kicker">Step 3</p>
+                            <h3 data-tooltip="The selected snapshot and any cast output will appear here after generation completes.">Your Result</h3>
+                        </div>
+                        <div class="result-actions" id="result-actions"></div>
+                    </div>
+                    <div id="result-view" class="result-view">
+                        <div class="empty-state">
+                            <strong>No result yet.</strong>
+                            <p>Select a Phema, create or choose a snapshot, then package it with a Castr to see it here.</p>
+                        </div>
+                    </div>
+                </section>
+            </section>
+
+            <section id="saved-view" class="view">
+                <header class="view-header">
+                    <div>
+                        <p class="eyebrow">Saved</p>
+                        <h2>Saved Locally</h2>
+                        <p class="subcopy">
+                            These results are stored in this user agent’s local pool so they can be reopened later.
+                        </p>
+                    </div>
+                    <div class="status-area">
+                        <button id="refresh-saved" class="ghost-btn" type="button">Refresh Saved</button>
+                    </div>
+                </header>
+
+                <div class="saved-grid">
+                    <section class="panel saved-list-panel">
+                        <div class="panel-head">
+                            <div>
+                                <p class="panel-kicker">Library</p>
+                                <h3>Saved Results</h3>
+                            </div>
+                            <span id="saved-count" class="panel-count">0</span>
+                        </div>
+                        <div id="saved-list" class="selection-list"></div>
+                    </section>
+
+                    <section class="panel saved-detail-panel">
+                        <div class="panel-head">
+                            <div>
+                                <p class="panel-kicker">Preview</p>
+                                <h3>Saved Result Detail</h3>
+                            </div>
+                        </div>
+                        <div id="saved-detail" class="result-view">
+                            <div class="empty-state">
+                                <strong>No saved result selected.</strong>
+                                <p>Choose one from the list to view the details.</p>
+                            </div>
+                        </div>
+                    </section>
                 </div>
             </section>
 
-            <section class="search-section">
-                <div class="input-group">
-                    <input type="text" id="ticker-input" placeholder="Enter Ticker (e.g. BTC, AAPL, NVDA)"
-                        maxlength="10">
-                    <button id="fetch-btn">
-                        <span class="btn-text">Analyze</span>
-                        <span class="countdown-text hidden"></span>
-                        <span class="loader"></span>
-                    </button>
-                </div>
+            <section id="plazas-view" class="view">
+                <header class="view-header">
+                    <div>
+                        <p class="eyebrow">Plazas</p>
+                        <h2>Network Overview</h2>
+                        <p class="subcopy">
+                            This is the advanced view for connected plazas, availability, and catalog health.
+                        </p>
+                    </div>
+                </header>
+                <section class="panel plazas-panel">
+                    <div class="panel-head">
+                        <div>
+                            <p class="panel-kicker">Network</p>
+                            <h3 data-tooltip="Connected plazas are the remote networks this user agent can browse for Phemas, snapshots, and Castrs.">Connected Plazas</h3>
+                        </div>
+                        <span id="plaza-count" class="panel-count">{{ plaza_urls | length }}</span>
+                    </div>
+                    <div id="plaza-rail" class="plaza-rail"></div>
+                </section>
+
+                <section class="panel plazas-panel">
+                    <div class="panel-head">
+                        <div>
+                            <p class="panel-kicker">Directory</p>
+                            <h3 data-tooltip="AgentConfig entries are saved launch templates that live in connected Plaza directories.">AgentConfig Library</h3>
+                        </div>
+                        <div class="status-area">
+                            <span id="agent-config-count" class="panel-count">0</span>
+                            <button id="launch-agent-from-user" class="ghost-btn" type="button">Launch Agent</button>
+                            <button id="refresh-agent-configs" class="ghost-btn" type="button">Refresh AgentConfig</button>
+                        </div>
+                    </div>
+                    <div class="picker-toolbar">
+                        <div class="field compact-field">
+                            <label for="agent-config-query">Search AgentConfig</label>
+                            <input id="agent-config-query" type="text" placeholder="Search by name, owner, role, or plaza">
+                        </div>
+                    </div>
+                    <div id="agent-config-list" class="selection-list"></div>
+                </section>
             </section>
 
-            <section class="results-section" id="results-container">
-                <div class="empty-state">
-                    <div class="icon-search"></div>
-                    <p>Waiting for ticker input...</p>
+            <section id="settings-view" class="view">
+                <header class="view-header">
+                    <div>
+                        <p class="eyebrow">Settings</p>
+                        <h2>Site Settings</h2>
+                        <p class="subcopy">
+                            Set the overall theme and accent color for this interface. Your choices stay saved in this browser for this UI, so the next visit opens with the same look.
+                        </p>
+                    </div>
+                    <div class="status-area">
+                        <button class="ghost-btn" type="button" data-ui-open-preferences data-tooltip="Open the same settings in the quick panel that is available from every page.">Open Quick Panel</button>
+                        <button class="ghost-btn" type="button" data-ui-reset-preferences data-tooltip="Return the UI to the default paper theme and cobalt accent.">Reset To Default</button>
+                    </div>
+                </header>
+
+                <div class="settings-layout">
+                    <section class="panel settings-surface-panel">
+                        <div class="panel-head">
+                            <div>
+                                <p class="panel-kicker">Theme</p>
+                                <h3 data-tooltip="Theme adjusts surface tone, contrast, and overall atmosphere without changing the underlying workflow.">Theme Mode</h3>
+                            </div>
+                            <span class="panel-count" data-ui-current-theme>Paper</span>
+                        </div>
+                        <div class="settings-choice-grid">
+                            <button class="settings-choice" type="button" data-ui-theme-option="paper">
+                                <span class="settings-choice-name">Paper</span>
+                                <span class="settings-choice-copy">Warm, bright, and editorial.</span>
+                            </button>
+                            <button class="settings-choice" type="button" data-ui-theme-option="graphite">
+                                <span class="settings-choice-name">Graphite</span>
+                                <span class="settings-choice-copy">Cool studio neutrals with more edge.</span>
+                            </button>
+                            <button class="settings-choice" type="button" data-ui-theme-option="midnight">
+                                <span class="settings-choice-name">Midnight</span>
+                                <span class="settings-choice-copy">Dark surfaces for focused sessions.</span>
+                            </button>
+                        </div>
+                    </section>
+
+                    <section class="panel settings-surface-panel">
+                        <div class="panel-head">
+                            <div>
+                                <p class="panel-kicker">Color</p>
+                                <h3 data-tooltip="Accent color drives emphasis across buttons, chips, focus states, and status highlights.">Accent Color</h3>
+                            </div>
+                            <span class="panel-count" data-ui-current-accent>Cobalt</span>
+                        </div>
+                        <div class="settings-accent-grid">
+                            <button class="settings-accent" type="button" data-ui-accent-option="cobalt">
+                                <span class="settings-accent-dot settings-accent-dot-cobalt"></span>
+                                <span class="settings-accent-name">Cobalt</span>
+                            </button>
+                            <button class="settings-accent" type="button" data-ui-accent-option="forest">
+                                <span class="settings-accent-dot settings-accent-dot-forest"></span>
+                                <span class="settings-accent-name">Forest</span>
+                            </button>
+                            <button class="settings-accent" type="button" data-ui-accent-option="copper">
+                                <span class="settings-accent-dot settings-accent-dot-copper"></span>
+                                <span class="settings-accent-name">Copper</span>
+                            </button>
+                            <button class="settings-accent" type="button" data-ui-accent-option="plum">
+                                <span class="settings-accent-dot settings-accent-dot-plum"></span>
+                                <span class="settings-accent-name">Plum</span>
+                            </button>
+                        </div>
+                    </section>
                 </div>
 
-                <div class="info-card hidden" id="stock-card">
-                    <div class="card-header">
-                        <h2 id="display-ticker">--</h2>
-                        <div class="price-tag">
-                            <span class="currency">$</span>
-                            <span id="display-price">0.00</span>
+                <section class="panel settings-preview-panel">
+                    <div class="panel-head">
+                        <div>
+                            <p class="panel-kicker">Preview</p>
+                            <h3 data-tooltip="A quick mock-up of the active visual system so you can judge contrast before going back to work.">Appearance Preview</h3>
                         </div>
                     </div>
-
-                    <div class="card-body">
-                        <div class="stat">
-                            <label>24h Change</label>
-                            <span id="display-change">0.00%</span>
-                        </div>
-                        <div class="stat">
-                            <label>Volume</label>
-                            <span id="display-volume">0</span>
-                        </div>
-                        <div class="stat">
-                            <label>Last Updated</label>
-                            <span id="display-time">--</span>
-                        </div>
-                    </div>
-
-                    <div class="ai-insight-section" id="ai-insight-container">
-                        <div class="insight-header">
-                            <span class="insight-label">AI Insight</span>
-                            <button id="refresh-insight-btn" class="mini-btn">Regenerate</button>
-                        </div>
-                        <div class="insight-content" id="display-insight">
-                            <div class="insight-placeholder">Analyzing market sentiment...</div>
-                        </div>
-                    </div>
-
-                    <div class="card-footer">
-                        <div class="agent-trail">
-                            <span class="trail-label">Processed by:</span>
-                            <div class="agent-chips" id="agent-chips">
-                                <span class="chip">MarketData</span>
+                    <div class="settings-preview-shell">
+                        <div class="settings-preview-header">
+                            <div>
+                                <p class="settings-preview-kicker">attas</p>
+                                <h4>Professional, simplified surfaces</h4>
+                            </div>
+                            <div class="settings-preview-pills">
+                                <span class="meta-chip">Theme: <span data-ui-current-theme>Paper</span></span>
+                                <span class="meta-chip">Accent: <span data-ui-current-accent>Cobalt</span></span>
                             </div>
                         </div>
+                        <div class="settings-preview-grid">
+                            <article class="settings-preview-card">
+                                <span class="preview-label">Primary action</span>
+                                <div class="settings-preview-cta">Create Snapshot</div>
+                            </article>
+                            <article class="settings-preview-card">
+                                <span class="preview-label">Supporting surfaces</span>
+                                <div class="settings-preview-lines">
+                                    <span></span>
+                                    <span></span>
+                                    <span></span>
+                                </div>
+                            </article>
+                        </div>
                     </div>
-                </div>
+                </section>
             </section>
-        </section>
+        </main>
+    </div>
 
-        <!-- Page: Layouts -->
-        <section id="layouts-page" class="page">
-            <header class="page-header">
-                <div class="header-info">
-                    <h1>Report <span>Layouts</span></h1>
-                    <p class="subtitle">Design and manage report structures</p>
+    <div id="parameter-modal" class="modal-shell" hidden aria-hidden="true">
+        <div class="modal-backdrop" data-close-modal="true"></div>
+        <section class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="parameter-modal-title">
+            <div class="modal-head">
+                <div>
+                    <p class="eyebrow">Snapshot</p>
+                    <h3 id="parameter-modal-title">Create Snapshot</h3>
+                    <p id="parameter-modal-copy" class="subcopy">
+                        Fill in the required details below, then create the snapshot.
+                    </p>
                 </div>
-                <div class="header-actions">
-                    <button id="create-layout-btn" class="primary-btn">
-                        <span class="icon-add"></span> Create Layout
-                    </button>
-                </div>
-            </header>
+                <button id="close-parameter-modal" class="dialog-close" type="button" aria-label="Close dialog">Close</button>
+            </div>
 
-            <div class="layouts-container">
-                <div class="search-bar">
-                    <input type="text" id="layout-search" placeholder="Search layouts...">
-                </div>
+            <div id="parameter-modal-summary" class="hero-card modal-summary"></div>
+            <div id="parameter-modal-error" class="form-error" hidden></div>
+            <div id="modal-param-form" class="modal-form-stack"></div>
 
-                <div id="layouts-grid" class="layouts-grid">
-                    <!-- Layouts will be rendered here -->
-                </div>
+            <div class="dialog-footer">
+                <button id="parameter-modal-cancel" class="ghost-btn" type="button">Cancel</button>
+                <button id="parameter-modal-submit" class="primary-btn" type="button">Create Snapshot</button>
             </div>
         </section>
+    </div>
 
-        <!-- Layout Editor Modal -->
-        <div id="layout-editor-modal" class="modal" style="display: none;">
-            <div class="modal-content layout-editor">
-                <div class="modal-header">
-                    <h2 id="editor-title">Layout Editor</h2>
-                    <button class="close-modal">&times;</button>
+    <div id="cast-modal" class="modal-shell" hidden aria-hidden="true">
+        <div class="modal-backdrop" data-close-modal="true"></div>
+        <section class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="cast-modal-title">
+            <div class="modal-head">
+                <div>
+                    <p class="eyebrow">Final Result</p>
+                    <h3 id="cast-modal-title">Create My Result</h3>
+                    <p id="cast-modal-copy" class="subcopy">
+                        Review the selected Phema and Castr, then choose the tone and style that should guide the final output.
+                    </p>
                 </div>
-
-                <div class="editor-body">
-                    <div class="editor-sidebar">
-                        <h3>Available Pieces</h3>
-                        <div id="pieces-library" class="pieces-library">
-                            <!-- Pieces will be loaded here -->
-                        </div>
-                    </div>
-
-                    <div class="editor-canvas">
-                        <div class="canvas-toolbar">
-                            <input type="text" id="layout-name-input" placeholder="Layout Name"
-                                class="layout-name-input">
-                            <div class="canvas-controls">
-                                <button id="toggle-grid-btn" class="icon-btn" title="Toggle Grid">
-                                    <span class="icon-grid"></span>
-                                </button>
-                            </div>
-                        </div>
-                        <div id="layout-canvas" class="layout-canvas show-grid">
-                            <!-- Layout items will be placed here -->
-                        </div>
-                    </div>
-
-                    <div class="editor-properties">
-                        <h3>Properties</h3>
-                        <div id="properties-panel" class="properties-panel">
-                            <p class="placeholder-text">Select an item to edit properties</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="modal-footer">
-                    <button id="save-layout-btn" class="primary-btn">Save Layout</button>
-                    <button class="secondary-btn close-modal">Cancel</button>
-                </div>
+                <button id="close-cast-modal" class="dialog-close" type="button" aria-label="Close dialog">Close</button>
             </div>
-        </div>
 
-        <!-- Page: Pieces -->
-        <section id="pieces-page" class="page">
-            <header class="page-header">
-                <div class="header-info">
-                    <h1>Report <span>Pieces</span></h1>
-                    <p class="subtitle">Manage reusable report components</p>
-                </div>
-                <div class="header-actions">
-                    <button id="create-piece-btn" class="primary-btn">
-                        <span class="icon-add"></span> Create Piece
-                    </button>
-                </div>
-            </header>
+            <div id="cast-modal-summary" class="hero-card modal-summary"></div>
+            <div id="cast-modal-error" class="form-error" hidden></div>
 
-            <div class="pieces-container">
-                <div class="search-bar">
-                    <input type="text" id="piece-search" placeholder="Search pieces...">
-                </div>
-
-                <div id="pieces-grid" class="pieces-grid">
-                    <!-- Pieces will be rendered here -->
-                </div>
-            </div>
-        </section>
-
-        <!-- Piece Editor Modal -->
-        <div id="piece-editor-modal" class="modal" style="display: none;">
-            <div class="modal-content piece-editor">
-                <div class="modal-header">
-                    <h2 id="piece-editor-title">Piece Editor</h2>
-                    <button class="close-piece-modal">&times;</button>
-                </div>
-
-                <div class="piece-editor-body">
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label>Name *</label>
-                            <input type="text" id="piece-name" placeholder="e.g., Market Overview">
-                        </div>
-
-                        <div class="form-group full-width">
-                            <label>Description *</label>
-                            <textarea id="piece-description" rows="2"
-                                placeholder="Brief description of this piece"></textarea>
-                        </div>
-
-                        <div class="form-group full-width">
-                            <label>Detail of Processing *</label>
-                            <textarea id="piece-processing" rows="3"
-                                placeholder="Technical details of how this piece is generated"></textarea>
-                        </div>
-
-                        <div class="form-group">
-                            <label>Input Schema (JSON)</label>
-                            <textarea id="piece-input-schema" rows="4" placeholder='{"ticker": "string"}'></textarea>
-                        </div>
-
-                        <div class="form-group">
-                            <label>Output Schema (JSON)</label>
-                            <textarea id="piece-output-schema" rows="4" placeholder='{"price": "number"}'></textarea>
-                        </div>
-
-                        <div class="form-group">
-                            <label>Example Input (JSON)</label>
-                            <textarea id="piece-example-input" rows="3" placeholder='{"ticker": "AAPL"}'></textarea>
-                        </div>
-
-                        <div class="form-group">
-                            <label>Example Data (JSON)</label>
-                            <textarea id="piece-example-data" rows="3" placeholder='{"price": 150.25}'></textarea>
-                        </div>
-
-                        <div class="form-group full-width">
-                            <label>Recommended Display Types</label>
-                            <div class="checkbox-group">
-                                <label><input type="checkbox" class="display-type" value="text"> Text</label>
-                                <label><input type="checkbox" class="display-type" value="table"> Table</label>
-                                <label><input type="checkbox" class="display-type" value="chart"> Chart</label>
-                                <label><input type="checkbox" class="display-type" value="list"> List</label>
-                                <label><input type="checkbox" class="display-type" value="insight"> Insight</label>
-                            </div>
-                        </div>
+            <div class="modal-form-stack">
+                <section class="modal-section">
+                    <div class="modal-section-head">
+                        <h4>Personalization</h4>
+                        <p class="modal-section-copy">These choices are sent to an LLM pulser first, which creates a temporary script before the Castr packages the final result.</p>
                     </div>
-                </div>
-
-                <div class="modal-footer">
-                    <button id="save-piece-btn" class="primary-btn">Save Piece</button>
-                    <button class="secondary-btn close-piece-modal">Cancel</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Page: Templates -->
-        <section id="templates-page" class="page">
-            <header class="page-header">
-                <div class="header-info">
-                    <h1>Report <span>Templates</span></h1>
-                    <p class="subtitle">AI-generated structured reporting</p>
-                </div>
-            </header>
-
-            <div class="template-layout">
-                <div class="template-sidebar">
-                    <div class="card">
-                        <h3>Saved Templates</h3>
-                        <select id="saved-templates-select" class="full-width">
-                            <option value="">Select a template...</option>
-                        </select>
-                    </div>
-
-                    <div class="card">
-                        <h3>Target Analyst</h3>
-                        <div class="form-group">
-                            <select id="analyst-select" class="full-width">
-                                <option value="">Searching analysts...</option>
+                    <div class="modal-section-grid personalization-grid">
+                        <div class="field-row personalization-span">
+                            <label for="cast-llm-pulser">Active `llm_chat` Pulser</label>
+                            <select id="cast-llm-pulser"></select>
+                            <span id="cast-llm-pulser-meta" class="muted">Choose which active `llm_chat` pulser should run the temporary-script inference.</span>
+                        </div>
+                        <div class="field-row">
+                            <label for="cast-tone">Tone</label>
+                            <select id="cast-tone">
+                                <option value="Balanced">Balanced</option>
+                                <option value="Analytical">Analytical</option>
+                                <option value="Confident">Confident</option>
+                                <option value="Warm">Warm</option>
+                                <option value="Urgent">Urgent</option>
                             </select>
                         </div>
+                        <div class="field-row">
+                            <label for="cast-style">Style</label>
+                            <select id="cast-style">
+                                <option value="Executive brief">Executive brief</option>
+                                <option value="Concise bullet memo">Concise bullet memo</option>
+                                <option value="Narrative summary">Narrative summary</option>
+                                <option value="Investor update">Investor update</option>
+                                <option value="Story-led briefing">Story-led briefing</option>
+                            </select>
+                        </div>
+                        <div class="field-row">
+                            <label for="cast-audience">Audience</label>
+                            <input id="cast-audience" type="text" placeholder="Leadership team">
+                        </div>
+                        <div class="field-row">
+                            <label for="cast-language">Language</label>
+                            <input id="cast-language" type="text" value="en" placeholder="en">
+                        </div>
+                        <div class="field-row personalization-span">
+                            <label for="cast-modifier">Modifier</label>
+                            <input id="cast-modifier" type="text" placeholder="Highlight near-term risks and practical next steps">
+                        </div>
+                        <div class="field-row personalization-span">
+                            <label for="cast-instructions">Extra Instructions</label>
+                            <textarea id="cast-instructions" placeholder="Any additional notes for the LLM temporary script before the Castr renders the final output."></textarea>
+                        </div>
                     </div>
+                </section>
+            </div>
 
-                    <div class="card chat-card">
-                        <div class="chat-header">
-                            <h3>Analyst Chat</h3>
-                            <button id="clear-chat-btn" class="mini-btn">New Session</button>
-                        </div>
-                        <div id="template-chat-messages" class="chat-messages">
-                            <div class="message assistant">
-                                <p>Select an analyst and tell me what kind of report you need.</p>
-                            </div>
-                        </div>
-                        <div class="chat-footer">
-                            <input type="text" id="template-prompt"
-                                placeholder="Ask to add news, charts, or change structure...">
-                            <button id="generate-template-btn" class="icon-btn primary">
-                                <span class="icon-send"></span>
-                                <span class="countdown-text hidden"></span>
-                                <span class="loader"></span>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="template-main">
-                    <div class="preview-card" id="template-preview-container">
-                        <div class="card-header">
-                            <div class="header-main">
-                                <span class="icon-reports"></span>
-                                <h2>Template Preview</h2>
-                            </div>
-                            <div class="preview-tabs">
-                                <button class="tab-btn active" data-tab="structure">Structure</button>
-                                <button class="tab-btn" data-tab="simulation">Simulated Report</button>
-                            </div>
-                        </div>
-                        <div class="preview-actions hidden" id="save-actions">
-                            <input type="text" id="save-name" placeholder="Template Name">
-                            <button id="save-template-btn" class="mini-btn accent">Save Template</button>
-                        </div>
-                        <div id="preview-content" class="preview-content tab-pane active" data-pane="structure">
-                            <div class="empty-preview">
-                                <span class="icon-reports"></span>
-                                <p>Select or generate a template to preview</p>
-                            </div>
-                        </div>
-                        <div id="simulation-container" class="preview-content tab-pane" data-pane="simulation">
-                            <div class="empty-preview">
-                                <span class="icon-eye"></span>
-                                <p>Switch to "Simulated" to see a live preview</p>
-                            </div>
-                        </div>
-                        <div id="simulation-controls" class="preview-actions hidden">
-                            <button id="regenerate-sim-btn" class="mini-btn">
-                                <span class="icon-refresh"></span>
-                                Regenerate Simulation
-                            </button>
-                        </div>
-                    </div>
-                </div>
+            <div class="dialog-footer">
+                <button id="cast-modal-cancel" class="ghost-btn" type="button">Cancel</button>
+                <button id="cast-modal-submit" class="primary-btn" type="button">Generate Final Result</button>
             </div>
         </section>
-
-        <footer class="footer">
-            <p>&copy; 2026 attas Protocol. All system communications encrypted.</p>
-        </footer>
-    </main>
-
-    <script src="/static/script.js"></script>
+    </div>
 </body>
-
 </html>

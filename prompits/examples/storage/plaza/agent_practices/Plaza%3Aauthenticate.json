@@ -1,0 +1,41 @@
+{
+  "id": "Plaza:authenticate",
+  "agent_name": "Plaza",
+  "practice_id": "authenticate",
+  "practice_name": "Plaza Authenticate",
+  "practice_description": "Authenticate Plaza tokens or credentials.",
+  "practice_data": {
+    "name": "Plaza Authenticate",
+    "description": "Authenticate Plaza tokens or credentials.",
+    "id": "authenticate",
+    "cost": 0,
+    "tags": [
+      "core",
+      "plaza"
+    ],
+    "examples": [
+      "POST /authenticate (Bearer token)",
+      "POST /authenticate {'agent_id':'...','api_key':'...'}"
+    ],
+    "inputModes": [
+      "http-post",
+      "json"
+    ],
+    "outputModes": [
+      "json"
+    ],
+    "parameters": {
+      "agent_id": {
+        "type": "string",
+        "description": "Agent identity for credential login."
+      },
+      "api_key": {
+        "type": "string",
+        "description": "Agent API key for credential login."
+      }
+    },
+    "path": "/authenticate"
+  },
+  "is_deleted": false,
+  "updated_at": "2026-03-25T01:27:54.234025+00:00"
+}

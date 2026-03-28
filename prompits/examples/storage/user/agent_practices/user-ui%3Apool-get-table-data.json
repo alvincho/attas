@@ -1,0 +1,44 @@
+{
+  "id": "user-ui:pool-get-table-data",
+  "agent_name": "user-ui",
+  "practice_id": "pool-get-table-data",
+  "practice_name": "Pool Get Table Data",
+  "practice_description": "Read rows from a filesystem-backed table.",
+  "practice_data": {
+    "name": "Pool Get Table Data",
+    "description": "Read rows from a filesystem-backed table.",
+    "id": "pool-get-table-data",
+    "cost": 0,
+    "tags": [
+      "pool",
+      "filesystem",
+      "storage",
+      "read"
+    ],
+    "examples": [],
+    "inputModes": [
+      "http-post",
+      "json"
+    ],
+    "outputModes": [
+      "json"
+    ],
+    "parameters": {
+      "table_name": {
+        "type": "string",
+        "description": "Logical table name."
+      },
+      "id_or_where": {
+        "type": "object",
+        "description": "Optional id or equality filter."
+      },
+      "table_schema": {
+        "type": "object",
+        "description": "Optional table schema for decoding."
+      }
+    },
+    "path": "/pool_get_table_data"
+  },
+  "is_deleted": false,
+  "updated_at": "2026-03-25T01:27:54.247786+00:00"
+}

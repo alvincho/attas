@@ -1,8 +1,653 @@
 {% extends "phemacast/pulsers/templates/pulser_editor_base.html" %}
 
-{% block subtitle %}Compose selected Plaza pulses with a step-by-step path editor. Each step receives the previous step’s output, and the final step must satisfy the selected pulse’s output schema before the pulser is considered complete.{% endblock %}
+{% block subtitle %}Compose selected Plaza pulses with a visual step lab. Arrange source and Python steps on a drag-and-drop canvas, inspect each node from the side panel, and keep the final step aligned with the pulse schema.{% endblock %}
+
+{% block extra_styles %}
+    .path-lab-summary {
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        padding: 18px;
+        background:
+            radial-gradient(circle at top left, rgba(15, 23, 42, 0.06), transparent 42%),
+            linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.92));
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 18px;
+        box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
+    }
+
+    .path-lab-summary-copy {
+        min-width: 0;
+        flex: 1 1 auto;
+    }
+
+    .path-lab-summary-title {
+        margin: 0;
+        font-family: "Fraunces", serif;
+        font-size: 1.2rem;
+        line-height: 1.15;
+        color: var(--text);
+    }
+
+    .path-lab-summary-note {
+        margin: 10px 0 0;
+        color: var(--muted);
+        line-height: 1.55;
+    }
+
+    .path-lab-pill-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 14px;
+    }
+
+    .path-lab-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 7px 12px;
+        border-radius: 999px;
+        border: 1px solid rgba(15, 23, 42, 0.12);
+        background: rgba(255, 255, 255, 0.86);
+        color: var(--text);
+        font-size: 0.8rem;
+        font-weight: 700;
+    }
+
+    .path-lab-summary-steps {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 16px;
+    }
+
+    .path-lab-summary-step {
+        min-width: 0;
+        padding: 10px 12px;
+        border: 1px solid rgba(148, 163, 184, 0.28);
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.84);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+    }
+
+    .path-lab-summary-step strong {
+        display: block;
+        font-size: 0.84rem;
+        color: var(--text);
+    }
+
+    .path-lab-summary-step span {
+        display: block;
+        margin-top: 4px;
+        font-size: 0.76rem;
+        color: var(--muted);
+    }
+
+    .path-lab-card {
+        width: min(1320px, 100%);
+        padding: 0;
+        border-radius: 28px;
+        overflow: hidden;
+        background:
+            linear-gradient(135deg, rgba(246, 248, 252, 0.98), rgba(255, 255, 255, 0.96)),
+            #ffffff;
+    }
+
+    .path-lab-chrome {
+        padding: 24px 26px 16px;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+        background:
+            radial-gradient(circle at top left, rgba(15, 23, 42, 0.1), transparent 36%),
+            linear-gradient(145deg, rgba(248, 250, 252, 0.98), rgba(255, 255, 255, 0.94));
+    }
+
+    .path-lab-headline {
+        margin: 0;
+        font-family: "Fraunces", serif;
+        font-size: 1.55rem;
+        line-height: 1.05;
+        color: var(--text);
+    }
+
+    .path-lab-subline {
+        margin: 10px 0 0;
+        color: var(--muted);
+        line-height: 1.6;
+        max-width: 60rem;
+    }
+
+    .path-lab-layout {
+        display: grid;
+        grid-template-columns: minmax(220px, 250px) minmax(0, 1fr) minmax(300px, 360px);
+        min-height: min(74vh, 820px);
+    }
+
+    .path-lab-rail,
+    .path-lab-inspector {
+        padding: 22px;
+        background: rgba(248, 250, 252, 0.76);
+    }
+
+    .path-lab-rail {
+        border-right: 1px solid rgba(148, 163, 184, 0.18);
+    }
+
+    .path-lab-inspector {
+        border-left: 1px solid rgba(148, 163, 184, 0.18);
+        overflow: auto;
+    }
+
+    .path-lab-section-title {
+        margin: 0;
+        font-size: 0.82rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #334155;
+    }
+
+    .path-lab-section-copy {
+        margin: 10px 0 0;
+        color: var(--muted);
+        line-height: 1.55;
+        font-size: 0.9rem;
+    }
+
+    .path-lab-palette {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin-top: 18px;
+    }
+
+    .path-lab-palette-item {
+        border: 1px solid rgba(148, 163, 184, 0.22);
+        border-radius: 20px;
+        padding: 14px;
+        background:
+            linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(241, 245, 249, 0.86));
+        cursor: grab;
+        text-align: left;
+        transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+    }
+
+    .path-lab-palette-item:hover,
+    .path-lab-palette-item:focus-visible {
+        transform: translateY(-1px);
+        border-color: rgba(15, 23, 42, 0.18);
+        box-shadow: 0 14px 28px rgba(15, 23, 42, 0.08);
+    }
+
+    .path-lab-palette-item strong {
+        display: block;
+        font-size: 0.95rem;
+        color: var(--text);
+    }
+
+    .path-lab-palette-item span {
+        display: block;
+        margin-top: 6px;
+        font-size: 0.82rem;
+        line-height: 1.45;
+        color: var(--muted);
+    }
+
+    .path-lab-canvas-shell {
+        padding: 22px 22px 26px;
+        background:
+            radial-gradient(circle at top left, rgba(15, 23, 42, 0.05), transparent 36%),
+            linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(248, 250, 252, 0.96));
+        min-width: 0;
+    }
+
+    .path-lab-canvas-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 14px;
+    }
+
+    .path-lab-canvas {
+        margin-top: 18px;
+        border: 1px dashed rgba(148, 163, 184, 0.4);
+        border-radius: 28px;
+        padding: 22px;
+        min-height: 430px;
+        background:
+            linear-gradient(rgba(148, 163, 184, 0.08) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(148, 163, 184, 0.08) 1px, transparent 1px),
+            linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(241, 245, 249, 0.78));
+        background-size: 28px 28px, 28px 28px, auto;
+        overflow: auto;
+    }
+
+    .path-lab-flow {
+        display: flex;
+        align-items: stretch;
+        gap: 12px;
+        min-width: fit-content;
+    }
+
+    .path-lab-flow-empty {
+        display: grid;
+        place-items: center;
+        min-height: 380px;
+        color: var(--muted);
+        text-align: center;
+        border: 1px dashed rgba(148, 163, 184, 0.35);
+        border-radius: 22px;
+        background: rgba(255, 255, 255, 0.56);
+        padding: 24px;
+    }
+
+    .path-lab-dropzone {
+        flex: 0 0 94px;
+        min-height: 212px;
+        display: grid;
+        place-items: center;
+        border: 1px dashed rgba(148, 163, 184, 0.36);
+        border-radius: 24px;
+        color: #64748b;
+        background: rgba(255, 255, 255, 0.54);
+        transition: all 0.18s ease;
+        text-align: center;
+        padding: 12px;
+        font-size: 0.82rem;
+        line-height: 1.45;
+    }
+
+    .path-lab-dropzone.is-active {
+        border-color: rgba(15, 23, 42, 0.38);
+        background: rgba(15, 23, 42, 0.08);
+        color: var(--text);
+        transform: scale(1.01);
+    }
+
+    .path-lab-node {
+        flex: 0 0 262px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        padding: 18px;
+        border-radius: 26px;
+        border: 1px solid rgba(148, 163, 184, 0.22);
+        background:
+            linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(241, 245, 249, 0.88));
+        box-shadow: 0 18px 36px rgba(15, 23, 42, 0.08);
+        cursor: pointer;
+        min-height: 212px;
+        transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    }
+
+    .path-lab-node:hover,
+    .path-lab-node:focus-visible {
+        transform: translateY(-2px);
+        border-color: rgba(15, 23, 42, 0.22);
+        box-shadow: 0 22px 44px rgba(15, 23, 42, 0.12);
+    }
+
+    .path-lab-node.is-selected {
+        border-color: rgba(15, 23, 42, 0.48);
+        box-shadow: 0 24px 48px rgba(15, 23, 42, 0.14);
+        background:
+            linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(224, 231, 255, 0.32));
+    }
+
+    .path-lab-node-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 10px;
+    }
+
+    .path-lab-node-title {
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 800;
+        color: var(--text);
+        line-height: 1.2;
+        word-break: break-word;
+    }
+
+    .path-lab-node-type {
+        flex: 0 0 auto;
+        padding: 5px 10px;
+        border-radius: 999px;
+        font-size: 0.7rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        font-weight: 800;
+        background: rgba(15, 23, 42, 0.08);
+        color: #334155;
+    }
+
+    .path-lab-node-copy {
+        color: var(--muted);
+        line-height: 1.55;
+        font-size: 0.88rem;
+    }
+
+    .path-lab-node-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: auto;
+    }
+
+    .path-lab-node-meta span {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.82);
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        font-size: 0.74rem;
+        color: #475569;
+        font-weight: 700;
+    }
+
+    .path-lab-inspector-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 14px;
+    }
+
+    .path-lab-inspector-head h3 {
+        margin: 0;
+        font-family: "Fraunces", serif;
+        font-size: 1.14rem;
+        color: var(--text);
+    }
+
+    .path-lab-inspector-grid {
+        display: grid;
+        gap: 14px;
+    }
+
+    .path-lab-empty-inspector {
+        display: grid;
+        place-items: center;
+        min-height: 100%;
+        text-align: center;
+        color: var(--muted);
+        padding: 18px;
+        border: 1px dashed rgba(148, 163, 184, 0.32);
+        border-radius: 22px;
+        background: rgba(255, 255, 255, 0.56);
+    }
+
+    .path-lab-field-error {
+        margin-top: 6px;
+        color: var(--danger);
+        font-size: 0.8rem;
+        line-height: 1.45;
+    }
+
+    .path-lab-json.is-invalid {
+        border-color: rgba(153, 27, 27, 0.35);
+        box-shadow: 0 0 0 4px rgba(153, 27, 27, 0.08);
+    }
+
+    .path-lab-schema-preview {
+        min-height: 86px;
+        max-height: 160px;
+        font-size: 0.82rem;
+    }
+
+    .path-lab-stack {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    @media (max-width: 1100px) {
+        .path-lab-layout {
+            grid-template-columns: 1fr;
+        }
+
+        .path-lab-rail,
+        .path-lab-inspector {
+            border: 0;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+        }
+
+        .path-lab-inspector {
+            border-bottom: 0;
+        }
+
+        .path-lab-dropzone {
+            flex-basis: 74px;
+            min-height: 176px;
+        }
+    }
+
+    @media (max-width: 760px) {
+        .path-lab-summary {
+            padding: 16px;
+            border-radius: 20px;
+            flex-direction: column;
+        }
+
+        .path-lab-card {
+            border-radius: 22px;
+        }
+
+        .path-lab-chrome {
+            padding: 18px 18px 14px;
+        }
+
+        .path-lab-canvas-shell,
+        .path-lab-rail,
+        .path-lab-inspector {
+            padding: 18px;
+        }
+
+        .path-lab-node {
+            flex-basis: 232px;
+        }
+    }
+{% endblock %}
 
 {% block extension_bootstrap %}
+const pathPulserStepLabState = window.pathPulserStepLabState || (window.pathPulserStepLabState = {
+    open: false,
+    pulseIndex: null,
+    selectedStepIndex: 0,
+    drag: null,
+    buffers: {},
+    jsonErrors: {},
+});
+
+if (!window.pathPulserStepLabEscapeBound) {
+    window.pathPulserStepLabEscapeBound = true;
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && pathPulserStepLabState.open) {
+            pathPulserStepLabState.open = false;
+            pathPulserStepLabState.drag = null;
+            if (typeof renderPulseEditor === 'function') renderPulseEditor();
+        }
+    });
+    document.addEventListener('dragend', () => {
+        pathPulserStepLabState.drag = null;
+    });
+}
+
+function pathLabBufferKey(pulseIndex, stepIndex, key) {
+    return `${pulseIndex}:${stepIndex}:${key}`;
+}
+
+function pathLabGetBufferedValue(pulseIndex, stepIndex, key, fallback) {
+    const bufferKey = pathLabBufferKey(pulseIndex, stepIndex, key);
+    return Object.prototype.hasOwnProperty.call(pathPulserStepLabState.buffers, bufferKey)
+        ? pathPulserStepLabState.buffers[bufferKey]
+        : fallback;
+}
+
+function pathLabSetBufferedValue(pulseIndex, stepIndex, key, value) {
+    pathPulserStepLabState.buffers[pathLabBufferKey(pulseIndex, stepIndex, key)] = value;
+}
+
+function pathLabClearBufferedValue(pulseIndex, stepIndex, key) {
+    delete pathPulserStepLabState.buffers[pathLabBufferKey(pulseIndex, stepIndex, key)];
+}
+
+function pathLabSetJsonError(pulseIndex, stepIndex, key, message) {
+    pathPulserStepLabState.jsonErrors[pathLabBufferKey(pulseIndex, stepIndex, key)] = message;
+}
+
+function pathLabGetJsonError(pulseIndex, stepIndex, key) {
+    return pathPulserStepLabState.jsonErrors[pathLabBufferKey(pulseIndex, stepIndex, key)] || '';
+}
+
+function pathLabClearJsonError(pulseIndex, stepIndex, key) {
+    delete pathPulserStepLabState.jsonErrors[pathLabBufferKey(pulseIndex, stepIndex, key)];
+}
+
+function pathLabPruneTransientState(pulseIndex, stepCount) {
+    Object.keys(pathPulserStepLabState.buffers).forEach((bufferKey) => {
+        if (!bufferKey.startsWith(`${pulseIndex}:`)) return;
+        const [, rawIndex] = bufferKey.split(':');
+        if (Number(rawIndex) >= stepCount) delete pathPulserStepLabState.buffers[bufferKey];
+    });
+    Object.keys(pathPulserStepLabState.jsonErrors).forEach((bufferKey) => {
+        if (!bufferKey.startsWith(`${pulseIndex}:`)) return;
+        const [, rawIndex] = bufferKey.split(':');
+        if (Number(rawIndex) >= stepCount) delete pathPulserStepLabState.jsonErrors[bufferKey];
+    });
+}
+
+function pathLabNormalizeStep(step, index) {
+    const stepType = String(step?.type || 'source').trim().toLowerCase() === 'python' ? 'python' : 'source';
+    const normalized = {
+        ...(step && typeof step === 'object' ? step : {}),
+        name: String(step?.name || `step_${index + 1}`),
+        type: stepType,
+    };
+    if (stepType === 'source') {
+        if (!normalized.params || typeof normalized.params !== 'object' || Array.isArray(normalized.params)) {
+            normalized.params = {};
+        }
+    }
+    if (stepType === 'python') {
+        if (normalized.sources && !Array.isArray(normalized.sources)) {
+            normalized.sources = [];
+        }
+        if (typeof normalized.script !== 'string') {
+            normalized.script = normalized.script ? String(normalized.script) : '';
+        }
+    }
+    if (normalized.when && (typeof normalized.when !== 'object' || Array.isArray(normalized.when))) {
+        normalized.when = {};
+    }
+    if (normalized.output_schema && (typeof normalized.output_schema !== 'object' || Array.isArray(normalized.output_schema))) {
+        normalized.output_schema = {};
+    }
+    return normalized;
+}
+
+function pathLabDefaultStep(stepType, index) {
+    return pathLabNormalizeStep(
+        stepType === 'python'
+            ? {
+                name: `step_${index + 1}`,
+                type: 'python',
+                script: '',
+                sources: [],
+                when: {},
+                output_schema: {},
+            }
+            : {
+                name: `step_${index + 1}`,
+                type: 'source',
+                pulser_url: '',
+                pulser_name: '',
+                pulse_name: '',
+                params: {},
+                when: {},
+                output_schema: {},
+            },
+        index
+    );
+}
+
+function pathLabParseSteps(draft) {
+    try {
+        const parsed = JSON.parse(draft.path_steps_json || '[]');
+        return Array.isArray(parsed) ? parsed.map((step, index) => pathLabNormalizeStep(step, index)) : [];
+    } catch (error) {
+        return [];
+    }
+}
+
+function pathLabPrettyJson(value, fallback = {}) {
+    try {
+        return JSON.stringify(value && typeof value === 'object' ? value : fallback, null, 2);
+    } catch (error) {
+        return JSON.stringify(fallback, null, 2);
+    }
+}
+
+function pathLabStepSummary(step) {
+    if (!step) return '';
+    if (step.type === 'python') {
+        if (String(step.script_path || '').trim()) return `Runs ${String(step.script_path).trim()}`;
+        const snippet = String(step.script || '').trim().split('\n').find((line) => line.trim());
+        return snippet ? snippet.trim() : 'Custom transform or compute step';
+    }
+    return String(step.pulse_name || step.pulse_address || step.pulser_name || '').trim() || 'Configure source pulser and pulse';
+}
+
+function pathLabStepBadges(step, index, draft) {
+    const badges = [`Step ${index + 1}`];
+    if (step.type === 'source' && step.params && Object.keys(step.params || {}).length) {
+        badges.push(`${Object.keys(step.params || {}).length} param${Object.keys(step.params || {}).length === 1 ? '' : 's'}`);
+    }
+    if (step.type === 'python' && String(step.script || step.script_path || '').trim()) {
+        badges.push('logic ready');
+    }
+    if (step.when && Object.keys(step.when || {}).length) {
+        badges.push('conditional');
+    }
+    if (draft.path_result_path === `steps.${step.name}`) {
+        badges.push('final result');
+    }
+    return badges;
+}
+
+function pathLabFallbackResultPath(steps) {
+    if (!Array.isArray(steps) || !steps.length) return '';
+    const lastStep = steps[steps.length - 1];
+    return `steps.${lastStep.name || `step_${steps.length}`}`;
+}
+
+function pathLabSyncResultPath(draft, previousSteps, nextSteps) {
+    const current = String(draft.path_result_path || '').trim();
+    const previousFallback = pathLabFallbackResultPath(previousSteps);
+    const nextFallback = pathLabFallbackResultPath(nextSteps);
+    const nextStepNames = new Set((nextSteps || []).map((step) => String(step.name || '')));
+    if (!current || current === previousFallback) {
+        draft.path_result_path = nextFallback;
+        return;
+    }
+    if (current.startsWith('steps.') && !nextStepNames.has(current.slice('steps.'.length))) {
+        draft.path_result_path = nextFallback;
+    }
+}
+
+function pathLabMoveStep(steps, fromIndex, toIndex) {
+    const next = [...steps];
+    const [moved] = next.splice(fromIndex, 1);
+    let insertAt = toIndex;
+    if (fromIndex < insertAt) insertAt -= 1;
+    next.splice(insertAt, 0, moved);
+    return next.map((step, index) => pathLabNormalizeStep(step, index));
+}
+
 window.pulserEditorExtension = {
     defaultPulse({ index }) {
         return {
@@ -46,38 +691,79 @@ window.pulserEditorExtension = {
         };
     },
     normalizePulseDraft({ pulse, draft }) {
-        const next = { ...draft };
-        next.path_steps_json = JSON.stringify(pulse.steps || [], null, 2);
-        next.path_result_path = pulse.result_path || '';
-        next.path_completion_status = pulse.completion_status || (pulse.is_complete ? 'complete' : 'unfinished');
-        next.path_completion_errors_json = JSON.stringify(pulse.completion_errors || [], null, 2);
-        return next;
+        return {
+            ...draft,
+            path_steps_json: JSON.stringify(pulse.steps || [], null, 2),
+            path_result_path: pulse.result_path || '',
+            path_completion_status: pulse.completion_status || (pulse.is_complete ? 'complete' : 'unfinished'),
+            path_completion_errors_json: JSON.stringify(pulse.completion_errors || [], null, 2),
+        };
     },
     compilePulse({ draft, compiledPulse }) {
         let steps = [];
         if ((draft.path_steps_json || '').trim()) {
             steps = JSON.parse(draft.path_steps_json);
         }
-        const normalizedSteps = Array.isArray(steps) ? steps : [];
-        const fallbackResultPath = normalizedSteps.length ? `steps.${normalizedSteps[normalizedSteps.length - 1].name || `step_${normalizedSteps.length}`}` : '';
+        const normalizedSteps = Array.isArray(steps) ? steps.map((step, index) => pathLabNormalizeStep(step, index)) : [];
+        const fallbackResultPath = pathLabFallbackResultPath(normalizedSteps);
         return {
             ...compiledPulse,
             steps: normalizedSteps,
             result_path: (draft.path_result_path || fallbackResultPath || '').trim(),
         };
     },
-    renderPulseEditorExtension({ root, pulse, draft }) {
+    renderPulseEditorExtension({ root, pulse, draft, index, state }) {
         const anchor = root.querySelector('[data-pulse-field="test_data_json"]')?.closest('.field');
         if (!anchor) return;
 
-        const stepEditor = document.createElement('div');
-        stepEditor.className = 'field full-span';
-        stepEditor.innerHTML = `
-            <label>Path Editor</label>
-            <div class="muted">Each step receives the prior step’s output as <code>previous_output</code> in Python or <code>{{ "{{_previous.*}}" }}</code> in source params.</div>
-            <div data-path-step-editor="1"></div>
+        const steps = pathLabParseSteps(draft);
+        pathLabPruneTransientState(index, steps.length);
+
+        const selectedIndex = steps.length
+            ? Math.max(0, Math.min(
+                pathPulserStepLabState.pulseIndex === index ? pathPulserStepLabState.selectedStepIndex : 0,
+                steps.length - 1
+            ))
+            : 0;
+        if (pathPulserStepLabState.pulseIndex === index) {
+            pathPulserStepLabState.selectedStepIndex = selectedIndex;
+        }
+
+        const summaryField = document.createElement('div');
+        summaryField.className = 'field full-span';
+        summaryField.innerHTML = `
+            <label>Path Step Lab</label>
+            <div class="path-lab-summary">
+                <div class="path-lab-summary-copy">
+                    <h3 class="path-lab-summary-title">Popup step editor with canvas + inspector</h3>
+                    <p class="path-lab-summary-note">Open the visual lab to drag source and Python blocks onto the flow, reorder them, and configure each step from a dedicated right-side inspector.</p>
+                    <div class="path-lab-pill-row">
+                        <span class="path-lab-pill">${steps.length} step${steps.length === 1 ? '' : 's'}</span>
+                        <span class="path-lab-pill">Final path: ${escapeHtml(draft.path_result_path || pathLabFallbackResultPath(steps) || 'Not set')}</span>
+                        <span class="path-lab-pill">Status: ${escapeHtml(draft.path_completion_status || 'unfinished')}</span>
+                    </div>
+                    <div class="path-lab-summary-steps">
+                        ${(steps.length ? steps : [null]).map((step, stepIndex) => step ? `
+                            <div class="path-lab-summary-step">
+                                <strong>${escapeHtml(step.name || `step_${stepIndex + 1}`)}</strong>
+                                <span>${escapeHtml(pathLabStepSummary(step))}</span>
+                            </div>
+                        ` : `
+                            <div class="path-lab-summary-step">
+                                <strong>Canvas is empty</strong>
+                                <span>Drag a source or Python block into the flow to start.</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                <div class="stack" style="min-width:220px;">
+                    <button type="button" class="primary-btn" data-open-step-lab="true">Open Step Lab</button>
+                    <button type="button" class="ghost-btn" data-add-step-inline="source">Add Source Step</button>
+                    <button type="button" class="ghost-btn" data-add-step-inline="python">Add Python Step</button>
+                </div>
+            </div>
         `;
-        anchor.insertAdjacentElement('afterend', stepEditor);
+        anchor.insertAdjacentElement('afterend', summaryField);
 
         const completionBlock = document.createElement('div');
         completionBlock.className = 'field full-span';
@@ -88,7 +774,7 @@ window.pulserEditorExtension = {
             <label style="margin-top:10px;">Completion Errors</label>
             <textarea readonly>${escapeHtml(draft.path_completion_errors_json || '[]')}</textarea>
         `;
-        stepEditor.insertAdjacentElement('afterend', completionBlock);
+        summaryField.insertAdjacentElement('afterend', completionBlock);
 
         const resultPathField = document.createElement('div');
         resultPathField.className = 'field full-span';
@@ -99,156 +785,458 @@ window.pulserEditorExtension = {
         `;
         completionBlock.insertAdjacentElement('afterend', resultPathField);
 
-        const renderPathSteps = () => {
-            const host = stepEditor.querySelector('[data-path-step-editor]');
-            let steps = [];
+        const modalRoot = document.createElement('div');
+        modalRoot.className = 'full-span';
+        resultPathField.insertAdjacentElement('afterend', modalRoot);
+
+        const syncBodyLock = () => {
+            document.body.classList.toggle(
+                'modal-open',
+                Boolean(pathPulserStepLabState.open && pathPulserStepLabState.pulseIndex === index) || state.testPanelOpen || state.pulsePicker.open
+            );
+        };
+
+        const rerenderEditor = () => {
+            if (typeof renderPulseList === 'function') renderPulseList();
+            if (typeof renderPulseEditor === 'function') renderPulseEditor();
+            if (typeof renderPreview === 'function') renderPreview();
+        };
+
+        const updateResultPathInput = () => {
+            const input = resultPathField.querySelector('[data-pulse-field="path_result_path"]');
+            if (input) input.value = draft.path_result_path || '';
+        };
+
+        const commitStructuralSteps = (nextSteps, selectedStepIndex = 0) => {
+            const previousSteps = pathLabParseSteps(draft);
+            const normalizedSteps = (nextSteps || []).map((step, stepIndex) => pathLabNormalizeStep(step, stepIndex));
+            draft.path_steps_json = JSON.stringify(normalizedSteps, null, 2);
+            pathLabSyncResultPath(draft, previousSteps, normalizedSteps);
+            pathPulserStepLabState.pulseIndex = index;
+            pathPulserStepLabState.selectedStepIndex = normalizedSteps.length
+                ? Math.max(0, Math.min(selectedStepIndex, normalizedSteps.length - 1))
+                : 0;
+            pathLabPruneTransientState(index, normalizedSteps.length);
+            updateResultPathInput();
+            rerenderEditor();
+        };
+
+        const updateStepPrimitive = (stepIndex, key, value, options = {}) => {
+            const currentSteps = pathLabParseSteps(draft);
+            if (!currentSteps[stepIndex]) return;
+            const previousName = String(currentSteps[stepIndex].name || `step_${stepIndex + 1}`);
+            const previousStep = currentSteps[stepIndex];
+            currentSteps[stepIndex] = pathLabNormalizeStep(
+                {
+                    ...previousStep,
+                    [key]: value,
+                },
+                stepIndex
+            );
+            if (key === 'type') {
+                currentSteps[stepIndex] = pathLabNormalizeStep(
+                    {
+                        ...pathLabDefaultStep(value, stepIndex),
+                        name: previousName,
+                        when: previousStep.when || {},
+                        output_schema: previousStep.output_schema || {},
+                    },
+                    stepIndex
+                );
+            }
+            draft.path_steps_json = JSON.stringify(currentSteps, null, 2);
+            if (key === 'name') {
+                const nextPath = `steps.${String(currentSteps[stepIndex].name || `step_${stepIndex + 1}`)}`;
+                if (draft.path_result_path === `steps.${previousName}`) {
+                    draft.path_result_path = nextPath;
+                    updateResultPathInput();
+                }
+                const titleNode = modalRoot.querySelector(`[data-step-card="${stepIndex}"] .path-lab-node-title`);
+                if (titleNode) titleNode.textContent = currentSteps[stepIndex].name || `step_${stepIndex + 1}`;
+            }
+            if (options.rerender) {
+                commitStructuralSteps(currentSteps, stepIndex);
+                return;
+            }
+            if (typeof renderPreview === 'function') renderPreview();
+        };
+
+        const updateStepJson = (stepIndex, key, rawValue, fieldNode) => {
+            pathLabSetBufferedValue(index, stepIndex, key, rawValue);
             try {
-                steps = JSON.parse(draft.path_steps_json || '[]');
-                if (!Array.isArray(steps)) steps = [];
+                const parsed = JSON.parse(rawValue || (key === 'sources' ? '[]' : '{}'));
+                const currentSteps = pathLabParseSteps(draft);
+                if (!currentSteps[stepIndex]) return;
+                currentSteps[stepIndex] = pathLabNormalizeStep(
+                    {
+                        ...currentSteps[stepIndex],
+                        [key]: parsed,
+                    },
+                    stepIndex
+                );
+                draft.path_steps_json = JSON.stringify(currentSteps, null, 2);
+                pathLabClearJsonError(index, stepIndex, key);
+                pathLabClearBufferedValue(index, stepIndex, key);
+                if (fieldNode) fieldNode.classList.remove('is-invalid');
+                if (typeof renderPreview === 'function') renderPreview();
             } catch (error) {
-                host.innerHTML = `<div class="status error">Step editor has invalid JSON: ${escapeHtml(error.message)}</div>`;
+                pathLabSetJsonError(index, stepIndex, key, error.message);
+                if (fieldNode) fieldNode.classList.add('is-invalid');
+            }
+        };
+
+        const renderModal = () => {
+            const liveSteps = pathLabParseSteps(draft);
+            const modalOpen = Boolean(pathPulserStepLabState.open && pathPulserStepLabState.pulseIndex === index);
+            syncBodyLock();
+            if (!modalOpen) {
+                modalRoot.innerHTML = '';
                 return;
             }
 
-            const cards = steps.map((step, index) => {
-                const stepName = step.name || `step_${index + 1}`;
-                const stepType = step.type || 'source';
-                return `
-                    <section style="border:1px solid var(--line);border-radius:18px;padding:14px;background:rgba(255,255,255,0.82);margin-top:12px;">
-                        <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;">
-                            <strong>Step ${index + 1}</strong>
-                            <button type="button" class="ghost-btn" data-path-delete-step="${index}">Delete</button>
-                        </div>
-                        <div class="editor-grid" style="margin-top:12px;">
-                            <div class="field">
-                                <label>Step Name</label>
-                                <input type="text" data-path-step-field="${index}" data-path-step-key="name" value="${escapeAttribute(stepName)}">
-                            </div>
-                            <div class="field">
-                                <label>Step Type</label>
-                                <select data-path-step-field="${index}" data-path-step-key="type">
-                                    ${['source', 'python'].map((option) => `<option value="${option}" ${stepType === option ? 'selected' : ''}>${option}</option>`).join('')}
-                                </select>
-                            </div>
-                            <div class="field full-span">
-                                <label>Previous Output</label>
-                                <textarea readonly>${escapeHtml(index === 0 ? JSON.stringify(pulse.input_schema || {}, null, 2) : JSON.stringify(steps[index - 1]?.output_schema || { note: 'Uses previous step runtime result' }, null, 2))}</textarea>
-                            </div>
-                            <div class="field full-span" style="${stepType === 'source' ? '' : 'display:none;'}">
-                                <label>Source Pulser URL</label>
-                                <input type="text" data-path-step-field="${index}" data-path-step-key="pulser_url" value="${escapeAttribute(step.pulser_url || '')}" placeholder="http://127.0.0.1:8020">
-                            </div>
-                            <div class="field full-span" style="${stepType === 'source' ? '' : 'display:none;'}">
-                                <label>Source Pulse Name</label>
-                                <input type="text" data-path-step-field="${index}" data-path-step-key="pulse_name" value="${escapeAttribute(step.pulse_name || '')}" placeholder="last_price">
-                            </div>
-                            <div class="field full-span" style="${stepType === 'source' ? '' : 'display:none;'}">
-                                <label>Source Params JSON</label>
-                                <textarea data-path-step-json="${index}" data-path-step-key="params">${escapeHtml(JSON.stringify(step.params || {}, null, 2))}</textarea>
-                                <div class="muted">Leave empty to pass the previous step output through as params.</div>
-                            </div>
-                            <div class="field full-span" style="${stepType === 'python' ? '' : 'display:none;'}">
-                                <label>Python Script</label>
-                                <textarea data-path-step-field="${index}" data-path-step-key="script">${escapeHtml(step.script || '')}</textarea>
-                                <div class="muted">Use <code>previous_output</code>, <code>input_data</code>, <code>steps</code>, and set <code>result</code>.</div>
-                            </div>
-                            <div class="field full-span">
-                                <label>Step Output Schema JSON</label>
-                                <textarea data-path-step-json="${index}" data-path-step-key="output_schema">${escapeHtml(JSON.stringify(step.output_schema || {}, null, 2))}</textarea>
-                                <div class="muted">The final step output should match the selected pulse output schema.</div>
-                            </div>
-                        </div>
-                    </section>
-                `;
-            }).join('');
+            const activeIndex = liveSteps.length
+                ? Math.max(0, Math.min(pathPulserStepLabState.selectedStepIndex, liveSteps.length - 1))
+                : 0;
+            pathPulserStepLabState.selectedStepIndex = activeIndex;
+            const activeStep = liveSteps[activeIndex];
+            const previousSchema = activeIndex === 0
+                ? pulse.input_schema || {}
+                : (liveSteps[activeIndex - 1]?.output_schema || { note: 'Uses previous step runtime result.' });
 
-            host.innerHTML = `
-                <div class="toolbar" style="margin-top:10px;">
-                    <button type="button" class="primary-btn" data-path-add-step="source">Add Source Step</button>
-                    <button type="button" class="ghost-btn" data-path-add-step="python">Add Python Step</button>
+            const inspectorMarkup = activeStep ? `
+                <div class="path-lab-inspector-head">
+                    <div>
+                        <h3>Step Inspector</h3>
+                        <div class="muted" style="margin-top:6px;">Editing <strong>${escapeHtml(activeStep.name || `step_${activeIndex + 1}`)}</strong></div>
+                    </div>
+                    <div class="toolbar">
+                        <button type="button" class="ghost-btn" data-step-duplicate="${activeIndex}">Duplicate</button>
+                        <button type="button" class="ghost-btn" data-step-make-final="${activeIndex}">Use As Result</button>
+                        <button type="button" class="ghost-btn" data-step-delete="${activeIndex}">Delete</button>
+                    </div>
                 </div>
-                <div class="field full-span" style="margin-top:12px;">
-                    <label>Pulse Input Schema</label>
-                    <textarea readonly>${escapeHtml(draft.input_schema_json || '{}')}</textarea>
+                <div class="path-lab-inspector-grid">
+                    <div class="field">
+                        <label>Step Name</label>
+                        <input type="text" data-step-field="${activeIndex}" data-step-key="name" value="${escapeAttribute(activeStep.name || `step_${activeIndex + 1}`)}">
+                    </div>
+                    <div class="field">
+                        <label>Step Type</label>
+                        <select data-step-field="${activeIndex}" data-step-key="type">
+                            ${['source', 'python'].map((option) => `<option value="${option}" ${activeStep.type === option ? 'selected' : ''}>${option}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="field full-span">
+                        <label>Incoming Shape</label>
+                        <textarea class="path-lab-schema-preview" readonly>${escapeHtml(pathLabPrettyJson(previousSchema))}</textarea>
+                    </div>
+                    ${activeStep.type === 'source' ? `
+                        <div class="field full-span">
+                            <label>Source Pulser URL</label>
+                            <input type="text" data-step-field="${activeIndex}" data-step-key="pulser_url" value="${escapeAttribute(activeStep.pulser_url || '')}" placeholder="http://127.0.0.1:8020">
+                        </div>
+                        <div class="field">
+                            <label>Source Pulser Name</label>
+                            <input type="text" data-step-field="${activeIndex}" data-step-key="pulser_name" value="${escapeAttribute(activeStep.pulser_name || '')}" placeholder="YFinancePulser">
+                        </div>
+                        <div class="field">
+                            <label>Source Pulse Name</label>
+                            <input type="text" data-step-field="${activeIndex}" data-step-key="pulse_name" value="${escapeAttribute(activeStep.pulse_name || '')}" placeholder="ohlc_bar_series">
+                        </div>
+                        <div class="field full-span">
+                            <label>Source Params JSON</label>
+                            <textarea class="path-lab-json ${pathLabGetJsonError(index, activeIndex, 'params') ? 'is-invalid' : ''}" data-step-json="${activeIndex}" data-step-json-key="params">${escapeHtml(pathLabGetBufferedValue(index, activeIndex, 'params', pathLabPrettyJson(activeStep.params || {})))}</textarea>
+                            <div class="muted">Template params can reference <code>_input</code>, <code>_previous</code>, and <code>steps</code>.</div>
+                            <div class="path-lab-field-error">${escapeHtml(pathLabGetJsonError(index, activeIndex, 'params'))}</div>
+                        </div>
+                    ` : `
+                        <div class="field full-span">
+                            <label>Python Script Path</label>
+                            <input type="text" data-step-field="${activeIndex}" data-step-key="script_path" value="${escapeAttribute(activeStep.script_path || '')}" placeholder="../pulsers/technical_analysis_step.py">
+                        </div>
+                        <div class="field full-span">
+                            <label>Python Script</label>
+                            <textarea data-step-field="${activeIndex}" data-step-key="script">${escapeHtml(activeStep.script || '')}</textarea>
+                            <div class="muted">Use <code>input_data</code>, <code>previous_output</code>, <code>steps</code>, and assign <code>result</code>.</div>
+                        </div>
+                        <div class="field full-span">
+                            <label>Python Sources JSON</label>
+                            <textarea class="path-lab-json ${pathLabGetJsonError(index, activeIndex, 'sources') ? 'is-invalid' : ''}" data-step-json="${activeIndex}" data-step-json-key="sources">${escapeHtml(pathLabGetBufferedValue(index, activeIndex, 'sources', pathLabPrettyJson(activeStep.sources || [])))}</textarea>
+                            <div class="path-lab-field-error">${escapeHtml(pathLabGetJsonError(index, activeIndex, 'sources'))}</div>
+                        </div>
+                    `}
+                    <div class="field full-span">
+                        <label>Run Conditions JSON</label>
+                        <textarea class="path-lab-json ${pathLabGetJsonError(index, activeIndex, 'when') ? 'is-invalid' : ''}" data-step-json="${activeIndex}" data-step-json-key="when">${escapeHtml(pathLabGetBufferedValue(index, activeIndex, 'when', pathLabPrettyJson(activeStep.when || {})))}</textarea>
+                        <div class="muted">Use <code>present</code>, <code>missing</code>, <code>equals</code>, and <code>not_equals</code> to branch the step flow.</div>
+                        <div class="path-lab-field-error">${escapeHtml(pathLabGetJsonError(index, activeIndex, 'when'))}</div>
+                    </div>
+                    <div class="field full-span">
+                        <label>Step Output Schema JSON</label>
+                        <textarea class="path-lab-json ${pathLabGetJsonError(index, activeIndex, 'output_schema') ? 'is-invalid' : ''}" data-step-json="${activeIndex}" data-step-json-key="output_schema">${escapeHtml(pathLabGetBufferedValue(index, activeIndex, 'output_schema', pathLabPrettyJson(activeStep.output_schema || {})))}</textarea>
+                        <div class="path-lab-field-error">${escapeHtml(pathLabGetJsonError(index, activeIndex, 'output_schema'))}</div>
+                    </div>
                 </div>
-                <div class="field full-span">
-                    <label>Pulse Output Schema</label>
-                    <textarea readonly>${escapeHtml(draft.output_schema_json || '{}')}</textarea>
+            ` : `
+                <div class="path-lab-empty-inspector">
+                    <div>
+                        <h3 style="margin:0;font-family:'Fraunces',serif;color:var(--text);">Step Inspector</h3>
+                        <p class="path-lab-section-copy">Pick a node on the canvas, or drag a new step from the palette to start the flow.</p>
+                    </div>
                 </div>
-                ${cards || '<div class="muted" style="margin-top:12px;">No steps yet. Add a source or Python step to begin the path.</div>'}
             `;
 
-            const updateJson = (nextSteps) => {
-                draft.path_steps_json = JSON.stringify(nextSteps, null, 2);
-                if (!draft.path_result_path && nextSteps.length) {
-                    const lastName = nextSteps[nextSteps.length - 1].name || `step_${nextSteps.length}`;
-                    draft.path_result_path = `steps.${lastName}`;
-                    const resultPathInput = resultPathField.querySelector('[data-pulse-field="path_result_path"]');
-                    if (resultPathInput) resultPathInput.value = draft.path_result_path;
+            modalRoot.innerHTML = `
+                <div id="path-step-lab-modal" class="modal-backdrop">
+                    <section class="modal-card path-lab-card" role="dialog" aria-modal="true" aria-labelledby="path-step-lab-title">
+                        <div class="path-lab-chrome">
+                            <div class="panel-head compact">
+                                <div>
+                                    <h2 id="path-step-lab-title" class="path-lab-headline">Step Lab</h2>
+                                    <p class="path-lab-subline">Drag step types from the left rail into the canvas flow, click any node to inspect it on the right, and keep the final result path in sync as the pipeline evolves.</p>
+                                </div>
+                                <button class="ghost-btn" type="button" data-close-step-lab="true">Close</button>
+                            </div>
+                            <div class="path-lab-pill-row">
+                                <span class="path-lab-pill">Pulse: ${escapeHtml(pulse.name || draft.name || `path_pulse_${index}`)}</span>
+                                <span class="path-lab-pill">Canvas Flow: ${liveSteps.length} step${liveSteps.length === 1 ? '' : 's'}</span>
+                                <span class="path-lab-pill">Result Path: ${escapeHtml(draft.path_result_path || pathLabFallbackResultPath(liveSteps) || 'Not set')}</span>
+                            </div>
+                        </div>
+                        <div class="path-lab-layout">
+                            <aside class="path-lab-rail">
+                                <h3 class="path-lab-section-title">Drag Step Types</h3>
+                                <p class="path-lab-section-copy">Drag these blocks onto any drop lane in the canvas, or click once to append them at the end.</p>
+                                <div class="path-lab-palette">
+                                    <button type="button" class="path-lab-palette-item" draggable="true" data-step-template="source">
+                                        <strong>Source Step</strong>
+                                        <span>Call an upstream pulser, map params, and pass the returned payload into the path.</span>
+                                    </button>
+                                    <button type="button" class="path-lab-palette-item" draggable="true" data-step-template="python">
+                                        <strong>Python Step</strong>
+                                        <span>Run custom logic, combine sources, or compute formulas from prior outputs.</span>
+                                    </button>
+                                </div>
+                            </aside>
+                            <section class="path-lab-canvas-shell">
+                                <div class="path-lab-canvas-head">
+                                    <div>
+                                        <h3 class="path-lab-section-title">Canvas Flow</h3>
+                                        <p class="path-lab-section-copy">Drop a step between nodes to reorder the pipeline visually. The selected node opens in the inspector.</p>
+                                    </div>
+                                    <div class="toolbar">
+                                        <button type="button" class="ghost-btn" data-add-step-inline="source">Quick Add Source</button>
+                                        <button type="button" class="ghost-btn" data-add-step-inline="python">Quick Add Python</button>
+                                    </div>
+                                </div>
+                                <div class="path-lab-canvas">
+                                    ${liveSteps.length ? `
+                                        <div class="path-lab-flow">
+                                            <div class="path-lab-dropzone" data-step-insert="0">Drop a step here</div>
+                                            ${liveSteps.map((step, stepIndex) => `
+                                                <article class="path-lab-node ${stepIndex === activeIndex ? 'is-selected' : ''}" tabindex="0" draggable="true" data-step-card="${stepIndex}">
+                                                    <div class="path-lab-node-head">
+                                                        <div>
+                                                            <h4 class="path-lab-node-title">${escapeHtml(step.name || `step_${stepIndex + 1}`)}</h4>
+                                                            <div class="path-lab-node-copy">${escapeHtml(pathLabStepSummary(step))}</div>
+                                                        </div>
+                                                        <span class="path-lab-node-type">${escapeHtml(step.type || 'source')}</span>
+                                                    </div>
+                                                    <div class="path-lab-node-meta">
+                                                        ${pathLabStepBadges(step, stepIndex, draft).map((badge) => `<span>${escapeHtml(badge)}</span>`).join('')}
+                                                    </div>
+                                                </article>
+                                                <div class="path-lab-dropzone" data-step-insert="${stepIndex + 1}">Drop a step here</div>
+                                            `).join('')}
+                                        </div>
+                                    ` : `
+                                        <div class="path-lab-flow-empty">
+                                            <div>
+                                                <h3 style="margin:0;font-family:'Fraunces',serif;color:var(--text);">Canvas is empty</h3>
+                                                <p class="path-lab-section-copy">Drop a source or Python block here to start the path. The inspector will appear as soon as the first node lands.</p>
+                                            </div>
+                                        </div>
+                                    `}
+                                </div>
+                            </section>
+                            <aside class="path-lab-inspector">
+                                ${inspectorMarkup}
+                            </aside>
+                        </div>
+                    </section>
+                </div>
+            `;
+
+            modalRoot.querySelector('#path-step-lab-modal')?.addEventListener('click', (event) => {
+                if (event.target.id === 'path-step-lab-modal' || event.target.dataset.closeStepLab === 'true') {
+                    pathPulserStepLabState.open = false;
+                    pathPulserStepLabState.drag = null;
+                    rerenderEditor();
                 }
-                renderPathSteps();
-                renderPreview();
-            };
+            });
 
-            host.querySelectorAll('[data-path-add-step]').forEach((node) => {
+            modalRoot.querySelectorAll('[data-step-template]').forEach((node) => {
                 node.addEventListener('click', () => {
-                    const current = Array.isArray(steps) ? [...steps] : [];
-                    const stepType = node.dataset.pathAddStep || 'source';
-                    const nextIndex = current.length + 1;
-                    current.push(
-                        stepType === 'python'
-                            ? { name: `step_${nextIndex}`, type: 'python', script: '', output_schema: {} }
-                            : { name: `step_${nextIndex}`, type: 'source', pulser_url: '', pulse_name: '', params: {}, output_schema: {} }
+                    const currentSteps = pathLabParseSteps(draft);
+                    const nextSteps = [...currentSteps, pathLabDefaultStep(node.dataset.stepTemplate || 'source', currentSteps.length)];
+                    commitStructuralSteps(nextSteps, nextSteps.length - 1);
+                });
+                node.addEventListener('dragstart', (event) => {
+                    pathPulserStepLabState.drag = {
+                        kind: 'template',
+                        stepType: node.dataset.stepTemplate || 'source',
+                    };
+                    event.dataTransfer.effectAllowed = 'copy';
+                    event.dataTransfer.setData('text/plain', node.dataset.stepTemplate || 'source');
+                });
+            });
+
+            modalRoot.querySelectorAll('[data-add-step-inline]').forEach((node) => {
+                node.addEventListener('click', () => {
+                    const currentSteps = pathLabParseSteps(draft);
+                    const nextSteps = [...currentSteps, pathLabDefaultStep(node.dataset.addStepInline || 'source', currentSteps.length)];
+                    commitStructuralSteps(nextSteps, nextSteps.length - 1);
+                });
+            });
+
+            modalRoot.querySelectorAll('[data-step-card]').forEach((node) => {
+                const stepIndex = Number(node.dataset.stepCard || 0);
+                node.addEventListener('click', () => {
+                    pathPulserStepLabState.pulseIndex = index;
+                    pathPulserStepLabState.selectedStepIndex = stepIndex;
+                    rerenderEditor();
+                });
+                node.addEventListener('keydown', (event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        pathPulserStepLabState.pulseIndex = index;
+                        pathPulserStepLabState.selectedStepIndex = stepIndex;
+                        rerenderEditor();
+                    }
+                });
+                node.addEventListener('dragstart', (event) => {
+                    pathPulserStepLabState.drag = {
+                        kind: 'existing',
+                        stepIndex,
+                    };
+                    event.dataTransfer.effectAllowed = 'move';
+                    event.dataTransfer.setData('text/plain', String(stepIndex));
+                });
+            });
+
+            modalRoot.querySelectorAll('[data-step-insert]').forEach((node) => {
+                node.addEventListener('dragover', (event) => {
+                    event.preventDefault();
+                    node.classList.add('is-active');
+                });
+                node.addEventListener('dragleave', () => {
+                    node.classList.remove('is-active');
+                });
+                node.addEventListener('drop', (event) => {
+                    event.preventDefault();
+                    node.classList.remove('is-active');
+                    const dragPayload = pathPulserStepLabState.drag;
+                    if (!dragPayload) return;
+                    const currentSteps = pathLabParseSteps(draft);
+                    const insertIndex = Number(node.dataset.stepInsert || currentSteps.length);
+                    if (dragPayload.kind === 'template') {
+                        const nextSteps = [...currentSteps];
+                        nextSteps.splice(insertIndex, 0, pathLabDefaultStep(dragPayload.stepType || 'source', currentSteps.length));
+                        commitStructuralSteps(nextSteps, insertIndex);
+                    } else if (dragPayload.kind === 'existing' && dragPayload.stepIndex !== insertIndex && dragPayload.stepIndex !== insertIndex - 1) {
+                        const nextSteps = pathLabMoveStep(currentSteps, dragPayload.stepIndex, insertIndex);
+                        const nextSelection = dragPayload.stepIndex < insertIndex ? Math.max(0, insertIndex - 1) : insertIndex;
+                        commitStructuralSteps(nextSteps, nextSelection);
+                    }
+                    pathPulserStepLabState.drag = null;
+                });
+            });
+
+            modalRoot.querySelectorAll('[data-step-delete]').forEach((node) => {
+                node.addEventListener('click', () => {
+                    const stepIndex = Number(node.dataset.stepDelete || 0);
+                    const currentSteps = pathLabParseSteps(draft);
+                    currentSteps.splice(stepIndex, 1);
+                    commitStructuralSteps(currentSteps, Math.max(0, stepIndex - 1));
+                });
+            });
+
+            modalRoot.querySelectorAll('[data-step-duplicate]').forEach((node) => {
+                node.addEventListener('click', () => {
+                    const stepIndex = Number(node.dataset.stepDuplicate || 0);
+                    const currentSteps = pathLabParseSteps(draft);
+                    const sourceStep = currentSteps[stepIndex];
+                    if (!sourceStep) return;
+                    const duplicate = pathLabNormalizeStep(
+                        {
+                            ...sourceStep,
+                            name: `${sourceStep.name || `step_${stepIndex + 1}`}_copy`,
+                        },
+                        stepIndex + 1
                     );
-                    updateJson(current);
+                    currentSteps.splice(stepIndex + 1, 0, duplicate);
+                    commitStructuralSteps(currentSteps, stepIndex + 1);
                 });
             });
 
-            host.querySelectorAll('[data-path-delete-step]').forEach((node) => {
+            modalRoot.querySelectorAll('[data-step-make-final]').forEach((node) => {
                 node.addEventListener('click', () => {
-                    const index = Number(node.dataset.pathDeleteStep || 0);
-                    const current = Array.isArray(steps) ? [...steps] : [];
-                    current.splice(index, 1);
-                    updateJson(current);
+                    const stepIndex = Number(node.dataset.stepMakeFinal || 0);
+                    const currentSteps = pathLabParseSteps(draft);
+                    const step = currentSteps[stepIndex];
+                    if (!step) return;
+                    draft.path_result_path = `steps.${step.name || `step_${stepIndex + 1}`}`;
+                    updateResultPathInput();
+                    rerenderEditor();
                 });
             });
 
-            host.querySelectorAll('[data-path-step-field]').forEach((node) => {
+            modalRoot.querySelectorAll('[data-step-field]').forEach((node) => {
                 node.addEventListener('input', (event) => {
-                    const index = Number(event.target.dataset.pathStepField || 0);
-                    const key = event.target.dataset.pathStepKey;
-                    const current = Array.isArray(steps) ? [...steps] : [];
-                    current[index] = { ...(current[index] || {}), [key]: event.target.value };
-                    if (key === 'type' && event.target.value === 'source') {
-                        current[index].script = '';
-                    }
-                    updateJson(current);
+                    const stepIndex = Number(event.target.dataset.stepField || 0);
+                    const key = event.target.dataset.stepKey;
+                    updateStepPrimitive(stepIndex, key, event.target.value, { rerender: key === 'type' });
                 });
             });
 
-            host.querySelectorAll('[data-path-step-json]').forEach((node) => {
+            modalRoot.querySelectorAll('[data-step-json]').forEach((node) => {
                 node.addEventListener('input', (event) => {
-                    const index = Number(event.target.dataset.pathStepJson || 0);
-                    const key = event.target.dataset.pathStepKey;
-                    const current = Array.isArray(steps) ? [...steps] : [];
-                    try {
-                        current[index] = { ...(current[index] || {}), [key]: JSON.parse(event.target.value || '{}') };
-                        updateJson(current);
-                    } catch (error) {
-                        draft.path_steps_json = draft.path_steps_json;
-                    }
+                    const stepIndex = Number(event.target.dataset.stepJson || 0);
+                    const key = event.target.dataset.stepJsonKey;
+                    updateStepJson(stepIndex, key, event.target.value, event.target);
+                    const errorNode = event.target.closest('.field')?.querySelector('.path-lab-field-error');
+                    if (errorNode) errorNode.textContent = pathLabGetJsonError(index, stepIndex, key);
                 });
             });
         };
 
-        renderPathSteps();
+        summaryField.querySelectorAll('[data-open-step-lab]').forEach((node) => {
+            node.addEventListener('click', () => {
+                pathPulserStepLabState.open = true;
+                pathPulserStepLabState.pulseIndex = index;
+                pathPulserStepLabState.selectedStepIndex = steps.length ? selectedIndex : 0;
+                rerenderEditor();
+            });
+        });
+
+        summaryField.querySelectorAll('[data-add-step-inline]').forEach((node) => {
+            node.addEventListener('click', () => {
+                const currentSteps = pathLabParseSteps(draft);
+                const nextSteps = [...currentSteps, pathLabDefaultStep(node.dataset.addStepInline || 'source', currentSteps.length)];
+                pathPulserStepLabState.open = true;
+                pathPulserStepLabState.pulseIndex = index;
+                commitStructuralSteps(nextSteps, nextSteps.length - 1);
+            });
+        });
 
         resultPathField.querySelectorAll('[data-pulse-field]').forEach((node) => {
             node.addEventListener('input', (event) => {
                 draft[event.target.dataset.pulseField] = event.target.value;
-                renderPreview();
+                if (typeof renderPreview === 'function') renderPreview();
             });
         });
+
+        renderModal();
     },
 };
 {% endblock %}

@@ -1,6 +1,7 @@
 import os
 import sys
 import asyncio
+import logging
 import time
 import uuid
 from unittest.mock import patch
@@ -187,6 +188,26 @@ class InMemoryPool(Pool):
         )
 
 
+class CountingBatchInMemoryPool(InMemoryPool):
+    def __init__(self):
+        super().__init__()
+        self.insert_calls = []
+        self.insert_many_calls = []
+
+    def _Insert(self, table_name, data):
+        self.insert_calls.append((table_name, dict(data)))
+        return super()._Insert(table_name, data)
+
+    def _InsertMany(self, table_name, data_list):
+        copied_rows = [dict(row) for row in (data_list or [])]
+        self.insert_many_calls.append((table_name, copied_rows))
+        self.tables.setdefault(table_name, {})
+        for data in copied_rows:
+            row_id = data.get("id") or data.get("agent_id")
+            self.tables[table_name][row_id] = dict(data)
+        return True
+
+
 class FakeResponse:
     def __init__(self, payload, status_code=200):
         self._payload = payload
@@ -292,8 +313,10 @@ def test_pit_can_register_itself_on_plaza():
     assert record["payload"]["agent_name"] == "schema-x"
     assert record["payload"]["pit_type"] == "Schema"
     assert record["payload"]["accepts_inbound_from_plaza"] is False
+    assert record["payload"]["accepts_direct_call"] is False
     assert "pit_address" in record["payload"]["card"]
     assert record["payload"]["card"]["accepts_inbound_from_plaza"] is False
+    assert record["payload"]["card"]["accepts_direct_call"] is False
     assert record["payload"]["card"]["connectivity_mode"] == "outbound-only"
 
 
@@ -460,7 +483,7 @@ def test_agent_register_retries_plaza_calls_with_long_timeout():
     assert all(entry["timeout"] == 30 for entry in attempts)
 
 
-def test_agent_reconnect_loop_waits_30_seconds_between_attempts_until_success():
+def test_agent_reconnect_loop_waits_60_seconds_between_attempts_until_success():
     agent = StandbyAgent(name="alice", plaza_url="http://127.0.0.1:8011")
     sleep_calls = []
     register_calls = []
@@ -485,14 +508,66 @@ def test_agent_reconnect_loop_waits_30_seconds_between_attempts_until_success():
         "prompits.agents.base.time.sleep",
         side_effect=fake_sleep,
     ):
-        agent._reconnect_loop(initial_delay=30)
+        agent._reconnect_loop(initial_delay=60)
 
-    assert sleep_calls == [30, 30]
+    assert sleep_calls == [60, 60]
     assert register_calls == [
         {"start_reconnect_on_failure": False, "request_retries": 0},
         {"start_reconnect_on_failure": False, "request_retries": 0},
     ]
     assert agent.plaza_token == "token-restored"
+
+
+def test_agent_heartbeat_schedules_reconnect_once_while_waiting_for_token(caplog):
+    agent = StandbyAgent(name="alice", plaza_url="http://127.0.0.1:8011")
+    sleep_calls = []
+
+    def fake_sleep(seconds):
+        sleep_calls.append(seconds)
+        if len(sleep_calls) >= 3:
+            raise SystemExit()
+
+    with caplog.at_level(logging.INFO, logger="prompits.agents.base"), patch(
+        "prompits.agents.base.time.sleep",
+        side_effect=fake_sleep,
+    ), patch.object(
+        agent,
+        "_has_active_reconnect_thread",
+        side_effect=[False, True],
+    ), patch.object(agent, "_schedule_reconnect") as schedule_reconnect:
+        with pytest.raises(SystemExit):
+            agent._heartbeat_loop()
+
+    assert sleep_calls == [agent.PLAZA_HEARTBEAT_INTERVAL] * 3
+    schedule_reconnect.assert_called_once_with(
+        "heartbeat waiting for plaza token",
+        initial_delay=agent.PLAZA_RECONNECT_INTERVAL,
+    )
+    assert "Skipping heartbeat, no valid token." not in caplog.text
+
+
+def test_agent_heartbeat_switches_to_reconnect_mode_when_plaza_is_starting():
+    agent = StandbyAgent(name="alice", plaza_url="http://127.0.0.1:8011")
+    agent.agent_id = "alice-id"
+    agent.plaza_token = "token-live"
+    agent.token_expires_at = time.time() + 3600
+    sleep_calls = []
+
+    def fake_sleep(seconds):
+        sleep_calls.append(seconds)
+        if len(sleep_calls) >= 2:
+            raise SystemExit()
+
+    with patch("prompits.agents.base.time.sleep", side_effect=fake_sleep), patch.object(
+        agent,
+        "_plaza_post",
+        return_value=FakeResponse({"detail": "Starting"}, status_code=503),
+    ), patch.object(agent, "_schedule_reconnect") as schedule_reconnect:
+        with pytest.raises(SystemExit):
+            agent._heartbeat_loop()
+
+    assert sleep_calls == [agent.PLAZA_HEARTBEAT_INTERVAL] * 2
+    schedule_reconnect.assert_called_once_with("plaza starting")
 
 
 def test_agent_register_does_not_burn_through_retries_while_plaza_is_starting():
@@ -573,6 +648,28 @@ def test_practice_persistence_tracks_callable_endpoints_not_bundle():
     assert "multi-endpoint-practice" not in card_practice_ids
     assert card_by_id["echo-endpoint"]["cost"] == 5
     assert card_by_id["ping-endpoint"]["cost"] == 0
+
+
+def test_agent_batches_callable_practice_metadata_persistence():
+    pool = CountingBatchInMemoryPool()
+    agent = StandbyAgent(name="alice", pool=pool)
+    pool.insert_calls.clear()
+    pool.insert_many_calls.clear()
+
+    agent.add_practice(MultiEndpointPractice())
+
+    batch_calls = [
+        call for call in pool.insert_many_calls
+        if call[0] == "agent_practices"
+    ]
+    assert len(batch_calls) == 1
+    assert {row["practice_id"] for row in batch_calls[0][1]} == {"echo-endpoint", "ping-endpoint"}
+
+    single_calls = [
+        call for call in pool.insert_calls
+        if call[0] == "agent_practices" and call[1].get("practice_id") in {"echo-endpoint", "ping-endpoint"}
+    ]
+    assert single_calls == []
 
 
 def test_agent_registers_pool_operation_practices_and_can_use_them():

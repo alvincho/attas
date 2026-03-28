@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 import os
 import re
 from pathlib import Path
@@ -25,12 +26,15 @@ _SAFE_BUILTINS = {
     "bool": bool,
     "dict": dict,
     "enumerate": enumerate,
+    "Exception": Exception,
     "float": float,
+    "isinstance": isinstance,
     "int": int,
     "len": len,
     "list": list,
     "max": max,
     "min": min,
+    "pow": pow,
     "range": range,
     "round": round,
     "set": set,
@@ -38,6 +42,8 @@ _SAFE_BUILTINS = {
     "str": str,
     "sum": sum,
     "tuple": tuple,
+    "TypeError": TypeError,
+    "ValueError": ValueError,
     "zip": zip,
 }
 
@@ -53,6 +59,8 @@ class PathPulser(Pulser):
     """
 
     def __init__(self, *args, **kwargs):
+        self._script_cache: Dict[str, str] = {}
+        self._test_data_cache: Dict[str, Dict[str, Any]] = {}
         super().__init__(*args, **kwargs)
         template_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..")
         self.templates = Jinja2Templates(directory=template_dir)
@@ -63,9 +71,9 @@ class PathPulser(Pulser):
         @self.app.get("/")
         async def path_pulser_ui(request: Request):
             return self.templates.TemplateResponse(
-                request,
-                "phemacast/pulsers/templates/path_pulser_editor.html",
-                {
+                request=request,
+                name="phemacast/pulsers/templates/path_pulser_editor.html",
+                context={
                     "agent_name": self.agent_card.get("name", self.name),
                     "config_path": str(self.config_path) if self.config_path else "",
                 },
@@ -246,13 +254,30 @@ class PathPulser(Pulser):
 
     def _build_editor_config_document(self, config: Dict[str, Any]) -> Dict[str, Any]:
         document = self._normalize_config_document(config)
-        if self.supported_pulses:
-            document["supported_pulses"] = [dict(pulse) for pulse in self.supported_pulses]
+        source_pulses = self.supported_pulses or document.get("supported_pulses") or []
+        document["supported_pulses"] = [
+            self._build_editor_pulse_document(pulse)
+            for pulse in source_pulses
+            if isinstance(pulse, dict)
+        ]
         return document
+
+    def _build_editor_pulse_document(self, pulse: Dict[str, Any]) -> Dict[str, Any]:
+        editor_pulse = dict(pulse)
+        try:
+            resolved_test_data = self._load_pulse_test_data(editor_pulse)
+        except Exception as exc:
+            editor_pulse["resolved_test_data_error"] = str(exc)
+            return editor_pulse
+        if isinstance(resolved_test_data, dict) and resolved_test_data:
+            editor_pulse["resolved_test_data"] = dict(resolved_test_data)
+        return editor_pulse
 
     @staticmethod
     def _normalize_config_pulse(pulse: Dict[str, Any]) -> Dict[str, Any]:
         normalized = dict(pulse)
+        normalized.pop("resolved_test_data", None)
+        normalized.pop("resolved_test_data_error", None)
         pulse_address = PitAddress.from_value(normalized.get("pulse_address"))
         if pulse_address.pit_id:
             normalized["pulse_address"] = pulse_address.to_ref()
@@ -286,6 +311,8 @@ class PathPulser(Pulser):
         normalized["result_path"] = str(pulse.get("result_path") or "result")
         if "test_data" in pulse:
             normalized["test_data"] = dict(pulse.get("test_data") or {}) if isinstance(pulse.get("test_data"), Mapping) else {}
+        if pulse.get("test_data_path"):
+            normalized["test_data_path"] = str(pulse.get("test_data_path"))
         normalized["is_complete"] = bool(pulse.get("is_complete")) if "is_complete" in pulse else False
         normalized["completion_status"] = str(pulse.get("completion_status") or ("complete" if normalized["is_complete"] else "unfinished"))
         normalized["completion_errors"] = list(pulse.get("completion_errors") or [])
@@ -336,9 +363,9 @@ class PathPulser(Pulser):
             # A bare `result` path does not point at the step chain output in this pulser.
             errors.append("result_path must point at the final step output, for example steps.final_step.")
 
-        test_data = pulse_definition.get("test_data")
+        test_data = self._load_pulse_test_data(pulse_definition)
         if not isinstance(test_data, dict) or not test_data:
-            errors.append("Pulse test_data is required to validate the final step against the pulse schema.")
+            errors.append("Pulse test_data or test_data_path is required to validate the final step against the pulse schema.")
             return errors
 
         try:
@@ -384,15 +411,26 @@ class PathPulser(Pulser):
                 raise ValueError(f"Step {index + 1} for pulse '{pulse_name}' must be a JSON object.")
             step = dict(raw_step)
             step_name = str(step.get("name") or f"step_{index + 1}")
-            result = self._execute_step(step_name=step_name, step=step, context=context, pulse_definition=pulse_definition)
+            should_run, skip_reason = self._should_execute_step(step_name=step_name, step=step, context=context)
+            if should_run:
+                result = self._execute_step(step_name=step_name, step=step, context=context, pulse_definition=pulse_definition)
+            else:
+                result = {
+                    "_skipped": True,
+                    "_skip_reason": skip_reason,
+                    "when": dict(step.get("when") or {}),
+                }
             context["steps"][step_name] = result
-            context["_previous"] = result
-            context["previous"] = result
+            if should_run:
+                context["_previous"] = result
+                context["previous"] = result
             context["sources"] = context.get("sources") or {}
             self.last_fetch_debug["steps"].append(
                 {
                     "name": step_name,
                     "type": step.get("type") or ("python" if step.get("script") else "source"),
+                    "skipped": not should_run,
+                    "skip_reason": skip_reason,
                     "sources": list((result.get("_sources") or {}).keys()) if isinstance(result, dict) else [],
                     "result": result,
                 }
@@ -472,6 +510,84 @@ class PathPulser(Pulser):
 
         raise ValueError(f"Unsupported step type '{step_type}' in step '{step_name}'.")
 
+    def _should_execute_step(
+        self,
+        *,
+        step_name: str,
+        step: Dict[str, Any],
+        context: Dict[str, Any],
+    ) -> tuple[bool, Optional[str]]:
+        when = step.get("when")
+        if when is None:
+            return True, None
+        if not isinstance(when, Mapping):
+            raise ValueError(f"Step '{step_name}' when must be a JSON object.")
+
+        for raw_path in when.get("present") or []:
+            path = str(raw_path or "").strip()
+            value = self._resolve_condition_value(path, context)
+            if not self._condition_has_value(value):
+                return False, f"missing required condition path '{path}'"
+
+        for raw_path in when.get("missing") or []:
+            path = str(raw_path or "").strip()
+            value = self._resolve_condition_value(path, context)
+            if self._condition_has_value(value):
+                return False, f"condition path '{path}' must be missing"
+
+        equals = when.get("equals") or {}
+        if equals:
+            if not isinstance(equals, Mapping):
+                raise ValueError(f"Step '{step_name}' when.equals must be a JSON object.")
+            for raw_path, expected in equals.items():
+                path = str(raw_path or "").strip()
+                value = self._resolve_condition_value(path, context)
+                if value != expected:
+                    return False, f"condition path '{path}' did not equal the expected value"
+
+        not_equals = when.get("not_equals") or {}
+        if not_equals:
+            if not isinstance(not_equals, Mapping):
+                raise ValueError(f"Step '{step_name}' when.not_equals must be a JSON object.")
+            for raw_path, expected in not_equals.items():
+                path = str(raw_path or "").strip()
+                value = self._resolve_condition_value(path, context)
+                if value == expected:
+                    return False, f"condition path '{path}' matched a blocked value"
+
+        return True, None
+
+    def _resolve_condition_value(self, path: str, context: Dict[str, Any]) -> Any:
+        path = str(path or "").strip()
+        if not path:
+            return None
+
+        candidates = [path]
+        if "." not in path:
+            candidates.extend(
+                [
+                    f"_input.{path}",
+                    f"input.{path}",
+                    f"_previous.{path}",
+                    f"previous.{path}",
+                    f"steps.{path}",
+                    f"sources.{path}",
+                ]
+            )
+
+        for candidate in candidates:
+            resolved = _resolve_path(context, candidate)
+            if resolved is not None:
+                return resolved
+        return None
+
+    def _condition_has_value(self, value: Any) -> bool:
+        if value is None or value == "":
+            return False
+        if isinstance(value, (list, dict, tuple, set)) and not value:
+            return False
+        return True
+
     def _fetch_step_sources(self, *, step_name: str, step: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
         source_defs = step.get("sources")
         if source_defs is None and any(key in step for key in ("pulser_url", "pulser_name", "pulse_name", "pulse_address", "params", "pulser_address")):
@@ -512,22 +628,27 @@ class PathPulser(Pulser):
         if not pulse_name and not pulse_address:
             raise ValueError("Each path pulser source requires pulse_name or pulse_address.")
 
+        caller_headers = self._ensure_token_valid() if self.plaza_url else None
+        caller_token = self._extract_bearer_token(caller_headers)
         payload = {
-            "sender": self.name,
-            "receiver": target_url,
+            "sender": str(self.agent_id or self.name),
+            "receiver": str(target_url),
             "msg_type": "get_pulse_data",
             "content": {
                 "pulse_name": pulse_name,
                 "pulse_address": pulse_address,
                 "params": params,
             },
+            "caller_agent_address": self.pit_address.to_dict(),
+            "caller_plaza_token": caller_token,
+            "caller_direct_token": self.direct_auth_token,
         }
         response = requests.post(f"{target_url.rstrip('/')}/use_practice/get_pulse_data", json=payload, timeout=30)
         if response.status_code != 200:
             raise ValueError(f"Source pulser call failed with status {response.status_code}: {response.text}")
         if not response.content:
             return {}
-        return response.json()
+        return self._unwrap_remote_practice_response(response.json())
 
     def _resolve_source_url(self, source: Dict[str, Any]) -> Optional[str]:
         explicit = source.get("pulser_url") or source.get("url") or source.get("address")
@@ -564,11 +685,12 @@ class PathPulser(Pulser):
         context: Dict[str, Any],
         pulse_definition: Dict[str, Any],
     ) -> Any:
-        script = step.get("script")
+        script = self._load_python_script(step)
         if not isinstance(script, str) or not script.strip():
             raise ValueError(f"Python step '{step_name}' requires a non-empty script.")
 
-        local_vars: Dict[str, Any] = {
+        execution_scope: Dict[str, Any] = {
+            "__builtins__": _SAFE_BUILTINS,
             "step_name": step_name,
             "step": dict(step),
             "pulse": dict(pulse_definition),
@@ -578,14 +700,14 @@ class PathPulser(Pulser):
             "steps": context.get("steps") or {},
             "sources": sources,
             "json": json,
+            "math": math,
             "result": None,
             "output": None,
             "resolve_path": _resolve_path,
         }
-        exec_globals = {"__builtins__": _SAFE_BUILTINS}
-        exec(script, exec_globals, local_vars)
+        exec(script, execution_scope, execution_scope)
 
-        transform = local_vars.get("transform")
+        transform = execution_scope.get("transform")
         if callable(transform):
             return transform(
                 sources=sources,
@@ -596,12 +718,73 @@ class PathPulser(Pulser):
                 pulse=dict(pulse_definition),
             )
 
-        if local_vars.get("result") is not None:
-            return local_vars["result"]
-        if local_vars.get("output") is not None:
-            return local_vars["output"]
+        if execution_scope.get("result") is not None:
+            return execution_scope["result"]
+        if execution_scope.get("output") is not None:
+            return execution_scope["output"]
 
         raise ValueError(f"Python step '{step_name}' did not set `result`, `output`, or `transform`.")
+
+    def _load_python_script(self, step: Dict[str, Any]) -> Optional[str]:
+        script = step.get("script")
+        if isinstance(script, str) and script.strip():
+            return script
+
+        script_path = step.get("script_path") or step.get("script_file")
+        if not script_path:
+            return script if isinstance(script, str) else None
+
+        resolved = self._resolve_support_file_path(str(script_path))
+        cache_key = str(resolved)
+        cache = getattr(self, "_script_cache", None)
+        if cache is None:
+            cache = {}
+            self._script_cache = cache
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return cached
+
+        loaded = resolved.read_text(encoding="utf-8")
+        cache[cache_key] = loaded
+        return loaded
+
+    def _load_pulse_test_data(self, pulse_definition: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        test_data = pulse_definition.get("test_data")
+        if isinstance(test_data, Mapping) and test_data:
+            return dict(test_data)
+
+        test_data_path = pulse_definition.get("test_data_path")
+        if not test_data_path:
+            return None
+
+        resolved = self._resolve_support_file_path(str(test_data_path))
+        cache_key = str(resolved)
+        cached = self._test_data_cache.get(cache_key)
+        if cached is not None:
+            return dict(cached)
+        with resolved.open("r", encoding="utf-8") as fh:
+            loaded = json.load(fh)
+        if not isinstance(loaded, dict):
+            raise ValueError(f"Pulse test_data_path must point to a JSON object: {test_data_path}")
+        self._test_data_cache[cache_key] = dict(loaded)
+        return dict(loaded)
+
+    def _resolve_support_file_path(self, file_path: str) -> Path:
+        candidate = Path(str(file_path).strip()).expanduser()
+        search_paths: List[Path] = []
+        if candidate.is_absolute():
+            search_paths.append(candidate)
+        else:
+            if self.config_path:
+                search_paths.append(self.config_path.parent / candidate)
+            search_paths.append(Path.cwd() / candidate)
+
+        for path in search_paths:
+            if path.exists():
+                return path.resolve()
+
+        attempted = ", ".join(str(path) for path in search_paths) or str(candidate)
+        raise ValueError(f"Unable to resolve support file: {file_path} (looked in {attempted})")
 
     def _render_structure(self, value: Any, context: Dict[str, Any]) -> Any:
         if isinstance(value, str):

@@ -9,16 +9,19 @@
             "type": "SupabasePool",
             "name": "plaza_pool",
             "description": "Plaza Supabase pool",
-            "url": "https://shwjdbugjabdgybzdhws.supabase.co",
+            "url": {
+                "env": "SUPABASE_URL",
+                "value": "https://shwjdbugjabdgybzdhws.supabase.co"
+            },
             "key": {
-                "env": "SUPABASE_PUBLISHABLE_KEY"
+                "env": "SUPABASE_SERVICE_ROLE_KEY"
             }
         }
     ],
     "type": "prompits.core.plaza.PlazaAgent",
     "plaza": {
         "init_files":[
-            "attas/init_pits/init_pulse.json"
+            "attas/init_pits"
         ]
     },
     "practices": [

@@ -1,0 +1,67 @@
+{
+  "pds_version": "0.1.0",
+  "resource_type": "pulse_mapping",
+  "id": "ai.attas.mapping.lseg.last_trade",
+  "version": "1.0.0",
+  "pulse_id": "ai.attas.finance.price.last_trade",
+  "source_system": "lseg",
+  "source_ref": {
+    "product": "realtime",
+    "service": "Elektron / Real-Time Optimized",
+    "field": "TRDPRC_1"
+  },
+  "relation": "close_match",
+  "mapping_type": "direct",
+  "field_map": {
+    "value": "TRDPRC_1",
+    "currency": "CURRENCY",
+    "observed_at": "TRDTIM_1",
+    "venue": "EXCHID"
+  },
+  "transforms": [
+    {
+      "target_field": "observed_at",
+      "operation": "parse_time_only_with_trade_date",
+      "notes": "Combine trade time field with applicable trade date context when the source separates date and time."
+    },
+    {
+      "target_field": "venue",
+      "operation": "map_exchange_code",
+      "notes": "Normalize vendor venue code to Attas venue dimension when needed."
+    }
+  ],
+  "tests": [
+    {
+      "name": "maps_basic_trade_price_payload",
+      "input": {
+        "TRDPRC_1": 187.42,
+        "CURRENCY": "USD",
+        "TRDTIM_1": "14:31:05",
+        "EXCHID": "XNAS"
+      },
+      "expected": {
+        "value": 187.42,
+        "currency": "USD",
+        "venue": "XNAS"
+      }
+    },
+    {
+      "name": "rejects_missing_trade_price",
+      "input": {
+        "CURRENCY": "USD",
+        "TRDTIM_1": "14:31:05",
+        "EXCHID": "XNAS"
+      },
+      "expected_error": "value is required"
+    }
+  ],
+  "coverage": "Maps core last-trade fields for LSEG real-time pricing feeds. Does not cover delayed-only products, auction price variants, or consolidated composite logic.",
+  "confidence": 0.9,
+  "notes": "Example mapping resource showing how vendor field bindings stay outside the base pulse_definition.",
+  "extensions": {
+    "ai.attas": {
+      "domain": "pricing",
+      "review_status": "draft-reviewed"
+    }
+  }
+}

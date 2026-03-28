@@ -1,0 +1,12 @@
+fastapi
+fpdf2
+gunicorn
+httpx
+jinja2
+jsonschema
+pydantic
+python-dotenv
+requests
+supabase
+uvicorn[standard]
+yfinance

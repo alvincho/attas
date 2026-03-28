@@ -40,8 +40,15 @@
           "company_profile",
           "business_description",
           "valuation_pe",
+          "market_cap",
+          "valuation_multiples",
+          "profitability_metrics",
+          "revenue_and_growth",
+          "eps_metrics",
           "fifty_two_week_range",
           "dividend_info",
+          "dividend_profile",
+          "beta_and_volatility",
           "news_article",
           "earnings_surprise_history",
           "income_statement_revenue",
@@ -76,5 +83,5 @@
     "path": "/get_pulse_data"
   },
   "is_deleted": false,
-  "updated_at": "2026-03-23T13:17:46.850703+00:00"
+  "updated_at": "2026-03-27T12:10:40.171883+00:00"
 }

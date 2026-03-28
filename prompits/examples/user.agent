@@ -1,0 +1,21 @@
+{
+  "name": "user-ui",
+  "type": "prompits.agents.user.UserAgent",
+  "host": "127.0.0.1",
+  "port": 8214,
+  "plaza_url": "http://127.0.0.1:8211",
+  "pools": [
+    {
+      "type": "FileSystemPool",
+      "name": "user_pool",
+      "description": "Local user-agent storage",
+      "root_path": "prompits/examples/storage/user"
+    }
+  ],
+  "agent_card": {
+    "name": "user-ui",
+    "description": "Browser-facing Prompits dashboard",
+    "role": "frontend",
+    "tags": ["ui", "dashboard"]
+  }
+}

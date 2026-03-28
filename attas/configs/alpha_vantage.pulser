@@ -478,6 +478,207 @@
             "party": "attas"
         },
         {
+            "name": "market_cap",
+            "pulse_address": "480385dd-0943-5753-a563-257816df0d7a",
+            "description": "Market capitalization and share count snapshot from Alpha Vantage OVERVIEW.",
+            "tags": [
+                "fundamentals",
+                "valuation",
+                "size"
+            ],
+            "api": {
+                "url": "https://www.alphavantage.co/query?function=OVERVIEW&symbol={symbol}",
+                "method": "GET",
+                "api_key_id": "alpha_vantage"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "symbol"
+                ]
+            },
+            "mapping": {
+                "symbol": "Symbol",
+                "market_cap": "MarketCapitalization",
+                "shares_outstanding": "SharesOutstanding",
+                "source": {
+                    "value": "alpha_vantage"
+                }
+            },
+            "test_data": {
+                "symbol": "IBM"
+            },
+            "cost": 0,
+            "party": "attas"
+        },
+        {
+            "name": "valuation_multiples",
+            "pulse_address": "4d9aa045-cd58-5339-9d2d-c5c1990d3063",
+            "description": "Broad valuation multiples from Alpha Vantage OVERVIEW.",
+            "tags": [
+                "fundamentals",
+                "valuation"
+            ],
+            "api": {
+                "url": "https://www.alphavantage.co/query?function=OVERVIEW&symbol={symbol}",
+                "method": "GET",
+                "api_key_id": "alpha_vantage"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "symbol"
+                ]
+            },
+            "mapping": {
+                "symbol": "Symbol",
+                "trailing_pe": "TrailingPE",
+                "forward_pe": "ForwardPE",
+                "peg_ratio": "PEGRatio",
+                "price_to_sales": "PriceToSalesRatioTTM",
+                "price_to_book": "PriceToBookRatio",
+                "enterprise_to_revenue": "EVToRevenue",
+                "enterprise_to_ebitda": "EVToEBITDA",
+                "source": {
+                    "value": "alpha_vantage"
+                }
+            },
+            "test_data": {
+                "symbol": "IBM"
+            },
+            "cost": 0,
+            "party": "attas"
+        },
+        {
+            "name": "profitability_metrics",
+            "pulse_address": "5f071aa5-5f1a-5511-9d28-54d0613bfd92",
+            "description": "Operating margin and return metrics from Alpha Vantage OVERVIEW.",
+            "tags": [
+                "fundamentals",
+                "profitability"
+            ],
+            "api": {
+                "url": "https://www.alphavantage.co/query?function=OVERVIEW&symbol={symbol}",
+                "method": "GET",
+                "api_key_id": "alpha_vantage"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "symbol"
+                ]
+            },
+            "mapping": {
+                "symbol": "Symbol",
+                "operating_margin": "OperatingMarginTTM",
+                "profit_margin": "ProfitMargin",
+                "return_on_assets": "ReturnOnAssetsTTM",
+                "return_on_equity": "ReturnOnEquityTTM",
+                "source": {
+                    "value": "alpha_vantage"
+                }
+            },
+            "test_data": {
+                "symbol": "IBM"
+            },
+            "cost": 0,
+            "party": "attas"
+        },
+        {
+            "name": "revenue_and_growth",
+            "pulse_address": "90f61319-966f-5c8d-bff1-083f1ba85701",
+            "description": "Revenue scale and growth rates from Alpha Vantage OVERVIEW.",
+            "tags": [
+                "fundamentals",
+                "growth"
+            ],
+            "api": {
+                "url": "https://www.alphavantage.co/query?function=OVERVIEW&symbol={symbol}",
+                "method": "GET",
+                "api_key_id": "alpha_vantage"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "symbol"
+                ]
+            },
+            "mapping": {
+                "symbol": "Symbol",
+                "total_revenue": "RevenueTTM",
+                "revenue_growth": "QuarterlyRevenueGrowthYOY",
+                "earnings_growth": "QuarterlyEarningsGrowthYOY",
+                "earnings_quarterly_growth": "QuarterlyEarningsGrowthYOY",
+                "source": {
+                    "value": "alpha_vantage"
+                }
+            },
+            "test_data": {
+                "symbol": "IBM"
+            },
+            "cost": 0,
+            "party": "attas"
+        },
+        {
+            "name": "eps_metrics",
+            "pulse_address": "5e7b8f4c-c497-5847-9caf-bcb315ca1b4c",
+            "description": "EPS and target price metrics from Alpha Vantage OVERVIEW.",
+            "tags": [
+                "fundamentals",
+                "earnings",
+                "valuation"
+            ],
+            "api": {
+                "url": "https://www.alphavantage.co/query?function=OVERVIEW&symbol={symbol}",
+                "method": "GET",
+                "api_key_id": "alpha_vantage"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "symbol"
+                ]
+            },
+            "mapping": {
+                "symbol": "Symbol",
+                "trailing_eps": "DilutedEPSTTM",
+                "target_mean_price": "AnalystTargetPrice",
+                "source": {
+                    "value": "alpha_vantage"
+                }
+            },
+            "test_data": {
+                "symbol": "IBM"
+            },
+            "cost": 0,
+            "party": "attas"
+        },
+        {
             "name": "fifty_two_week_range",
             "pulse_address": "507d9476-f1be-5019-9498-39396221c647",
             "description": "52-week trading range from Alpha Vantage OVERVIEW.",
@@ -545,6 +746,84 @@
                 "currency": "Currency",
                 "ex_date": "ExDividendDate",
                 "dividend_yield": "DividendYield"
+            },
+            "test_data": {
+                "symbol": "IBM"
+            },
+            "cost": 0,
+            "party": "attas"
+        },
+        {
+            "name": "dividend_profile",
+            "pulse_address": "a3e216e4-c0b1-5e16-b05a-ed59f35b86da",
+            "description": "Dividend profile metrics from Alpha Vantage OVERVIEW.",
+            "tags": [
+                "fundamentals",
+                "dividends",
+                "income"
+            ],
+            "api": {
+                "url": "https://www.alphavantage.co/query?function=OVERVIEW&symbol={symbol}",
+                "method": "GET",
+                "api_key_id": "alpha_vantage"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "symbol"
+                ]
+            },
+            "mapping": {
+                "symbol": "Symbol",
+                "dividend_rate": "DividendPerShare",
+                "dividend_yield": "DividendYield",
+                "ex_dividend_date": "ExDividendDate",
+                "source": {
+                    "value": "alpha_vantage"
+                }
+            },
+            "test_data": {
+                "symbol": "IBM"
+            },
+            "cost": 0,
+            "party": "attas"
+        },
+        {
+            "name": "beta_and_volatility",
+            "pulse_address": "ad454463-a21e-5d99-bd41-c41d5589a92b",
+            "description": "Systematic risk metrics from Alpha Vantage OVERVIEW.",
+            "tags": [
+                "fundamentals",
+                "risk",
+                "volatility"
+            ],
+            "api": {
+                "url": "https://www.alphavantage.co/query?function=OVERVIEW&symbol={symbol}",
+                "method": "GET",
+                "api_key_id": "alpha_vantage"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "symbol"
+                ]
+            },
+            "mapping": {
+                "symbol": "Symbol",
+                "beta": "Beta",
+                "source": {
+                    "value": "alpha_vantage"
+                }
             },
             "test_data": {
                 "symbol": "IBM"
@@ -1082,6 +1361,122 @@
                 },
                 "capital_expenditure": "capitalExpenditures",
                 "currency": "reportedCurrency"
+            },
+            "test_data": {
+                "symbol": "IBM"
+            },
+            "cost": 0,
+            "party": "attas"
+        },
+        {
+            "name": "cash_flow_free_cash_flow",
+            "pulse_address": "3856dcb9-8be9-56d3-bd78-38f4865586f9",
+            "description": "Most recent annual free cash flow derived from Alpha Vantage CASH_FLOW.",
+            "tags": [
+                "financial-statements",
+                "cash-flow",
+                "analysis",
+                "annual"
+            ],
+            "api": {
+                "url": "https://www.alphavantage.co/query?function=CASH_FLOW&symbol={symbol}",
+                "method": "GET",
+                "root_path": "annualReports.0",
+                "api_key_id": "alpha_vantage"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "symbol"
+                ]
+            },
+            "mapping": {
+                "symbol": "_input.symbol",
+                "period_end": "fiscalDateEnding",
+                "period_type": {
+                    "value": "annual"
+                },
+                "free_cash_flow": {
+                    "op": "subtract_abs",
+                    "args": [
+                        "operatingCashflow",
+                        "capitalExpenditures"
+                    ]
+                },
+                "currency": "reportedCurrency"
+            },
+            "test_data": {
+                "symbol": "IBM"
+            },
+            "cost": 0,
+            "party": "attas"
+        },
+        {
+            "name": "balance_sheet_strength",
+            "pulse_address": "bf0027ff-2f05-50df-b09d-8b80bd19737e",
+            "description": "Liquidity and leverage indicators derived from Alpha Vantage BALANCE_SHEET.",
+            "tags": [
+                "financial-statements",
+                "balance-sheet",
+                "analysis",
+                "risk"
+            ],
+            "api": {
+                "url": "https://www.alphavantage.co/query?function=BALANCE_SHEET&symbol={symbol}",
+                "method": "GET",
+                "root_path": "annualReports.0",
+                "api_key_id": "alpha_vantage"
+            },
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "symbol"
+                ]
+            },
+            "mapping": {
+                "symbol": "_input.symbol",
+                "current_ratio": {
+                    "op": "divide",
+                    "args": [
+                        "totalCurrentAssets",
+                        "totalCurrentLiabilities"
+                    ]
+                },
+                "quick_ratio": {
+                    "op": "divide",
+                    "args": [
+                        {
+                            "op": "subtract",
+                            "args": [
+                                "totalCurrentAssets",
+                                "inventory"
+                            ]
+                        },
+                        "totalCurrentLiabilities"
+                    ]
+                },
+                "debt_to_equity": {
+                    "op": "divide",
+                    "args": [
+                        "shortLongTermDebtTotal",
+                        "totalShareholderEquity"
+                    ]
+                },
+                "total_cash": "cashAndCashEquivalentsAtCarryingValue",
+                "total_debt": "shortLongTermDebtTotal",
+                "source": {
+                    "value": "alpha_vantage"
+                }
             },
             "test_data": {
                 "symbol": "IBM"

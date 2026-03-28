@@ -1,0 +1,72 @@
+{
+  "pds_version": "0.1.0",
+  "resource_type": "pulse_profile",
+  "id": "ai.attas.profile.equity_research.last_trade",
+  "version": "1.0.0",
+  "base_pulse_id": "ai.attas.finance.price.last_trade",
+  "application": "attas.equity_research",
+  "constraints": {
+    "request": {
+      "require_one_of": [
+        "symbol",
+        "lseg_ric",
+        "bloomberg_ticker"
+      ],
+      "default_values": {
+        "venue": "primary_listing"
+      }
+    },
+    "response": {
+      "required": [
+        "value",
+        "currency",
+        "observed_at",
+        "venue"
+      ],
+      "preferred_fields": [
+        "value",
+        "currency",
+        "observed_at",
+        "venue",
+        "session",
+        "source_mode"
+      ]
+    }
+  },
+  "defaults": {
+    "venue": "primary_listing",
+    "source_mode_preference": "realtime"
+  },
+  "presentation": {
+    "panel": "market_snapshot",
+    "field_order": [
+      "value",
+      "currency",
+      "observed_at",
+      "venue",
+      "session",
+      "source_mode"
+    ],
+    "display_hints": {
+      "value": {
+        "format": "price"
+      },
+      "observed_at": {
+        "format": "datetime"
+      },
+      "currency": {
+        "style": "badge"
+      },
+      "source_mode": {
+        "style": "muted_label"
+      }
+    }
+  },
+  "extensions": {
+    "ai.attas": {
+      "domain": "equity_research",
+      "widget": "last_trade_card",
+      "usage_notes": "This profile is intended for research pages and market snapshot summaries."
+    }
+  }
+}

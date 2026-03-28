@@ -1,0 +1,44 @@
+{
+  "id": "Plaza:pool-search-memory",
+  "agent_name": "Plaza",
+  "practice_id": "pool-search-memory",
+  "practice_name": "Pool Search Memory",
+  "practice_description": "Search stored memory records in the filesystem pool.",
+  "practice_data": {
+    "name": "Pool Search Memory",
+    "description": "Search stored memory records in the filesystem pool.",
+    "id": "pool-search-memory",
+    "cost": 0,
+    "tags": [
+      "pool",
+      "filesystem",
+      "memory",
+      "search"
+    ],
+    "examples": [],
+    "inputModes": [
+      "http-post",
+      "json"
+    ],
+    "outputModes": [
+      "json"
+    ],
+    "parameters": {
+      "query": {
+        "type": "string",
+        "description": "Case-insensitive search text."
+      },
+      "limit": {
+        "type": "integer",
+        "description": "Maximum number of matches."
+      },
+      "table_name": {
+        "type": "string",
+        "description": "Optional override table name."
+      }
+    },
+    "path": "/pool_search_memory"
+  },
+  "is_deleted": false,
+  "updated_at": "2026-03-25T01:27:54.187487+00:00"
+}

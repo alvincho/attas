@@ -7,23 +7,26 @@
     <title>attas | Phema Editor</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Space+Mono&display=swap"
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600&family=Manrope:wght@400;500;600;700;800&display=swap"
         rel="stylesheet">
+    <link rel="stylesheet" href="/static/attas_ui_shared.css?v=20260327a">
+    <script defer src="/static/attas_theme.js?v=20260327a"></script>
+    <script defer src="/static/agent_connection.js?v=20260327a"></script>
     <style>
         :root {
-            --bg: #f4f8fb;
-            --panel: rgba(255, 255, 255, 0.9);
-            --panel-strong: rgba(255, 255, 255, 0.96);
-            --border: rgba(15, 118, 110, 0.14);
-            --border-strong: rgba(15, 118, 110, 0.28);
-            --text: #13313a;
-            --muted: #5d7680;
-            --label-text: #365560;
-            --accent: #0f766e;
-            --accent-soft: rgba(15, 118, 110, 0.08);
-            --warning: #ef8f34;
-            --danger: #dc4d67;
-            --shadow: 0 20px 60px rgba(15, 46, 58, 0.12);
+            --bg: #f8fafc;
+            --panel: #ffffff;
+            --panel-strong: #ffffff;
+            --border: #e2e8f0;
+            --border-strong: #cbd5e1;
+            --text: #0f172a;
+            --muted: #475569;
+            --label-text: #64748b;
+            --accent: #0f172a;
+            --accent-soft: rgba(15, 23, 42, 0.08);
+            --warning: #92400e;
+            --danger: #991b1b;
+            --shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
         }
 
         * {
@@ -33,12 +36,11 @@
         body {
             margin: 0;
             min-height: 100vh;
-            font-family: 'Outfit', sans-serif;
-            color: var(--text);
-            background:
-                radial-gradient(circle at top left, rgba(15, 118, 110, 0.15), transparent 32%),
-                radial-gradient(circle at bottom right, rgba(31, 122, 255, 0.12), transparent 28%),
-                linear-gradient(180deg, #f9fcfd, var(--bg));
+            font-family: var(--ui-font-body, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif);
+            font-size: var(--ui-content-size);
+            font-weight: var(--ui-content-weight);
+            color: var(--ui-content-color, var(--text));
+            background: var(--bg);
         }
 
         .shell {
@@ -56,9 +58,8 @@
         .section-card {
             background: var(--panel);
             border: 1px solid var(--border);
-            border-radius: 24px;
+            border-radius: 8px;
             box-shadow: var(--shadow);
-            backdrop-filter: blur(18px);
         }
 
         .topbar {
@@ -69,10 +70,31 @@
             gap: 1rem;
         }
 
+        .topbar-manager {
+            align-items: center;
+            flex-wrap: nowrap;
+        }
+
+        .topbar.is-sticky {
+            align-items: center;
+            padding-top: 0.95rem;
+            padding-bottom: 0.95rem;
+        }
+
+        .topbar.is-sticky .topbar-utility {
+            gap: 0.55rem;
+        }
+
+        .topbar.is-sticky .topbar-connection {
+            gap: 0;
+        }
+
         .topbar h1 {
-            margin: 0 0 0.35rem;
-            font-size: clamp(1.8rem, 3vw, 2.8rem);
-            line-height: 1;
+            margin: 0 0 0.25rem;
+            font-size: var(--ui-title-size);
+            color: var(--ui-title-color);
+            line-height: 1.2;
+            font-weight: var(--ui-title-weight);
         }
 
         .topbar p,
@@ -82,12 +104,106 @@
             line-height: 1.5;
         }
 
+        .topbar-main {
+            min-width: 0;
+            flex: 1 1 auto;
+        }
+
+        .topbar-manager .topbar-main {
+            flex: 0 1 auto;
+        }
+
+        .topbar-manager .topbar-main h1 {
+            margin: 0;
+            white-space: nowrap;
+        }
+
+        .topbar-utility {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 0.85rem;
+            flex: 0 0 auto;
+        }
+
+        .topbar-manager .topbar-utility {
+            flex-direction: row;
+            align-items: center;
+            gap: 1rem;
+            flex: 0 1 auto;
+            min-width: 0;
+            max-width: min(100%, 60rem);
+            margin-left: auto;
+        }
+
+        .topbar-connection {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 0.35rem;
+            max-width: 24rem;
+        }
+
+        .topbar-manager .topbar-connection {
+            flex-direction: row;
+            align-items: center;
+            gap: 0.8rem;
+            flex: 1 1 auto;
+            min-width: 0;
+            max-width: none;
+        }
+
+        .topbar-connection .agent-plaza-status {
+            margin-top: 0;
+            justify-content: flex-end;
+        }
+
+        .topbar-manager .topbar-connection .agent-plaza-status {
+            flex: 1 1 auto;
+            flex-wrap: nowrap;
+            gap: 0.65rem;
+            min-width: 0;
+        }
+
+        .topbar-manager .topbar-connection .agent-plaza-pill {
+            flex: 0 0 auto;
+        }
+
+        .topbar-manager .topbar-connection .agent-plaza-meta {
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .topbar-connection .agent-plaza-note {
+            margin-top: 0;
+            text-align: right;
+        }
+
+        .topbar-manager .topbar-connection .agent-plaza-note {
+            display: none;
+        }
+
         .top-actions,
         .section-actions,
         .header-actions {
             display: flex;
             gap: 0.75rem;
             flex-wrap: wrap;
+        }
+
+        .top-actions {
+            justify-content: flex-end;
+        }
+
+        .topbar-manager .top-actions {
+            flex: 0 0 auto;
+            flex-wrap: nowrap;
+        }
+
+        .topbar-manager .top-actions button {
+            white-space: nowrap;
         }
 
         .top-status-pill {
@@ -99,13 +215,14 @@
         button,
         .link-btn {
             border: 1px solid var(--border);
-            border-radius: 14px;
-            padding: 0.8rem 1rem;
+            border-radius: 6px;
+            padding: 0.5rem 0.85rem;
             font: inherit;
             font-weight: 600;
             cursor: pointer;
             color: var(--text);
-            background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(242, 250, 250, 0.92));
+            background: #ffffff;
+            transition: all 0.2s ease;
         }
 
         button:hover,
@@ -115,8 +232,8 @@
 
         .primary-btn {
             color: white;
-            background: linear-gradient(135deg, #0f766e, #139b91);
-            border-color: rgba(15, 118, 110, 0.6);
+            background: #0f172a;
+            border-color: #0f172a;
         }
 
         .danger-btn {
@@ -165,12 +282,13 @@
         textarea {
             width: 100%;
             border: 1px solid var(--border);
-            border-radius: 16px;
-            background: var(--panel-strong);
-            padding: 0.95rem 1rem;
+            border-radius: 6px;
+            background: #ffffff;
+            padding: 0.5rem 0.75rem;
             color: var(--text);
             font: inherit;
             resize: vertical;
+            font-size: 0.9rem;
         }
 
         input:focus,
@@ -195,7 +313,7 @@
         .pulse-panel,
         .sections-panel,
         .meta-panel {
-            padding: 1.1rem;
+            padding: 0.75rem;
         }
 
         .pulse-panel {
@@ -220,7 +338,9 @@
         .panel-title h2,
         .section-header h3 {
             margin: 0;
-            font-size: 1.05rem;
+            font-size: var(--ui-header-size);
+            color: var(--ui-header-color);
+            font-weight: var(--ui-header-weight);
         }
 
         .pulse-list,
@@ -270,15 +390,16 @@
         .checkbox-inline {
             display: inline-flex;
             align-items: center;
-            gap: 0.6rem;
-            min-height: 54px;
-            padding: 0.85rem 0.95rem;
-            border: 1px solid rgba(15, 118, 110, 0.18);
-            border-radius: 16px;
-            background: rgba(255, 255, 255, 0.9);
+            gap: 0.5rem;
+            min-height: auto;
+            padding: 0.5rem 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: #ffffff;
             color: var(--text);
             font-weight: 600;
             cursor: pointer;
+            font-size: 0.9rem;
         }
 
         .checkbox-inline input {
@@ -291,19 +412,21 @@
         .pulse-select {
             width: 100%;
             border: 1px solid var(--border);
-            border-radius: 16px;
-            background: var(--panel-strong);
-            padding: 0.95rem 1rem;
+            border-radius: 6px;
+            background: #ffffff;
+            padding: 0.5rem 0.75rem;
             color: var(--text);
             font: inherit;
+            font-size: 0.9rem;
         }
 
         .pulse-card {
             border: 1px solid var(--border);
-            border-radius: 18px;
-            padding: 0.95rem;
-            background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(239, 250, 249, 0.92));
+            border-radius: 8px;
+            padding: 0.75rem;
+            background: #ffffff;
             cursor: grab;
+            font-size: 0.9rem;
         }
 
         .pulse-card strong {
@@ -312,10 +435,10 @@
         }
 
         .section-card {
-            padding: 1rem;
+            padding: 0.75rem;
             display: flex;
             flex-direction: column;
-            gap: 0.9rem;
+            gap: 0.5rem;
         }
 
         .section-card[draggable="true"] {
@@ -381,9 +504,9 @@
         }
 
         .section-action-btn {
-            padding: 0.48rem 0.72rem;
-            border-radius: 12px;
-            font-size: 0.82rem;
+            padding: 0.35rem 0.5rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
             line-height: 1.1;
         }
 
@@ -431,10 +554,10 @@
         }
 
         .dropzone {
-            border: 2px dashed rgba(15, 118, 110, 0.22);
-            border-radius: 14px;
+            border: 1px dashed var(--border-strong);
+            border-radius: 6px;
             padding: 0;
-            background: rgba(255, 255, 255, 0.96);
+            background: #ffffff;
             overflow: hidden;
         }
 
@@ -459,13 +582,13 @@
 
         .content-composer {
             display: block;
-            min-height: 56px;
+            min-height: 48px;
             width: 100%;
-            padding: 0.45rem 0.6rem;
+            padding: 0.5rem;
             outline: none;
             white-space: pre-wrap;
             word-break: break-word;
-            font-size: 0.96rem;
+            font-size: 0.9rem;
             line-height: 1.4;
             cursor: text;
         }
@@ -593,11 +716,10 @@
         }
 
         .task-dot {
-            width: 0.58rem;
-            height: 0.58rem;
+            width: 0.5rem;
+            height: 0.5rem;
             border-radius: 999px;
-            background: linear-gradient(135deg, #1556c3, #1f7aff);
-            box-shadow: 0 0 0 4px rgba(31, 122, 255, 0.12);
+            background: #0f172a;
             flex: 0 0 auto;
         }
 
@@ -658,10 +780,9 @@
         .manager-panel {
             background: var(--panel);
             border: 1px solid var(--border);
-            border-radius: 24px;
+            border-radius: 8px;
             box-shadow: var(--shadow);
-            backdrop-filter: blur(18px);
-            padding: 1.1rem;
+            padding: 0.75rem;
         }
 
         .manager-toolbar {
@@ -682,13 +803,14 @@
 
         .manager-item {
             border: 1px solid var(--border);
-            border-radius: 18px;
-            padding: 0.95rem;
-            background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(239, 250, 249, 0.92));
+            border-radius: 6px;
+            padding: 0.75rem;
+            background: #ffffff;
             cursor: pointer;
             display: flex;
             flex-direction: column;
-            gap: 0.5rem;
+            gap: 0.25rem;
+            font-size: 0.9rem;
         }
 
         .manager-item.active {
@@ -836,6 +958,13 @@
             display: flex;
             flex-direction: column;
             gap: 0.2rem;
+        }
+
+        .pulse-card-chip-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.45rem;
+            margin-top: 0.55rem;
         }
 
         .pulser-picker {
@@ -1039,6 +1168,52 @@
                 padding: 1rem;
             }
 
+            .topbar {
+                flex-direction: column;
+            }
+
+            .topbar-manager {
+                align-items: flex-start;
+            }
+
+            .topbar-manager .topbar-main h1 {
+                white-space: normal;
+            }
+
+            .topbar-utility {
+                width: 100%;
+                align-items: flex-start;
+            }
+
+            .topbar-manager .topbar-utility,
+            .topbar-manager .topbar-connection {
+                flex-direction: column;
+                align-items: flex-start;
+                max-width: none;
+                width: 100%;
+            }
+
+            .topbar-connection {
+                align-items: flex-start;
+                max-width: none;
+            }
+
+            .topbar-connection .agent-plaza-status {
+                justify-content: flex-start;
+            }
+
+            .topbar-manager .topbar-connection .agent-plaza-status {
+                flex-wrap: wrap;
+            }
+
+            .topbar-connection .agent-plaza-note {
+                text-align: left;
+            }
+
+            .top-actions {
+                justify-content: flex-start;
+            }
+
             .meta-grid,
             .section-meta {
                 grid-template-columns: 1fr;
@@ -1050,33 +1225,32 @@
 <body>
     {% set is_manager_mode = manager_mode | default(false) %}
     <div class="shell">
-        <header class="topbar">
-            <div>
+        <header class="topbar agent-sticky-header{% if is_manager_mode %} topbar-manager{% endif %}">
+            <div class="topbar-main">
                 <h1>{{ 'Phema Manager' if is_manager_mode else 'Phema Editor' }}</h1>
-                <p>
-                    {% if is_manager_mode %}
-                    Manage Phemas across your local pool and Plaza, then edit the selected Phema with Plaza Pulse drag-and-drop.
-                    {% else %}
+                {% if not is_manager_mode %}
+                <p data-sticky-hide="condensed">
                     Dedicated wide-canvas editing for complex Phema composition, with Plaza Pulse drag-and-drop into sections.
-                    {% endif %}
                 </p>
+                {% endif %}
             </div>
-            <div class="top-actions">
-                {% if is_manager_mode %}
-                <span id="topbar-status-pill" class="pill top-status-pill">Ready.</span>
-                {% endif %}
-                {% if is_manager_mode and back_href %}
-                <a class="link-btn" href="{{ back_href }}">{{ back_label or 'Open Plaza' }}</a>
-                {% elif not is_manager_mode %}
-                <a class="link-btn" href="/plazas">Back To Plaza</a>
-                {% endif %}
-                {% if is_manager_mode %}
-                <button id="new-btn">New Phema</button>
-                <button id="edit-btn">Edit</button>
-                {% else %}
-                <button id="delete-btn" class="danger-btn">Delete</button>
-                <button id="save-btn" class="primary-btn">Save Phema</button>
-                {% endif %}
+            <div class="topbar-utility">
+                <div class="topbar-connection">
+                    <div class="agent-plaza-status">
+                        <span id="agent-plaza-pill" class="agent-plaza-pill agent-plaza-pill-not_configured">Checking Plaza</span>
+                        <span id="agent-plaza-meta" class="agent-plaza-meta">Loading connection details...</span>
+                    </div>
+                    <p id="agent-plaza-note" class="agent-plaza-note" data-sticky-hide="condensed">Checking the current plaza heartbeat for this agent.</p>
+                </div>
+                <div class="top-actions">
+                    {% if is_manager_mode %}
+                    <button id="new-btn" class="primary-btn" data-tooltip="Start a blank Phema draft without leaving the manager view.">New Phema</button>
+                    {% else %}
+                    <a class="link-btn" href="/plazas">Back To Plaza</a>
+                    <button id="delete-btn" class="danger-btn" data-tooltip="Remove the current Phema from local storage or Plaza, depending on its source.">Delete</button>
+                    <button id="save-btn" class="primary-btn" data-tooltip="Save the current Phema and persist the latest schema and section layout.">Save Phema</button>
+                    {% endif %}
+                </div>
             </div>
         </header>
 
@@ -1108,7 +1282,7 @@
                     <label for="manager-search">Search Local Pool Or Plaza</label>
                     <input id="manager-search" type="text" placeholder="Name, owner, tags, description">
                 </div>
-                <button id="refresh-manager-btn" type="button">Refresh</button>
+                <button id="refresh-manager-btn" type="button" data-tooltip="Reload local pool and Plaza results for the current search scope.">Refresh</button>
             </div>
             <div id="manager-search-results" class="manager-results"></div>
         </section>
@@ -1376,6 +1550,8 @@
         };
 
         document.addEventListener('DOMContentLoaded', async () => {
+            window.attasAgentConnection?.mount({ pollMs: 15000 });
+            window.attasAgentConnection?.mountStickyHeader({ selector: '.topbar.agent-sticky-header', topOffset: 12 });
             bindEvents();
             if (!state.phemaId && !managerMode) {
                 addSection();
@@ -1432,7 +1608,7 @@
 
             document.getElementById('add-section-btn').addEventListener('click', () => {
                 if (state.editorReadOnly) {
-                    setStatus('Click Edit before changing this Plaza Phema.', 'error');
+                    setStatus('This Phema is read only for the current Phemar.', 'error');
                     return;
                 }
                 addSection();
@@ -1449,7 +1625,6 @@
             document.getElementById('save-btn').addEventListener('click', savePhema);
             document.getElementById('delete-btn').addEventListener('click', deletePhema);
             if (managerMode) {
-                document.getElementById('edit-btn').addEventListener('click', startEditingCurrentPhema);
                 document.getElementById('save-as-btn').addEventListener('click', savePhemaAsCopy);
                 document.getElementById('generate-snapshot-btn').addEventListener('click', generateSnapshotFromManager);
                 document.getElementById('plaza-mode-select').addEventListener('change', (event) => {
@@ -1552,7 +1727,7 @@
                 }
                 if (state.editorReadOnly) {
                     if (event.target.closest('[data-add-text]') || event.target.closest('[data-remove-section]') || event.target.closest('[data-remove-content]') || event.target.closest('[data-edit-content]')) {
-                        setStatus('Click Edit before changing this Plaza Phema.', 'error');
+                        setStatus('This Phema is read only for the current Phemar.', 'error');
                     }
                     return;
                 }
@@ -1683,7 +1858,7 @@
                     });
                     if (state.editorReadOnly) {
                         state.draggingSectionId = '';
-                        setStatus('Click Edit before reordering sections in this Plaza Phema.', 'error');
+                        setStatus('This Phema is read only for the current Phemar.', 'error');
                         return;
                     }
                     const targetCard = event.target.closest('[data-section-card]');
@@ -1706,7 +1881,7 @@
                     return;
                 }
                 if (state.editorReadOnly) {
-                    setStatus('Click Edit before dragging pulses into this Plaza Phema.', 'error');
+                    setStatus('This Phema is read only for the current Phemar.', 'error');
                     return;
                 }
                 const zone = event.target.closest('[data-section-composer]');
@@ -1800,16 +1975,38 @@
                         const meta = entry.meta || {};
                         const availablePulsers = sortPulsers(Array.isArray(entry.available_pulsers) ? entry.available_pulsers : []);
                         const activePulserCount = availablePulsers.filter((pulser) => popupHeartbeatState(Number(pulser.last_active || 0)) === 'active').length;
-                        pulses.push({
-                            key: `${entry.name || meta.pulse_address || entry.address || Math.random().toString(36).slice(2)}`,
-                            name: entry.name || 'Unnamed Pulse',
-                            address: entry.address || entry.card?.address || meta.pulse_address || '',
-                            owner: entry.owner || entry.card?.owner || '',
-                            pulser: availablePulsers.map((pulser) => pulser.name || '').filter(Boolean).join(', '),
+                        const pulseDefinition = normalizePulseDefinitionShape(meta.pulse_definition || entry.pulse_definition || {}, {
+                            pulse_id: meta.pulse_id || '',
+                            pulse_name: entry.name || entry.card?.name || '',
+                            title: entry.name || entry.card?.name || '',
                             description: entry.description || entry.card?.description || '',
-                            tags: normalizeTags(meta.tags || entry.card?.tags || []),
+                            pulse_address: entry.address || entry.card?.address || meta.pulse_address || '',
                             input_schema: meta.input_schema || {},
                             output_schema: meta.output_schema || {},
+                            concept: meta.concept || {},
+                            interface: meta.interface || {},
+                            pulse_class: meta.pulse_class || '',
+                            status: meta.status || '',
+                            resource_type: meta.resource_type || '',
+                        });
+                        pulses.push({
+                            key: `${pulseDefinition.pulse_id || entry.name || meta.pulse_address || entry.address || Math.random().toString(36).slice(2)}`,
+                            name: pulseDefinition.pulse_name || entry.name || 'Unnamed Pulse',
+                            title: pulseDefinition.title || entry.name || 'Unnamed Pulse',
+                            pulse_id: pulseDefinition.pulse_id || '',
+                            address: pulseDefinition.pulse_address || entry.address || entry.card?.address || meta.pulse_address || '',
+                            owner: entry.owner || entry.card?.owner || '',
+                            pulser: availablePulsers.map((pulser) => pulser.name || '').filter(Boolean).join(', '),
+                            description: pulseDefinition.description || entry.description || entry.card?.description || '',
+                            tags: normalizeTags((pulseDefinition.concept && pulseDefinition.concept.tags) || meta.tags || entry.card?.tags || []),
+                            input_schema: pulseDefinition.input_schema || {},
+                            output_schema: pulseDefinition.output_schema || {},
+                            pulse_definition: pulseDefinition,
+                            pulse_class: pulseDefinition.pulse_class || '',
+                            status: pulseDefinition.status || '',
+                            concept: pulseDefinition.concept || {},
+                            interface: pulseDefinition.interface || {},
+                            resource_type: pulseDefinition.resource_type || '',
                             available_pulser_count: Number(entry.available_pulser_count || availablePulsers.length || 0),
                             active_pulser_count: activePulserCount,
                             available_pulsers: availablePulsers
@@ -1962,9 +2159,7 @@
             state.metaText = JSON.stringify(phema.meta || {}, null, 2);
             state.selectedSource = source;
             state.plazaEditable = Boolean(phema.editable);
-            state.editorReadOnly = managerMode
-                ? source === 'plaza'
-                : source === 'plaza' && !phema.editable;
+            state.editorReadOnly = source === 'plaza' && !phema.editable;
             state.selectedContent = null;
             state.sections = Array.isArray(phema.sections) && phema.sections.length
                 ? phema.sections.map((section) => normalizeSection(section))
@@ -2017,7 +2212,6 @@
                 renderManagerDetail();
                 renderSnapshotRefreshState();
                 renderSnapshotResults();
-                document.getElementById('edit-btn').disabled = !canEditCurrentPhema();
                 document.getElementById('save-btn').disabled = state.editorReadOnly || !state.name.trim();
                 document.getElementById('save-as-btn').disabled = !state.name.trim();
                 document.getElementById('delete-btn').disabled = !canDeleteCurrentPhema();
@@ -2327,18 +2521,26 @@
                 list.innerHTML = '<div class="empty-note">No Plaza Pulses are available right now.</div>';
                 return;
             }
-            list.innerHTML = visiblePulses.map((pulse) => `
-                <article class="pulse-card" draggable="true" data-pulse-key="${escapeAttribute(pulse.key)}">
-                    <div class="pulse-card-line">
-                        <strong>${escapeHtml(pulse.name)}</strong>
-                        <span class="pill">${escapeHtml(String(pulse.active_pulser_count || 0))} active</span>
-                    </div>
-                    <div class="pulse-card-copy">${escapeHtml(pulse.description || pulse.address || 'No description')}</div>
-                    <div class="pulse-card-meta">
-                        <span class="pulse-card-subtle">${escapeHtml(describePulsePulserNames(pulse))}</span>
-                    </div>
-                </article>
-            `).join('');
+            list.innerHTML = visiblePulses.map((pulse) => {
+                const definition = resolvePulseDefinition(pulse, pulse.available_pulsers || []);
+                const schemaSummary = formatPulseSchemaSummary(definition);
+                const pulseLabels = buildPulseDefinitionLabels(definition);
+                return `
+                    <article class="pulse-card" draggable="true" data-pulse-key="${escapeAttribute(pulse.key)}">
+                        <div class="pulse-card-line">
+                            <strong>${escapeHtml(definition.title || pulse.title || pulse.name)}</strong>
+                            <span class="pill">${escapeHtml(String(pulse.active_pulser_count || 0))} active</span>
+                        </div>
+                        <div class="pulse-card-copy">${escapeHtml(definition.description || pulse.description || pulse.address || 'No description')}</div>
+                        ${pulseLabels.length ? `<div class="pulse-card-chip-row">${pulseLabels.map((label) => `<span class="pill info">${escapeHtml(label)}</span>`).join('')}</div>` : ''}
+                        <div class="pulse-card-meta">
+                            ${definition.pulse_id ? `<span class="pulse-card-subtle">${escapeHtml(`ID: ${definition.pulse_id}`)}</span>` : ''}
+                            ${schemaSummary ? `<span class="pulse-card-subtle">${escapeHtml(schemaSummary)}</span>` : ''}
+                            <span class="pulse-card-subtle">${escapeHtml(describePulsePulserNames(pulse))}</span>
+                        </div>
+                    </article>
+                `;
+            }).join('');
 
             list.querySelectorAll('[data-pulse-key]').forEach((node) => {
                 node.addEventListener('dragstart', (event) => {
@@ -2357,7 +2559,17 @@
             const activeOnly = state.pulseActiveOnly;
 
             const filtered = state.pulses.filter((pulse) => {
-                const searchText = `${pulse.name} ${pulse.description}`.toLowerCase();
+                const definition = resolvePulseDefinition(pulse, pulse.available_pulsers || []);
+                const searchText = [
+                    definition.title,
+                    pulse.name,
+                    definition.pulse_name,
+                    definition.pulse_id,
+                    definition.description,
+                    definition.pulse_class,
+                    definition.status,
+                    pulse.description,
+                ].join(' ').toLowerCase();
                 const tagsText = (pulse.tags || []).join(' ').toLowerCase();
                 const pulserText = String(pulse.pulser || '').toLowerCase();
                 if (search && !searchText.includes(search)) return false;
@@ -2369,11 +2581,13 @@
 
             const sortKey = state.pulseSort === 'pulser' ? 'pulser' : 'name';
             filtered.sort((left, right) => {
-                const leftValue = String(left[sortKey] || '').toLowerCase();
-                const rightValue = String(right[sortKey] || '').toLowerCase();
+                const leftDefinition = resolvePulseDefinition(left, left.available_pulsers || []);
+                const rightDefinition = resolvePulseDefinition(right, right.available_pulsers || []);
+                const leftValue = String(sortKey === 'name' ? (leftDefinition.title || left.title || left.name || '') : (left[sortKey] || '')).toLowerCase();
+                const rightValue = String(sortKey === 'name' ? (rightDefinition.title || right.title || right.name || '') : (right[sortKey] || '')).toLowerCase();
                 const primary = leftValue.localeCompare(rightValue);
                 if (primary !== 0) return primary;
-                return String(left.name || '').toLowerCase().localeCompare(String(right.name || '').toLowerCase());
+                return String(leftDefinition.title || left.name || '').toLowerCase().localeCompare(String(rightDefinition.title || right.name || '').toLowerCase());
             });
             return filtered;
         }
@@ -2877,6 +3091,7 @@
             const shell = document.getElementById('pulse-config-modal');
             const pulserSelect = document.getElementById('pulse-config-pulser');
             const choices = sortPulsers(Array.isArray(pulse?.available_pulsers) ? pulse.available_pulsers : []);
+            const pulseDefinition = resolvePulseDefinition(pulse, choices);
             const preferredPulserId = String(existingItem?.pulser_id || '');
             const defaultPulserId = preferredPulserId && choices.some((pulser) => String(pulser.agent_id || '') === preferredPulserId)
                 ? preferredPulserId
@@ -2888,7 +3103,12 @@
                 const pulser = choices.find((entry) => String(entry.agent_id || '') === defaultPulserId) || choices[0];
                 return JSON.stringify(
                     derivePulserTestPayload(
-                        resolvePulserDefinition(pulser, pulse?.name || pulse?.pulse_name || '', pulse?.address || pulse?.pulse_address || '')
+                        resolvePulserDefinition(
+                            pulser,
+                            pulse?.name || pulse?.pulse_name || '',
+                            pulse?.address || pulse?.pulse_address || '',
+                            pulseDefinition.pulse_id || pulse?.pulse_id || ''
+                        )
                     ),
                     null,
                     2
@@ -2906,7 +3126,7 @@
                 selectedFields: Array.isArray(existingItem?.selected_fields) ? [...existingItem.selected_fields] : [],
                 saving: false
             };
-            document.getElementById('pulse-config-name').value = pulse?.name || pulse?.pulse_name || '';
+            document.getElementById('pulse-config-name').value = pulseDefinition.title || pulse?.name || pulse?.pulse_name || '';
             pulserSelect.innerHTML = choices.length
                 ? choices.map((pulser) => {
                     const isActive = popupHeartbeatState(Number(pulser.last_active || 0)) === 'active';
@@ -2918,7 +3138,11 @@
             document.getElementById('pulse-config-result').textContent = JSON.stringify({ status: 'idle' }, null, 2);
             document.getElementById('pulse-config-display').textContent = JSON.stringify({ display: {} }, null, 2);
             document.getElementById('pulse-config-fields').innerHTML = '<div class="empty-note">Use Get Sample to choose fields.</div>';
-            document.getElementById('pulse-config-summary').textContent = renderPulsePulserAvailability(pulse);
+            document.getElementById('pulse-config-summary').textContent = [
+                renderPulsePulserAvailability(pulse),
+                pulseDefinition.pulse_class,
+                pulseDefinition.status,
+            ].filter(Boolean).join(' • ');
             document.getElementById('pulse-config-save').textContent = contentIndex === null ? 'Add To Section' : 'Update Section';
             updatePulseConfigSaveState();
             renderPulseConfigPulserChoices();
@@ -2950,8 +3174,14 @@
         function handlePulsePulserChanged(nextPulserId) {
             state.pulseModal.selectedPulserId = String(nextPulserId || '');
             const pulse = state.pulseModal.pulse;
+            const pulseDefinition = resolvePulseDefinition(pulse, getModalPulserChoices());
             const pulser = currentModalPulser();
-            const definition = resolvePulserDefinition(pulser, pulse?.name || pulse?.pulse_name || '', pulse?.address || pulse?.pulse_address || '');
+            const definition = resolvePulserDefinition(
+                pulser,
+                pulse?.name || pulse?.pulse_name || '',
+                pulse?.address || pulse?.pulse_address || '',
+                pulseDefinition.pulse_id || pulse?.pulse_id || ''
+            );
             state.pulseModal.paramsText = JSON.stringify(derivePulserTestPayload(definition), null, 2);
             document.getElementById('pulse-config-pulser').value = state.pulseModal.selectedPulserId;
             document.getElementById('pulse-config-params').value = state.pulseModal.paramsText;
@@ -2968,6 +3198,7 @@
         function renderPulseConfigPulserChoices() {
             const container = document.getElementById('pulse-config-pulser-list');
             const choices = getModalPulserChoices();
+            const pulseDefinition = resolvePulseDefinition(state.pulseModal.pulse, choices);
             if (!choices.length) {
                 container.innerHTML = '<div class="empty-note">No pulser available for this pulse.</div>';
                 return;
@@ -2977,9 +3208,12 @@
                 const definition = resolvePulserDefinition(
                     pulser,
                     state.pulseModal.pulse?.name || state.pulseModal.pulse?.pulse_name || '',
-                    state.pulseModal.pulse?.address || state.pulseModal.pulse?.pulse_address || ''
+                    state.pulseModal.pulse?.address || state.pulseModal.pulse?.pulse_address || '',
+                    pulseDefinition.pulse_id || state.pulseModal.pulse?.pulse_id || ''
                 );
-                const pulseLabel = definition.pulse_name || definition.name || state.pulseModal.pulse?.name || 'Pulse';
+                const pulseLabel = definition.title || definition.pulse_name || definition.name || pulseDefinition.title || state.pulseModal.pulse?.name || 'Pulse';
+                const pulseLabels = buildPulseDefinitionLabels(definition);
+                const schemaSummary = formatPulseSchemaSummary(definition);
                 const selected = String(pulser.agent_id || '') === String(state.pulseModal.selectedPulserId || '');
                 return `
                     <article class="pulser-choice ${heartbeat === 'active' ? 'active' : ''} ${selected ? 'selected' : ''}" data-select-pulser="${escapeAttribute(pulser.agent_id || '')}">
@@ -2988,9 +3222,14 @@
                             <span class="pill ${heartbeat === 'active' ? 'success' : 'warning'}">${escapeHtml(heartbeat === 'active' ? 'Active' : 'Inactive')}</span>
                         </div>
                         <div class="pulse-card-copy">${escapeHtml(pulser.description || pulser.address || 'No description')}</div>
+                        ${pulseLabels.length ? `<div class="pulse-card-chip-row">${pulseLabels.map((label) => `<span class="pill info">${escapeHtml(label)}</span>`).join('')}</div>` : ''}
                         <div class="pulser-choice-meta">
                             <span class="pulse-card-subtle">${escapeHtml(pulseLabel)}</span>
                             <span class="pulse-card-subtle">${escapeHtml(renderPopupHeartbeatCopy(Number(pulser.last_active || 0)))}</span>
+                        </div>
+                        <div class="pulse-card-meta">
+                            ${definition.pulse_id ? `<span class="pulse-card-subtle">${escapeHtml(`ID: ${definition.pulse_id}`)}</span>` : ''}
+                            ${schemaSummary ? `<span class="pulse-card-subtle">${escapeHtml(schemaSummary)}</span>` : ''}
                         </div>
                         <div class="pulser-choice-actions">
                             <button class="pulser-sample-btn" type="button" data-run-sample="${escapeAttribute(pulser.agent_id || '')}">Get Sample</button>
@@ -3066,7 +3305,13 @@
                 setPulseConfigStatus(`Input must be valid JSON: ${error.message}`, 'error');
                 return;
             }
-            const definition = resolvePulserDefinition(pulser, pulse.name || pulse.pulse_name, pulse.address || pulse.pulse_address);
+            const pulseDefinition = resolvePulseDefinition(pulse, getModalPulserChoices());
+            const definition = resolvePulserDefinition(
+                pulser,
+                pulse.name || pulse.pulse_name,
+                pulse.address || pulse.pulse_address,
+                pulseDefinition.pulse_id || pulse.pulse_id || ''
+            );
             const resultNode = document.getElementById('pulse-config-result');
             resultNode.textContent = JSON.stringify({ status: 'running' }, null, 2);
             setPulseConfigStatus(`Requesting sample data from ${pulser.name || 'selected pulser'}...`, '');
@@ -3120,14 +3365,20 @@
                 setPulseConfigStatus(`Input must be valid JSON: ${error.message}`, 'error');
                 return;
             }
-            const definition = resolvePulserDefinition(pulser, pulse.name || pulse.pulse_name, pulse.address || pulse.pulse_address);
+            const pulseDefinition = resolvePulseDefinition(pulse, getModalPulserChoices());
+            const definition = resolvePulserDefinition(
+                pulser,
+                pulse.name || pulse.pulse_name,
+                pulse.address || pulse.pulse_address,
+                pulseDefinition.pulse_id || pulse.pulse_id || ''
+            );
             const shared = {
                 pulse_name: definition.pulse_name || definition.name || pulse.name || pulse.pulse_name,
                 pulse_address: definition.pulse_address || pulse.address || pulse.pulse_address,
                 pulser_id: pulser.agent_id || '',
                 pulser_name: pulser.name || '',
                 owner: pulse.owner,
-                description: pulse.description,
+                description: definition.description || pulse.description,
                 input_schema: definition.input_schema || pulse.input_schema || {},
             };
             const items = state.pulseModal.selectedFields.map((fieldPath) => ({
@@ -3479,7 +3730,6 @@
                 }
                 hydrateFromPhema(data.phema, 'local');
                 if (managerMode) {
-                    state.editorReadOnly = true;
                     await loadManagerData();
                     await loadSnapshotHistory({ announce: false });
                 }
@@ -3524,7 +3774,6 @@
                     throw new Error(data.detail || data.message || 'Failed to save local copy');
                 }
                 hydrateFromPhema(data.phema, 'local');
-                state.editorReadOnly = true;
                 await loadManagerData();
                 await loadSnapshotHistory({ announce: false });
                 renderAll();
@@ -3634,7 +3883,6 @@
                     }
                 } else {
                     hydrateFromPhema(data.phema, 'plaza');
-                    state.editorReadOnly = true;
                     renderAll();
                 }
                 setStatus(
@@ -3777,22 +4025,200 @@
             return String(left || '').toLowerCase().includes(String(right || '').toLowerCase());
         }
 
-        function resolvePulserDefinition(pulser, pulseName = '', pulseAddress = '') {
-            const direct = pulser && typeof pulser.pulse_definition === 'object' && !Array.isArray(pulser.pulse_definition)
-                ? pulser.pulse_definition
-                : {};
-            if (Object.keys(direct).length) return direct;
+        function humanizePulseLabel(value) {
+            const text = String(value || '').trim();
+            if (!text) return 'Pulse';
+            return text
+                .split(/[.:/_-]+/)
+                .filter(Boolean)
+                .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+                .join(' ');
+        }
+
+        function normalizePulseDefinitionShape(payload = {}, fallback = {}) {
+            const base = isPlainObject(payload) ? payload : {};
+            const nested = isPlainObject(base.pulse_definition) ? base.pulse_definition : {};
+            const concept = isPlainObject(nested.concept)
+                ? nested.concept
+                : isPlainObject(base.concept)
+                    ? base.concept
+                    : isPlainObject(fallback.concept)
+                        ? fallback.concept
+                        : {};
+            const interfaceValue = isPlainObject(nested.interface)
+                ? nested.interface
+                : isPlainObject(base.interface)
+                    ? base.interface
+                    : isPlainObject(fallback.interface)
+                        ? fallback.interface
+                        : {};
+            const requestSchema = isPlainObject(nested.input_schema)
+                ? nested.input_schema
+                : isPlainObject(base.input_schema)
+                    ? base.input_schema
+                    : isPlainObject(interfaceValue.request_schema)
+                        ? interfaceValue.request_schema
+                        : isPlainObject(fallback.input_schema)
+                            ? fallback.input_schema
+                            : {};
+            const responseSchema = isPlainObject(nested.output_schema)
+                ? nested.output_schema
+                : isPlainObject(base.output_schema)
+                    ? base.output_schema
+                    : isPlainObject(interfaceValue.response_schema)
+                        ? interfaceValue.response_schema
+                        : isPlainObject(fallback.output_schema)
+                            ? fallback.output_schema
+                            : {};
+            const pulseId = String(nested.id || base.pulse_id || base.resource_id || fallback.pulse_id || fallback.id || '').trim();
+            const pulseName = String(nested.name || base.pulse_name || base.name || fallback.pulse_name || fallback.name || '').trim();
+            const fallbackTitle = pulseName || pulseId.split('.').filter(Boolean).pop() || fallback.pulse_address || 'Pulse';
+            return {
+                pds_version: String(nested.pds_version || base.pds_version || fallback.pds_version || '').trim(),
+                resource_type: String(nested.resource_type || base.resource_type || fallback.resource_type || '').trim(),
+                pulse_id: pulseId,
+                id: pulseId,
+                version: String(nested.version || base.version || fallback.version || '').trim(),
+                pulse_name: pulseName,
+                name: pulseName,
+                title: String(nested.title || base.title || fallback.title || '').trim() || humanizePulseLabel(fallbackTitle),
+                description: String(nested.description || base.description || fallback.description || concept.definition || '').trim(),
+                pulse_address: String(base.pulse_address || fallback.pulse_address || fallback.address || '').trim(),
+                pulse_class: String(nested.pulse_class || base.pulse_class || fallback.pulse_class || '').trim(),
+                status: String(nested.status || base.status || fallback.status || '').trim(),
+                concept,
+                interface: {
+                    ...interfaceValue,
+                    request_schema: requestSchema,
+                    response_schema: responseSchema,
+                },
+                input_schema: requestSchema,
+                output_schema: responseSchema,
+            };
+        }
+
+        function hasPulseDefinitionData(definition = {}) {
+            return Boolean(
+                definition.pulse_id
+                || definition.pulse_name
+                || definition.description
+                || definition.pulse_class
+                || definition.status
+                || Object.keys(definition.input_schema || {}).length
+                || Object.keys(definition.output_schema || {}).length
+            );
+        }
+
+        function hasStructuredPulseDefinition(definition = {}) {
+            return Boolean(
+                definition.resource_type
+                || definition.version
+                || definition.pds_version
+                || definition.pulse_class
+                || definition.status
+                || Object.keys(definition.concept || {}).length
+                || Object.keys(definition.input_schema || {}).length
+                || Object.keys(definition.output_schema || {}).length
+            );
+        }
+
+        function matchesPulseDefinition(definition = {}, pulseName = '', pulseAddress = '', pulseId = '') {
+            if (!hasPulseDefinitionData(definition)) return false;
+            if (pulseId && definition.pulse_id && String(definition.pulse_id).trim() !== String(pulseId).trim()) {
+                return false;
+            }
+            if (pulseName && definition.pulse_name && !containsText(definition.pulse_name, pulseName) && !containsText(pulseName, definition.pulse_name)) {
+                return false;
+            }
+            if (pulseAddress && definition.pulse_address && !samePitRef(definition.pulse_address, pulseAddress)) {
+                return false;
+            }
+            return true;
+        }
+
+        function countPulseSchemaFields(schema = {}) {
+            if (!isPlainObject(schema)) return 0;
+            if (isPlainObject(schema.properties)) {
+                return Object.keys(schema.properties).length;
+            }
+            return Object.keys(schema).length;
+        }
+
+        function formatPulseSchemaSummary(definition = {}) {
+            const parts = [];
+            const requestCount = countPulseSchemaFields(definition.input_schema || {});
+            const responseCount = countPulseSchemaFields(definition.output_schema || {});
+            if (requestCount) {
+                parts.push(`Request ${requestCount} field${requestCount === 1 ? '' : 's'}`);
+            }
+            if (responseCount) {
+                parts.push(`Response ${responseCount} field${responseCount === 1 ? '' : 's'}`);
+            }
+            return parts.join(' • ');
+        }
+
+        function buildPulseDefinitionLabels(definition = {}) {
+            return [
+                definition.resource_type,
+                definition.pulse_class,
+                definition.status,
+            ].filter(Boolean);
+        }
+
+        function resolvePulseDefinition(pulse, pulsers = []) {
+            const definition = normalizePulseDefinitionShape(
+                pulse?.pulse_definition || {},
+                {
+                    pulse_id: pulse?.pulse_id || '',
+                    pulse_name: pulse?.name || pulse?.pulse_name || '',
+                    title: pulse?.title || pulse?.name || pulse?.pulse_name || '',
+                    description: pulse?.description || '',
+                    pulse_address: pulse?.address || pulse?.pulse_address || '',
+                    input_schema: pulse?.input_schema || {},
+                    output_schema: pulse?.output_schema || {},
+                    concept: pulse?.concept || {},
+                    interface: pulse?.interface || {},
+                    pulse_class: pulse?.pulse_class || '',
+                    status: pulse?.status || '',
+                    resource_type: pulse?.resource_type || '',
+                }
+            );
+            if (hasStructuredPulseDefinition(definition)) {
+                return definition;
+            }
+            const fallback = sortPulsers(pulsers).map((pulser) => resolvePulserDefinition(
+                pulser,
+                pulse?.name || pulse?.pulse_name || '',
+                pulse?.address || pulse?.pulse_address || '',
+                definition.pulse_id || pulse?.pulse_id || ''
+            )).find((entry) => hasPulseDefinitionData(entry));
+            return fallback ? normalizePulseDefinitionShape(fallback, definition) : definition;
+        }
+
+        function resolvePulserDefinition(pulser, pulseName = '', pulseAddress = '', pulseId = '') {
+            const fallback = {
+                pulse_id: pulseId,
+                pulse_name: pulseName,
+                title: pulseName || '',
+                pulse_address: pulseAddress,
+            };
+            const direct = normalizePulseDefinitionShape(
+                pulser && typeof pulser.pulse_definition === 'object' && !Array.isArray(pulser.pulse_definition)
+                    ? pulser.pulse_definition
+                    : {},
+                fallback
+            );
+            if (hasStructuredPulseDefinition(direct) && matchesPulseDefinition(direct, pulseName, pulseAddress, pulseId)) {
+                return direct;
+            }
 
             const meta = pulser && typeof pulser.meta === 'object' && !Array.isArray(pulser.meta) ? pulser.meta : {};
             const supported = Array.isArray(meta.supported_pulses) ? meta.supported_pulses : [];
-            return supported.find((entry) => {
-                if (!entry || typeof entry !== 'object') return false;
-                const entryName = entry.pulse_name || entry.name || '';
-                const entryAddress = entry.pulse_address || '';
-                if (pulseName && !containsText(entryName, pulseName)) return false;
-                if (pulseAddress && entryAddress && !samePitRef(entryAddress, pulseAddress)) return false;
-                return true;
-            }) || {};
+            const matchedSupported = supported
+                .map((entry) => normalizePulseDefinitionShape(entry, fallback))
+                .find((entry) => matchesPulseDefinition(entry, pulseName, pulseAddress, pulseId))
+                || null;
+            return matchedSupported ? normalizePulseDefinitionShape(matchedSupported, direct) : direct;
         }
 
         function derivePulserTestPayload(definition) {
@@ -4213,7 +4639,7 @@
         function dedupePulses(pulses) {
             const seen = new Set();
             return pulses.filter((pulse) => {
-                const key = `${pulse.name}::${pulse.address}`;
+                const key = `${pulse.pulse_id || ''}::${pulse.name}::${pulse.address}`;
                 if (seen.has(key)) return false;
                 seen.add(key);
                 pulse.key = pulse.key || key;
@@ -4232,19 +4658,35 @@
         function findMatchingPulse(item) {
             const pulseName = item?.pulse_name || '';
             const pulseAddress = item?.pulse_address || '';
+            const pulseDefinition = normalizePulseDefinitionShape(item?.pulse_definition || {}, {
+                pulse_id: item?.pulse_id || '',
+                pulse_name: pulseName,
+                description: item?.description || '',
+                pulse_address: pulseAddress,
+                input_schema: item?.input_schema || {},
+            });
             return state.pulses.find((pulse) => {
                 if (pulseAddress && samePitRef(pulse.address || '', pulseAddress)) return true;
+                if (pulseDefinition.pulse_id && String(pulse.pulse_id || '').trim() === String(pulseDefinition.pulse_id || '').trim()) return true;
                 if (pulseName && String(pulse.name || '').trim().toLowerCase() === String(pulseName || '').trim().toLowerCase()) return true;
                 return false;
             }) || {
-                key: `${pulseName || pulseAddress || 'pulse'}::fallback`,
-                name: pulseName || 'Pulse',
-                address: pulseAddress || '',
+                key: `${pulseDefinition.pulse_id || pulseName || pulseAddress || 'pulse'}::fallback`,
+                name: pulseDefinition.pulse_name || pulseName || 'Pulse',
+                title: pulseDefinition.title || pulseName || 'Pulse',
+                pulse_id: pulseDefinition.pulse_id || '',
+                address: pulseDefinition.pulse_address || pulseAddress || '',
                 owner: item?.owner || '',
-                description: item?.description || '',
-                tags: [],
-                input_schema: item?.input_schema || {},
-                output_schema: {},
+                description: pulseDefinition.description || item?.description || '',
+                tags: normalizeTags((pulseDefinition.concept && pulseDefinition.concept.tags) || []),
+                input_schema: pulseDefinition.input_schema || item?.input_schema || {},
+                output_schema: pulseDefinition.output_schema || {},
+                pulse_definition: pulseDefinition,
+                pulse_class: pulseDefinition.pulse_class || '',
+                status: pulseDefinition.status || '',
+                concept: pulseDefinition.concept || {},
+                interface: pulseDefinition.interface || {},
+                resource_type: pulseDefinition.resource_type || '',
                 available_pulser_count: item?.pulser_id ? 1 : 0,
                 active_pulser_count: item?.pulser_id ? 1 : 0,
                 available_pulsers: item?.pulser_id ? [{
@@ -4254,13 +4696,26 @@
                     description: '',
                     last_active: Math.floor(Date.now() / 1000),
                     practices: [{ id: 'get_pulse_data', name: 'Get Pulse Data', tags: ['pulser', 'pulse', 'data'] }],
-                    pulse_definition: {
-                        pulse_name: pulseName || '',
-                        pulse_address: pulseAddress || '',
-                        input_schema: item?.input_schema || {}
-                    }
+                    pulse_definition: normalizePulseDefinitionShape(item?.pulse_definition || {}, {
+                        pulse_id: pulseDefinition.pulse_id || '',
+                        pulse_name: pulseDefinition.pulse_name || pulseName || '',
+                        title: pulseDefinition.title || pulseName || '',
+                        description: pulseDefinition.description || item?.description || '',
+                        pulse_address: pulseDefinition.pulse_address || pulseAddress || '',
+                        input_schema: pulseDefinition.input_schema || item?.input_schema || {},
+                        output_schema: pulseDefinition.output_schema || {},
+                        concept: pulseDefinition.concept || {},
+                        interface: pulseDefinition.interface || {},
+                        pulse_class: pulseDefinition.pulse_class || '',
+                        status: pulseDefinition.status || '',
+                        resource_type: pulseDefinition.resource_type || '',
+                    })
                 }] : []
             };
+        }
+
+        function resolvePulseForItem(item) {
+            return findMatchingPulse(item);
         }
 
         function setStatus(message, kind = '') {

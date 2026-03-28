@@ -83,6 +83,16 @@ def test_phemar_mounts_editor_ui_and_persists_local_phemas(tmp_path):
         assert "Not Registered" in root.text
         assert "Collapse All" in root.text
         assert "Expand All" in root.text
+        assert 'src="/static/agent_connection.js' in root.text
+        assert "agent-sticky-header" in root.text
+        assert "topbar-manager" in root.text
+        assert "mountStickyHeader" in root.text
+        assert 'id="agent-plaza-pill"' in root.text
+        assert 'id="agent-plaza-meta"' in root.text
+        assert 'id="agent-plaza-note"' in root.text
+        assert 'id="new-btn"' in root.text
+        assert 'id="edit-btn"' not in root.text
+        assert 'id="topbar-status-pill"' not in root.text
         assert "snapshot_phema" not in root.text
         assert 'id="manager-detail-panel" class="manager-detail-panel" hidden' in root.text
         assert 'id="phema-meta-grid" class="meta-grid" hidden' in root.text

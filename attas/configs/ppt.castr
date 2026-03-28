@@ -1,11 +1,11 @@
 {
     "name": "PptCastr",
-    "type": "phemacast.agents.castr.Castr",
+    "type": "phemacast.castrs.pptx_castr.PptCastr",
     "host": "127.0.0.1",
     "port": 8028,
     "plaza_url": "http://127.0.0.1:8011",
     "role": "castr",
-    "tags": ["castr", "ppt", "media", "render"],
+    "tags": ["castr", "ppt", "pptx", "media", "render"],
     "pools": [
         {
             "type": "FileSystemPool",
@@ -15,8 +15,8 @@
         }
     ],
     "castr": {
-        "description": "A Castr agent specialized in rendering Phemas into PPT presentations.",
-        "tags": ["ppt"],
-        "media_type": "PPT"
+        "description": "A Castr agent specialized in rendering Phemas into PPTX presentations.",
+        "tags": ["ppt", "pptx"],
+        "media_type": "PPTX"
     }
 }

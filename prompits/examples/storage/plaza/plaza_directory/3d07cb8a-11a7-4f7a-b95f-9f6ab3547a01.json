@@ -1,0 +1,89 @@
+{
+  "id": "3d07cb8a-11a7-4f7a-b95f-9f6ab3547a01",
+  "agent_id": "3d07cb8a-11a7-4f7a-b95f-9f6ab3547a01",
+  "name": "Schema: plaza_credentials",
+  "type": "Schema",
+  "description": "Built-in table schema for persisted Plaza credentials.",
+  "owner": "Plaza",
+  "address": "",
+  "meta": {
+    "schema_name": "plaza_credentials",
+    "schema_kind": "table",
+    "schema": {
+      "name": "plaza_credentials",
+      "description": "Persisted Plaza credentials by agent and plaza URL",
+      "primary_key": [
+        "id"
+      ],
+      "rowSchema": {
+        "id": {
+          "type": "string"
+        },
+        "plaza_url": {
+          "type": "string"
+        },
+        "agent_id": {
+          "type": "string"
+        },
+        "agent_name": {
+          "type": "string"
+        },
+        "api_key": {
+          "type": "string"
+        },
+        "updated_at": {
+          "type": "datetime"
+        }
+      }
+    }
+  },
+  "card": {
+    "name": "Schema: plaza_credentials",
+    "description": "Built-in table schema for persisted Plaza credentials.",
+    "pit_type": "Schema",
+    "owner": "Plaza",
+    "tags": [
+      "schema",
+      "system",
+      "table"
+    ],
+    "pit_address": {
+      "pit_id": "3d07cb8a-11a7-4f7a-b95f-9f6ab3547a01",
+      "plazas": [
+        "http://127.0.0.1:8211"
+      ]
+    },
+    "meta": {
+      "schema_name": "plaza_credentials",
+      "schema_kind": "table",
+      "schema": {
+        "name": "plaza_credentials",
+        "description": "Persisted Plaza credentials by agent and plaza URL",
+        "primary_key": [
+          "id"
+        ],
+        "rowSchema": {
+          "id": {
+            "type": "string"
+          },
+          "plaza_url": {
+            "type": "string"
+          },
+          "agent_id": {
+            "type": "string"
+          },
+          "agent_name": {
+            "type": "string"
+          },
+          "api_key": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "datetime"
+          }
+        }
+      }
+    }
+  },
+  "updated_at": "2026-03-25T01:27:54.192204+00:00"
+}

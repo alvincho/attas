@@ -43,7 +43,7 @@ window.pulserEditorExtension = {
         root.innerHTML = `
             <div class="field full-span">
                 <label>Provider Notes</label>
-                <textarea readonly style="min-height:88px;font-family:var(--sans);">YFinancePulser reads market data from the yfinance Python module. API URL and API key fields are ignored here, so use mapping, schemas, and Pulse Test Data JSON as the primary controls.</textarea>
+                <textarea readonly style="min-height:70px;">YFinancePulser reads market data from the yfinance Python module. API URL and API key fields are ignored here; use mapping and schemas as primary controls.</textarea>
             </div>
         `;
     },
@@ -66,7 +66,7 @@ window.pulserEditorExtension = {
             note.className = 'field full-span';
             note.innerHTML = `
                 <label>YFinance Pulse Extension</label>
-                <textarea readonly style="min-height:88px;font-family:var(--sans);">This pulse is backed by yfinance snapshot data. Keep the input schema centered on ticker symbols and map fields from the shared snapshot keys like last_price, previous_close, open_price, day_high, day_low, volume, average_daily_volume_30d, currency, and source.</textarea>
+                <textarea readonly style="min-height:70px;">This pulse is backed by yfinance snapshot data. Map fields like last_price, previous_close, open_price, day_high, day_low, volume, and currency.</textarea>
             `;
             root.appendChild(note);
         }

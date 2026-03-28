@@ -39,10 +39,14 @@
           "intraday_ohlcv_bar",
           "company_profile",
           "market_cap_snapshot",
+          "market_cap",
           "fifty_two_week_range",
           "dividend_info",
           "valuation_pe",
+          "valuation_multiples",
           "profitability_ratios",
+          "profitability_metrics",
+          "beta_and_volatility",
           "news_article",
           "news_sentiment_aggregate",
           "earnings_surprise_history",
@@ -68,5 +72,5 @@
     "path": "/get_pulse_data"
   },
   "is_deleted": false,
-  "updated_at": "2026-03-23T13:16:54.768600+00:00"
+  "updated_at": "2026-03-27T05:59:29.338713+00:00"
 }

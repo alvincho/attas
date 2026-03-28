@@ -3,7 +3,9 @@ from __future__ import annotations
 import json
 import logging
 import os
+import uuid
 from collections.abc import Mapping
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -14,6 +16,7 @@ except ImportError:  # pragma: no cover - exercised only when dependency is abse
 
 from fastapi import HTTPException, Request
 from fastapi.templating import Jinja2Templates
+from attas.pds import derive_pulse_id, normalize_runtime_pulse_entry
 from phemacast.agents.pulser import ConfigInput, _assign_path, _read_config, _resolve_path
 from phemacast.practices.pulser import GetPulseDataPractice
 from prompits.agents.standby import StandbyAgent
@@ -35,6 +38,59 @@ COMMON_INPUT_SCHEMA = {
     "required": ["symbol"],
 }
 
+COMMON_INTERVAL_ENUM = ["1m", "5m", "15m", "30m", "1h", "4h", "1d", "1wk", "1mo"]
+
+OHLC_BAR_SERIES_INPUT_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "symbol": {
+            "type": "string",
+            "description": "Ticker symbol, for example AAPL.",
+        },
+        "interval": {
+            "type": "string",
+            "enum": COMMON_INTERVAL_ENUM,
+            "description": "Bar interval for the requested time series.",
+        },
+        "start_date": {
+            "type": "string",
+            "description": "Inclusive lower bound for the requested time series, as an ISO date or datetime.",
+        },
+        "end_date": {
+            "type": "string",
+            "description": "Inclusive upper bound for the requested time series, as an ISO date or datetime.",
+        },
+    },
+    "required": ["symbol", "interval", "start_date", "end_date"],
+}
+
+OHLC_BAR_SERIES_OUTPUT_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "symbol": {"type": "string"},
+        "interval": {"type": "string"},
+        "start_date": {"type": "string"},
+        "end_date": {"type": "string"},
+        "ohlc_series": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "timestamp": {"type": "string"},
+                    "open": {"type": "number"},
+                    "high": {"type": "number"},
+                    "low": {"type": "number"},
+                    "close": {"type": "number"},
+                    "volume": {"type": "number"},
+                },
+                "required": ["timestamp", "open", "high", "low", "close"],
+            },
+        },
+        "source": {"type": "string"},
+    },
+    "required": ["symbol", "interval", "start_date", "end_date", "ohlc_series"],
+}
+
 
 def _build_output_schema(properties: Dict[str, Dict[str, Any]], required: list[str]) -> Dict[str, Any]:
     return {
@@ -52,23 +108,329 @@ def _pulse_definition(
     properties: Dict[str, Dict[str, Any]],
     required: list[str],
     mapping: Dict[str, Any],
+    input_schema: Optional[Dict[str, Any]] = None,
+    output_schema: Optional[Dict[str, Any]] = None,
     test_data: Optional[Dict[str, Any]] = None,
+    pulse_address: Optional[str] = None,
+    pulse_id: Optional[str] = None,
+    include_source: bool = True,
 ) -> Dict[str, Any]:
+    pulse_mapping: Dict[str, Any] = {
+        "symbol": "symbol",
+        **mapping,
+    }
+    if include_source:
+        pulse_mapping["source"] = {"value": "yfinance"}
+
     return {
         "name": name,
         "description": description,
         "tags": tags,
-        "input_schema": COMMON_INPUT_SCHEMA,
-        "output_schema": _build_output_schema(properties, required),
-        "mapping": {
-            "symbol": "symbol",
-            **mapping,
-            "source": {"value": "yfinance"},
-        },
+        "input_schema": input_schema or COMMON_INPUT_SCHEMA,
+        "output_schema": output_schema or _build_output_schema(properties, required),
+        "mapping": pulse_mapping,
         "test_data": test_data or {"symbol": "AAPL"},
         "cost": 0,
         "party": "attas",
+        **({"pulse_address": pulse_address} if pulse_address else {}),
+        **({"pulse_id": pulse_id} if pulse_id else {}),
     }
+
+
+def _stable_shared_pulse_address(name: str) -> str:
+    return str(uuid.uuid5(uuid.NAMESPACE_URL, f"plaza-pulse:{str(name).strip().lower()}"))
+
+
+def _shared_income_statement_pulse(
+    *,
+    name: str,
+    description: str,
+    tags: list[str],
+    properties: Dict[str, Dict[str, Any]],
+    required: list[str],
+    mapping: Dict[str, Any],
+) -> Dict[str, Any]:
+    return _pulse_definition(
+        name=name,
+        description=description,
+        tags=tags,
+        properties=properties,
+        required=required,
+        mapping=mapping,
+        pulse_address=_stable_shared_pulse_address(name),
+        pulse_id=derive_pulse_id({"name": name}),
+        include_source=False,
+    )
+
+
+def _normalize_statement_label(value: Any) -> str:
+    text = str(value or "").strip().lower()
+    for old, new in (
+        ("&", " and "),
+        ("/", " "),
+        ("-", " "),
+        ("_", " "),
+        (".", " "),
+    ):
+        text = text.replace(old, new)
+    return " ".join(text.split())
+
+
+def _format_statement_period(value: Any) -> str:
+    candidate = value
+    if hasattr(candidate, "to_pydatetime"):
+        try:
+            candidate = candidate.to_pydatetime()
+        except Exception:
+            pass
+    if isinstance(candidate, datetime):
+        return candidate.date().isoformat()
+    if isinstance(candidate, date):
+        return candidate.isoformat()
+    text = str(candidate or "").strip()
+    if not text:
+        return ""
+    if " " in text:
+        text = text.split(" ", 1)[0]
+    if "T" in text:
+        text = text.split("T", 1)[0]
+    return text
+
+
+def _coerce_number(value: Any) -> Optional[float]:
+    if value is None:
+        return None
+    if hasattr(value, "item"):
+        try:
+            value = value.item()
+        except Exception:
+            pass
+    if isinstance(value, str):
+        value = value.replace(",", "").strip()
+        if not value:
+            return None
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        return None
+    if numeric != numeric:
+        return None
+    return numeric
+
+
+def _calculate_growth_percent(current: Optional[float], previous: Optional[float]) -> Optional[float]:
+    if current is None or previous is None or previous == 0:
+        return None
+    return ((current - previous) / abs(previous)) * 100.0
+
+
+def _calculate_margin_percent(numerator: Optional[float], denominator: Optional[float]) -> Optional[float]:
+    if numerator is None or denominator in (None, 0):
+        return None
+    return (numerator / denominator) * 100.0
+
+
+def _series_to_dict(series: Any) -> Dict[Any, Any]:
+    if series is None:
+        return {}
+    if hasattr(series, "to_dict"):
+        try:
+            data = series.to_dict()
+        except Exception:
+            data = None
+        if isinstance(data, dict):
+            return data
+    if isinstance(series, Mapping):
+        return dict(series)
+    index = list(getattr(series, "index", []))
+    values = list(getattr(series, "values", []))
+    if index and len(index) == len(values):
+        return dict(zip(index, values))
+    return {}
+
+
+def _coerce_iso_bound(value: Any) -> tuple[datetime, str, bool]:
+    has_time_component = False
+    if isinstance(value, datetime):
+        parsed = value
+        has_time_component = True
+    elif isinstance(value, date):
+        parsed = datetime.combine(value, datetime.min.time())
+    else:
+        text = str(value or "").strip()
+        if not text:
+            raise ValueError("start_date and end_date are required")
+        has_time_component = "T" in text or " " in text
+        candidate = text.replace("Z", "+00:00")
+        try:
+            parsed = datetime.fromisoformat(candidate)
+        except ValueError:
+            parsed = datetime.combine(date.fromisoformat(text), datetime.min.time())
+    return parsed, _format_history_timestamp(parsed), has_time_component
+
+
+def _format_history_timestamp(value: Any) -> str:
+    candidate = value
+    if hasattr(candidate, "to_pydatetime"):
+        try:
+            candidate = candidate.to_pydatetime()
+        except Exception:
+            pass
+    if isinstance(candidate, date) and not isinstance(candidate, datetime):
+        return f"{candidate.isoformat()}T00:00:00Z"
+    if isinstance(candidate, datetime):
+        if candidate.tzinfo is None:
+            candidate = candidate.replace(tzinfo=timezone.utc)
+        else:
+            candidate = candidate.astimezone(timezone.utc)
+        text = candidate.isoformat()
+        if text.endswith("+00:00"):
+            text = f"{text[:-6]}Z"
+        return text.replace(" ", "T")
+    text = str(candidate or "").strip()
+    if not text:
+        return ""
+    if " " in text:
+        text = text.replace(" ", "T", 1)
+    if text.endswith("+00:00"):
+        return f"{text[:-6]}Z"
+    return text
+
+
+INCOME_STATEMENT_ROW_ALIASES = {
+    "revenue": ("Total Revenue", "Operating Revenue", "Revenue", "Sales Revenue"),
+    "gross_profit": ("Gross Profit",),
+    "operating_income": ("Operating Income", "EBIT", "Operating Profit"),
+    "net_income": ("Net Income", "Net Income Common Stockholders", "Net Income Applicable To Common Shares"),
+    "eps_basic": ("Basic EPS", "Basic EPS Continuing Operations"),
+    "eps_diluted": ("Diluted EPS", "Diluted EPS Continuing Operations"),
+}
+
+
+INCOME_STATEMENT_PULSE_BEHAVIOR = {
+    "income_statement_revenue": {"period_type": "annual", "required_field": "revenue"},
+    "income_statement_gross_profit": {"period_type": "annual", "required_field": "gross_profit"},
+    "income_statement_operating_income": {"period_type": "annual", "required_field": "operating_income"},
+    "income_statement_net_income": {"period_type": "annual", "required_field": "net_income"},
+    "income_statement_eps": {"period_type": "quarterly", "required_field": "eps_diluted"},
+}
+
+
+SHARED_INCOME_STATEMENT_PULSES = [
+    _shared_income_statement_pulse(
+        name="income_statement_revenue",
+        description="Latest annual revenue line item from Yahoo Finance income statements.",
+        tags=["finance", "fundamentals", "income-statement", "annual"],
+        properties={
+            "symbol": {"type": "string"},
+            "period_end": {"type": "string"},
+            "period_type": {"type": "string"},
+            "revenue": {"type": "number"},
+            "currency": {"type": "string"},
+            "year_over_year_growth_percent": {"type": "number"},
+        },
+        required=["symbol", "period_end", "revenue"],
+        mapping={
+            "period_end": "period_end",
+            "period_type": "period_type",
+            "revenue": "revenue",
+            "currency": "currency",
+            "year_over_year_growth_percent": "revenue_year_over_year_growth_percent",
+        },
+    ),
+    _shared_income_statement_pulse(
+        name="income_statement_gross_profit",
+        description="Latest annual gross profit line item from Yahoo Finance income statements.",
+        tags=["finance", "fundamentals", "income-statement", "annual"],
+        properties={
+            "symbol": {"type": "string"},
+            "period_end": {"type": "string"},
+            "period_type": {"type": "string"},
+            "gross_profit": {"type": "number"},
+            "gross_margin_percent": {"type": "number"},
+            "currency": {"type": "string"},
+            "year_over_year_growth_percent": {"type": "number"},
+        },
+        required=["symbol", "period_end", "gross_profit"],
+        mapping={
+            "period_end": "period_end",
+            "period_type": "period_type",
+            "gross_profit": "gross_profit",
+            "gross_margin_percent": "gross_margin_percent",
+            "currency": "currency",
+            "year_over_year_growth_percent": "gross_profit_year_over_year_growth_percent",
+        },
+    ),
+    _shared_income_statement_pulse(
+        name="income_statement_operating_income",
+        description="Latest annual operating income line item from Yahoo Finance income statements.",
+        tags=["finance", "fundamentals", "income-statement", "annual"],
+        properties={
+            "symbol": {"type": "string"},
+            "period_end": {"type": "string"},
+            "period_type": {"type": "string"},
+            "operating_income": {"type": "number"},
+            "operating_margin_percent": {"type": "number"},
+            "currency": {"type": "string"},
+            "year_over_year_growth_percent": {"type": "number"},
+        },
+        required=["symbol", "period_end", "operating_income"],
+        mapping={
+            "period_end": "period_end",
+            "period_type": "period_type",
+            "operating_income": "operating_income",
+            "operating_margin_percent": "operating_margin_percent",
+            "currency": "currency",
+            "year_over_year_growth_percent": "operating_income_year_over_year_growth_percent",
+        },
+    ),
+    _shared_income_statement_pulse(
+        name="income_statement_net_income",
+        description="Latest annual net income line item from Yahoo Finance income statements.",
+        tags=["finance", "fundamentals", "income-statement", "annual"],
+        properties={
+            "symbol": {"type": "string"},
+            "period_end": {"type": "string"},
+            "period_type": {"type": "string"},
+            "net_income": {"type": "number"},
+            "net_margin_percent": {"type": "number"},
+            "currency": {"type": "string"},
+            "year_over_year_growth_percent": {"type": "number"},
+        },
+        required=["symbol", "period_end", "net_income"],
+        mapping={
+            "period_end": "period_end",
+            "period_type": "period_type",
+            "net_income": "net_income",
+            "net_margin_percent": "net_margin_percent",
+            "currency": "currency",
+            "year_over_year_growth_percent": "net_income_year_over_year_growth_percent",
+        },
+    ),
+    _shared_income_statement_pulse(
+        name="income_statement_eps",
+        description="Latest quarterly basic and diluted EPS from Yahoo Finance income statements.",
+        tags=["finance", "fundamentals", "income-statement", "quarterly"],
+        properties={
+            "symbol": {"type": "string"},
+            "period_end": {"type": "string"},
+            "period_type": {"type": "string"},
+            "eps_basic": {"type": "number"},
+            "eps_diluted": {"type": "number"},
+            "currency": {"type": "string"},
+            "year_over_year_growth_percent": {"type": "number"},
+        },
+        required=["symbol", "period_end", "eps_diluted"],
+        mapping={
+            "period_end": "period_end",
+            "period_type": "period_type",
+            "eps_basic": "eps_basic",
+            "eps_diluted": "eps_diluted",
+            "currency": "currency",
+            "year_over_year_growth_percent": "eps_diluted_year_over_year_growth_percent",
+        },
+    ),
+]
 
 
 DEFAULT_SUPPORTED_PULSES = [
@@ -84,6 +446,29 @@ DEFAULT_SUPPORTED_PULSES = [
         },
         required=["symbol", "last_price"],
         mapping={"last_price": "last_price", "currency": "currency"},
+    ),
+    _pulse_definition(
+        name="ohlc_bar_series",
+        description="Historical OHLCV bar series from Yahoo Finance for a requested symbol, interval, and date range.",
+        tags=["finance", "market-data", "ohlc", "timeseries"],
+        properties={},
+        required=[],
+        mapping={
+            "interval": "interval",
+            "start_date": "start_date",
+            "end_date": "end_date",
+            "ohlc_series": "ohlc_series",
+        },
+        input_schema=OHLC_BAR_SERIES_INPUT_SCHEMA,
+        output_schema=OHLC_BAR_SERIES_OUTPUT_SCHEMA,
+        test_data={
+            "symbol": "AAPL",
+            "interval": "1d",
+            "start_date": "2025-01-01",
+            "end_date": "2025-03-31",
+        },
+        pulse_address="ai.attas.finance.price.ohlc_bar_series",
+        pulse_id=derive_pulse_id({"name": "ohlc_bar_series"}),
     ),
     _pulse_definition(
         name="previous_close",
@@ -110,6 +495,19 @@ DEFAULT_SUPPORTED_PULSES = [
         },
         required=["symbol", "open_price"],
         mapping={"open_price": "open_price", "currency": "currency"},
+    ),
+    _pulse_definition(
+        name="market_state",
+        description="Current Yahoo Finance session state for the ticker.",
+        tags=["finance", "quote", "session"],
+        properties={
+            "symbol": {"type": "string"},
+            "market_state": {"type": "string"},
+            "exchange": {"type": "string"},
+            "source": {"type": "string"},
+        },
+        required=["symbol", "market_state"],
+        mapping={"market_state": "market_state", "exchange": "exchange"},
     ),
     _pulse_definition(
         name="day_high_low",
@@ -295,6 +693,7 @@ DEFAULT_SUPPORTED_PULSES = [
             "earnings_quarterly_growth": "earnings_quarterly_growth",
         },
     ),
+    *SHARED_INCOME_STATEMENT_PULSES,
     _pulse_definition(
         name="eps_metrics",
         description="EPS, analyst expectations, and earnings surprise inputs.",
@@ -528,9 +927,9 @@ class YFinancePulser(StandbyAgent):
         @self.app.get("/")
         async def yfinance_pulser_ui(request: Request):
             return self.templates.TemplateResponse(
-                request,
-                "attas/pulsers/templates/yfinance_pulser_editor.html",
-                {
+                request=request,
+                name="attas/pulsers/templates/yfinance_pulser_editor.html",
+                context={
                     "agent_name": self.agent_card.get("name", self.name),
                     "config_path": str(self.config_path) if self.config_path else "",
                 },
@@ -732,6 +1131,12 @@ class YFinancePulser(StandbyAgent):
         pulse_address = normalized.get("pulse_address")
         if pulse_address:
             normalized["pulse_address"] = self._compact_pit_ref(pulse_address)
+        normalized = normalize_runtime_pulse_entry(
+            normalized,
+            default_name=str(normalized.get("name") or "default_pulse"),
+            default_description=str(normalized.get("description") or ""),
+            default_pulse_address=normalized.get("pulse_address"),
+        )
         normalized["input_schema"] = dict(normalized.get("input_schema") or {})
         normalized["mapping"] = dict(normalized.get("mapping") or {})
         normalized["output_schema"] = dict(normalized.get("output_schema") or {})
@@ -816,6 +1221,7 @@ class YFinancePulser(StandbyAgent):
         pit_type: Optional[str] = None,
         pit_id: Optional[str] = None,
         api_key: Optional[str] = None,
+        accepts_inbound_from_plaza: Optional[bool] = None,
     ) -> Dict[str, Any]:
         payload = super().build_register_payload(
             plaza_url=plaza_url,
@@ -825,12 +1231,25 @@ class YFinancePulser(StandbyAgent):
             pit_type=pit_type or "Pulser",
             pit_id=pit_id,
             api_key=api_key,
+            accepts_inbound_from_plaza=accepts_inbound_from_plaza,
         )
         payload["pulse_pulser_pairs"] = [
             {
+                "pulse_id": pulse.get("pulse_id"),
                 "pulse_name": pulse.get("pulse_name") or pulse.get("name"),
                 "pulse_address": pulse.get("pulse_address"),
+                "pulse_definition": pulse.get("pulse_definition"),
                 "input_schema": pulse.get("input_schema"),
+                **(
+                    {
+                        "is_complete": pulse.get("is_complete"),
+                        "completion_status": pulse.get("completion_status"),
+                        "completion_errors": pulse.get("completion_errors"),
+                        "status": pulse.get("completion_status") or pulse.get("status"),
+                    }
+                    if any(key in pulse for key in ("is_complete", "completion_status", "completion_errors", "status"))
+                    else {}
+                ),
             }
             for pulse in self.supported_pulses
             if isinstance(pulse, dict) and (pulse.get("pulse_name") or pulse.get("name"))
@@ -935,8 +1354,47 @@ class YFinancePulser(StandbyAgent):
             self.last_fetch_debug["error"] = "symbol is required"
             return {"error": "symbol is required"}
 
+        if pulse_name == "ohlc_bar_series":
+            interval = str((input_data or {}).get("interval") or "").strip()
+            start_date = str((input_data or {}).get("start_date") or "").strip()
+            end_date = str((input_data or {}).get("end_date") or (input_data or {}).get("timestamp") or "").strip()
+            if not interval:
+                self.last_fetch_debug["error"] = "interval is required"
+                return {"error": "interval is required", "symbol": symbol}
+            if not start_date or not end_date:
+                self.last_fetch_debug["error"] = "start_date and end_date are required"
+                return {"error": "start_date and end_date are required", "symbol": symbol}
+            try:
+                snapshot = self._load_ohlc_bar_series(
+                    symbol,
+                    interval=interval,
+                    start_date=start_date,
+                    end_date=end_date,
+                )
+            except Exception as exc:
+                logger.error("[%s] Error fetching '%s' for '%s': %s", self.name, pulse_name, symbol, exc)
+                self.last_fetch_debug["error"] = str(exc)
+                return {"error": str(exc), "symbol": symbol, "source": "yfinance"}
+            snapshot["symbol"] = symbol
+            snapshot.setdefault("source", "yfinance")
+            self.last_fetch_debug["snapshot"] = dict(snapshot)
+            return snapshot
+
+        income_statement_behavior = INCOME_STATEMENT_PULSE_BEHAVIOR.get(pulse_name)
         try:
-            snapshot = self._load_ticker_snapshot(symbol)
+            if income_statement_behavior:
+                snapshot = self._load_latest_income_statement_snapshot(
+                    symbol,
+                    period_type=str(income_statement_behavior["period_type"]),
+                )
+                required_field = str(income_statement_behavior["required_field"])
+                if snapshot.get(required_field) is None:
+                    message = f"{required_field} is unavailable for {symbol}"
+                    self.last_fetch_debug["error"] = message
+                    return {"error": message, "symbol": symbol}
+                self.last_fetch_debug["statement"] = dict(snapshot)
+            else:
+                snapshot = self._load_ticker_snapshot(symbol)
         except Exception as exc:
             logger.error("[%s] Error fetching '%s' for '%s': %s", self.name, pulse_name, symbol, exc)
             self.last_fetch_debug["error"] = str(exc)
@@ -946,6 +1404,96 @@ class YFinancePulser(StandbyAgent):
         snapshot.setdefault("source", "yfinance")
         self.last_fetch_debug["snapshot"] = dict(snapshot)
         return snapshot
+
+    def _load_ohlc_bar_series(
+        self,
+        symbol: str,
+        *,
+        interval: str,
+        start_date: str,
+        end_date: str,
+    ) -> Dict[str, Any]:
+        if yf is None:
+            raise RuntimeError("yfinance is not installed.")
+
+        ticker = yf.Ticker(symbol)
+        start_bound, normalized_start, _ = _coerce_iso_bound(start_date)
+        end_bound, normalized_end, end_has_time_component = _coerce_iso_bound(end_date)
+        fetch_end = end_bound + (timedelta(seconds=1) if end_has_time_component else timedelta(days=1))
+        effective_end = normalized_end if end_has_time_component else _format_history_timestamp(fetch_end - timedelta(seconds=1))
+        history = ticker.history(start=start_bound, end=fetch_end, interval=interval, auto_adjust=False, actions=False)
+        if history is None or getattr(history, "empty", False):
+            raise ValueError(f"No OHLC bars returned for {symbol} ({interval}) between {start_date} and {end_date}")
+
+        rows = []
+        if hasattr(history, "iterrows"):
+            iterator = history.iterrows()
+        else:
+            iterator = self._iter_history_rows(history)
+
+        for index, row in iterator:
+            timestamp = _format_history_timestamp(index)
+            if not timestamp:
+                continue
+            if timestamp < normalized_start or timestamp > effective_end:
+                continue
+            rows.append(
+                {
+                    "timestamp": timestamp,
+                    "open": float(_coerce_number(self._row_value(row, "Open")) or 0.0),
+                    "high": float(_coerce_number(self._row_value(row, "High")) or 0.0),
+                    "low": float(_coerce_number(self._row_value(row, "Low")) or 0.0),
+                    "close": float(_coerce_number(self._row_value(row, "Close")) or 0.0),
+                    "volume": float(_coerce_number(self._row_value(row, "Volume")) or 0.0),
+                }
+            )
+
+        if not rows:
+            raise ValueError(f"No OHLC bars returned for {symbol} ({interval}) between {start_date} and {end_date}")
+
+        return {
+            "symbol": symbol,
+            "interval": interval,
+            "start_date": normalized_start,
+            "end_date": effective_end,
+            "ohlc_series": rows,
+            "source": "yfinance",
+        }
+
+    def _iter_history_rows(self, history: Any):
+        index_values = list(getattr(history, "index", []))
+        opens = _series_to_dict(self._history_column(history, "Open"))
+        highs = _series_to_dict(self._history_column(history, "High"))
+        lows = _series_to_dict(self._history_column(history, "Low"))
+        closes = _series_to_dict(self._history_column(history, "Close"))
+        volumes = _series_to_dict(self._history_column(history, "Volume"))
+        for index in index_values:
+            yield index, {
+                "Open": opens.get(index),
+                "High": highs.get(index),
+                "Low": lows.get(index),
+                "Close": closes.get(index),
+                "Volume": volumes.get(index),
+            }
+
+    def _history_column(self, history: Any, name: str) -> Any:
+        if isinstance(history, Mapping):
+            return history.get(name)
+        try:
+            return history[name]
+        except Exception:
+            return getattr(history, name, None)
+
+    def _row_value(self, row: Any, name: str) -> Any:
+        if isinstance(row, Mapping):
+            return row.get(name)
+        getter = getattr(row, "get", None)
+        if callable(getter):
+            try:
+                return getter(name)
+            except Exception:
+                pass
+        return getattr(row, name, None)
 
     def _load_ticker_snapshot(self, symbol: str) -> Dict[str, Any]:
         if yf is None:
@@ -1079,6 +1627,117 @@ class YFinancePulser(StandbyAgent):
             "country": info.get("country"),
             "website": info.get("website"),
             "source": "yfinance",
+        }
+        return {key: value for key, value in snapshot.items() if value is not None}
+
+    def _get_income_statement_frame(self, ticker: Any, symbol: str, period_type: str) -> Any:
+        candidate_attrs = (
+            ("quarterly_income_stmt", "quarterly_financials")
+            if period_type == "quarterly"
+            else ("income_stmt", "financials")
+        )
+        for attr_name in candidate_attrs:
+            try:
+                frame = getattr(ticker, attr_name, None)
+            except Exception as exc:
+                logger.debug("[%s] Could not load %s for %s: %s", self.name, attr_name, symbol, exc)
+                continue
+            if frame is None or getattr(frame, "empty", False):
+                continue
+            if list(getattr(frame, "columns", [])):
+                return frame
+        return None
+
+    def _get_statement_row_values(self, frame: Any, aliases: tuple[str, ...]) -> Dict[Any, Any]:
+        normalized_rows: Dict[str, Any] = {}
+        for label in list(getattr(frame, "index", [])):
+            normalized_rows.setdefault(_normalize_statement_label(label), label)
+
+        for alias in aliases:
+            actual_label = normalized_rows.get(_normalize_statement_label(alias))
+            if actual_label is None:
+                continue
+            try:
+                series = frame.loc[actual_label]
+            except Exception:
+                continue
+            values = _series_to_dict(series)
+            if values:
+                return values
+        return {}
+
+    def _load_latest_income_statement_snapshot(self, symbol: str, *, period_type: str) -> Dict[str, Any]:
+        if yf is None:
+            raise RuntimeError("yfinance is not installed.")
+
+        ticker = yf.Ticker(symbol)
+        frame = self._get_income_statement_frame(ticker, symbol, period_type)
+        if frame is None:
+            raise RuntimeError(f"No {period_type} income statement data available for {symbol}.")
+
+        columns = sorted(
+            list(getattr(frame, "columns", [])),
+            key=lambda value: (_format_statement_period(value), str(value)),
+            reverse=True,
+        )
+        if not columns:
+            raise RuntimeError(f"No {period_type} income statement periods available for {symbol}.")
+
+        current_column = columns[0]
+        compare_column: Any = None
+        if period_type == "quarterly":
+            if len(columns) > 4:
+                compare_column = columns[4]
+        elif len(columns) > 1:
+            compare_column = columns[1]
+
+        info = self._get_ticker_info(ticker, symbol)
+        revenue_row = self._get_statement_row_values(frame, INCOME_STATEMENT_ROW_ALIASES["revenue"])
+        gross_profit_row = self._get_statement_row_values(frame, INCOME_STATEMENT_ROW_ALIASES["gross_profit"])
+        operating_income_row = self._get_statement_row_values(frame, INCOME_STATEMENT_ROW_ALIASES["operating_income"])
+        net_income_row = self._get_statement_row_values(frame, INCOME_STATEMENT_ROW_ALIASES["net_income"])
+        eps_basic_row = self._get_statement_row_values(frame, INCOME_STATEMENT_ROW_ALIASES["eps_basic"])
+        eps_diluted_row = self._get_statement_row_values(frame, INCOME_STATEMENT_ROW_ALIASES["eps_diluted"])
+
+        revenue = _coerce_number(revenue_row.get(current_column))
+        gross_profit = _coerce_number(gross_profit_row.get(current_column))
+        operating_income = _coerce_number(operating_income_row.get(current_column))
+        net_income = _coerce_number(net_income_row.get(current_column))
+        eps_basic = _coerce_number(eps_basic_row.get(current_column))
+        eps_diluted = _pick_first(
+            _coerce_number(eps_diluted_row.get(current_column)),
+            eps_basic,
+        )
+
+        revenue_compare = _coerce_number(revenue_row.get(compare_column)) if compare_column is not None else None
+        gross_profit_compare = _coerce_number(gross_profit_row.get(compare_column)) if compare_column is not None else None
+        operating_income_compare = _coerce_number(operating_income_row.get(compare_column)) if compare_column is not None else None
+        net_income_compare = _coerce_number(net_income_row.get(compare_column)) if compare_column is not None else None
+        eps_basic_compare = _coerce_number(eps_basic_row.get(compare_column)) if compare_column is not None else None
+        eps_diluted_compare = _pick_first(
+            _coerce_number(eps_diluted_row.get(compare_column)) if compare_column is not None else None,
+            eps_basic_compare,
+        )
+
+        snapshot = {
+            "symbol": symbol,
+            "period_end": _format_statement_period(current_column),
+            "period_type": period_type,
+            "currency": _pick_first(info.get("financialCurrency"), info.get("currency")),
+            "revenue": revenue,
+            "revenue_year_over_year_growth_percent": _calculate_growth_percent(revenue, revenue_compare),
+            "gross_profit": gross_profit,
+            "gross_margin_percent": _calculate_margin_percent(gross_profit, revenue),
+            "gross_profit_year_over_year_growth_percent": _calculate_growth_percent(gross_profit, gross_profit_compare),
+            "operating_income": operating_income,
+            "operating_margin_percent": _calculate_margin_percent(operating_income, revenue),
+            "operating_income_year_over_year_growth_percent": _calculate_growth_percent(operating_income, operating_income_compare),
+            "net_income": net_income,
+            "net_margin_percent": _calculate_margin_percent(net_income, revenue),
+            "net_income_year_over_year_growth_percent": _calculate_growth_percent(net_income, net_income_compare),
+            "eps_basic": eps_basic,
+            "eps_diluted": eps_diluted,
+            "eps_diluted_year_over_year_growth_percent": _calculate_growth_percent(eps_diluted, eps_diluted_compare),
         }
         return {key: value for key, value in snapshot.items() if value is not None}
 
