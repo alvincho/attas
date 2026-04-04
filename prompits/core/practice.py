@@ -1,4 +1,13 @@
-"""Practice abstraction for executable/mountable agent capabilities."""
+"""
+Practice abstractions for `prompits.core.practice`.
+
+Prompits provides the core HTTP-native agent runtime, Plaza coordination layer, and
+pool/practice infrastructure for FinMAS. Within Prompits, the core package defines the
+shared abstractions that the rest of the runtime builds on.
+
+Core types exposed here include `Practice`, which carry the main behavior or state
+managed by this module.
+"""
 
 from abc import ABC, abstractmethod
 from fastapi import FastAPI
@@ -25,6 +34,7 @@ class Practice(Pit, ABC):
                  inputModes: List[str] = None,
                  outputModes: List[str] = None,
                  parameters: Dict[str, Any] = None):
+        """Initialize the practice."""
         self.name = name
         self.description = description
         self.id = id or name.lower().replace(" ", "-")

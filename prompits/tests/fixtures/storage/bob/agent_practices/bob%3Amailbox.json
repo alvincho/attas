@@ -1,0 +1,48 @@
+{
+  "id": "bob:mailbox",
+  "agent_name": "bob",
+  "practice_id": "mailbox",
+  "practice_name": "Mailbox",
+  "practice_description": "Default inbound message endpoint for generic agent delivery.",
+  "practice_data": {
+    "name": "Mailbox",
+    "description": "Default inbound message endpoint for generic agent delivery.",
+    "id": "mailbox",
+    "cost": 0,
+    "tags": [
+      "message",
+      "mailbox"
+    ],
+    "examples": [
+      "POST /mailbox {'sender':'alice','content':'hello','msg_type':'message'}"
+    ],
+    "inputModes": [
+      "http-post",
+      "json"
+    ],
+    "outputModes": [
+      "json"
+    ],
+    "parameters": {
+      "sender": {
+        "type": "string",
+        "description": "Sending agent name or id."
+      },
+      "receiver": {
+        "type": "string",
+        "description": "Target agent name or id."
+      },
+      "content": {
+        "type": "object",
+        "description": "Message payload."
+      },
+      "msg_type": {
+        "type": "string",
+        "description": "Message routing key."
+      }
+    },
+    "path": "/mailbox"
+  },
+  "is_deleted": false,
+  "updated_at": "2026-04-03T03:49:37.838237+00:00"
+}

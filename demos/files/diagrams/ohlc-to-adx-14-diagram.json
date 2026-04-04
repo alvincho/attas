@@ -1,0 +1,423 @@
+{
+  "id": "ohlc-to-adx-14-diagram",
+  "phema_id": "ohlc-to-adx-14-diagram",
+  "name": "OHLC To ADX 14 Diagram",
+  "description": "Diagram-backed Phema managed by MapPhemar.",
+  "owner": "FinMAS demos",
+  "address": "plaza://phema/ohlc-to-adx-14-diagram",
+  "tags": [
+    "diagram",
+    "map-phemar"
+  ],
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "symbol": {
+        "type": "string"
+      },
+      "interval": {
+        "type": "string"
+      },
+      "start_date": {
+        "type": "string"
+      },
+      "end_date": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "symbol",
+      "interval",
+      "start_date",
+      "end_date"
+    ]
+  },
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "values": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "timestamp": {
+              "type": "string"
+            },
+            "value": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "timestamp",
+            "value"
+          ]
+        }
+      }
+    },
+    "required": [
+      "values"
+    ]
+  },
+  "sections": [
+    {
+      "name": "OHLC Bars",
+      "description": "Runs pulse ohlc_bar_series via YFinancePulser. 1 inbound and 1 outbound connection.",
+      "modifier": "",
+      "content": [
+        {
+          "type": "text",
+          "text": "Pulse: ohlc_bar_series"
+        }
+      ]
+    },
+    {
+      "name": "ADX 14",
+      "description": "Runs pulse adx via TechnicalAnalysisPulser. 1 inbound and 1 outbound connection.",
+      "modifier": "",
+      "content": [
+        {
+          "type": "text",
+          "text": "Pulse: adx"
+        }
+      ]
+    }
+  ],
+  "resolution_mode": "dynamic",
+  "meta": {
+    "builder": "MapPhemar",
+    "kind": "diagram",
+    "resolution_mode": "dynamic",
+    "map_phemar": {
+      "version": 1,
+      "diagram": {
+        "plazaUrl": "http://127.0.0.1:8011",
+        "showGrid": true,
+        "inspectorWidth": 320,
+        "expandedSourcePaths": [],
+        "nextNodeIndex": 2,
+        "nextEdgeIndex": 4,
+        "nodes": [
+          {
+            "id": "mind-boundary-input",
+            "role": "input",
+            "type": "pill",
+            "title": "Input",
+            "subtitle": "",
+            "body": "",
+            "x": 10,
+            "y": 42,
+            "w": 16,
+            "h": 10,
+            "pulserMode": "specific",
+            "pulserId": "",
+            "pulserName": "",
+            "pulserAddress": "",
+            "practiceId": "get_pulse_data",
+            "pulseName": "",
+            "pulseAddress": "",
+            "inputSchema": {},
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "symbol": {
+                  "type": "string"
+                },
+                "interval": {
+                  "type": "string"
+                },
+                "start_date": {
+                  "type": "string"
+                },
+                "end_date": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "symbol",
+                "interval",
+                "start_date",
+                "end_date"
+              ]
+            },
+            "inputSchemaText": "{}",
+            "outputSchemaText": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"symbol\": {\n      \"type\": \"string\"\n    },\n    \"interval\": {\n      \"type\": \"string\"\n    },\n    \"start_date\": {\n      \"type\": \"string\"\n    },\n    \"end_date\": {\n      \"type\": \"string\"\n    }\n  },\n  \"required\": [\n    \"symbol\",\n    \"interval\",\n    \"start_date\",\n    \"end_date\"\n  ]\n}",
+            "inputSchemaError": "",
+            "outputSchemaError": "",
+            "paramsText": "{}",
+            "conditionExpression": "",
+            "branchInputSide": "left",
+            "branchYesSide": "right",
+            "branchNoSide": "right",
+            "branchInputMode": "any",
+            "branchYesMode": "all",
+            "branchNoMode": "all"
+          },
+          {
+            "id": "node-ohlc-bars",
+            "role": "",
+            "type": "rectangle",
+            "title": "OHLC Bars",
+            "subtitle": "YFinancePulser / ohlc_bar_series",
+            "body": "",
+            "x": 31,
+            "y": 28,
+            "w": 22,
+            "h": 14,
+            "pulserMode": "specific",
+            "pulserId": "",
+            "pulserName": "YFinancePulser",
+            "pulserAddress": "http://127.0.0.1:8020",
+            "practiceId": "get_pulse_data",
+            "pulseName": "ohlc_bar_series",
+            "pulseAddress": "ai.attas.finance.price.ohlc_bar_series",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "symbol": {
+                  "type": "string"
+                },
+                "interval": {
+                  "type": "string"
+                },
+                "start_date": {
+                  "type": "string"
+                },
+                "end_date": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "symbol",
+                "interval",
+                "start_date",
+                "end_date"
+              ]
+            },
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "symbol": {
+                  "type": "string"
+                },
+                "interval": {
+                  "type": "string"
+                },
+                "start_date": {
+                  "type": "string"
+                },
+                "end_date": {
+                  "type": "string"
+                },
+                "ohlc_series": {
+                  "type": "array"
+                },
+                "source": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "symbol",
+                "interval",
+                "start_date",
+                "end_date",
+                "ohlc_series"
+              ]
+            },
+            "inputSchemaText": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"symbol\": {\n      \"type\": \"string\"\n    },\n    \"interval\": {\n      \"type\": \"string\"\n    },\n    \"start_date\": {\n      \"type\": \"string\"\n    },\n    \"end_date\": {\n      \"type\": \"string\"\n    }\n  },\n  \"required\": [\n    \"symbol\",\n    \"interval\",\n    \"start_date\",\n    \"end_date\"\n  ]\n}",
+            "outputSchemaText": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"symbol\": {\n      \"type\": \"string\"\n    },\n    \"interval\": {\n      \"type\": \"string\"\n    },\n    \"start_date\": {\n      \"type\": \"string\"\n    },\n    \"end_date\": {\n      \"type\": \"string\"\n    },\n    \"ohlc_series\": {\n      \"type\": \"array\"\n    },\n    \"source\": {\n      \"type\": \"string\"\n    }\n  },\n  \"required\": [\n    \"symbol\",\n    \"interval\",\n    \"start_date\",\n    \"end_date\",\n    \"ohlc_series\"\n  ]\n}",
+            "inputSchemaError": "",
+            "outputSchemaError": "",
+            "paramsText": "{}",
+            "conditionExpression": "",
+            "branchInputSide": "left",
+            "branchYesSide": "right",
+            "branchNoSide": "right",
+            "branchInputMode": "any",
+            "branchYesMode": "all",
+            "branchNoMode": "all"
+          },
+          {
+            "id": "node-adx-14",
+            "role": "",
+            "type": "rectangle",
+            "title": "ADX 14",
+            "subtitle": "TechnicalAnalysisPulser / adx",
+            "body": "",
+            "x": 56,
+            "y": 28,
+            "w": 22,
+            "h": 14,
+            "pulserMode": "specific",
+            "pulserId": "",
+            "pulserName": "TechnicalAnalysisPulser",
+            "pulserAddress": "http://127.0.0.1:8033",
+            "practiceId": "get_pulse_data",
+            "pulseName": "adx",
+            "pulseAddress": "ai.attas.finance.technical.adx",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "symbol": {
+                  "type": "string"
+                },
+                "interval": {
+                  "type": "string"
+                },
+                "start_date": {
+                  "type": "string"
+                },
+                "end_date": {
+                  "type": "string"
+                },
+                "ohlc_series": {
+                  "type": "array"
+                },
+                "window": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "symbol",
+                "interval",
+                "start_date",
+                "end_date",
+                "ohlc_series",
+                "window"
+              ]
+            },
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "values": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "timestamp": {
+                        "type": "string"
+                      },
+                      "value": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "timestamp",
+                      "value"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "values"
+              ]
+            },
+            "inputSchemaText": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"symbol\": {\n      \"type\": \"string\"\n    },\n    \"interval\": {\n      \"type\": \"string\"\n    },\n    \"start_date\": {\n      \"type\": \"string\"\n    },\n    \"end_date\": {\n      \"type\": \"string\"\n    },\n    \"ohlc_series\": {\n      \"type\": \"array\"\n    },\n    \"window\": {\n      \"type\": \"integer\"\n    }\n  },\n  \"required\": [\n    \"symbol\",\n    \"interval\",\n    \"start_date\",\n    \"end_date\",\n    \"ohlc_series\",\n    \"window\"\n  ]\n}",
+            "outputSchemaText": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"values\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"timestamp\": {\n            \"type\": \"string\"\n          },\n          \"value\": {\n            \"type\": \"number\"\n          }\n        },\n        \"required\": [\n          \"timestamp\",\n          \"value\"\n        ]\n      }\n    }\n  },\n  \"required\": [\n    \"values\"\n  ]\n}",
+            "inputSchemaError": "",
+            "outputSchemaError": "",
+            "paramsText": "{\n  \"window\": 14\n}",
+            "conditionExpression": "",
+            "branchInputSide": "left",
+            "branchYesSide": "right",
+            "branchNoSide": "right",
+            "branchInputMode": "any",
+            "branchYesMode": "all",
+            "branchNoMode": "all"
+          },
+          {
+            "id": "mind-boundary-output",
+            "role": "output",
+            "type": "pill",
+            "title": "Output",
+            "subtitle": "",
+            "body": "",
+            "x": 82,
+            "y": 42,
+            "w": 16,
+            "h": 10,
+            "pulserMode": "specific",
+            "pulserId": "",
+            "pulserName": "",
+            "pulserAddress": "",
+            "practiceId": "get_pulse_data",
+            "pulseName": "",
+            "pulseAddress": "",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "values": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "timestamp": {
+                        "type": "string"
+                      },
+                      "value": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "timestamp",
+                      "value"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "values"
+              ]
+            },
+            "outputSchema": {},
+            "inputSchemaText": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"values\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"timestamp\": {\n            \"type\": \"string\"\n          },\n          \"value\": {\n            \"type\": \"number\"\n          }\n        },\n        \"required\": [\n          \"timestamp\",\n          \"value\"\n        ]\n      }\n    }\n  },\n  \"required\": [\n    \"values\"\n  ]\n}",
+            "outputSchemaText": "{}",
+            "inputSchemaError": "",
+            "outputSchemaError": "",
+            "paramsText": "{}",
+            "conditionExpression": "",
+            "branchInputSide": "left",
+            "branchYesSide": "right",
+            "branchNoSide": "right",
+            "branchInputMode": "any",
+            "branchYesMode": "all",
+            "branchNoMode": "all"
+          }
+        ],
+        "edges": [
+          {
+            "id": "edge-input-to-ohlc",
+            "from": "mind-boundary-input",
+            "to": "node-ohlc-bars",
+            "label": "",
+            "fromAnchor": "right",
+            "toAnchor": "left",
+            "mappingText": "{}",
+            "route": ""
+          },
+          {
+            "id": "edge-ohlc-to-adx",
+            "from": "node-ohlc-bars",
+            "to": "node-adx-14",
+            "label": "",
+            "fromAnchor": "right",
+            "toAnchor": "left",
+            "mappingText": "{}",
+            "route": ""
+          },
+          {
+            "id": "edge-adx-to-output",
+            "from": "node-adx-14",
+            "to": "mind-boundary-output",
+            "label": "",
+            "fromAnchor": "right",
+            "toAnchor": "left",
+            "mappingText": "{}",
+            "route": ""
+          }
+        ]
+      }
+    }
+  },
+  "created_at": "2026-04-02T00:00:00Z",
+  "updated_at": "2026-04-03T02:56:32.330Z"
+}

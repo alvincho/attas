@@ -1,0 +1,299 @@
+{
+  "name": "DemoAnalystInsightPulser",
+  "type": "phemacast.pulsers.path_pulser.PathPulser",
+  "host": "127.0.0.1",
+  "port": 8267,
+  "plaza_url": "http://127.0.0.1:8266",
+  "role": "pulser",
+  "description": "Demo pulser showing how an analyst can publish structured research views through multiple pulses.",
+  "tags": [
+    "demo",
+    "analyst",
+    "research",
+    "insight",
+    "pulser"
+  ],
+  "pools": [
+    {
+      "type": "FileSystemPool",
+      "name": "demo_analyst_insight_pool",
+      "description": "Runtime storage for the analyst insight pulser demo.",
+      "root_path": "demos/pulsers/analyst-insights/storage/agent-pool"
+    }
+  ],
+  "supported_pulses": [
+    {
+      "name": "rating_summary",
+      "pulse_address": "plaza://pulse/demo_analyst_rating_summary",
+      "description": "Headline analyst call with target price, conviction, and short narrative.",
+      "tags": ["analyst", "rating", "summary"],
+      "insight_view": "rating_summary",
+      "steps": [
+        {
+          "name": "build_output",
+          "type": "python",
+          "script_path": "./analyst_insight_step.py"
+        }
+      ],
+      "result_path": "steps.build_output",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "description": "Covered symbol, for example NVDA."
+          }
+        },
+        "required": [
+          "symbol"
+        ]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string"
+          },
+          "analyst": {
+            "type": "string"
+          },
+          "rating_label": {
+            "type": "string"
+          },
+          "target_price": {
+            "type": "number"
+          },
+          "current_price_reference": {
+            "type": "number"
+          },
+          "time_horizon": {
+            "type": "string"
+          },
+          "confidence_label": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol",
+          "analyst",
+          "rating_label",
+          "target_price",
+          "summary"
+        ]
+      },
+      "test_data": {
+        "symbol": "NVDA"
+      }
+    },
+    {
+      "name": "thesis_bullets",
+      "pulse_address": "plaza://pulse/demo_analyst_thesis_bullets",
+      "description": "Bullish or constructive thesis points published as reusable bullets.",
+      "tags": ["analyst", "thesis", "bullets"],
+      "insight_view": "thesis_bullets",
+      "steps": [
+        {
+          "name": "build_output",
+          "type": "python",
+          "script_path": "./analyst_insight_step.py"
+        }
+      ],
+      "result_path": "steps.build_output",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol"
+        ]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string"
+          },
+          "analyst": {
+            "type": "string"
+          },
+          "time_horizon": {
+            "type": "string"
+          },
+          "confidence_score": {
+            "type": "number"
+          },
+          "bullets": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol",
+          "analyst",
+          "bullets"
+        ]
+      },
+      "test_data": {
+        "symbol": "NVDA"
+      }
+    },
+    {
+      "name": "risk_watch",
+      "pulse_address": "plaza://pulse/demo_analyst_risk_watch",
+      "description": "Key risks with severity and explicit signals to monitor.",
+      "tags": ["analyst", "risk", "monitoring"],
+      "insight_view": "risk_watch",
+      "steps": [
+        {
+          "name": "build_output",
+          "type": "python",
+          "script_path": "./analyst_insight_step.py"
+        }
+      ],
+      "result_path": "steps.build_output",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol"
+        ]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string"
+          },
+          "analyst": {
+            "type": "string"
+          },
+          "risks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "risk": {
+                  "type": "string"
+                },
+                "signal_to_watch": {
+                  "type": "string"
+                },
+                "severity": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "risk",
+                "signal_to_watch",
+                "severity"
+              ]
+            }
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol",
+          "analyst",
+          "risks"
+        ]
+      },
+      "test_data": {
+        "symbol": "NVDA"
+      }
+    },
+    {
+      "name": "scenario_grid",
+      "pulse_address": "plaza://pulse/demo_analyst_scenario_grid",
+      "description": "Bull, base, and bear scenarios in one structured scenario table.",
+      "tags": ["analyst", "scenario", "valuation"],
+      "insight_view": "scenario_grid",
+      "steps": [
+        {
+          "name": "build_output",
+          "type": "python",
+          "script_path": "./analyst_insight_step.py"
+        }
+      ],
+      "result_path": "steps.build_output",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol"
+        ]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string"
+          },
+          "analyst": {
+            "type": "string"
+          },
+          "scenarios": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "case": {
+                  "type": "string"
+                },
+                "probability": {
+                  "type": "number"
+                },
+                "fair_value": {
+                  "type": "number"
+                },
+                "narrative": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "case",
+                "probability",
+                "fair_value",
+                "narrative"
+              ]
+            }
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol",
+          "analyst",
+          "scenarios"
+        ]
+      },
+      "test_data": {
+        "symbol": "NVDA"
+      }
+    }
+  ]
+}

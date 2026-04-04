@@ -25,15 +25,6 @@
         "plaza_urls": [
             "http://127.0.0.1:8011"
         ],
-        "applications": [
-            {
-                "name": "Stock Report",
-                "description": "Stock report application routed through StockReportPhemar and PdfCastr.",
-                "preferred_phema_name": "Simple Report 2",
-                "preferred_phemar_name": "StockReportPhemar",
-                "preferred_castr_name": "PdfCastr",
-                "party": "attas"
-            }
-        ]
+        "applications": []
     }
 }

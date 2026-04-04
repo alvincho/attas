@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-labelledby="title desc">
+  <title id="title">Sample Personal Agent guide image</title>
+  <desc id="desc">A simple placeholder illustration for documentation image rendering tests.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f7efe3"/>
+      <stop offset="100%" stop-color="#efe0c7"/>
+    </linearGradient>
+  </defs>
+  <rect width="960" height="540" rx="28" fill="url(#bg)"/>
+  <rect x="72" y="68" width="816" height="404" rx="22" fill="#201915" stroke="#8c6e42" stroke-width="3"/>
+  <rect x="108" y="116" width="256" height="42" rx="12" fill="#3a2e22"/>
+  <rect x="108" y="182" width="744" height="18" rx="9" fill="#4d3d2d"/>
+  <rect x="108" y="218" width="644" height="18" rx="9" fill="#4d3d2d" opacity="0.82"/>
+  <rect x="108" y="286" width="320" height="126" rx="18" fill="#2d241c" stroke="#8c6e42" stroke-width="2"/>
+  <rect x="452" y="286" width="400" height="126" rx="18" fill="#2d241c" stroke="#8c6e42" stroke-width="2"/>
+  <text x="108" y="510" fill="#5e4832" font-family="Arial, sans-serif" font-size="28">Personal Agent guide image folder sample</text>
+</svg>

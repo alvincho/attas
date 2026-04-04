@@ -1,0 +1,72 @@
+{
+  "id": "Plaza:register",
+  "agent_name": "Plaza",
+  "practice_id": "register",
+  "practice_name": "Plaza Register",
+  "practice_description": "Register agents with Plaza.",
+  "practice_data": {
+    "name": "Plaza Register",
+    "description": "Register agents with Plaza.",
+    "id": "register",
+    "cost": 0,
+    "tags": [
+      "core",
+      "plaza"
+    ],
+    "examples": [
+      "POST /register {'agent_name':'alice','address':'http://127.0.0.1:8012','accepts_inbound_from_plaza':true}"
+    ],
+    "inputModes": [
+      "http-post",
+      "json"
+    ],
+    "outputModes": [
+      "json"
+    ],
+    "parameters": {
+      "agent_name": {
+        "type": "string",
+        "description": "Agent display name."
+      },
+      "address": {
+        "type": "string",
+        "description": "HTTP base URL for this agent."
+      },
+      "expires_in": {
+        "type": "integer",
+        "description": "Token TTL in seconds."
+      },
+      "pit_type": {
+        "type": "string",
+        "description": "Agent type: Agent | Pulser | Schema | Pulse | Phema."
+      },
+      "card": {
+        "type": "object",
+        "description": "Optional agent card payload."
+      },
+      "pulse_pulser_pairs": {
+        "type": "array",
+        "description": "Optional batch of pulse-pulser pair rows to index in the same request."
+      },
+      "agent_id": {
+        "type": "string",
+        "description": "Optional existing identity for relogin."
+      },
+      "api_key": {
+        "type": "string",
+        "description": "Optional existing secret for relogin."
+      },
+      "owner_key": {
+        "type": "string",
+        "description": "Optional Plaza UI owner key used to claim agent ownership for a signed-in user."
+      },
+      "accepts_inbound_from_plaza": {
+        "type": "boolean",
+        "description": "Whether Plaza can directly open inbound HTTP connections to this agent."
+      }
+    },
+    "path": "/register"
+  },
+  "is_deleted": false,
+  "updated_at": "2026-04-03T03:49:37.610697+00:00"
+}

@@ -1,3 +1,18 @@
+"""
+Regression tests for MCP Pulser.
+
+Phemacast assembles pulse inputs, phemas, and castrs into rendered research artifacts
+and interactive tooling. These tests protect the Phemacast pipeline, demo flows, UI
+helpers, and pulser integrations.
+
+The pytest cases in this file document expected behavior through checks such as
+`test_mcp_pulser_renders_connection_and_tool_arguments`,
+`test_alpha_vantage_api_and_mcp_configs_keep_supported_pulse_names_in_sync`,
+`test_alpha_vantage_mcp_config_exposes_all_shared_financial_statement_pulses`, and
+`test_alpha_vantage_mcp_config_uses_tool_call_wrapper_and_shared_pulses`, helping guard
+against regressions as the packages evolve.
+"""
+
 import json
 import os
 import sys
@@ -9,7 +24,9 @@ from phemacast.pulsers.mcp_pulser import MCPPulser
 
 
 class FakeAsyncHttpResponse:
+    """Response model for fake async HTTP payloads."""
     def __init__(self, payload=None, *, status_code=200, headers=None, text=None):
+        """Initialize the fake async HTTP response."""
         self._payload = payload
         self.status_code = status_code
         self.headers = dict(headers or {})
@@ -19,29 +36,36 @@ class FakeAsyncHttpResponse:
         self.content = self.text.encode("utf-8") if self.text else b""
 
     def raise_for_status(self):
+        """Return the raise for the status."""
         if self.status_code >= 400:
             raise Exception(self.text or f"HTTP {self.status_code}")
 
     def json(self):
+        """Handle JSON for the fake async HTTP response."""
         if self._payload is not None:
             return self._payload
         return json.loads(self.text)
 
 
 class FakeAsyncHttpClient:
+    """Represent a fake async HTTP client."""
     def __init__(self, capture, responses, **kwargs):
+        """Initialize the fake async HTTP client."""
         self.capture = capture
         self.responses = list(responses)
         self.kwargs = kwargs
 
     async def __aenter__(self):
+        """Handle aenter for the fake async HTTP client."""
         self.capture["client_kwargs"] = dict(self.kwargs)
         return self
 
     async def __aexit__(self, exc_type, exc, tb):
+        """Handle aexit for the fake async HTTP client."""
         return False
 
     async def post(self, url, json=None, headers=None):
+        """Post the value."""
         self.capture.setdefault("requests", []).append(
             {
                 "url": url,
@@ -53,6 +77,10 @@ class FakeAsyncHttpClient:
 
 
 def test_mcp_pulser_renders_connection_and_tool_arguments(monkeypatch):
+    """
+    Exercise the test_mcp_pulser_renders_connection_and_tool_arguments regression
+    scenario.
+    """
     monkeypatch.setenv("ALPHA_VANTAGE_API_KEY", "runtime-secret")
     capture = {}
 
@@ -95,6 +123,7 @@ def test_mcp_pulser_renders_connection_and_tool_arguments(monkeypatch):
     )
 
     def fake_call(config, tool_name, arguments):
+        """Handle fake call."""
         capture["config"] = config
         capture["tool_name"] = tool_name
         capture["arguments"] = arguments
@@ -133,6 +162,10 @@ def test_mcp_pulser_renders_connection_and_tool_arguments(monkeypatch):
 
 
 def test_mcp_pulser_applies_root_path_before_mapping(monkeypatch):
+    """
+    Exercise the test_mcp_pulser_applies_root_path_before_mapping regression
+    scenario.
+    """
     pulser = MCPPulser(
         config={
             "name": "HistoricalMCPPulser",
@@ -204,6 +237,10 @@ def test_mcp_pulser_applies_root_path_before_mapping(monkeypatch):
 
 
 def test_mcp_pulser_http_transport_initializes_session_and_calls_tool(monkeypatch):
+    """
+    Exercise the test_mcp_pulser_http_transport_initializes_session_and_calls_tool
+    regression scenario.
+    """
     monkeypatch.setenv("ALPHA_VANTAGE_API_KEY", "runtime-secret")
     capture = {}
     responses = [
@@ -312,6 +349,11 @@ def test_mcp_pulser_http_transport_initializes_session_and_calls_tool(monkeypatc
 
 
 def test_mcp_pulser_falls_back_to_text_content_when_structured_content_is_empty(monkeypatch):
+    """
+    Exercise the
+    test_mcp_pulser_falls_back_to_text_content_when_structured_content_is_empty
+    regression scenario.
+    """
     monkeypatch.setenv("ALPHA_VANTAGE_API_KEY", "runtime-secret")
     capture = {}
     responses = [
@@ -415,6 +457,11 @@ def test_mcp_pulser_falls_back_to_text_content_when_structured_content_is_empty(
 
 
 def test_mcp_pulser_returns_clear_error_when_registry_api_key_is_missing(monkeypatch):
+    """
+    Exercise the
+    test_mcp_pulser_returns_clear_error_when_registry_api_key_is_missing regression
+    scenario.
+    """
     monkeypatch.delenv("ALPHA_VANTAGE_API_KEY", raising=False)
 
     pulser = MCPPulser(
@@ -451,6 +498,11 @@ def test_mcp_pulser_returns_clear_error_when_registry_api_key_is_missing(monkeyp
 
 
 def test_alpha_vantage_mcp_config_uses_tool_call_wrapper_and_shared_pulses():
+    """
+    Exercise the
+    test_alpha_vantage_mcp_config_uses_tool_call_wrapper_and_shared_pulses
+    regression scenario.
+    """
     config_path = Path(__file__).resolve().parents[2] / "attas" / "configs" / "alpha_vantage_mcp.pulser"
 
     pulser = MCPPulser(config=str(config_path), auto_register=False)
@@ -480,6 +532,11 @@ def test_alpha_vantage_mcp_config_uses_tool_call_wrapper_and_shared_pulses():
 
 
 def test_alpha_vantage_mcp_config_exposes_all_shared_financial_statement_pulses():
+    """
+    Exercise the
+    test_alpha_vantage_mcp_config_exposes_all_shared_financial_statement_pulses
+    regression scenario.
+    """
     config_path = Path(__file__).resolve().parents[2] / "attas" / "configs" / "alpha_vantage_mcp.pulser"
 
     pulser = MCPPulser(config=str(config_path), auto_register=False)
@@ -507,6 +564,11 @@ def test_alpha_vantage_mcp_config_exposes_all_shared_financial_statement_pulses(
 
 
 def test_alpha_vantage_api_and_mcp_configs_keep_supported_pulse_names_in_sync():
+    """
+    Exercise the
+    test_alpha_vantage_api_and_mcp_configs_keep_supported_pulse_names_in_sync
+    regression scenario.
+    """
     api_config_path = Path(__file__).resolve().parents[2] / "attas" / "configs" / "alpha_vantage.pulser"
     mcp_config_path = Path(__file__).resolve().parents[2] / "attas" / "configs" / "alpha_vantage_mcp.pulser"
 

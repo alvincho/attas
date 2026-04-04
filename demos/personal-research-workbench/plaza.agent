@@ -1,0 +1,22 @@
+{
+  "name": "workbench-plaza",
+  "role": "coordinator",
+  "tags": ["demo", "workbench", "registry"],
+  "host": "127.0.0.1",
+  "port": 8241,
+  "pools": [
+    {
+      "type": "FileSystemPool",
+      "name": "workbench_plaza_pool",
+      "description": "Local Plaza storage for the workbench demo.",
+      "root_path": "demos/personal-research-workbench/storage/plaza"
+    }
+  ],
+  "type": "prompits.core.plaza.PlazaAgent",
+  "practices": [
+    {
+      "type": "prompits.practices.plaza.PlazaPractice",
+      "params": {}
+    }
+  ]
+}

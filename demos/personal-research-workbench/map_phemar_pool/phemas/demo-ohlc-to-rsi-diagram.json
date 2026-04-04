@@ -1,0 +1,437 @@
+{
+  "id": "demo-ohlc-to-rsi-diagram",
+  "phema_id": "demo-ohlc-to-rsi-diagram",
+  "name": "OHLC To RSI Diagram",
+  "description": "Fetch OHLC bars with the demo YFinance pulser, then compute an RSI series with the demo technical analysis pulser.",
+  "owner": "FinMAS demos",
+  "address": "plaza://phema/demo-ohlc-to-rsi-diagram",
+  "tags": [
+    "demo",
+    "diagram",
+    "map-phemar",
+    "technical-analysis"
+  ],
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "symbol": {
+        "type": "string"
+      },
+      "interval": {
+        "type": "string"
+      },
+      "start_date": {
+        "type": "string"
+      },
+      "end_date": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "symbol",
+      "interval",
+      "start_date",
+      "end_date"
+    ]
+  },
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "values": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "timestamp": {
+              "type": "string"
+            },
+            "value": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "timestamp",
+            "value"
+          ]
+        }
+      }
+    },
+    "required": [
+      "values"
+    ]
+  },
+  "sections": [
+    {
+      "name": "Flow",
+      "description": "Diagram-backed workbench flow that turns a market-data request into a calculated RSI series.",
+      "modifier": "",
+      "content": [
+        {
+          "type": "text",
+          "text": "Input -> OHLC Bars -> RSI 14 -> Output"
+        }
+      ]
+    }
+  ],
+  "resolution_mode": "dynamic",
+  "meta": {
+    "builder": "MapPhemar",
+    "kind": "diagram",
+    "resolution_mode": "dynamic",
+    "map_phemar": {
+      "version": 1,
+      "diagram": {
+        "plazaUrl": "http://127.0.0.1:8241",
+        "showGrid": true,
+        "inspectorWidth": 320,
+        "expandedSourcePaths": [],
+        "nextNodeIndex": 2,
+        "nextEdgeIndex": 4,
+        "nodes": [
+          {
+            "id": "mind-boundary-input",
+            "role": "input",
+            "type": "pill",
+            "title": "Input",
+            "x": 10,
+            "y": 42,
+            "w": 16,
+            "h": 10,
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "symbol": {
+                  "type": "string"
+                },
+                "interval": {
+                  "type": "string"
+                },
+                "start_date": {
+                  "type": "string"
+                },
+                "end_date": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "symbol",
+                "interval",
+                "start_date",
+                "end_date"
+              ]
+            },
+            "paramsText": "{}"
+          },
+          {
+            "id": "node-ohlc-bars",
+            "type": "rounded",
+            "title": "OHLC Bars",
+            "subtitle": "DemoYFinancePulser / ohlc_bar_series",
+            "x": 31,
+            "y": 28,
+            "w": 22,
+            "h": 14,
+            "pulserMode": "specific",
+            "pulserName": "DemoYFinancePulser",
+            "pulserAddress": "http://127.0.0.1:8243",
+            "practiceId": "get_pulse_data",
+            "pulseName": "ohlc_bar_series",
+            "pulseAddress": "ai.attas.finance.price.ohlc_bar_series",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "symbol": {
+                  "type": "string",
+                  "description": "Ticker symbol, for example AAPL."
+                },
+                "interval": {
+                  "type": "string",
+                  "enum": [
+                    "1m",
+                    "5m",
+                    "15m",
+                    "30m",
+                    "1h",
+                    "4h",
+                    "1d",
+                    "1wk",
+                    "1mo"
+                  ],
+                  "description": "Bar interval for the requested time series."
+                },
+                "start_date": {
+                  "type": "string",
+                  "description": "Inclusive lower bound for the requested time series, as an ISO date or datetime."
+                },
+                "end_date": {
+                  "type": "string",
+                  "description": "Inclusive upper bound for the requested time series, as an ISO date or datetime."
+                }
+              },
+              "required": [
+                "symbol",
+                "interval",
+                "start_date",
+                "end_date"
+              ]
+            },
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "symbol": {
+                  "type": "string"
+                },
+                "interval": {
+                  "type": "string"
+                },
+                "start_date": {
+                  "type": "string"
+                },
+                "end_date": {
+                  "type": "string"
+                },
+                "ohlc_series": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "timestamp": {
+                        "type": "string"
+                      },
+                      "open": {
+                        "type": "number"
+                      },
+                      "high": {
+                        "type": "number"
+                      },
+                      "low": {
+                        "type": "number"
+                      },
+                      "close": {
+                        "type": "number"
+                      },
+                      "volume": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "timestamp",
+                      "open",
+                      "high",
+                      "low",
+                      "close"
+                    ]
+                  }
+                },
+                "source": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "symbol",
+                "interval",
+                "start_date",
+                "end_date",
+                "ohlc_series"
+              ]
+            },
+            "paramsText": "{}"
+          },
+          {
+            "id": "node-rsi-14",
+            "type": "rounded",
+            "title": "RSI 14",
+            "subtitle": "DemoTechnicalAnalysisPulser / rsi",
+            "x": 56,
+            "y": 28,
+            "w": 22,
+            "h": 14,
+            "pulserMode": "specific",
+            "pulserName": "DemoTechnicalAnalysisPulser",
+            "pulserAddress": "http://127.0.0.1:8244",
+            "practiceId": "get_pulse_data",
+            "pulseName": "rsi",
+            "pulseAddress": "ai.attas.finance.technical.rsi",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "symbol": {
+                  "type": "string"
+                },
+                "interval": {
+                  "type": "string"
+                },
+                "start_date": {
+                  "type": "string"
+                },
+                "end_date": {
+                  "type": "string"
+                },
+                "timestamp": {
+                  "type": "string"
+                },
+                "ohlc_series": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "timestamp": {
+                        "type": "string"
+                      },
+                      "open": {
+                        "type": "number"
+                      },
+                      "high": {
+                        "type": "number"
+                      },
+                      "low": {
+                        "type": "number"
+                      },
+                      "close": {
+                        "type": "number"
+                      },
+                      "volume": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "timestamp",
+                      "open",
+                      "high",
+                      "low",
+                      "close"
+                    ]
+                  }
+                },
+                "window": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "default": 14
+                },
+                "price_field": {
+                  "type": "string",
+                  "enum": [
+                    "open",
+                    "high",
+                    "low",
+                    "close",
+                    "hl2",
+                    "hlc3",
+                    "ohlc4"
+                  ],
+                  "default": "close"
+                }
+              },
+              "required": [
+                "symbol",
+                "interval",
+                "start_date",
+                "end_date",
+                "ohlc_series",
+                "window"
+              ]
+            },
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "values": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "timestamp": {
+                        "type": "string"
+                      },
+                      "value": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "timestamp",
+                      "value"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "values"
+              ]
+            },
+            "paramsText": "{\n  \"window\": 14,\n  \"price_field\": \"close\"\n}"
+          },
+          {
+            "id": "mind-boundary-output",
+            "role": "output",
+            "type": "pill",
+            "title": "Output",
+            "x": 82,
+            "y": 42,
+            "w": 16,
+            "h": 10,
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "values": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "timestamp": {
+                        "type": "string"
+                      },
+                      "value": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "timestamp",
+                      "value"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "values"
+              ]
+            },
+            "paramsText": "{}"
+          }
+        ],
+        "edges": [
+          {
+            "id": "edge-input-to-ohlc",
+            "from": "mind-boundary-input",
+            "to": "node-ohlc-bars",
+            "label": "",
+            "fromAnchor": "right",
+            "toAnchor": "left",
+            "mappingText": "{}",
+            "route": ""
+          },
+          {
+            "id": "edge-ohlc-to-rsi",
+            "from": "node-ohlc-bars",
+            "to": "node-rsi-14",
+            "label": "",
+            "fromAnchor": "right",
+            "toAnchor": "left",
+            "mappingText": "{}",
+            "route": ""
+          },
+          {
+            "id": "edge-rsi-to-output",
+            "from": "node-rsi-14",
+            "to": "mind-boundary-output",
+            "label": "",
+            "fromAnchor": "right",
+            "toAnchor": "left",
+            "mappingText": "{}",
+            "route": ""
+          }
+        ]
+      }
+    }
+  },
+  "created_at": "2026-04-02T00:00:00Z",
+  "updated_at": "2026-04-02T00:00:00Z"
+}

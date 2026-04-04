@@ -45,3 +45,13 @@ print(output)
 - Template syntax: `{{binding.path}}`
 - Root `binding` is a pulse key returned by `PulserAgent`
 - Missing providers are returned as `{ "status": "missing-provider" }` to keep casts resilient
+
+## Planned Phemacast Capabilities
+
+- more `Phemar` agents focused on representing human intelligence, judgment, and
+  structured interpretation
+- more `Castr` agents that can produce outputs from a `Phema` in formats such as
+  PDS, PPTX, web pages, and multimedia
+- AI-generated `Pulse` creation and refinement informed by human feedback, runtime
+  efficiency, and cost
+- broader diagram support in `MapPhemar`

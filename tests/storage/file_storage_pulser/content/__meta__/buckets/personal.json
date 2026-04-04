@@ -1,0 +1,10 @@
+{
+  "bucket_name": "personal",
+  "created_at": "2026-04-02T08:31:10Z",
+  "owner_agent_id": "plaza:http://127.0.0.1:8011",
+  "owner_agent_name": "Plaza",
+  "status": "created",
+  "storage_backend": "filesystem",
+  "updated_at": "2026-04-02T08:31:10Z",
+  "visibility": "private"
+}

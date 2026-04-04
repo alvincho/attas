@@ -1,3 +1,15 @@
+"""
+Plaza integration and web runtime for `prompits.practices.plaza`.
+
+Prompits provides the core HTTP-native agent runtime, Plaza coordination layer, and
+pool/practice infrastructure for FinMAS. Within Prompits, the practices package bundles
+reusable behaviors that agents can mount or execute remotely.
+
+Core types exposed here include `PlazaAuthenticatePractice`, `PlazaCredentialStore`,
+`PlazaEndpointPractice`, `PlazaHeartbeatPractice`, and `PlazaPractice`, which carry the
+main behavior or state managed by this module.
+"""
+
 import uuid
 import httpx
 import time
@@ -7,13 +19,13 @@ import json
 import os
 import logging
 import concurrent.futures
+import re
 from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from starlette.concurrency import run_in_threadpool
 from typing import Dict, Any, Optional, List, Tuple
 from pydantic import BaseModel
-from attas.pds import normalize_pulse_pair_entry, normalize_runtime_pulse_entry
 from prompits.core.agent_config import AgentConfigStore
 from prompits.core.init_schema import (
     builtin_schema_cards,
@@ -22,6 +34,7 @@ from prompits.core.init_schema import (
     plaza_directory_table_schema,
     pulse_pulser_pairs_table_schema,
 )
+from prompits.core.pulse_runtime import normalize_pulse_pair_entry, normalize_runtime_pulse_entry
 from prompits.core.practice import Practice
 from prompits.core.pool import Pool
 from prompits.core.pit import PitAddress
@@ -39,6 +52,7 @@ class RegisterRequest(BaseModel):
     pulse_pulser_pairs: Optional[List[Dict[str, Any]]] = None
     agent_id: Optional[str] = None
     api_key: Optional[str] = None
+    owner_key: Optional[str] = None
     accepts_inbound_from_plaza: Optional[bool] = None
 
 class RenewRequest(BaseModel):
@@ -58,11 +72,6 @@ class HeartbeatRequest(BaseModel):
     agent_name: Optional[str] = None
     content: Optional[Dict[str, Any]] = None
 
-class AuthenticateRequest(BaseModel):
-    """Request body for `/authenticate` credential-based login flow."""
-    agent_id: Optional[str] = None
-    api_key: Optional[str] = None
-
 
 class PlazaCredentialStore:
     """
@@ -76,6 +85,7 @@ class PlazaCredentialStore:
     PLAZA_LOGIN_HISTORY_TABLE = "plaza_login_history"
 
     def __init__(self, pool: Optional[Pool] = None):
+        """Initialize the Plaza credential store."""
         self.pool = pool
         self._login_history_available = True
 
@@ -94,6 +104,7 @@ class PlazaCredentialStore:
 
     @staticmethod
     def _normalize_plaza_url(plaza_url: Optional[str]) -> str:
+        """Internal helper to normalize the Plaza URL."""
         return str(plaza_url or "").rstrip("/")
 
     @classmethod
@@ -103,6 +114,7 @@ class PlazaCredentialStore:
         plaza_url: Optional[str] = None,
         agent_id: Optional[str] = None,
     ) -> str:
+        """Internal helper for credential row ID."""
         normalized_plaza = cls._normalize_plaza_url(plaza_url)
         normalized_name = str(agent_name or "").strip()
         if normalized_name and normalized_plaza:
@@ -116,6 +128,7 @@ class PlazaCredentialStore:
         plaza_url: Optional[str] = None,
         agent_id: Optional[str] = None,
     ) -> str:
+        """Internal helper for legacy credential row ID."""
         normalized_plaza = cls._normalize_plaza_url(plaza_url)
         normalized_name = str(agent_name or "").strip()
         if normalized_name and normalized_plaza:
@@ -123,6 +136,7 @@ class PlazaCredentialStore:
         return str(agent_id or normalized_name or "").strip()
 
     def save(self, agent_name: str, agent_id: str, api_key: str, plaza_url: Optional[str] = None):
+        """Save the value."""
         if not self.pool:
             return
         if not agent_name or not agent_id or not api_key:
@@ -142,6 +156,7 @@ class PlazaCredentialStore:
 
     @staticmethod
     def _parse_updated_at(value: Any) -> datetime:
+        """Internal helper to parse the updated at."""
         if isinstance(value, datetime):
             return value
         if isinstance(value, (int, float)):
@@ -155,6 +170,7 @@ class PlazaCredentialStore:
 
     @staticmethod
     def _to_epoch_seconds(value: Any) -> float:
+        """Convert the value to epoch seconds."""
         if isinstance(value, (int, float)):
             return float(value)
         if isinstance(value, datetime):
@@ -211,6 +227,7 @@ class PlazaCredentialStore:
         return None
 
     def clear(self, agent_id: str, agent_name: str = "", plaza_url: Optional[str] = None):
+        """Handle clear for the Plaza credential store."""
         if not self.pool:
             return
         if not agent_id:
@@ -229,6 +246,7 @@ class PlazaCredentialStore:
         self.pool._Insert(self.PLAZA_CREDENTIALS_TABLE, row)
 
     def _ensure_login_history_table(self):
+        """Internal helper to ensure the login history table exists."""
         if getattr(self, "_login_history_table_ensured", False):
             return
         if not self.pool or not self._login_history_available:
@@ -245,6 +263,7 @@ class PlazaCredentialStore:
             self._login_history_available = False
 
     def append_login_event(self, agent_id: str, agent_name: str, address: str, event: str, ts: float):
+        """Append the login event."""
         if not self.pool or not agent_id or not self._login_history_available:
             return
         try:
@@ -264,6 +283,7 @@ class PlazaCredentialStore:
             self._login_history_available = False
 
     def load_login_history(self, agent_id: str, limit: int = 50) -> List[Dict[str, Any]]:
+        """Load the login history."""
         if not self.pool or not agent_id or not self._login_history_available:
             return []
         try:
@@ -301,6 +321,15 @@ class PlazaState:
     IMPORTED_INIT_SUFFIX = "_imported.json"
     LEGACY_INIT_PULSE_FILE = "init_pulse.json"
     INIT_PULSE_PREFIX = "init_pulse_"
+    PULSE_ALIAS_FAMILIES = {
+        "ohlc_bar_series": {
+            "ohlc_bar_series",
+            "intraday_ohlcv_bar",
+            "daily_ohlcv_bar",
+            "daily_price_history",
+            "ai_demo_finance_price_ohlc_bar_series",
+        }
+    }
 
     def __init__(
         self,
@@ -309,6 +338,7 @@ class PlazaState:
         init_files: Optional[List[str] | str] = None,
         config_dir: Optional[str] = None,
     ):
+        """Initialize the Plaza state."""
         self.registry = registry if registry is not None else {}
         self.self_heartbeat_interval = self_heartbeat_interval
         self.init_files = self._normalize_init_files(init_files)
@@ -331,6 +361,8 @@ class PlazaState:
         self._loaded_login_history_ids: set[str] = set()
         self._login_history_load_events: Dict[str, threading.Event] = {}
         self._token_store_available = True
+        self._directory_persistence_batch_depth = 0
+        self._pending_directory_rows: Dict[str, Dict[str, Any]] = {}
         self.is_starting = True
         self.lock = threading.RLock()
         self._executor = concurrent.futures.ThreadPoolExecutor(max_workers=4, thread_name_prefix="plaza_bg_")
@@ -339,6 +371,7 @@ class PlazaState:
         self._load_site_settings()
 
     def _default_site_settings(self) -> Dict[str, Any]:
+        """Internal helper to return the default site settings."""
         return {
             "typography": {
                 "title": {"size": "1.75rem", "color": "#0f172a", "weight": "700"},
@@ -350,6 +383,7 @@ class PlazaState:
         }
 
     def _load_site_settings(self):
+        """Internal helper to load the site settings."""
         if not self.directory_pool:
             return
         try:
@@ -368,7 +402,9 @@ class PlazaState:
             logging.getLogger(__name__).warning(f"Failed to load site settings: {e}")
 
     def save_site_settings(self, settings: Dict[str, Any]):
+        """Save the site settings."""
         def deep_update(d, u):
+            """Handle deep update for the Plaza state."""
             for k, v in u.items():
                 if isinstance(v, dict):
                     d[k] = deep_update(d.get(k, {}), v)
@@ -391,9 +427,11 @@ class PlazaState:
                 logging.getLogger(__name__).warning(f"Failed to save site settings: {e}")
 
     def _submit_background_task(self, fn, *args, **kwargs):
+        """Internal helper to submit the background task."""
         future = self._executor.submit(fn, *args, **kwargs)
 
         def _log_failure(done_future: concurrent.futures.Future):
+            """Internal helper to log the failure."""
             try:
                 done_future.result()
             except Exception:
@@ -403,12 +441,14 @@ class PlazaState:
         return future
 
     def start_housekeeping_loop(self):
+        """Start the housekeeping loop."""
         with self.lock:
             if self._housekeeping_started:
                 return
             self._housekeeping_started = True
 
         def _housekeeping():
+            """Internal helper for housekeeping."""
             logger = logging.getLogger(__name__)
             while True:
                 try:
@@ -440,6 +480,7 @@ class PlazaState:
         threading.Thread(target=_housekeeping, daemon=True, name="PlazaHousekeeping").start()
 
     def ensure_tokens_table(self):
+        """Ensure the tokens table exists."""
         if getattr(self, "_tokens_table_ensured", False):
             return True
         if not self.directory_pool or not self._token_store_available:
@@ -469,6 +510,7 @@ class PlazaState:
             return False
 
     def persist_token(self, token: str, payload: Dict[str, Any]):
+        """Persist the token."""
         if not self.directory_pool or not self._token_store_available:
             return
         try:
@@ -488,6 +530,7 @@ class PlazaState:
             pass
 
     def _hydrate_plaza_state(self):
+        """Internal helper to return the hydrate Plaza state."""
         try:
             if self.directory_pool:
                 # Load tokens
@@ -510,50 +553,54 @@ class PlazaState:
                 # Load directory statuses
                 if self.directory_pool._TableExists(self.DIRECTORY_TABLE):
                     dir_rows = self.directory_pool._GetTableData(self.DIRECTORY_TABLE) or []
-                    for row in dir_rows:
-                        agent_id = row.get("agent_id") or row.get("id")
-                        if not agent_id:
-                            continue
-                        card = row.get("card", {})
-                        if isinstance(card, str):
-                            try:
-                                card = json.loads(card)
-                            except Exception:
+                    self._begin_directory_persistence_batch()
+                    try:
+                        for row in dir_rows:
+                            agent_id = row.get("agent_id") or row.get("id")
+                            if not agent_id:
+                                continue
+                            card = row.get("card", {})
+                            if isinstance(card, str):
+                                try:
+                                    card = json.loads(card)
+                                except Exception:
+                                    card = {}
+                            if not isinstance(card, dict):
                                 card = {}
-                        if not isinstance(card, dict):
-                            card = {}
-                            
-                        agent_name = row.get("name") or card.get("name")
-                        pit_type = self.canonical_pit_type(row.get("type") or card.get("pit_type"), default="Agent") or "Agent"
-                        address = row.get("address") or card.get("address")
-                        updated_at = PlazaCredentialStore._to_epoch_seconds(row.get("updated_at"))
-                        last_active = updated_at or time.time()
-                        normalized_card = self.normalize_card_for_pit(
-                            card,
-                            pit_type,
-                            agent_name=str(agent_name or ""),
-                            address=str(address or ""),
-                        )
 
-                        self.agent_cards.setdefault(agent_id, normalized_card)
-                        self.pit_types[agent_id] = pit_type
-                        self.last_active[agent_id] = last_active
-                        if agent_name:
-                            self.agent_names_by_id[agent_id] = agent_name
-                            self.agent_ids[agent_name] = agent_id
-                        if address:
-                            self.registry[agent_id] = address
+                            agent_name = row.get("name") or card.get("name")
+                            pit_type = self.canonical_pit_type(row.get("type") or card.get("pit_type"), default="Agent") or "Agent"
+                            address = row.get("address") or card.get("address")
+                            updated_at = PlazaCredentialStore._to_epoch_seconds(row.get("updated_at"))
+                            last_active = updated_at or time.time()
+                            normalized_card = self.normalize_card_for_pit(
+                                card,
+                                pit_type,
+                                agent_name=str(agent_name or ""),
+                                address=str(address or ""),
+                            )
+
+                            self.agent_cards.setdefault(agent_id, normalized_card)
+                            self.pit_types[agent_id] = pit_type
+                            self.last_active[agent_id] = last_active
                             if agent_name:
-                                self.registry_by_name[agent_name] = address
-                        if normalized_card != card:
-                            self.upsert_directory_entry(str(agent_id), str(agent_name or ""), str(address or ""), str(pit_type), normalized_card)
-                            if pit_type == "Pulser":
-                                self.upsert_pulse_pulser_pairs(
-                                    str(agent_id),
-                                    str(agent_name or ""),
-                                    normalized_card.get("pit_address") or address or "",
-                                    normalized_card,
-                                )
+                                self.agent_names_by_id[agent_id] = agent_name
+                                self.agent_ids[agent_name] = agent_id
+                            if address:
+                                self.registry[agent_id] = address
+                                if agent_name:
+                                    self.registry_by_name[agent_name] = address
+                            if normalized_card != card:
+                                self.upsert_directory_entry(str(agent_id), str(agent_name or ""), str(address or ""), str(pit_type), normalized_card)
+                                if pit_type == "Pulser":
+                                    self.upsert_pulse_pulser_pairs(
+                                        str(agent_id),
+                                        str(agent_name or ""),
+                                        normalized_card.get("pit_address") or address or "",
+                                        normalized_card,
+                                    )
+                    finally:
+                        self._end_directory_persistence_batch()
                 self.ensure_pulse_directory_entries_from_pair_rows()
         except Exception:
             pass
@@ -561,16 +608,254 @@ class PlazaState:
             self.is_starting = False
 
     def compact_pit_ref(self, value: Any) -> str:
+        """Handle compact pit ref for the Plaza state."""
         pit_address = PitAddress.from_value(value)
         return pit_address.to_ref(reference_plaza=self.plaza_url_for_store)
 
     @staticmethod
+    def _normalize_pulse_alias_token(value: Any) -> str:
+        """Internal helper to normalize the pulse alias token."""
+        text = str(value or "").strip().lower()
+        if not text:
+            return ""
+        if text.startswith("urn:plaza:pulse:"):
+            text = text.split("urn:plaza:pulse:", 1)[1]
+        if text.startswith("plaza://pulse/"):
+            text = text.split("plaza://pulse/", 1)[1]
+        if "@" in text:
+            text = text.split("@", 1)[0]
+        text = re.sub(r"[^a-z0-9]+", "_", text)
+        text = re.sub(r"_+", "_", text).strip("_")
+        return text
+
+    @classmethod
+    def pulse_alias_family(
+        cls,
+        *,
+        pulse_name: Any = None,
+        pulse_id: Any = None,
+        pulse_address: Any = None,
+        title: Any = None,
+    ) -> str:
+        """Handle pulse alias family for the Plaza state."""
+        tokens = {
+            cls._normalize_pulse_alias_token(value)
+            for value in (pulse_name, pulse_id, pulse_address, title)
+        }
+        tokens.discard("")
+        for family, aliases in cls.PULSE_ALIAS_FAMILIES.items():
+            if tokens & aliases:
+                return family
+        return ""
+
+    @classmethod
+    def pulse_identity_tokens(
+        cls,
+        *,
+        pulse_name: Any = None,
+        pulse_id: Any = None,
+        pulse_address: Any = None,
+        title: Any = None,
+    ) -> set[str]:
+        """Handle pulse identity tokens for the Plaza state."""
+        tokens = {
+            cls._normalize_pulse_alias_token(value)
+            for value in (pulse_name, pulse_id, pulse_address, title)
+        }
+        tokens.discard("")
+        family = cls.pulse_alias_family(
+            pulse_name=pulse_name,
+            pulse_id=pulse_id,
+            pulse_address=pulse_address,
+            title=title,
+        )
+        if family:
+            tokens.add(family)
+        return tokens
+
+    def pulse_entries_match(
+        self,
+        *,
+        left_name: Any = None,
+        left_id: Any = None,
+        left_address: Any = None,
+        left_title: Any = None,
+        right_name: Any = None,
+        right_id: Any = None,
+        right_address: Any = None,
+        right_title: Any = None,
+    ) -> bool:
+        """Handle pulse entries match for the Plaza state."""
+        left_id_text = str(left_id or "").strip()
+        right_id_text = str(right_id or "").strip()
+        if left_id_text and right_id_text and left_id_text == right_id_text:
+            return True
+        if left_address and right_address and self.same_pit_ref(left_address, right_address):
+            return True
+        left_tokens = self.pulse_identity_tokens(
+            pulse_name=left_name,
+            pulse_id=left_id,
+            pulse_address=left_address,
+            title=left_title,
+        )
+        right_tokens = self.pulse_identity_tokens(
+            pulse_name=right_name,
+            pulse_id=right_id,
+            pulse_address=right_address,
+            title=right_title,
+        )
+        return bool(left_tokens and right_tokens and left_tokens & right_tokens)
+
+    @classmethod
+    def canonical_pulse_family_name(
+        cls,
+        *,
+        pulse_name: Any = None,
+        pulse_id: Any = None,
+        pulse_address: Any = None,
+        title: Any = None,
+    ) -> str:
+        """Return the canonical pulse family name."""
+        return cls.pulse_alias_family(
+            pulse_name=pulse_name,
+            pulse_id=pulse_id,
+            pulse_address=pulse_address,
+            title=title,
+        )
+
+    @staticmethod
     def same_pit_ref(left: Any, right: Any) -> bool:
+        """Handle same pit ref for the Plaza state."""
         left_address = PitAddress.from_value(left)
         right_address = PitAddress.from_value(right)
         if left_address.pit_id and right_address.pit_id:
             return left_address.pit_id == right_address.pit_id
         return str(left or "").strip() == str(right or "").strip()
+
+    def _supported_pulse_preference_key(self, entry: Dict[str, Any]) -> tuple:
+        """Internal helper to return the supported pulse preference key."""
+        pulse_definition = entry.get("pulse_definition") if isinstance(entry.get("pulse_definition"), dict) else {}
+        input_schema = entry.get("input_schema") if isinstance(entry.get("input_schema"), dict) else {}
+        output_schema = entry.get("output_schema") if isinstance(entry.get("output_schema"), dict) else {}
+        test_data = entry.get("test_data") if isinstance(entry.get("test_data"), dict) else {}
+        return (
+            1 if self.pulse_definition_is_complete(entry) else 0,
+            len(output_schema),
+            len(input_schema),
+            len(test_data),
+            len(str(entry.get("description") or "")),
+            len(str(pulse_definition.get("title") or "")),
+        )
+
+    def _dedupe_supported_pulses(self, supported_pulses: Any) -> List[Dict[str, Any]]:
+        """Internal helper for dedupe supported pulses."""
+        if not isinstance(supported_pulses, list):
+            return []
+
+        deduped: List[Dict[str, Any]] = []
+        for entry in supported_pulses:
+            if not isinstance(entry, dict):
+                continue
+            matched_index: Optional[int] = None
+            for index, existing in enumerate(deduped):
+                if self.pulse_entries_match(
+                    left_name=existing.get("pulse_name") or existing.get("name"),
+                    left_id=existing.get("pulse_id"),
+                    left_address=existing.get("pulse_address"),
+                    left_title=(existing.get("pulse_definition") or {}).get("title"),
+                    right_name=entry.get("pulse_name") or entry.get("name"),
+                    right_id=entry.get("pulse_id"),
+                    right_address=entry.get("pulse_address"),
+                    right_title=(entry.get("pulse_definition") or {}).get("title"),
+                ):
+                    matched_index = index
+                    break
+            if matched_index is None:
+                deduped.append(entry)
+                continue
+            if self._supported_pulse_preference_key(entry) > self._supported_pulse_preference_key(deduped[matched_index]):
+                deduped[matched_index] = entry
+        return deduped
+
+    @staticmethod
+    def _pulser_result_dedupe_key(entry: Dict[str, Any]) -> str:
+        """Internal helper to return the pulser result dedupe key."""
+        card = entry.get("card") if isinstance(entry.get("card"), dict) else {}
+        name = str(entry.get("name") or card.get("name") or "").strip().lower()
+        address = str(card.get("address") or entry.get("address") or "").strip().lower()
+        agent_id = str(entry.get("agent_id") or card.get("agent_id") or "").strip().lower()
+        if name and address:
+            return f"{name}|{address}"
+        return name or address or agent_id
+
+    def _normalize_pulser_search_result(self, entry: Dict[str, Any]) -> Dict[str, Any]:
+        """Internal helper to normalize the pulser search result."""
+        resolved_type = self.normalize_pit_type(entry.get("pit_type") or entry.get("type") or "Agent")
+        if resolved_type != "Pulser":
+            return entry
+
+        meta = entry.get("meta")
+        if not isinstance(meta, dict):
+            return entry
+
+        supported_pulses = self._dedupe_supported_pulses(meta.get("supported_pulses"))
+        if not supported_pulses:
+            return entry
+
+        normalized_entry = dict(entry)
+        normalized_meta = dict(meta)
+        normalized_meta["supported_pulses"] = supported_pulses
+        normalized_meta["pulse_id"] = supported_pulses[0].get("pulse_id")
+        normalized_meta["pulse_definition"] = dict(supported_pulses[0].get("pulse_definition") or {})
+        if not isinstance(normalized_meta.get("input_schema"), dict):
+            normalized_meta["input_schema"] = dict(supported_pulses[0].get("input_schema") or {})
+        if not normalized_meta.get("pulse_address"):
+            normalized_meta["pulse_address"] = supported_pulses[0].get("pulse_address")
+        normalized_entry["meta"] = normalized_meta
+        return normalized_entry
+
+    def _pulser_result_preference_key(self, entry: Dict[str, Any]) -> tuple:
+        """Internal helper to return the pulser result preference key."""
+        normalized = self._normalize_pulser_search_result(entry)
+        meta = normalized.get("meta") if isinstance(normalized.get("meta"), dict) else {}
+        supported_pulses = meta.get("supported_pulses") if isinstance(meta, dict) else []
+        return (
+            float(normalized.get("last_active") or 0),
+            len(supported_pulses) if isinstance(supported_pulses, list) else 0,
+            sum(1 for pulse in supported_pulses if isinstance(pulse, dict) and self.pulse_definition_is_complete(pulse))
+            if isinstance(supported_pulses, list)
+            else 0,
+            len(str(normalized.get("description") or "")),
+        )
+
+    def _dedupe_search_results(self, results: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Internal helper for dedupe search results."""
+        deduped: List[Dict[str, Any]] = []
+        pulser_indexes: Dict[str, int] = {}
+
+        for entry in results:
+            normalized_entry = self._normalize_pulser_search_result(entry)
+            resolved_type = self.normalize_pit_type(normalized_entry.get("pit_type") or normalized_entry.get("type") or "Agent")
+            if resolved_type != "Pulser":
+                deduped.append(normalized_entry)
+                continue
+
+            key = self._pulser_result_dedupe_key(normalized_entry)
+            if not key:
+                deduped.append(normalized_entry)
+                continue
+
+            existing_index = pulser_indexes.get(key)
+            if existing_index is None:
+                pulser_indexes[key] = len(deduped)
+                deduped.append(normalized_entry)
+                continue
+
+            existing = deduped[existing_index]
+            if self._pulser_result_preference_key(normalized_entry) > self._pulser_result_preference_key(existing):
+                deduped[existing_index] = normalized_entry
+
+        return deduped
 
     def normalize_card_for_pit(
         self,
@@ -580,6 +865,7 @@ class PlazaState:
         agent_name: str = "",
         address: str = "",
     ) -> Dict[str, Any]:
+        """Normalize the card for the pit."""
         normalized_card = dict(card or {})
         meta = normalized_card.get("meta")
         if not isinstance(meta, dict):
@@ -599,6 +885,7 @@ class PlazaState:
                     for pulse in supported_pulses
                     if isinstance(pulse, dict)
                 ]
+                normalized_supported = self._dedupe_supported_pulses(normalized_supported)
                 if normalized_supported:
                     meta["supported_pulses"] = normalized_supported
                     meta["pulse_id"] = normalized_supported[0].get("pulse_id")
@@ -629,6 +916,7 @@ class PlazaState:
 
     @staticmethod
     def _normalize_init_files(init_files: Optional[List[str] | str]) -> List[str]:
+        """Internal helper to normalize the init files."""
         if init_files is None:
             return []
         if isinstance(init_files, str):
@@ -639,15 +927,18 @@ class PlazaState:
 
     @staticmethod
     def stable_pulse_id(name: str) -> str:
+        """Handle stable pulse ID for the Plaza state."""
         return str(uuid.uuid5(uuid.NAMESPACE_URL, f"plaza-pulse:{str(name).strip().lower()}"))
 
     @classmethod
     def is_imported_init_file(cls, path: str) -> bool:
+        """Return whether the value is an imported init file."""
         base_name = os.path.basename(str(path or "")).strip().lower()
         return bool(base_name) and base_name.endswith(cls.IMPORTED_INIT_SUFFIX)
 
     @classmethod
     def is_tagged_init_pulse_file(cls, path: str) -> bool:
+        """Return whether the value is a tagged init pulse file."""
         base_name = os.path.basename(str(path or "")).strip().lower()
         if not base_name or not base_name.endswith(".json"):
             return False
@@ -666,6 +957,7 @@ class PlazaState:
         default_description: str = "",
         owner: str = "Plaza",
     ) -> Tuple[str, str, Dict[str, Any]]:
+        """Build the pulse directory card."""
         raw_payload = dict(payload or {})
         raw_card = dict(raw_payload.get("card") or {})
         pulse_name = str(
@@ -741,6 +1033,7 @@ class PlazaState:
         default_description: str = "",
         owner: str = "Plaza",
     ) -> str:
+        """Handle upsert pulse directory entry for the Plaza state."""
         agent_id, agent_name, card = self.build_pulse_directory_card(
             payload,
             default_name=default_name,
@@ -757,6 +1050,7 @@ class PlazaState:
         self,
         pair_rows: Optional[List[Dict[str, Any]]] = None,
     ) -> int:
+        """Ensure the pulse directory entries from pair rows exists."""
         rows = pair_rows if isinstance(pair_rows, list) else self.get_pulse_pulser_rows()
         if not rows:
             return 0
@@ -822,6 +1116,7 @@ class PlazaState:
 
     @classmethod
     def canonical_pit_type(cls, pit_type: Optional[str], *, default: str = "Agent") -> Optional[str]:
+        """Handle canonical pit type for the Plaza state."""
         raw_value = str(pit_type or default or "").strip()
         if not raw_value:
             return None
@@ -835,6 +1130,7 @@ class PlazaState:
         return None
 
     def normalize_pit_type(self, pit_type: Optional[str]) -> str:
+        """Normalize the pit type."""
         normalized = self.canonical_pit_type(pit_type, default="Agent")
         if normalized not in self.SUPPORTED_PIT_TYPES:
             raise HTTPException(
@@ -844,6 +1140,7 @@ class PlazaState:
         return normalized
 
     def record_login_event(self, agent_id: str, agent_name: str, address: str, event: str):
+        """Handle record login event for the Plaza state."""
         ts = time.time()
         event_entry = {
             "timestamp": ts,
@@ -867,6 +1164,7 @@ class PlazaState:
 
     @staticmethod
     def _merge_login_history_rows(*groups: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Internal helper to merge the login history rows."""
         merged: List[Dict[str, Any]] = []
         seen: set[Tuple[Any, ...]] = set()
         for group in groups:
@@ -888,6 +1186,7 @@ class PlazaState:
         return merged
 
     def hydrate_login_history_for_id(self, agent_id: str, block: bool = True):
+        """Handle hydrate login history for the ID for the Plaza state."""
         if not agent_id:
             return
         loader_event: Optional[threading.Event] = None
@@ -909,6 +1208,7 @@ class PlazaState:
         self._submit_background_task(self._run_hydrate_login_history, agent_id, loader_event)
 
     def _run_hydrate_login_history(self, agent_id: str, loader_event: threading.Event):
+        """Internal helper to run the hydrate login history."""
         rows: List[Dict[str, Any]] = []
         try:
             if self.credential_store:
@@ -925,6 +1225,7 @@ class PlazaState:
                 loader_event.set()
 
     def ensure_directory_table(self):
+        """Ensure the directory table exists."""
         if getattr(self, "_directory_table_ensured", False):
             return
         if not self.directory_pool:
@@ -937,6 +1238,7 @@ class PlazaState:
         self._directory_table_ensured = True
 
     def ensure_pulse_pulser_table(self):
+        """Ensure the pulse pulser table exists."""
         if getattr(self, "_pulse_pulser_table_ensured", False):
             return
         if not self.directory_pool:
@@ -949,6 +1251,7 @@ class PlazaState:
         self._pulse_pulser_table_ensured = True
 
     def _remember_directory_entry(self, agent_id: str, agent_name: str, pit_type: str, card: Dict[str, Any]):
+        """Internal helper to remember the directory entry."""
         self.agent_cards[agent_id] = card
         self.pit_types[agent_id] = pit_type
         self.agent_ids[agent_name] = agent_id
@@ -963,6 +1266,7 @@ class PlazaState:
         pit_type: str,
         card: Dict[str, Any],
     ) -> Optional[Dict[str, Any]]:
+        """Internal helper to build the directory row."""
         if not agent_id:
             return None
         entry_card = dict(card or {})
@@ -983,7 +1287,14 @@ class PlazaState:
         }
 
     def _persist_directory_rows(self, rows: List[Dict[str, Any]]):
+        """Internal helper to persist the directory rows."""
         if not self.directory_pool or not rows:
+            return
+        if self._directory_persistence_batch_depth > 0:
+            for row in rows:
+                row_id = str(row.get("id") or row.get("agent_id") or "").strip()
+                if row_id:
+                    self._pending_directory_rows[row_id] = dict(row)
             return
         try:
             self.ensure_directory_table()
@@ -994,7 +1305,24 @@ class PlazaState:
         except Exception:
             pass
 
+    def _begin_directory_persistence_batch(self):
+        """Internal helper for begin directory persistence batch."""
+        self._directory_persistence_batch_depth = max(int(self._directory_persistence_batch_depth), 0) + 1
+
+    def _end_directory_persistence_batch(self):
+        """Internal helper for end directory persistence batch."""
+        current_depth = max(int(self._directory_persistence_batch_depth), 0)
+        if current_depth == 0:
+            return
+        self._directory_persistence_batch_depth = current_depth - 1
+        if self._directory_persistence_batch_depth == 0:
+            rows = list((self._pending_directory_rows or {}).values())
+            self._pending_directory_rows = {}
+            if rows:
+                self._persist_directory_rows(rows)
+
     def upsert_directory_entry(self, agent_id: str, agent_name: str, address: str, pit_type: str, card: Dict[str, Any]):
+        """Handle upsert directory entry for the Plaza state."""
         row = self._build_directory_row(agent_id, agent_name, address, pit_type, card)
         if row is not None:
             self._persist_directory_rows([row])
@@ -1007,6 +1335,7 @@ class PlazaState:
         card: Dict[str, Any],
         pulse_pulser_pairs: Optional[List[Dict[str, Any]]] = None,
     ):
+        """Handle upsert pulse pulser pairs for the Plaza state."""
         if not self.directory_pool or not pulser_id:
             return
 
@@ -1097,6 +1426,7 @@ class PlazaState:
         self.ensure_pulse_directory_entries_from_pair_rows(rows)
 
     def lookup_pulser_ids(self, pulse_id: Optional[str] = None, pulse_name: Optional[str] = None, pulse_address: Optional[str] = None) -> Optional[set[str]]:
+        """Look up the pulser IDs."""
         if not self.directory_pool or (not pulse_id and not pulse_name and not pulse_address):
             return None
         try:
@@ -1108,12 +1438,14 @@ class PlazaState:
 
         matched_ids: set[str] = set()
         for row in rows:
-            row_pulse_id = str(row.get("pulse_id") or "").strip()
-            if pulse_id and row_pulse_id != str(pulse_id).strip():
-                continue
-            if pulse_name and not self.contains(row.get("pulse_name"), pulse_name):
-                continue
-            if pulse_address and not self.same_pit_ref(row.get("pulse_address"), pulse_address):
+            if not self.pulse_entries_match(
+                left_name=row.get("pulse_name"),
+                left_id=row.get("pulse_id"),
+                left_address=row.get("pulse_address"),
+                right_name=pulse_name,
+                right_id=pulse_id,
+                right_address=pulse_address,
+            ):
                 continue
             pulser_id = row.get("pulser_id")
             if not pulser_id:
@@ -1125,6 +1457,7 @@ class PlazaState:
         return matched_ids
 
     def get_pulse_pulser_rows(self) -> List[Dict[str, Any]]:
+        """Return the pulse pulser rows."""
         if not self.directory_pool:
             return []
         try:
@@ -1136,12 +1469,14 @@ class PlazaState:
 
     @staticmethod
     def contains(haystack: Any, needle: Optional[str]) -> bool:
+        """Return whether the value contains value."""
         if not needle:
             return True
         return needle.lower() in str(haystack or "").lower()
 
     @staticmethod
     def pulse_definition_is_complete(entry: Any) -> bool:
+        """Handle pulse definition is complete for the Plaza state."""
         if not isinstance(entry, dict):
             return True
         if entry.get("is_complete") is False:
@@ -1159,6 +1494,7 @@ class PlazaState:
         pulse_name: Optional[str] = None,
         pulse_address: Optional[str] = None,
     ) -> Optional[Dict[str, Any]]:
+        """Resolve the supported pulse entry."""
         if not isinstance(supported_pulses, list):
             return None
         for entry in supported_pulses:
@@ -1167,16 +1503,21 @@ class PlazaState:
             entry_pulse_id = entry.get("pulse_id")
             entry_name = entry.get("pulse_name") or entry.get("name")
             entry_address = entry.get("pulse_address")
-            if pulse_id and str(entry_pulse_id or "").strip() != str(pulse_id).strip():
-                continue
-            if pulse_name and not self.contains(entry_name, pulse_name):
-                continue
-            if pulse_address and entry_address and not self.same_pit_ref(entry_address, pulse_address):
+            if (pulse_id or pulse_name or pulse_address) and not self.pulse_entries_match(
+                left_name=entry_name,
+                left_id=entry_pulse_id,
+                left_address=entry_address,
+                left_title=entry.get("title"),
+                right_name=pulse_name,
+                right_id=pulse_id,
+                right_address=pulse_address,
+            ):
                 continue
             return entry
         return None
 
     def _is_supported_pulse_complete(self, card: Dict[str, Any], pulse_id: Optional[str], pulse_name: Optional[str], pulse_address: Optional[str]) -> bool:
+        """Return whether the value is a supported pulse complete."""
         matched = self.resolve_supported_pulse_entry(
             card.get("meta", {}).get("supported_pulses") if isinstance(card.get("meta"), dict) else [],
             pulse_id=pulse_id,
@@ -1204,6 +1545,7 @@ class PlazaState:
         party: Optional[str] = None,
         use_persisted_fallback: bool = True,
     ) -> List[Dict[str, Any]]:
+        """Search the entries."""
         effective_type_filter = pit_type or type
         normalized_filter = self.normalize_pit_type(effective_type_filter) if effective_type_filter else None
         has_filters = any([
@@ -1226,11 +1568,14 @@ class PlazaState:
         if pulse_id or pulse_name or pulse_address:
             matched_pulser_ids = set()
             for row in pulser_rows:
-                if pulse_id and str(row.get("pulse_id") or "").strip() != str(pulse_id).strip():
-                    continue
-                if pulse_name and not self.contains(row.get("pulse_name"), pulse_name):
-                    continue
-                if pulse_address and not self.same_pit_ref(row.get("pulse_address"), pulse_address):
+                if not self.pulse_entries_match(
+                    left_name=row.get("pulse_name"),
+                    left_id=row.get("pulse_id"),
+                    left_address=row.get("pulse_address"),
+                    right_name=pulse_name,
+                    right_id=pulse_id,
+                    right_address=pulse_address,
+                ):
                     continue
                 pulser_id = row.get("pulser_id")
                 if pulser_id:
@@ -1315,7 +1660,7 @@ class PlazaState:
             and (not results or len(agent_cards_snapshot) <= 1 or not has_filters)
         )
         if not should_fallback_to_pool:
-            return results
+            return results if agent_id else self._dedupe_search_results(results)
 
         directory_rows = []
         try:
@@ -1357,6 +1702,16 @@ class PlazaState:
             resolved_type = self.normalize_pit_type(row.get("type") or pit_types.get(aid) or acard.get("pit_type") or "Agent")
             entry_owner = row.get("owner") or acard.get("owner") or display_name
             entry_desc = row.get("description") or acard.get("description", "")
+            if isinstance(acard, dict):
+                acard = self.normalize_card_for_pit(
+                    acard,
+                    resolved_type,
+                    agent_name=display_name,
+                    address=str(acard.get("address") or row.get("address") or ""),
+                )
+                normalized_meta = acard.get("meta")
+                if isinstance(normalized_meta, (dict, list)):
+                    emeta = normalized_meta
 
             if agent_id and aid != agent_id:
                 continue
@@ -1420,9 +1775,10 @@ class PlazaState:
                 "login_history": login_history
             })
 
-        return results
+        return results if agent_id else self._dedupe_search_results(results)
 
     def hydrate_credentials_from_pool(self):
+        """Handle hydrate credentials from pool for the Plaza state."""
         if not self.credential_store or not self.credential_store.pool:
             return
         self.credential_store._ensure_plaza_credentials_table()
@@ -1442,6 +1798,7 @@ class PlazaState:
                     self.agent_names_by_id[agent_id] = agent_name
 
     def persist_credential_to_pool(self, agent_name: str, agent_id: str, api_key: str):
+        """Persist the credential to pool."""
         if not self.credential_store:
             return
         self._submit_background_task(
@@ -1450,6 +1807,7 @@ class PlazaState:
         )
 
     def persist_token_async(self, token: str, payload: Dict[str, Any]):
+        """Persist the token async."""
         self._submit_background_task(self.persist_token, token, payload)
 
     def upsert_directory_entry_async(
@@ -1460,6 +1818,7 @@ class PlazaState:
         pit_type: str,
         card: Dict[str, Any],
     ):
+        """Handle upsert directory entry async for the Plaza state."""
         self._submit_background_task(
             self.upsert_directory_entry,
             agent_id,
@@ -1477,6 +1836,7 @@ class PlazaState:
         card: Dict[str, Any],
         pulse_pulser_pairs: Optional[List[Dict[str, Any]]] = None,
     ):
+        """Handle upsert pulse pulser pairs async for the Plaza state."""
         self._submit_background_task(
             self.upsert_pulse_pulser_pairs,
             pulser_id,
@@ -1487,11 +1847,13 @@ class PlazaState:
         )
 
     def start_self_heartbeat_loop(self, agent_id: str, agent_name: Optional[str] = None):
+        """Start the self heartbeat loop."""
         if self._self_heartbeat_started:
             return
         self._self_heartbeat_started = True
 
         def _beat():
+            """Internal helper for beat."""
             while True:
                 with self.lock:
                     self.last_active[agent_id] = time.time()
@@ -1502,6 +1864,7 @@ class PlazaState:
         threading.Thread(target=_beat, daemon=True).start()
 
     def bootstrap_plaza_agent(self, agent: Any):
+        """Handle bootstrap Plaza agent for the Plaza state."""
         if agent is None:
             return
         agent_name = getattr(agent, "name", None)
@@ -1516,6 +1879,12 @@ class PlazaState:
         pit_type = self.normalize_pit_type(agent_card.get("pit_type", "Agent"))
         agent_card["pit_type"] = pit_type
         agent_card["agent_id"] = agent_id
+        agent_card = self.normalize_card_for_pit(
+            agent_card,
+            pit_type,
+            agent_name=str(agent_name or ""),
+            address=str(address or ""),
+        )
         self.agent_cards[agent_id] = agent_card
         self.pit_types[agent_id] = pit_type
         self.agent_ids[agent_name] = agent_id
@@ -1528,18 +1897,23 @@ class PlazaState:
         self.directory_pool = getattr(agent, "pool", None)
         self.agent_config_store = AgentConfigStore(pool=self.directory_pool)
         self.hydrate_credentials_from_pool()
-        self.upsert_directory_entry(agent_id, agent_name, address, pit_type, agent_card)
-        if pit_type == "Pulser":
-            self.upsert_pulse_pulser_pairs(agent_id, agent_name, address or "", agent_card)
-        self.bootstrap_builtin_schemas()
-        self.bootstrap_init_pits()
-        self.bootstrap_agent_configs()
+        self._begin_directory_persistence_batch()
+        try:
+            self.upsert_directory_entry(agent_id, agent_name, address, pit_type, agent_card)
+            if pit_type == "Pulser":
+                self.upsert_pulse_pulser_pairs(agent_id, agent_name, address or "", agent_card)
+            self.bootstrap_builtin_schemas()
+            self.bootstrap_init_pits()
+            self.bootstrap_agent_configs()
+        finally:
+            self._end_directory_persistence_batch()
 
         # Start background hydration and housekeeping
         self._submit_background_task(self._hydrate_plaza_state)
         self.start_housekeeping_loop()
 
     def bootstrap_builtin_schemas(self):
+        """Handle bootstrap builtin schemas for the Plaza state."""
         plaza_url = self.plaza_url_for_store or ""
         for entry in builtin_schema_cards(plaza_url):
             schema_id = str(entry.get("schema_id") or "")
@@ -1557,6 +1931,7 @@ class PlazaState:
             self.upsert_directory_entry(schema_id, schema_name, card.get("address", ""), "Schema", card)
 
     def _iter_init_files(self) -> List[str]:
+        """Internal helper for iter init files."""
         files: List[str] = []
         for source in self.init_files:
             if not source:
@@ -1574,6 +1949,7 @@ class PlazaState:
         return files
 
     def _iter_agent_config_files(self) -> List[str]:
+        """Internal helper for iter agent config files."""
         files: List[str] = []
         seen: set[str] = set()
         candidate_directories: List[str] = []
@@ -1609,6 +1985,7 @@ class PlazaState:
         return files
 
     def _load_init_entries(self, file_path: str) -> List[Tuple[Dict[str, Any], Optional[str]]]:
+        """Internal helper to load the init entries."""
         try:
             with open(file_path, "r") as handle:
                 payload = json.load(handle)
@@ -1635,6 +2012,7 @@ class PlazaState:
 
     @staticmethod
     def _normalize_seed_meta(value: Any) -> Dict[str, Any]:
+        """Internal helper to normalize the seed meta."""
         if isinstance(value, dict):
             return dict(value)
         if isinstance(value, list):
@@ -1644,6 +2022,7 @@ class PlazaState:
         return {"value": value}
 
     def _infer_seed_pit_type(self, seed: Dict[str, Any], file_path: str, default_pit_type: Optional[str] = None) -> str:
+        """Internal helper for infer seed pit type."""
         explicit = default_pit_type or seed.get("PitType") or seed.get("pit_type") or seed.get("Type") or seed.get("type")
         if explicit:
             normalized = self.canonical_pit_type(explicit)
@@ -1660,6 +2039,7 @@ class PlazaState:
         return "Agent"
 
     def _resolve_seed_id(self, seed: Dict[str, Any], file_path: str, pit_type: str, card: Dict[str, Any]) -> str:
+        """Internal helper to resolve the seed ID."""
         for value in (
             seed.get("schema_id"),
             seed.get("agent_id"),
@@ -1676,6 +2056,7 @@ class PlazaState:
         return str(uuid.uuid5(uuid.NAMESPACE_URL, seed_basis))
 
     def _load_existing_directory_snapshot(self) -> Tuple[set[str], set[Tuple[str, str]]]:
+        """Internal helper to load the existing directory snapshot."""
         existing_ids: set[str] = set()
         existing_name_types: set[Tuple[str, str]] = set()
 
@@ -1711,6 +2092,7 @@ class PlazaState:
         return existing_ids, existing_name_types
 
     def _build_seed_card(self, seed: Dict[str, Any], file_path: str, pit_type: str) -> Dict[str, Any]:
+        """Internal helper to build the seed card."""
         card = dict(seed.get("card") or {})
 
         for key in ("name", "description", "owner", "address", "role"):
@@ -1734,6 +2116,7 @@ class PlazaState:
         return card
 
     def bootstrap_init_pits(self):
+        """Handle bootstrap init pits for the Plaza state."""
         existing_ids, existing_name_types = self._load_existing_directory_snapshot()
         for file_path in self._iter_init_files():
             for seed, default_pit_type in self._load_init_entries(file_path):
@@ -1785,6 +2168,7 @@ class PlazaState:
                 existing_name_types.add((agent_name, pit_type))
 
     def bootstrap_agent_configs(self):
+        """Return the bootstrap agent configs."""
         store = self.agent_config_store
         if store is None or not self.directory_pool:
             return
@@ -1803,20 +2187,45 @@ class PlazaState:
             if not isinstance(agent_card, dict):
                 agent_card = {}
 
-            saved = store.upsert(
-                payload,
-                name=str(payload.get("name") or os.path.splitext(os.path.basename(file_path))[0]),
-                owner=str(
-                    payload.get("owner")
-                    or agent_card.get("owner")
-                    or "Plaza"
-                ),
-                description=str(
-                    payload.get("description")
-                    or agent_card.get("description")
-                    or ""
-                ),
+            resolved_name = str(payload.get("name") or os.path.splitext(os.path.basename(file_path))[0])
+            resolved_owner = str(
+                payload.get("owner")
+                or agent_card.get("owner")
+                or "Plaza"
             )
+            resolved_description = str(
+                payload.get("description")
+                or agent_card.get("description")
+                or ""
+            )
+
+            try:
+                saved = store.upsert(
+                    payload,
+                    name=resolved_name,
+                    owner=resolved_owner,
+                    description=resolved_description,
+                )
+            except Exception as exc:
+                # Agent-config discovery should never prevent Plaza from starting.
+                # Keep a searchable in-memory entry and let persistence recover later.
+                sanitized = store.sanitize_config(payload)
+                logging.getLogger(__name__).warning(
+                    "[Plaza] Failed persisting bootstrapped agent config '%s' from %s; "
+                    "keeping in-memory entry only: %s",
+                    resolved_name,
+                    file_path,
+                    exc,
+                )
+                saved = {
+                    "id": store._row_id(name=resolved_name),
+                    "name": resolved_name,
+                    "description": resolved_description,
+                    "owner": resolved_owner,
+                    "role": store._derived_role(sanitized),
+                    "agent_type": store._as_text(sanitized.get("type")),
+                    "tags": store._derived_tags(sanitized),
+                }
 
             agent_id = str(saved.get("id") or "")
             agent_name = str(saved.get("name") or agent_id)
@@ -1856,6 +2265,7 @@ class PlazaEndpointPractice(Practice):
         output_modes: Optional[List[str]] = None,
         parameters: Optional[Dict[str, Any]] = None,
     ):
+        """Initialize the Plaza endpoint practice."""
         super().__init__(
             name=name,
             description=description,
@@ -1872,6 +2282,7 @@ class PlazaEndpointPractice(Practice):
 class PlazaRegisterPractice(PlazaEndpointPractice):
     """Endpoint practice for agent registration and identity issuance/relogin."""
     def __init__(self, state: PlazaState):
+        """Initialize the Plaza register practice."""
         super().__init__(
             state,
             "Plaza Register",
@@ -1889,15 +2300,18 @@ class PlazaRegisterPractice(PlazaEndpointPractice):
                 "pulse_pulser_pairs": {"type": "array", "description": "Optional batch of pulse-pulser pair rows to index in the same request."},
                 "agent_id": {"type": "string", "description": "Optional existing identity for relogin."},
                 "api_key": {"type": "string", "description": "Optional existing secret for relogin."},
+                "owner_key": {"type": "string", "description": "Optional Plaza UI owner key used to claim agent ownership for a signed-in user."},
                 "accepts_inbound_from_plaza": {"type": "boolean", "description": "Whether Plaza can directly open inbound HTTP connections to this agent."},
             },
         )
 
     def mount(self, app):
+        """Mount the value."""
         router = APIRouter()
 
         @router.post("/register")
         async def register(req: RegisterRequest):
+            """Route handler for POST /register."""
             if self.state.is_starting:
                 raise HTTPException(status_code=503, detail="Starting")
             card = dict(req.card or {})
@@ -1905,6 +2319,20 @@ class PlazaRegisterPractice(PlazaEndpointPractice):
             if not isinstance(card_meta, dict):
                 card_meta = {}
                 card["meta"] = card_meta
+            owner_key = str(req.owner_key or "").strip()
+            for container in (card, card_meta):
+                if not isinstance(container, dict):
+                    continue
+                for key_name in ("plaza_owner_key", "owner_key", "plaza_owner_key_secret", "owner_key_secret"):
+                    if not owner_key:
+                        owner_key = str(container.get(key_name) or "").strip()
+                    container.pop(key_name, None)
+            owner_context = None
+            if owner_key:
+                owner_resolver = getattr(self.agent, "_resolve_agent_owner_from_key", None)
+                if not callable(owner_resolver):
+                    raise HTTPException(status_code=501, detail="Owner keys are unavailable for this Plaza")
+                owner_context = owner_resolver(owner_key)
             requested_type = req.pit_type or card.get("pit_type") or card.get("type")
             pit_type = self.state.normalize_pit_type(requested_type)
             provided_id = (req.agent_id or "").strip()
@@ -1948,6 +2376,16 @@ class PlazaRegisterPractice(PlazaEndpointPractice):
                 card.setdefault("address", req.address)
                 card["pit_type"] = pit_type
                 card["agent_id"] = agent_id
+                if owner_context:
+                    owner_label = str(owner_context.get("owner_label") or "").strip()
+                    if owner_label:
+                        card["owner"] = owner_label
+                    card_meta["owner_source"] = "ui_agent_key"
+                    card_meta["owner_user_id"] = str(owner_context.get("user_id") or "")
+                    card_meta["owner_username"] = str(owner_context.get("username") or "")
+                    card_meta["owner_display_name"] = str(owner_context.get("display_name") or "")
+                    card_meta["owner_email"] = str(owner_context.get("email") or "")
+                    card_meta["plaza_owner_key_id"] = str(owner_context.get("key_id") or card_meta.get("plaza_owner_key_id") or "")
                 card["accepts_inbound_from_plaza"] = accepts_inbound
                 card["accepts_direct_call"] = accepts_inbound
                 card["connectivity_mode"] = "plaza-forward" if accepts_inbound else "outbound-only"
@@ -1968,6 +2406,7 @@ class PlazaRegisterPractice(PlazaEndpointPractice):
                             for pulse in supported_pulses
                             if isinstance(pulse, dict)
                         ]
+                        normalized_supported = self.state._dedupe_supported_pulses(normalized_supported)
                         if normalized_supported:
                             card_meta["supported_pulses"] = normalized_supported
                             card_meta["pulse_id"] = normalized_supported[0].get("pulse_id")
@@ -2014,6 +2453,13 @@ class PlazaRegisterPractice(PlazaEndpointPractice):
                     card,
                     pulse_pulser_pairs=req.pulse_pulser_pairs,
                 )
+            if owner_context:
+                touch_owner_key = getattr(self.agent, "_touch_ui_agent_key_usage", None)
+                if callable(touch_owner_key):
+                    try:
+                        touch_owner_key(str(owner_context.get("key_id") or ""))
+                    except Exception as exc:
+                        logger.warning("[Plaza] Failed updating owner key usage: %s", exc)
 
             return {
                 "status": "registered",
@@ -2031,6 +2477,7 @@ class PlazaRegisterPractice(PlazaEndpointPractice):
 class PlazaRenewPractice(PlazaEndpointPractice):
     """Endpoint practice for bearer token renewal."""
     def __init__(self, state: PlazaState):
+        """Initialize the Plaza renew practice."""
         super().__init__(
             state,
             "Plaza Renew",
@@ -2044,10 +2491,12 @@ class PlazaRenewPractice(PlazaEndpointPractice):
         )
 
     def mount(self, app):
+        """Mount the value."""
         router = APIRouter()
 
         @router.post("/renew")
         async def renew(req: RenewRequest, creds: HTTPAuthorizationCredentials = Depends(security)):
+            """Route handler for POST /renew."""
             if self.state.is_starting:
                 raise HTTPException(status_code=503, detail="Starting")
             token = creds.credentials
@@ -2074,31 +2523,25 @@ class PlazaRenewPractice(PlazaEndpointPractice):
 
 
 class PlazaAuthenticatePractice(PlazaEndpointPractice):
-    """Endpoint practice for bearer-token or credential-based authentication."""
+    """Endpoint practice for bearer-token authentication."""
     def __init__(self, state: PlazaState):
+        """Initialize the Plaza authenticate practice."""
         super().__init__(
             state,
             "Plaza Authenticate",
-            "Authenticate Plaza tokens or credentials.",
+            "Authenticate Plaza bearer tokens.",
             "authenticate",
-            examples=[
-                "POST /authenticate (Bearer token)",
-                "POST /authenticate {'agent_id':'...','api_key':'...'}"
-            ],
-            parameters={
-                "agent_id": {"type": "string", "description": "Agent identity for credential login."},
-                "api_key": {"type": "string", "description": "Agent API key for credential login."},
-            },
+            examples=["POST /authenticate (Bearer token)"],
+            parameters={},
         )
 
     def mount(self, app):
+        """Mount the value."""
         router = APIRouter()
 
         @router.post("/authenticate")
-        async def authenticate(
-            req: Optional[AuthenticateRequest] = None,
-            creds: Optional[HTTPAuthorizationCredentials] = Depends(optional_security)
-        ):
+        async def authenticate(creds: Optional[HTTPAuthorizationCredentials] = Depends(optional_security)):
+            """Route handler for POST /authenticate."""
             if self.state.is_starting:
                 raise HTTPException(status_code=503, detail="Starting")
             if creds is not None:
@@ -2109,31 +2552,6 @@ class PlazaAuthenticatePractice(PlazaEndpointPractice):
                     "agent_id": auth.get("agent_id")
                 }
 
-            if req and req.agent_id and req.api_key:
-                with self.state.lock:
-                    stored = self.state.credentials_by_id.get(req.agent_id)
-                    if not stored or stored.get("api_key") != req.api_key:
-                        raise HTTPException(status_code=401, detail="Invalid agent_id or api_key")
-                    agent_name = self.state.agent_names_by_id.get(req.agent_id)
-                    token = str(uuid.uuid4())
-                    expires_in = 3600
-                    token_payload = {
-                        "agent_name": agent_name or req.agent_id,
-                        "agent_id": req.agent_id,
-                        "expires_at": time.time() + expires_in
-                    }
-                    self.state.tokens[token] = token_payload
-                    if agent_name:
-                        self.state.agent_tokens[agent_name] = token
-                self.state.persist_token_async(token, token_payload)
-                return {
-                    "status": "authenticated",
-                    "agent_name": agent_name,
-                    "agent_id": req.agent_id,
-                    "token": token,
-                    "expires_in": expires_in
-                }
-
             raise HTTPException(status_code=401, detail="Missing authentication credentials")
 
         app.include_router(router)
@@ -2142,6 +2560,7 @@ class PlazaAuthenticatePractice(PlazaEndpointPractice):
 class PlazaHeartbeatPractice(PlazaEndpointPractice):
     """Endpoint practice for authenticated heartbeat updates."""
     def __init__(self, state: PlazaState):
+        """Initialize the Plaza heartbeat practice."""
         super().__init__(
             state,
             "Plaza Heartbeat",
@@ -2156,10 +2575,12 @@ class PlazaHeartbeatPractice(PlazaEndpointPractice):
         )
 
     def mount(self, app):
+        """Mount the value."""
         router = APIRouter()
 
         @router.post("/heartbeat")
         async def heartbeat(req: HeartbeatRequest, auth: Dict[str, Any] = Depends(self.state.verify_token)):
+            """Route handler for POST /heartbeat."""
             if self.state.is_starting:
                 raise HTTPException(status_code=503, detail="Starting")
             auth_agent_id = auth.get("agent_id")
@@ -2186,12 +2607,13 @@ class PlazaHeartbeatPractice(PlazaEndpointPractice):
 class PlazaSearchPractice(PlazaEndpointPractice):
     """Endpoint practice for directory lookup across persisted and in-memory state."""
     def __init__(self, state: PlazaState):
+        """Initialize the Plaza search practice."""
         super().__init__(
             state,
             "Plaza Search",
             "Search plaza directory and in-memory registry.",
             "search",
-            examples=["GET /search?name=alice&practice=chat-practice"],
+            examples=["GET /search?name=alice&practice=mailbox"],
             input_modes=["http-get", "query"],
             parameters={
                 "name": {"type": "string", "description": "Filter by name substring."},
@@ -2211,6 +2633,7 @@ class PlazaSearchPractice(PlazaEndpointPractice):
         )
 
     def mount(self, app):
+        """Mount the value."""
         router = APIRouter()
 
         @router.get("/search")
@@ -2230,6 +2653,7 @@ class PlazaSearchPractice(PlazaEndpointPractice):
             party: Optional[str] = None,
             auth: Dict[str, Any] = Depends(self.state.verify_token)
         ):
+            """Route handler for GET /search."""
             if self.state.is_starting:
                 raise HTTPException(status_code=503, detail="Starting")
             return await run_in_threadpool(
@@ -2256,13 +2680,14 @@ class PlazaSearchPractice(PlazaEndpointPractice):
 class PlazaRelayPractice(PlazaEndpointPractice):
     """Endpoint practice that proxies messages from one authenticated agent to another."""
     def __init__(self, state: PlazaState):
+        """Initialize the Plaza relay practice."""
         super().__init__(
             state,
             "Plaza Relay",
             "Relay messages between agents.",
             "relay",
             examples=[
-                "POST /relay {'receiver':'bob','content':'hi','msg_type':'chat-practice'}"
+                "POST /relay {'receiver':'bob','content':'hi','msg_type':'message'}"
             ],
             parameters={
                 "receiver": {"type": "string", "description": "Target agent id or name."},
@@ -2272,15 +2697,18 @@ class PlazaRelayPractice(PlazaEndpointPractice):
         )
 
     def mount(self, app):
+        """Mount the value."""
         router = APIRouter()
         self._client = httpx.AsyncClient(timeout=10.0)
 
         @app.on_event("shutdown")
         async def shutdown_event():
+            """Handle shutdown event for the Plaza relay practice."""
             await self._client.aclose()
 
         @router.post("/relay")
         async def relay_message(msg: RelayMessage, auth: Dict[str, Any] = Depends(self.state.verify_token)):
+            """Route handler for POST /relay."""
             if self.state.is_starting:
                 raise HTTPException(status_code=503, detail="Starting")
             receiver_id = msg.receiver
@@ -2290,7 +2718,18 @@ class PlazaRelayPractice(PlazaEndpointPractice):
                 raise HTTPException(status_code=404, detail="Receiver not found")
 
             receiver_address = self.state.registry[receiver_id]
-            path = "/chat" if msg.msg_type == "chat-practice" else "/mailbox"
+            receiver_card = self.state.agent_cards.get(receiver_id, {})
+            receiver_practices = receiver_card.get("practices", []) if isinstance(receiver_card, dict) else []
+            practice_entry = next(
+                (
+                    entry for entry in receiver_practices
+                    if isinstance(entry, dict) and str(entry.get("id") or "").strip() == str(msg.msg_type or "").strip()
+                ),
+                None,
+            )
+            path = str(practice_entry.get("path") or "/mailbox") if isinstance(practice_entry, dict) else "/mailbox"
+            if not path.startswith("/"):
+                path = f"/{path}"
             try:
                 payload = {
                     "sender": auth.get("agent_name") or auth.get("agent_id"),
@@ -2326,6 +2765,7 @@ class PlazaPractice(Practice):
         init_files: Optional[List[str] | str] = None,
         config_dir: Optional[str] = None,
     ):
+        """Initialize the Plaza practice."""
         super().__init__(
             name="Plaza Practice",
             description="Plaza endpoint bundle wrapper.",
@@ -2366,6 +2806,7 @@ class PlazaPractice(Practice):
         self.login_history_by_id = self.state.login_history_by_id
 
     def get_callable_endpoints(self) -> List[Dict[str, Any]]:
+        """Return the callable endpoints."""
         endpoints = []
         for practice in self.endpoint_practices:
             endpoints.append({
@@ -2383,6 +2824,7 @@ class PlazaPractice(Practice):
         return endpoints
 
     def mount(self, app):
+        """Mount the value."""
         self.state.bootstrap_plaza_agent(self.agent)
         self.credential_store = self.state.credential_store
         self.plaza_url_for_store = self.state.plaza_url_for_store

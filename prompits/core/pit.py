@@ -1,8 +1,18 @@
-"""Base abstraction for every conceptual unit in Prompits."""
+"""
+Core pit abstractions for `prompits.core.pit`.
+
+Prompits provides the core HTTP-native agent runtime, Plaza coordination layer, and
+pool/practice infrastructure for FinMAS. Within Prompits, the core package defines the
+shared abstractions that the rest of the runtime builds on.
+
+Core types exposed here include `Pit` and `PitAddress`, which carry the main behavior or
+state managed by this module.
+"""
 
 from __future__ import annotations
 
 from abc import ABC
+import copy
 from dataclasses import dataclass, field
 from typing import Any, Dict, List
 import requests
@@ -17,6 +27,7 @@ class PitAddress:
     plazas: List[str] = field(default_factory=list)
 
     def register_plaza(self, plaza_url: str):
+        """Register the Plaza."""
         if not plaza_url:
             return
         normalized = plaza_url.rstrip("/")
@@ -24,6 +35,7 @@ class PitAddress:
             self.plazas.append(normalized)
 
     def to_ref(self, reference_plaza: str | None = None) -> str:
+        """Convert the value to ref."""
         normalized_reference = str(reference_plaza).rstrip("/") if reference_plaza else ""
         plazas = [str(item).rstrip("/") for item in self.plazas if item]
         if normalized_reference and normalized_reference in plazas:
@@ -33,16 +45,19 @@ class PitAddress:
         return str(self.pit_id)
 
     def matches(self, other: Any) -> bool:
+        """Return whether the value matches value."""
         candidate = self.from_value(other)
         if self.pit_id and candidate.pit_id:
             return str(self.pit_id) == str(candidate.pit_id)
         return self.to_ref() == candidate.to_ref()
 
     def to_dict(self) -> Dict[str, Any]:
+        """Convert the value to dict."""
         return {"pit_id": self.pit_id, "plazas": list(self.plazas)}
 
     @classmethod
     def from_value(cls, value: Any) -> "PitAddress":
+        """Build an instance from value."""
         if isinstance(value, PitAddress):
             return value
         if isinstance(value, dict):
@@ -85,6 +100,7 @@ class Pit(ABC):
     """
 
     def __init__(self, name: str, description: str, address: PitAddress | None = None, meta: Dict[str, Any] | None = None):
+        """Initialize the pit."""
         self.name = name
         self.description = description
         self.address = address or PitAddress()
@@ -101,6 +117,7 @@ class Pit(ABC):
         api_key: str | None = None,
         accepts_inbound_from_plaza: bool | None = None,
     ) -> Dict[str, Any]:
+        """Build the register payload."""
         if not plaza_url:
             raise ValueError("plaza_url is required")
 
@@ -109,13 +126,21 @@ class Pit(ABC):
         if pit_id:
             self.address.pit_id = str(pit_id)
 
-        payload_card = dict(card or {})
+        payload_card = copy.deepcopy(dict(card or {}))
         payload_card.setdefault("name", self.name)
         payload_card["pit_address"] = self.address.to_dict()
         payload_meta = payload_card.get("meta")
         if not isinstance(payload_meta, dict):
             payload_meta = {}
         payload_card["meta"] = payload_meta
+        owner_key = ""
+        for container in (payload_card, payload_meta):
+            if not isinstance(container, dict):
+                continue
+            for key_name in ("plaza_owner_key", "owner_key", "plaza_owner_key_secret", "owner_key_secret"):
+                if not owner_key:
+                    owner_key = str(container.get(key_name) or "").strip()
+                container.pop(key_name, None)
         if accepts_inbound_from_plaza is not None:
             normalized_accepts = bool(accepts_inbound_from_plaza)
             payload_card["accepts_inbound_from_plaza"] = normalized_accepts
@@ -142,6 +167,8 @@ class Pit(ABC):
             payload["accepts_direct_call"] = bool(accepts_inbound_from_plaza)
         if pit_type:
             payload["pit_type"] = pit_type
+        if owner_key:
+            payload["owner_key"] = owner_key
         if pit_id and api_key:
             payload["agent_id"] = str(pit_id)
             payload["api_key"] = str(api_key)
@@ -159,6 +186,7 @@ class Pit(ABC):
         accepts_inbound_from_plaza: bool | None = None,
         timeout: int = 5,
     ) -> requests.Response:
+        """Register the value."""
         payload = self.build_register_payload(
             plaza_url=plaza_url,
             card=card,

@@ -1,3 +1,15 @@
+"""
+Regression tests for OpenAI Pulser UI.
+
+Phemacast assembles pulse inputs, phemas, and castrs into rendered research artifacts
+and interactive tooling. These tests protect the Phemacast pipeline, demo flows, UI
+helpers, and pulser integrations.
+
+The pytest cases in this file document expected behavior through checks such as
+`test_openai_pulser_uses_shared_editor_template`, helping guard against regressions as
+the packages evolve.
+"""
+
 import json
 import os
 import sys
@@ -11,10 +23,13 @@ from prompits.tests.test_support import build_agent_from_config
 
 
 class FakeLLMResponse:
+    """Response model for fake LLM payloads."""
     def raise_for_status(self):
+        """Return the raise for the status."""
         return None
 
     def json(self):
+        """Handle JSON for the fake LLM response."""
         return {
             "choices": [
                 {
@@ -27,10 +42,13 @@ class FakeLLMResponse:
 
 
 class FakeModelListResponse:
+    """Response model for fake model list payloads."""
     def raise_for_status(self):
+        """Return the raise for the status."""
         return None
 
     def json(self):
+        """Handle JSON for the fake model list response."""
         return {
             "data": [
                 {"id": "gpt-4o-mini"},
@@ -40,6 +58,9 @@ class FakeModelListResponse:
 
 
 def test_openai_pulser_uses_shared_editor_template(tmp_path, monkeypatch):
+    """
+    Exercise the test_openai_pulser_uses_shared_editor_template regression scenario.
+    """
     pool_dir = tmp_path / "storage"
     config_path = tmp_path / "demo_openai.pulser"
     config_path.write_text(
@@ -104,7 +125,7 @@ def test_openai_pulser_uses_shared_editor_template(tmp_path, monkeypatch):
         lambda url, headers=None, json=None, timeout=240: FakeLLMResponse(),
     )
     monkeypatch.setattr(
-        "prompits.practices.chat.requests.get",
+        "attas.pulsers.openai_pulser.requests.get",
         lambda url, headers=None, timeout=5: FakeModelListResponse(),
     )
 
@@ -115,7 +136,7 @@ def test_openai_pulser_uses_shared_editor_template(tmp_path, monkeypatch):
         assert root.status_code == 200
         assert "DemoOpenAIPulser Config" in root.text
         assert "Search Supported Pulses" in root.text
-        assert "APIPulser Details" in root.text
+        assert "APIsPulser Details" in root.text
         assert "Pulse Details" in root.text
         assert "Model Tools" in root.text
         assert "Load Models" in root.text
@@ -135,6 +156,12 @@ def test_openai_pulser_uses_shared_editor_template(tmp_path, monkeypatch):
         assert payload["name"] == "DemoOpenAIPulser"
         assert payload["supported_pulses"][0]["api"]["url"] == "https://api.openai.com/v1/chat/completions"
         assert payload["supported_pulses"][0]["test_data"]["model"] == "gpt-4o-mini"
+
+        invalid_payload = json.loads(json.dumps(payload))
+        invalid_payload["supported_pulses"][0]["test_data"] = {}
+        invalid_save = client.post("/api/config", json={"config": invalid_payload})
+        assert invalid_save.status_code == 400
+        assert "at least one set of test parameters" in invalid_save.json()["detail"]
 
         tested = client.post(
             "/api/test-pulse",

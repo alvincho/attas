@@ -1,0 +1,22 @@
+{
+  "name": "demo-plaza",
+  "role": "coordinator",
+  "tags": ["demo", "registry", "coordinator"],
+  "host": "127.0.0.1",
+  "port": 8211,
+  "pools": [
+    {
+      "type": "FileSystemPool",
+      "name": "demo_plaza_pool",
+      "description": "Local storage for the Hello Plaza demo.",
+      "root_path": "demos/hello-plaza/storage/plaza"
+    }
+  ],
+  "type": "prompits.core.plaza.PlazaAgent",
+  "practices": [
+    {
+      "type": "prompits.practices.plaza.PlazaPractice",
+      "params": {}
+    }
+  ]
+}

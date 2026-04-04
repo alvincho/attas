@@ -1,3 +1,14 @@
+"""
+Embeddings module for `prompits.practices.embeddings`.
+
+Prompits provides the core HTTP-native agent runtime, Plaza coordination layer, and
+pool/practice infrastructure for FinMAS. Within Prompits, the practices package bundles
+reusable behaviors that agents can mount or execute remotely.
+
+Core types exposed here include `EmbeddingPractice`, which carry the main behavior or
+state managed by this module.
+"""
+
 import logging
 import requests
 from typing import Any, Dict, Optional, List
@@ -16,6 +27,7 @@ class EmbeddingPractice(Practice):
     """
 
     def __init__(self, provider: str = "ollama", config: Optional[Dict[str, Any]] = None):
+        """Initialize the embedding practice."""
         super().__init__(
             name="EmbeddingPractice",
             description=f"Enables text embedding generation via {provider}.",
@@ -53,10 +65,12 @@ class EmbeddingPractice(Practice):
             raise ValueError(f"Unsupported Embedding provider: {self.provider}")
 
     def mount(self, app):
+        """Mount the value."""
         router = APIRouter()
 
         @router.post("/embeddings")
         async def generate_embeddings(message: Message):
+            """Route handler for POST /embeddings."""
             content = message.content
             if not isinstance(content, dict) or ("input" not in content and "text" not in content):
                 raise HTTPException(status_code=400, detail="Input text is required for embeddings.")
@@ -71,6 +85,7 @@ class EmbeddingPractice(Practice):
         app.include_router(router)
 
     def execute(self, **kwargs) -> Any:
+        """Handle execute for the embedding practice."""
         text = kwargs.get("input") or kwargs.get("text")
         if not text:
             return {"status": "error", "message": "Input text is required"}
@@ -99,6 +114,7 @@ class EmbeddingPractice(Practice):
             return {"status": "error", "message": str(e)}
 
     def _call_ollama_embeddings(self, text: str, model: Optional[str] = None) -> List[float]:
+        """Internal helper for call ollama embeddings."""
         payload = {
             "model": model or self.model,
             "prompt": text
@@ -108,6 +124,7 @@ class EmbeddingPractice(Practice):
         return resp.json().get("embedding", [])
 
     def _call_openai_embeddings(self, text: str, model: Optional[str] = None) -> List[float]:
+        """Internal helper for call OpenAI embeddings."""
         if not self.api_key:
             raise ValueError("OpenAI API key missing in config.")
             

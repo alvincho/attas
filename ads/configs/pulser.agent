@@ -1,0 +1,27 @@
+{
+  "name": "ADSPulser",
+  "host": "127.0.0.1",
+  "port": 8062,
+  "plaza_url": "http://127.0.0.1:8011",
+  "party": "ADS",
+  "type": "ads.pulser.ADSPulser",
+  "description": "Expose collected ADS datasets as Plaza pulses.",
+  "pools": [
+    {
+      "type": "PostgresPool",
+      "name": "ads_pulser_pool",
+      "description": "Shared ADS PostgreSQL data pool",
+      "schema": {
+        "env": "ADS_POSTGRES_SCHEMA",
+        "fallback": "public"
+      },
+      "sslmode": {
+        "env": "ADS_POSTGRES_SSLMODE",
+        "fallback": "disable"
+      }
+    }
+  ],
+  "ads": {
+    "auto_register": true
+  }
+}

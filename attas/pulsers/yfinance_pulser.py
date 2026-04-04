@@ -1,3 +1,14 @@
+"""
+YFinance pulser implementation for the Pulsers area.
+
+Attas layers finance-oriented pulse definitions, validation rules, and personal-agent
+workflows on top of the shared runtimes. Within Attas, these modules define finance-
+oriented pulse providers and transformation steps.
+
+Core types exposed here include `YFinancePulser`, which carry the main behavior or state
+managed by this module.
+"""
+
 from __future__ import annotations
 
 import json
@@ -17,7 +28,13 @@ except ImportError:  # pragma: no cover - exercised only when dependency is abse
 from fastapi import HTTPException, Request
 from fastapi.templating import Jinja2Templates
 from attas.pds import derive_pulse_id, normalize_runtime_pulse_entry
-from phemacast.agents.pulser import ConfigInput, _assign_path, _read_config, _resolve_path
+from phemacast.agents.pulser import (
+    ConfigInput,
+    _assign_path,
+    _read_config,
+    _resolve_path,
+    validate_pulser_config_test_parameters,
+)
 from phemacast.practices.pulser import GetPulseDataPractice
 from prompits.agents.standby import StandbyAgent
 from prompits.core.pit import PitAddress
@@ -39,6 +56,7 @@ COMMON_INPUT_SCHEMA = {
 }
 
 COMMON_INTERVAL_ENUM = ["1m", "5m", "15m", "30m", "1h", "4h", "1d", "1wk", "1mo"]
+NEWS_ARTICLE_PULSE_ADDRESS = "5f82c4c9-ac00-587c-9e43-547557081ab6"
 
 OHLC_BAR_SERIES_INPUT_SCHEMA = {
     "type": "object",
@@ -91,8 +109,51 @@ OHLC_BAR_SERIES_OUTPUT_SCHEMA = {
     "required": ["symbol", "interval", "start_date", "end_date", "ohlc_series"],
 }
 
+NEWS_ARTICLE_INPUT_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "symbol": {
+            "type": "string",
+            "description": "Ticker symbol, for example AAPL.",
+        },
+        "number_of_articles": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Number of recent articles to request from Yahoo Finance.",
+        },
+    },
+    "required": ["symbol", "number_of_articles"],
+}
+
+NEWS_ARTICLE_OUTPUT_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "symbol": {"type": "string"},
+        "number_of_articles": {"type": "integer"},
+        "articles": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "headline": {"type": "string"},
+                    "published_at": {"type": "string", "format": "date-time"},
+                    "publisher": {"type": "string"},
+                    "summary": {"type": "string"},
+                    "url": {"type": "string"},
+                    "sentiment_label": {"type": "string"},
+                },
+                "required": ["headline", "published_at"],
+                "additionalProperties": False,
+            },
+        },
+        "source": {"type": "string"},
+    },
+    "required": ["symbol", "articles"],
+}
+
 
 def _build_output_schema(properties: Dict[str, Dict[str, Any]], required: list[str]) -> Dict[str, Any]:
+    """Internal helper to build the output schema."""
     return {
         "type": "object",
         "properties": properties,
@@ -115,6 +176,7 @@ def _pulse_definition(
     pulse_id: Optional[str] = None,
     include_source: bool = True,
 ) -> Dict[str, Any]:
+    """Internal helper for pulse definition."""
     pulse_mapping: Dict[str, Any] = {
         "symbol": "symbol",
         **mapping,
@@ -138,6 +200,7 @@ def _pulse_definition(
 
 
 def _stable_shared_pulse_address(name: str) -> str:
+    """Internal helper to return the stable shared pulse address."""
     return str(uuid.uuid5(uuid.NAMESPACE_URL, f"plaza-pulse:{str(name).strip().lower()}"))
 
 
@@ -150,6 +213,7 @@ def _shared_income_statement_pulse(
     required: list[str],
     mapping: Dict[str, Any],
 ) -> Dict[str, Any]:
+    """Internal helper for shared income statement pulse."""
     return _pulse_definition(
         name=name,
         description=description,
@@ -164,6 +228,7 @@ def _shared_income_statement_pulse(
 
 
 def _normalize_statement_label(value: Any) -> str:
+    """Internal helper to normalize the statement label."""
     text = str(value or "").strip().lower()
     for old, new in (
         ("&", " and "),
@@ -177,6 +242,7 @@ def _normalize_statement_label(value: Any) -> str:
 
 
 def _format_statement_period(value: Any) -> str:
+    """Internal helper to format the statement period."""
     candidate = value
     if hasattr(candidate, "to_pydatetime"):
         try:
@@ -198,6 +264,7 @@ def _format_statement_period(value: Any) -> str:
 
 
 def _coerce_number(value: Any) -> Optional[float]:
+    """Internal helper to coerce the number."""
     if value is None:
         return None
     if hasattr(value, "item"):
@@ -218,19 +285,38 @@ def _coerce_number(value: Any) -> Optional[float]:
     return numeric
 
 
+def _coerce_positive_int(value: Any) -> Optional[int]:
+    """Internal helper to coerce the positive int."""
+    if value in (None, ""):
+        return None
+    try:
+        numeric = int(str(value).strip())
+    except (TypeError, ValueError):
+        try:
+            numeric = int(float(value))
+        except (TypeError, ValueError):
+            return None
+    if numeric < 1:
+        return None
+    return numeric
+
+
 def _calculate_growth_percent(current: Optional[float], previous: Optional[float]) -> Optional[float]:
+    """Internal helper for calculate growth percent."""
     if current is None or previous is None or previous == 0:
         return None
     return ((current - previous) / abs(previous)) * 100.0
 
 
 def _calculate_margin_percent(numerator: Optional[float], denominator: Optional[float]) -> Optional[float]:
+    """Internal helper for calculate margin percent."""
     if numerator is None or denominator in (None, 0):
         return None
     return (numerator / denominator) * 100.0
 
 
 def _series_to_dict(series: Any) -> Dict[Any, Any]:
+    """Internal helper for series to dict."""
     if series is None:
         return {}
     if hasattr(series, "to_dict"):
@@ -250,6 +336,7 @@ def _series_to_dict(series: Any) -> Dict[Any, Any]:
 
 
 def _coerce_iso_bound(value: Any) -> tuple[datetime, str, bool]:
+    """Internal helper to coerce the iso bound."""
     has_time_component = False
     if isinstance(value, datetime):
         parsed = value
@@ -270,6 +357,7 @@ def _coerce_iso_bound(value: Any) -> tuple[datetime, str, bool]:
 
 
 def _format_history_timestamp(value: Any) -> str:
+    """Internal helper to format the history timestamp."""
     candidate = value
     if hasattr(candidate, "to_pydatetime"):
         try:
@@ -295,6 +383,90 @@ def _format_history_timestamp(value: Any) -> str:
     if text.endswith("+00:00"):
         return f"{text[:-6]}Z"
     return text
+
+
+def _mapping_get(value: Any, *path: str) -> Any:
+    """Internal helper for mapping get."""
+    current = value
+    for segment in path:
+        if not isinstance(current, Mapping):
+            return None
+        current = current.get(segment)
+    return current
+
+
+def _extract_text(value: Any) -> str:
+    """Internal helper to extract the text."""
+    if value is None:
+        return ""
+    if isinstance(value, str):
+        return value.strip()
+    if isinstance(value, Mapping):
+        for key in ("text", "value", "title", "headline", "name", "displayName", "url"):
+            text = _extract_text(value.get(key))
+            if text:
+                return text
+        return ""
+    return str(value).strip()
+
+
+def _pick_first_text(*values: Any) -> str:
+    """Internal helper for pick first text."""
+    for value in values:
+        text = _extract_text(value)
+        if text:
+            return text
+    return ""
+
+
+def _normalize_news_timestamp(value: Any) -> str:
+    """Internal helper to normalize the news timestamp."""
+    candidate = value
+    if hasattr(candidate, "to_pydatetime"):
+        try:
+            candidate = candidate.to_pydatetime()
+        except Exception:
+            pass
+    if isinstance(candidate, datetime):
+        return _format_history_timestamp(candidate)
+    if isinstance(candidate, date):
+        return _format_history_timestamp(datetime.combine(candidate, datetime.min.time(), tzinfo=timezone.utc))
+    if isinstance(candidate, (int, float)):
+        seconds = float(candidate)
+        if seconds > 1_000_000_000_000:
+            seconds /= 1000.0
+        return _format_history_timestamp(datetime.fromtimestamp(seconds, tz=timezone.utc))
+
+    text = _extract_text(candidate)
+    if not text:
+        return ""
+    if text.isdigit():
+        seconds = float(text)
+        if len(text) >= 13:
+            seconds /= 1000.0
+        return _format_history_timestamp(datetime.fromtimestamp(seconds, tz=timezone.utc))
+
+    normalized = text.replace("Z", "+00:00")
+    try:
+        return _format_history_timestamp(datetime.fromisoformat(normalized))
+    except ValueError:
+        pass
+
+    for pattern in (
+        "%Y-%m-%d %H:%M:%S%z",
+        "%Y-%m-%d %H:%M:%S",
+        "%a, %d %b %Y %H:%M:%S %z",
+    ):
+        try:
+            parsed = datetime.strptime(text, pattern)
+            return _format_history_timestamp(parsed)
+        except ValueError:
+            continue
+
+    try:
+        return _format_history_timestamp(date.fromisoformat(text))
+    except ValueError:
+        return ""
 
 
 INCOME_STATEMENT_ROW_ALIASES = {
@@ -826,10 +998,36 @@ DEFAULT_SUPPORTED_PULSES = [
             "currency": "currency",
         },
     ),
+    _pulse_definition(
+        name="news_article",
+        description="Latest company news articles from Yahoo Finance.",
+        tags=["news", "source-data", "company-news"],
+        properties={},
+        required=[],
+        mapping={
+            "number_of_articles": "number_of_articles",
+            "articles": {
+                "source": "articles",
+                "items": {
+                    "headline": "headline",
+                    "published_at": "published_at",
+                    "publisher": "publisher",
+                    "summary": "summary",
+                    "url": "url",
+                    "sentiment_label": "sentiment_label",
+                },
+            },
+        },
+        input_schema=NEWS_ARTICLE_INPUT_SCHEMA,
+        output_schema=NEWS_ARTICLE_OUTPUT_SCHEMA,
+        test_data={"symbol": "AAPL", "number_of_articles": 2},
+        pulse_address=NEWS_ARTICLE_PULSE_ADDRESS,
+    ),
 ]
 
 
 def _coerce_mapping(value: Any) -> Dict[str, Any]:
+    """Internal helper to coerce the mapping."""
     if value is None:
         return {}
     if isinstance(value, Mapping):
@@ -841,6 +1039,7 @@ def _coerce_mapping(value: Any) -> Dict[str, Any]:
 
 
 def _pick_first(*values: Any) -> Any:
+    """Internal helper for pick first."""
     for value in values:
         if value is not None:
             return value
@@ -848,6 +1047,7 @@ def _pick_first(*values: Any) -> Any:
 
 
 class YFinancePulser(StandbyAgent):
+    """Represent a y finance pulser."""
     def __init__(
         self,
         config: Optional[ConfigInput] = None,
@@ -862,6 +1062,7 @@ class YFinancePulser(StandbyAgent):
         supported_pulses: Optional[list[Dict[str, Any]]] = None,
         auto_register: bool = True,
     ):
+        """Initialize the y finance pulser."""
         config_data = _read_config(config) if config is not None else {}
         resolved_config_path = config_path
         if resolved_config_path is None and isinstance(config, (str, Path)):
@@ -921,11 +1122,14 @@ class YFinancePulser(StandbyAgent):
 
     @classmethod
     def from_config(cls, config: ConfigInput, **kwargs: Any) -> "YFinancePulser":
+        """Build an instance from config."""
         return cls(config=config, **kwargs)
 
     def _setup_ui_routes(self) -> None:
+        """Internal helper to set up the UI routes."""
         @self.app.get("/")
         async def yfinance_pulser_ui(request: Request):
+            """Route handler for GET /."""
             return self.templates.TemplateResponse(
                 request=request,
                 name="attas/pulsers/templates/yfinance_pulser_editor.html",
@@ -937,6 +1141,7 @@ class YFinancePulser(StandbyAgent):
 
         @self.app.get("/api/config")
         async def get_yfinance_pulser_config():
+            """Route handler for GET /api/config."""
             config = await run_in_threadpool(self._load_config_document)
             return {
                 "status": "success",
@@ -946,6 +1151,7 @@ class YFinancePulser(StandbyAgent):
 
         @self.app.get("/api/plaza/pulses")
         async def get_plaza_pulses(search: str = ""):
+            """Route handler for GET /api/plaza/pulses."""
             rows = await run_in_threadpool(self._search_plaza_directory, pit_type="Pulse", name=search.strip() or None)
             pulses = []
             for row in rows or []:
@@ -966,6 +1172,7 @@ class YFinancePulser(StandbyAgent):
 
         @self.app.post("/api/config")
         async def save_yfinance_pulser_config(request: Request):
+            """Route handler for POST /api/config."""
             payload = await request.json()
             config = payload.get("config") if isinstance(payload, dict) and isinstance(payload.get("config"), dict) else payload
             if not isinstance(config, dict):
@@ -979,6 +1186,7 @@ class YFinancePulser(StandbyAgent):
 
         @self.app.post("/api/test-pulse")
         async def test_yfinance_pulser_pulse(request: Request):
+            """Exercise the test_yfinance_pulser_pulse regression scenario."""
             payload = await request.json()
             if not isinstance(payload, dict):
                 raise HTTPException(status_code=400, detail="Test payload must be a JSON object.")
@@ -995,6 +1203,7 @@ class YFinancePulser(StandbyAgent):
                 raise HTTPException(status_code=400, detail="config must be a JSON object when provided.")
 
             def _run_test_sync():
+                """Internal helper to run the test sync."""
                 runtime_config = config if isinstance(config, dict) else self._load_config_document()
                 runner = self.__class__(config=runtime_config, auto_register=False)
                 pulse_definition = runner.resolve_pulse_definition(pulse_name=str(pulse_name))
@@ -1036,6 +1245,7 @@ class YFinancePulser(StandbyAgent):
             return response
 
     def _load_config_document(self) -> Dict[str, Any]:
+        """Internal helper to load the config document."""
         if self.config_path and self.config_path.exists():
             with self.config_path.open("r", encoding="utf-8") as fh:
                 loaded = json.load(fh)
@@ -1044,10 +1254,15 @@ class YFinancePulser(StandbyAgent):
         return self._build_editor_config_document(self.raw_config or self._synthesize_runtime_config())
 
     def _save_config_document(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        """Internal helper to save the config document."""
         if not self.config_path:
             raise HTTPException(status_code=400, detail="This YFinancePulser was not started from a config file.")
 
         normalized = self._normalize_config_document(config)
+        try:
+            validate_pulser_config_test_parameters(normalized)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
         self.config_path.parent.mkdir(parents=True, exist_ok=True)
         self.config_path.write_text(json.dumps(normalized, indent=4), encoding="utf-8")
 
@@ -1055,6 +1270,7 @@ class YFinancePulser(StandbyAgent):
         return self._build_editor_config_document(normalized)
 
     def _normalize_config_document(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        """Internal helper to normalize the config document."""
         document = dict(config or {})
         document.setdefault("name", self.agent_card.get("name", self.name))
         document.setdefault("type", "attas.pulsers.yfinance_pulser.YFinancePulser")
@@ -1077,6 +1293,7 @@ class YFinancePulser(StandbyAgent):
         return document
 
     def _build_editor_config_document(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        """Internal helper to build the editor config document."""
         document = self._normalize_config_document(config)
         if self.supported_pulses:
             document["supported_pulses"] = [dict(pulse) for pulse in self.supported_pulses]
@@ -1084,6 +1301,7 @@ class YFinancePulser(StandbyAgent):
 
     @staticmethod
     def _normalize_config_pulse(pulse: Dict[str, Any]) -> Dict[str, Any]:
+        """Internal helper to normalize the config pulse."""
         normalized = dict(pulse)
         pulse_address = PitAddress.from_value(normalized.get("pulse_address"))
         if pulse_address.pit_id:
@@ -1092,6 +1310,7 @@ class YFinancePulser(StandbyAgent):
         return normalized
 
     def _synthesize_runtime_config(self) -> Dict[str, Any]:
+        """Internal helper to return the synthesize runtime config."""
         return {
             "name": self.agent_card.get("name", self.name),
             "type": "attas.pulsers.yfinance_pulser.YFinancePulser",
@@ -1112,6 +1331,7 @@ class YFinancePulser(StandbyAgent):
         config: Dict[str, Any],
         supported_pulses: Optional[list[Dict[str, Any]]],
     ) -> list[Dict[str, Any]]:
+        """Internal helper to build the supported pulses."""
         raw_pulses = supported_pulses
         if raw_pulses is None:
             raw_pulses = config.get("supported_pulses")
@@ -1126,6 +1346,7 @@ class YFinancePulser(StandbyAgent):
         return normalized
 
     def _normalize_pulse_definition(self, pulse: Mapping[str, Any]) -> Dict[str, Any]:
+        """Internal helper to normalize the pulse definition."""
         normalized = dict(pulse)
         normalized.setdefault("name", "default_pulse")
         pulse_address = normalized.get("pulse_address")
@@ -1145,6 +1366,7 @@ class YFinancePulser(StandbyAgent):
         return normalized
 
     def _compact_pit_ref(self, value: Any) -> str:
+        """Internal helper for compact pit ref."""
         pit_address = PitAddress.from_value(value)
         if pit_address.pit_id:
             return pit_address.to_ref(reference_plaza=self.plaza_url)
@@ -1152,6 +1374,7 @@ class YFinancePulser(StandbyAgent):
 
     @staticmethod
     def _same_pit_ref(left: Any, right: Any) -> bool:
+        """Internal helper for same pit ref."""
         left_address = PitAddress.from_value(left)
         right_address = PitAddress.from_value(right)
         if left_address.pit_id and right_address.pit_id:
@@ -1165,6 +1388,7 @@ class YFinancePulser(StandbyAgent):
         supported_pulses: Optional[list[Dict[str, Any]]] = None,
         agent_card_overrides: Optional[Dict[str, Any]] = None,
     ) -> None:
+        """Return the apply pulser config."""
         raw_config = dict(config_data or {})
         pulser_config = raw_config.get("pulser", raw_config)
         self.raw_config = raw_config
@@ -1205,6 +1429,7 @@ class YFinancePulser(StandbyAgent):
         self._refresh_get_pulse_practice_metadata()
 
     def _refresh_get_pulse_practice_metadata(self) -> None:
+        """Internal helper for refresh get pulse practice metadata."""
         practice = next((entry for entry in self.practices if entry.id == "get_pulse_data"), None)
         if practice is None:
             return
@@ -1223,6 +1448,7 @@ class YFinancePulser(StandbyAgent):
         api_key: Optional[str] = None,
         accepts_inbound_from_plaza: Optional[bool] = None,
     ) -> Dict[str, Any]:
+        """Build the register payload."""
         payload = super().build_register_payload(
             plaza_url=plaza_url,
             card=card,
@@ -1261,6 +1487,7 @@ class YFinancePulser(StandbyAgent):
         pulse_name: Optional[str] = None,
         pulse_address: Optional[str] = None,
     ) -> Dict[str, Any]:
+        """Resolve the pulse definition."""
         if pulse_name:
             for pulse in self.supported_pulses:
                 if pulse.get("name") == pulse_name or pulse.get("pulse_name") == pulse_name:
@@ -1279,6 +1506,7 @@ class YFinancePulser(StandbyAgent):
         output_schema: Optional[Dict[str, Any]] = None,
         mapping: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
+        """Transform the value."""
         pulse_definition = self.resolve_pulse_definition(pulse_name=pulse_name, pulse_address=pulse_address)
         schema = output_schema or pulse_definition.get("output_schema") or self.output_schema or {}
         mapping_rules = mapping or pulse_definition.get("mapping") or self.mapping
@@ -1296,6 +1524,7 @@ class YFinancePulser(StandbyAgent):
         return transformed
 
     def _resolve_mapping_value(self, rule: Any, input_data: Dict[str, Any]) -> tuple[Any, bool]:
+        """Internal helper to resolve the mapping value."""
         if isinstance(rule, str):
             value = _resolve_path(input_data, rule)
             return value, value is not None
@@ -1319,6 +1548,7 @@ class YFinancePulser(StandbyAgent):
         pulse_address: Optional[str] = None,
         output_schema: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
+        """Return the pulse data."""
         pulse_definition = self.resolve_pulse_definition(pulse_name=pulse_name, pulse_address=pulse_address)
         active_name = pulse_name or pulse_definition.get("name")
         raw_payload = self.fetch_pulse_payload(active_name, input_data, pulse_definition) or {}
@@ -1344,6 +1574,7 @@ class YFinancePulser(StandbyAgent):
         input_data: Dict[str, Any],
         pulse_definition: Dict[str, Any],
     ) -> Dict[str, Any]:
+        """Fetch the pulse payload."""
         symbol = str((input_data or {}).get("symbol") or "").strip().upper()
         self.last_fetch_debug = {
             "pulse_name": pulse_name,
@@ -1353,6 +1584,33 @@ class YFinancePulser(StandbyAgent):
         if not symbol:
             self.last_fetch_debug["error"] = "symbol is required"
             return {"error": "symbol is required"}
+
+        if pulse_name == "news_article":
+            requested_articles = (input_data or {}).get("number_of_articles")
+            if requested_articles in (None, ""):
+                number_of_articles = 10
+            else:
+                number_of_articles = _coerce_positive_int(requested_articles)
+                if number_of_articles is None:
+                    self.last_fetch_debug["error"] = "number_of_articles must be a positive integer"
+                    return {
+                        "error": "number_of_articles must be a positive integer",
+                        "symbol": symbol,
+                    }
+            try:
+                snapshot = self._load_company_news(
+                    symbol,
+                    number_of_articles=number_of_articles,
+                )
+            except Exception as exc:
+                logger.error("[%s] Error fetching '%s' for '%s': %s", self.name, pulse_name, symbol, exc)
+                self.last_fetch_debug["error"] = str(exc)
+                return {"error": str(exc), "symbol": symbol, "source": "yfinance"}
+            snapshot["symbol"] = symbol
+            snapshot.setdefault("number_of_articles", number_of_articles)
+            snapshot.setdefault("source", "yfinance")
+            self.last_fetch_debug["snapshot"] = dict(snapshot)
+            return snapshot
 
         if pulse_name == "ohlc_bar_series":
             interval = str((input_data or {}).get("interval") or "").strip()
@@ -1413,6 +1671,7 @@ class YFinancePulser(StandbyAgent):
         start_date: str,
         end_date: str,
     ) -> Dict[str, Any]:
+        """Internal helper to load the ohlc bar series."""
         if yf is None:
             raise RuntimeError("yfinance is not installed.")
 
@@ -1461,6 +1720,7 @@ class YFinancePulser(StandbyAgent):
         }
 
     def _iter_history_rows(self, history: Any):
+        """Internal helper to return the iter history rows."""
         index_values = list(getattr(history, "index", []))
         opens = _series_to_dict(self._history_column(history, "Open"))
         highs = _series_to_dict(self._history_column(history, "High"))
@@ -1477,6 +1737,7 @@ class YFinancePulser(StandbyAgent):
             }
 
     def _history_column(self, history: Any, name: str) -> Any:
+        """Internal helper to return the history column."""
         if isinstance(history, Mapping):
             return history.get(name)
         try:
@@ -1485,6 +1746,7 @@ class YFinancePulser(StandbyAgent):
             return getattr(history, name, None)
 
     def _row_value(self, row: Any, name: str) -> Any:
+        """Internal helper to return the row value."""
         if isinstance(row, Mapping):
             return row.get(name)
         getter = getattr(row, "get", None)
@@ -1495,7 +1757,129 @@ class YFinancePulser(StandbyAgent):
                 pass
         return getattr(row, name, None)
 
+    def _get_ticker_news(self, ticker: Any, symbol: str, *, count: int) -> list[Dict[str, Any]]:
+        """Internal helper to return the ticker news."""
+        getter = getattr(ticker, "get_news", None)
+        raw_news: Any
+        if callable(getter):
+            try:
+                raw_news = getter(count=count)
+            except TypeError:
+                try:
+                    raw_news = getter(count)
+                except TypeError:
+                    raw_news = getter()
+        else:
+            raw_news = getattr(ticker, "news", None)
+
+        if raw_news is None:
+            return []
+        if not isinstance(raw_news, list):
+            raise RuntimeError(f"Unexpected news payload returned for {symbol}.")
+        return [dict(entry) for entry in raw_news if isinstance(entry, Mapping)]
+
+    def _normalize_news_article(self, article: Mapping[str, Any]) -> Optional[Dict[str, Any]]:
+        """Internal helper to normalize the news article."""
+        headline = _pick_first_text(
+            article.get("headline"),
+            article.get("title"),
+            _mapping_get(article, "content", "headline"),
+            _mapping_get(article, "content", "title"),
+        )
+        published_at = _normalize_news_timestamp(
+            _pick_first(
+                article.get("published_at"),
+                article.get("publishedAt"),
+                article.get("providerPublishTime"),
+                article.get("pubDate"),
+                article.get("publicationDate"),
+                _mapping_get(article, "content", "published_at"),
+                _mapping_get(article, "content", "publishedAt"),
+                _mapping_get(article, "content", "providerPublishTime"),
+                _mapping_get(article, "content", "pubDate"),
+                _mapping_get(article, "content", "publicationDate"),
+                article.get("displayTime"),
+                _mapping_get(article, "content", "displayTime"),
+            )
+        )
+        if not headline or not published_at:
+            return None
+
+        normalized = {
+            "headline": headline,
+            "published_at": published_at,
+        }
+
+        publisher = _pick_first_text(
+            article.get("publisher"),
+            article.get("provider"),
+            article.get("source"),
+            _mapping_get(article, "provider", "displayName"),
+            _mapping_get(article, "provider", "name"),
+            _mapping_get(article, "content", "publisher"),
+            _mapping_get(article, "content", "source"),
+            _mapping_get(article, "content", "provider", "displayName"),
+            _mapping_get(article, "content", "provider", "name"),
+        )
+        if publisher:
+            normalized["publisher"] = publisher
+
+        summary = _pick_first_text(
+            article.get("summary"),
+            article.get("description"),
+            _mapping_get(article, "content", "summary"),
+            _mapping_get(article, "content", "description"),
+        )
+        if summary:
+            normalized["summary"] = summary
+
+        url = _pick_first_text(
+            article.get("link"),
+            article.get("url"),
+            _mapping_get(article, "canonicalUrl", "url"),
+            _mapping_get(article, "clickThroughUrl", "url"),
+            _mapping_get(article, "content", "url"),
+            _mapping_get(article, "content", "canonicalUrl", "url"),
+            _mapping_get(article, "content", "clickThroughUrl", "url"),
+        )
+        if url:
+            normalized["url"] = url
+
+        sentiment_label = _pick_first_text(
+            article.get("sentiment_label"),
+            article.get("sentiment"),
+            _mapping_get(article, "content", "sentiment_label"),
+            _mapping_get(article, "content", "sentiment"),
+        )
+        if sentiment_label:
+            normalized["sentiment_label"] = sentiment_label
+
+        return normalized
+
+    def _load_company_news(self, symbol: str, *, number_of_articles: int) -> Dict[str, Any]:
+        """Internal helper to load the company news."""
+        if yf is None:
+            raise RuntimeError("yfinance is not installed.")
+
+        ticker = yf.Ticker(symbol)
+        raw_articles = self._get_ticker_news(ticker, symbol, count=number_of_articles)
+        normalized_articles = []
+        for article in raw_articles:
+            normalized = self._normalize_news_article(article)
+            if normalized:
+                normalized_articles.append(normalized)
+
+        normalized_articles.sort(key=lambda article: str(article.get("published_at") or ""), reverse=True)
+
+        return {
+            "symbol": symbol,
+            "number_of_articles": number_of_articles,
+            "articles": normalized_articles[:number_of_articles],
+            "source": "yfinance",
+        }
+
     def _load_ticker_snapshot(self, symbol: str) -> Dict[str, Any]:
+        """Internal helper to load the ticker snapshot."""
         if yf is None:
             raise RuntimeError("yfinance is not installed.")
 
@@ -1631,6 +2015,7 @@ class YFinancePulser(StandbyAgent):
         return {key: value for key, value in snapshot.items() if value is not None}
 
     def _get_income_statement_frame(self, ticker: Any, symbol: str, period_type: str) -> Any:
+        """Internal helper to return the income statement frame."""
         candidate_attrs = (
             ("quarterly_income_stmt", "quarterly_financials")
             if period_type == "quarterly"
@@ -1649,6 +2034,7 @@ class YFinancePulser(StandbyAgent):
         return None
 
     def _get_statement_row_values(self, frame: Any, aliases: tuple[str, ...]) -> Dict[Any, Any]:
+        """Internal helper to return the statement row values."""
         normalized_rows: Dict[str, Any] = {}
         for label in list(getattr(frame, "index", [])):
             normalized_rows.setdefault(_normalize_statement_label(label), label)
@@ -1667,6 +2053,7 @@ class YFinancePulser(StandbyAgent):
         return {}
 
     def _load_latest_income_statement_snapshot(self, symbol: str, *, period_type: str) -> Dict[str, Any]:
+        """Internal helper to load the latest income statement snapshot."""
         if yf is None:
             raise RuntimeError("yfinance is not installed.")
 
@@ -1742,6 +2129,7 @@ class YFinancePulser(StandbyAgent):
         return {key: value for key, value in snapshot.items() if value is not None}
 
     def _get_ticker_fast_info(self, ticker: Any, symbol: str) -> Dict[str, Any]:
+        """Internal helper to return the ticker fast info."""
         try:
             return _coerce_mapping(getattr(ticker, "fast_info", None))
         except Exception as exc:
@@ -1749,6 +2137,7 @@ class YFinancePulser(StandbyAgent):
             return {}
 
     def _get_ticker_info(self, ticker: Any, symbol: str) -> Dict[str, Any]:
+        """Internal helper to return the ticker info."""
         try:
             return _coerce_mapping(getattr(ticker, "info", None))
         except Exception as exc:

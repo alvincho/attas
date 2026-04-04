@@ -1,3 +1,14 @@
+"""
+Pulser logic for `phemacast.practices.pulser`.
+
+Phemacast assembles pulse inputs, phemas, and castrs into rendered research artifacts
+and interactive tooling. Within Phemacast, the practices package connects domain
+behavior to the underlying Prompits runtime.
+
+Core types exposed here include `GetPulseDataPractice` and `PulsePractice`, which carry
+the main behavior or state managed by this module.
+"""
+
 from __future__ import annotations
 
 from typing import Any, Callable, Dict, Iterable, Optional
@@ -13,12 +24,15 @@ class PulsePractice:
     """Simple provider registry used by `PhemacastSystem` for local pulse fetches."""
 
     def __init__(self):
+        """Initialize the pulse practice."""
         self.providers: Dict[str, Callable[[Optional[Dict[str, Any]]], Any]] = {}
 
     def register_provider(self, key: str, provider: Callable[[Optional[Dict[str, Any]]], Any]) -> None:
+        """Register the provider."""
         self.providers[key] = provider
 
     def fetch(self, keys: Iterable[str], context: Optional[Dict[str, Any]] = None) -> Dict[str, Dict[str, Any]]:
+        """Fetch the value."""
         payload: Dict[str, Dict[str, Any]] = {}
         for key in keys:
             provider = self.providers.get(key)
@@ -35,6 +49,7 @@ class GetPulseDataPractice(Practice):
     """Expose `agent.get_pulse_data()` as a mounted callable practice."""
 
     def __init__(self):
+        """Initialize the get pulse data practice."""
         super().__init__(
             name="Get Pulse Data",
             description="Fetch or transform pulse payloads for the agent's supported pulses.",
@@ -47,6 +62,7 @@ class GetPulseDataPractice(Practice):
         )
 
     def bind(self, agent):
+        """Bind the value."""
         super().bind(agent)
         supported_pulses = getattr(agent, "supported_pulses", [])
         self.parameters = {
@@ -63,10 +79,12 @@ class GetPulseDataPractice(Practice):
         }
 
     def mount(self, app):
+        """Mount the value."""
         router = APIRouter()
 
         @router.post(self.path)
         async def get_pulse_data(message: Message):
+            """Route handler for POST requests."""
             content = message.content or {}
             if not isinstance(content, dict):
                 raise HTTPException(status_code=400, detail="Pulser content must be a JSON object.")
@@ -75,9 +93,11 @@ class GetPulseDataPractice(Practice):
         app.include_router(router)
 
     def execute(self, **kwargs) -> Any:
+        """Handle execute for the get pulse data practice."""
         if not self.agent:
             raise RuntimeError("GetPulseDataPractice is not bound to an agent.")
 
+        caller_context = kwargs.get("_caller")
         input_data = kwargs.get("input_data")
         if input_data is None:
             input_data = kwargs.get("params")
@@ -87,6 +107,11 @@ class GetPulseDataPractice(Practice):
                 for key, value in kwargs.items()
                 if key not in {"pulse_name", "pulse_address", "output_schema"}
             }
+
+        if isinstance(input_data, dict) and isinstance(caller_context, dict):
+            enriched_input = dict(input_data)
+            enriched_input.setdefault("_caller", dict(caller_context))
+            input_data = enriched_input
 
         return self.agent.get_pulse_data(
             input_data=input_data or {},

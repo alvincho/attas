@@ -1,3 +1,14 @@
+"""
+User module for `prompits.agents.user`.
+
+Prompits provides the core HTTP-native agent runtime, Plaza coordination layer, and
+pool/practice infrastructure for FinMAS. Within Prompits, these modules provide reusable
+agent hosts and user-facing agent variants.
+
+Core types exposed here include `UserAgent`, which carry the main behavior or state
+managed by this module.
+"""
+
 import json
 import logging
 import os
@@ -25,6 +36,7 @@ ConfigInput = Union[str, Path, Mapping[str, Any]]
 
 
 def _read_config(config: Optional[ConfigInput]) -> Dict[str, Any]:
+    """Internal helper to read the config."""
     if config is None:
         return {}
     if isinstance(config, Mapping):
@@ -37,7 +49,7 @@ def _read_config(config: Optional[ConfigInput]) -> Dict[str, Any]:
 
 class UserAgent(BaseAgent):
     """
-    Browser-facing attas operator UI.
+    Browser-facing multi-plaza operator UI.
 
     The user agent keeps a primary BaseAgent identity for backwards
     compatibility, while also managing independent auth sessions for any number
@@ -45,7 +57,7 @@ class UserAgent(BaseAgent):
     """
 
     SESSION_EXPIRES_IN = 3600
-    SAVED_RESULTS_TABLE = "attas_saved_results"
+    SAVED_RESULTS_TABLE = "user_agent_saved_results"
     SAVED_ARTIFACTS_DIR = "saved_outputs"
     PLAZA_CONNECTION_ACTIVE_WINDOW_SEC = 60
 
@@ -62,6 +74,7 @@ class UserAgent(BaseAgent):
         config_path: Optional[ConfigInput] = None,
         applications: Optional[List[Dict[str, Any]]] = None,
     ):
+        """Initialize the user agent."""
         config_data = _read_config(config if config is not None else config_path)
         user_config = config_data.get("user_agent") if isinstance(config_data.get("user_agent"), dict) else {}
 
@@ -90,6 +103,11 @@ class UserAgent(BaseAgent):
         if raw_applications is None:
             raw_applications = config_data.get("applications")
         self.configured_applications = self._normalize_configured_applications(raw_applications)
+        self.disabled_components = self._normalize_disabled_components(
+            user_config.get("disabled_components")
+            if isinstance(user_config.get("disabled_components"), dict)
+            else config_data.get("disabled_components")
+        )
 
         self._plaza_sessions: Dict[str, Dict[str, Any]] = {}
         self._plaza_sessions_lock = threading.RLock()
@@ -109,10 +127,12 @@ class UserAgent(BaseAgent):
 
     @staticmethod
     def _normalize_plaza_urls(*values: Any) -> List[str]:
+        """Internal helper to normalize the Plaza URLs."""
         urls: List[str] = []
         seen = set()
 
         def collect(value: Any):
+            """Collect the value."""
             if value is None:
                 return
             if isinstance(value, str):
@@ -135,6 +155,7 @@ class UserAgent(BaseAgent):
 
     @staticmethod
     def _normalize_configured_applications(raw: Any) -> List[Dict[str, Any]]:
+        """Internal helper to normalize the configured applications."""
         if not isinstance(raw, list):
             return []
         normalized: List[Dict[str, Any]] = []
@@ -148,7 +169,129 @@ class UserAgent(BaseAgent):
             normalized.append(entry)
         return normalized
 
+    @staticmethod
+    def _normalize_name_set(raw: Any) -> set[str]:
+        """Internal helper to normalize the name set."""
+        if isinstance(raw, (list, tuple, set)):
+            return {
+                str(item).strip().lower()
+                for item in raw
+                if str(item).strip()
+            }
+        if isinstance(raw, str) and raw.strip():
+            return {raw.strip().lower()}
+        return set()
+
+    @classmethod
+    def _normalize_disabled_components(cls, raw: Any) -> Dict[str, set[str]]:
+        """Internal helper to normalize the disabled components."""
+        source = raw if isinstance(raw, dict) else {}
+        return {
+            "applications": cls._normalize_name_set(source.get("applications")),
+            "phemars": cls._normalize_name_set(source.get("phemars")),
+            "castrs": cls._normalize_name_set(source.get("castrs")),
+            "agent_configs": cls._normalize_name_set(source.get("agent_configs")),
+        }
+
+    @staticmethod
+    def _normalized_text(value: Any) -> str:
+        """Internal helper for normalized text."""
+        return str(value or "").strip().lower()
+
+    def _matches_disabled_name(self, value: Any, *groups: str) -> bool:
+        """Return whether the value matches disabled name."""
+        normalized = self._normalized_text(value)
+        if not normalized:
+            return False
+        for group in groups:
+            if normalized in self.disabled_components.get(group, set()):
+                return True
+        return False
+
+    def _is_application_disabled(self, item: Dict[str, Any]) -> bool:
+        """Return whether the value is an application disabled."""
+        return any(
+            self._matches_disabled_name(candidate, "applications", "phemars")
+            for candidate in (
+                item.get("name"),
+                item.get("owner"),
+                item.get("host_phemar_name"),
+            )
+        )
+
+    def _is_agent_disabled(self, item: Dict[str, Any], group: str) -> bool:
+        """Return whether the value is an agent disabled."""
+        return self._matches_disabled_name(item.get("name"), group)
+
+    def _infer_agent_config_role(self, item: Dict[str, Any]) -> str:
+        """Internal helper for infer agent config role."""
+        role = self._normalized_text(item.get("role"))
+        if role:
+            return role
+        agent_type = self._normalized_text(item.get("agent_type"))
+        if "castr" in agent_type:
+            return "castr"
+        if "phemar" in agent_type:
+            return "phemar"
+        return ""
+
+    def _is_agent_config_disabled(self, item: Dict[str, Any]) -> bool:
+        """Return whether the value is an agent config disabled."""
+        config = item.get("config") if isinstance(item.get("config"), dict) else {}
+        agent_card = config.get("agent_card") if isinstance(config.get("agent_card"), dict) else {}
+        candidates = [
+            item.get("name"),
+            config.get("name"),
+            agent_card.get("name"),
+        ]
+        role = self._infer_agent_config_role(item)
+        groups = ["agent_configs"]
+        if role == "castr":
+            groups.append("castrs")
+        elif role == "phemar":
+            groups.append("phemars")
+        return any(self._matches_disabled_name(candidate, *groups) for candidate in candidates)
+
+    def _agent_config_entry_from_config(self, config: Dict[str, Any], *, config_id: str = "") -> Dict[str, Any]:
+        """Internal helper to return the agent config entry from config."""
+        agent_card = config.get("agent_card") if isinstance(config.get("agent_card"), dict) else {}
+        return {
+            "id": str(config_id or "").strip(),
+            "name": str(config.get("name") or agent_card.get("name") or "").strip(),
+            "role": str(config.get("role") or agent_card.get("role") or "").strip(),
+            "agent_type": str(config.get("type") or "").strip(),
+            "config": dict(config or {}),
+        }
+
+    def _ensure_agent_config_launch_allowed(
+        self,
+        *,
+        plaza_url: str,
+        config_id: str = "",
+        config: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        """Internal helper to ensure the agent config launch allowed exists."""
+        if isinstance(config, dict) and config:
+            if self._is_agent_config_disabled(self._agent_config_entry_from_config(config, config_id=config_id)):
+                raise HTTPException(status_code=403, detail="This component is temporarily disabled")
+            return
+
+        normalized_id = str(config_id or "").strip()
+        if not normalized_id:
+            return
+        try:
+            rows = self._fetch_plaza_agent_configs(plaza_url, include_config="true")
+        except Exception:
+            return
+        for row in rows:
+            if str(row.get("id") or "").strip() != normalized_id:
+                continue
+            if self._is_agent_config_disabled(row):
+                raise HTTPException(status_code=403, detail="This component is temporarily disabled")
+            return
+
     def _seed_primary_session(self) -> None:
+        """Internal helper for seed primary session."""
         if not self.plaza_url:
             return
         normalized = self.plaza_url.rstrip("/")
@@ -162,6 +305,7 @@ class UserAgent(BaseAgent):
             }
 
     def _get_session_state(self, plaza_url: str) -> Dict[str, Any]:
+        """Internal helper to return the session state."""
         normalized = str(plaza_url or "").strip().rstrip("/")
         if not normalized:
             raise ValueError("plaza_url is required")
@@ -180,13 +324,15 @@ class UserAgent(BaseAgent):
 
             # Mirror the BaseAgent primary session when available.
             if normalized == str(self.plaza_url or "").rstrip("/"):
-                if self.agent_id and not session.get("agent_id"):
+                if self.agent_id:
                     session["agent_id"] = str(self.agent_id)
-                if self.api_key and not session.get("api_key"):
+                if self.api_key:
                     session["api_key"] = str(self.api_key)
-                if self.plaza_token and not session.get("token"):
-                    session["token"] = str(self.plaza_token)
-                    session["token_expires_at"] = float(self.token_expires_at or 0)
+                # Keep the primary per-plaza session aligned with the BaseAgent state.
+                # Heartbeat renewal and reconnect update the primary token directly on the
+                # BaseAgent, so stale cached tokens here can break remote UsePractice calls.
+                session["token"] = str(self.plaza_token or "")
+                session["token_expires_at"] = float(self.token_expires_at or 0)
 
         if not session.get("agent_id") and self.pool:
             creds = self.plaza_credential_store.load(agent_name=self.name, plaza_url=normalized)
@@ -197,6 +343,7 @@ class UserAgent(BaseAgent):
         return session
 
     def _sync_primary_agent_state(self, plaza_url: str, session: Dict[str, Any]) -> None:
+        """Internal helper to synchronize the primary agent state."""
         normalized = str(plaza_url or "").rstrip("/")
         if normalized != str(self.plaza_url or "").rstrip("/"):
             return
@@ -209,6 +356,7 @@ class UserAgent(BaseAgent):
             self._refresh_pit_address()
 
     def _register_plaza_session(self, plaza_url: str, session: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Internal helper to register the Plaza session."""
         normalized = str(plaza_url or "").rstrip("/")
         payload = self.build_register_payload(
             plaza_url=normalized,
@@ -260,6 +408,7 @@ class UserAgent(BaseAgent):
         return session
 
     def _renew_plaza_session(self, plaza_url: str, session: Dict[str, Any]) -> bool:
+        """Internal helper for renew Plaza session."""
         token = str(session.get("token") or "").strip()
         if not token:
             return False
@@ -282,6 +431,7 @@ class UserAgent(BaseAgent):
         return True
 
     def _ensure_plaza_session(self, plaza_url: str) -> Optional[Dict[str, Any]]:
+        """Internal helper to ensure the Plaza session exists."""
         session = self._get_session_state(plaza_url)
         if float(session.get("token_expires_at") or 0) > (time.time() + 60) and session.get("token"):
             return session
@@ -290,6 +440,7 @@ class UserAgent(BaseAgent):
         return self._register_plaza_session(plaza_url, session)
 
     def _search_plaza(self, plaza_url: str, **params: Any) -> List[Dict[str, Any]]:
+        """Internal helper to search the Plaza."""
         session = self._ensure_plaza_session(plaza_url)
         if not session or not session.get("token"):
             return []
@@ -322,12 +473,14 @@ class UserAgent(BaseAgent):
         return payload if isinstance(payload, list) else []
 
     def _resolve_config_plaza_urls(self, plaza_url: str = "") -> List[str]:
+        """Internal helper to resolve the config Plaza URLs."""
         selected = self._normalize_plaza_urls(plaza_url) if plaza_url else list(self.user_plaza_urls)
         if not selected and self.plaza_url:
             selected = [str(self.plaza_url).rstrip("/")]
         return selected
 
     def _fetch_plaza_agent_configs(self, plaza_url: str, **params: Any) -> List[Dict[str, Any]]:
+        """Internal helper to fetch the Plaza agent configs."""
         filtered_params = {key: value for key, value in params.items() if value not in (None, "", [])}
         response = self._plaza_get(
             "/api/agent_configs",
@@ -358,6 +511,7 @@ class UserAgent(BaseAgent):
         name: str = "",
         description: str = "",
     ) -> Dict[str, Any]:
+        """Internal helper to save the Plaza agent config."""
         response = self._plaza_post(
             "/api/agent_configs",
             plaza_url=plaza_url,
@@ -403,6 +557,7 @@ class UserAgent(BaseAgent):
         pool_location: str = "",
         wait_for_health_sec: float = 15.0,
     ) -> Dict[str, Any]:
+        """Internal helper to return the launch Plaza agent config."""
         normalized_id = str(config_id or "").strip()
         if not normalized_id and not isinstance(config, dict):
             raise HTTPException(status_code=400, detail="config_id or config is required")
@@ -451,6 +606,7 @@ class UserAgent(BaseAgent):
         role: Optional[str] = None,
         pit_type: Optional[str] = None,
     ) -> Optional[Dict[str, Any]]:
+        """Internal helper to look up the Plaza agent."""
         if agent_id:
             results = self._search_plaza(plaza_url, agent_id=agent_id, pit_type=pit_type)
             if results:
@@ -463,6 +619,7 @@ class UserAgent(BaseAgent):
 
     @staticmethod
     def _query_blob(value: Any) -> str:
+        """Internal helper to query the blob."""
         if isinstance(value, (dict, list, tuple, set)):
             try:
                 return json.dumps(value, sort_keys=True, default=str).lower()
@@ -471,6 +628,7 @@ class UserAgent(BaseAgent):
         return str(value or "").lower()
 
     def _matches_query(self, *values: Any, query: str = "") -> bool:
+        """Return whether the value matches query."""
         normalized_query = str(query or "").strip().lower()
         if not normalized_query:
             return True
@@ -478,6 +636,7 @@ class UserAgent(BaseAgent):
 
     @staticmethod
     def _guess_castr_format(card: Dict[str, Any], meta: Dict[str, Any]) -> str:
+        """Internal helper for guess castr format."""
         media_type = str(meta.get("media_type") or card.get("media_type") or "").strip()
         if media_type:
             return media_type.upper()
@@ -488,6 +647,7 @@ class UserAgent(BaseAgent):
         return "PDF"
 
     def _map_application_record(self, row: Dict[str, Any], plaza_url: str) -> Dict[str, Any]:
+        """Internal helper to map the application record."""
         card = row.get("card") if isinstance(row.get("card"), dict) else {}
         meta = row.get("meta") if isinstance(row.get("meta"), dict) else {}
         host_pit_address = meta.get("host_phemar_pit_address") if isinstance(meta.get("host_phemar_pit_address"), dict) else {}
@@ -515,6 +675,7 @@ class UserAgent(BaseAgent):
         }
 
     def _map_agent_record(self, row: Dict[str, Any], plaza_url: str) -> Dict[str, Any]:
+        """Internal helper to map the agent record."""
         card = row.get("card") if isinstance(row.get("card"), dict) else {}
         meta = row.get("meta") if isinstance(row.get("meta"), dict) else {}
         if not meta and isinstance(card.get("meta"), dict):
@@ -538,6 +699,7 @@ class UserAgent(BaseAgent):
         }
 
     def _map_llm_pulser_record(self, row: Dict[str, Any], plaza_url: str) -> Dict[str, Any]:
+        """Internal helper to map the LLM pulser record."""
         mapped = self._map_agent_record(row, plaza_url)
         meta = mapped.get("meta") if isinstance(mapped.get("meta"), dict) else {}
         supported_pulses = meta.get("supported_pulses") if isinstance(meta.get("supported_pulses"), list) else []
@@ -554,6 +716,7 @@ class UserAgent(BaseAgent):
 
     @classmethod
     def _heartbeat_is_active(cls, last_active: Any) -> bool:
+        """Return whether the heartbeat is active."""
         try:
             timestamp = float(last_active or 0)
         except (TypeError, ValueError):
@@ -569,6 +732,7 @@ class UserAgent(BaseAgent):
         agent_id: str = "",
         fallback_name: str = "",
     ) -> Dict[str, Any]:
+        """Internal helper to build the Plaza connection summary."""
         summary = {
             "connected_agent_id": str(agent_id or "").strip(),
             "connected_agent_name": str(fallback_name or self.name or "").strip(),
@@ -596,6 +760,7 @@ class UserAgent(BaseAgent):
         return summary
 
     def _fetch_single_plaza_catalog(self, plaza_url: str, query: str = "", party: str = "") -> Dict[str, Any]:
+        """Internal helper to fetch the single Plaza catalog."""
         normalized = str(plaza_url or "").strip().rstrip("/")
         status: Dict[str, Any] = {
             "url": normalized,
@@ -692,15 +857,24 @@ class UserAgent(BaseAgent):
 
             status["applications"] = [
                 item for item in applications
-                if self._matches_query(item.get("name"), item.get("description"), item.get("owner"), item.get("tags"), query=query)
+                if (
+                    not self._is_application_disabled(item)
+                    and self._matches_query(item.get("name"), item.get("description"), item.get("owner"), item.get("tags"), query=query)
+                )
             ]
             status["phemars"] = [
                 item for item in phemars
-                if self._matches_query(item.get("name"), item.get("description"), item.get("tags"), query=query)
+                if (
+                    not self._is_agent_disabled(item, "phemars")
+                    and self._matches_query(item.get("name"), item.get("description"), item.get("tags"), query=query)
+                )
             ]
             status["castrs"] = [
                 item for item in castrs
-                if self._matches_query(item.get("name"), item.get("description"), item.get("tags"), item.get("media_type"), query=query)
+                if (
+                    not self._is_agent_disabled(item, "castrs")
+                    and self._matches_query(item.get("name"), item.get("description"), item.get("tags"), item.get("media_type"), query=query)
+                )
             ]
             status["llm_pulsers"] = [
                 item for item in llm_pulsers
@@ -716,6 +890,7 @@ class UserAgent(BaseAgent):
         return status
 
     def _build_catalog(self, query: str = "", party: str = "", plaza_url: str = "") -> Dict[str, Any]:
+        """Internal helper to build the catalog."""
         selected_plazas = self._normalize_plaza_urls(plaza_url) if plaza_url else list(self.user_plaza_urls)
         if not selected_plazas and self.plaza_url:
             selected_plazas = [self.plaza_url.rstrip("/")]
@@ -745,6 +920,7 @@ class UserAgent(BaseAgent):
         }
 
     def _build_legacy_plaza_status(self, pit_type: Optional[str] = None) -> Dict[str, Any]:
+        """Internal helper to build the legacy Plaza status."""
         plazas = []
         selected = list(self.user_plaza_urls)
         if not selected and self.plaza_url:
@@ -795,6 +971,7 @@ class UserAgent(BaseAgent):
         item_id: str = "",
         name: str = "",
     ) -> Optional[Dict[str, Any]]:
+        """Internal helper to resolve the catalog item."""
         normalized_id = str(item_id or "").strip()
         if normalized_id:
             for item in items:
@@ -824,6 +1001,7 @@ class UserAgent(BaseAgent):
         party: str = "",
         plaza_url: str = "",
     ) -> Dict[str, Any]:
+        """Internal helper to resolve the application selection."""
         catalog = self._build_catalog(query=query, party=party, plaza_url=plaza_url)
         selection = self._resolve_catalog_item(
             catalog.get("applications") or [],
@@ -842,6 +1020,7 @@ class UserAgent(BaseAgent):
         agent_name: str = "",
         plaza_url: str = "",
     ) -> Optional[Dict[str, Any]]:
+        """Internal helper to resolve the agent selection."""
         catalog = self._build_catalog(plaza_url=plaza_url)
         key = "phemars" if role == "phemar" else "castrs"
         return self._resolve_catalog_item(catalog.get(key) or [], item_id=agent_id, name=agent_name)
@@ -855,6 +1034,7 @@ class UserAgent(BaseAgent):
         phemar_address: str = "",
         phemar_plaza_url: str = "",
     ) -> Optional[Dict[str, Any]]:
+        """Internal helper to resolve the host phemar context."""
         preferred_agent_id = str(phemar_agent_id or selected_application.get("host_phemar_agent_id") or "").strip()
         preferred_name = str(phemar_name or selected_application.get("host_phemar_name") or "").strip()
         preferred_address = str(phemar_address or selected_application.get("host_phemar_address") or "").strip()
@@ -896,6 +1076,7 @@ class UserAgent(BaseAgent):
 
     @staticmethod
     def _row_supports_practice(row: Dict[str, Any], practice_id: str) -> bool:
+        """Return whether the row supports practice."""
         card = row.get("card") if isinstance(row.get("card"), dict) else {}
         practices = card.get("practices") if isinstance(card.get("practices"), list) else []
         normalized = str(practice_id or "").strip()
@@ -908,6 +1089,7 @@ class UserAgent(BaseAgent):
 
     @staticmethod
     def _looks_like_llm_row(row: Dict[str, Any]) -> bool:
+        """Internal helper to return the looks like LLM row."""
         card = row.get("card") if isinstance(row.get("card"), dict) else {}
         role = str(card.get("role") or row.get("role") or "").strip().lower()
         tags = [
@@ -934,6 +1116,7 @@ class UserAgent(BaseAgent):
 
     @staticmethod
     def _candidate_llm_plaza_urls(*values: Any) -> List[str]:
+        """Internal helper to return the candidate LLM Plaza URLs."""
         urls: List[str] = []
         seen = set()
         for value in values:
@@ -952,6 +1135,7 @@ class UserAgent(BaseAgent):
         llm_agent_id: str = "",
         llm_plaza_url: str = "",
     ) -> Optional[Dict[str, Any]]:
+        """Internal helper to resolve the LLM preprocessor."""
         candidate_plazas = self._candidate_llm_plaza_urls(
             llm_plaza_url,
             (selected_castr or {}).get("plaza_url"),
@@ -959,11 +1143,6 @@ class UserAgent(BaseAgent):
             selected_application.get("plaza_url"),
             self.user_plaza_urls,
         )
-
-        def map_row(row: Dict[str, Any], plaza_url: str, practice_id: str) -> Dict[str, Any]:
-            mapped = self._map_agent_record(row, plaza_url)
-            mapped["practice_id"] = practice_id
-            return mapped
 
         normalized_llm_agent_id = str(llm_agent_id or "").strip()
         if normalized_llm_agent_id:
@@ -982,12 +1161,11 @@ class UserAgent(BaseAgent):
 
             for plaza_url in candidate_plazas:
                 row = self._lookup_plaza_agent(plaza_url, agent_id=normalized_llm_agent_id)
-                if not row:
+                if not row or not self._row_supports_practice(row, "get_pulse_data"):
                     continue
-                if self._row_supports_practice(row, "llm"):
-                    return map_row(row, plaza_url, "llm")
-                if self._row_supports_practice(row, "chat-practice") and self._looks_like_llm_row(row):
-                    return map_row(row, plaza_url, "chat-practice")
+                mapped = self._map_llm_pulser_record(row, plaza_url)
+                if mapped.get("supports_llm_chat"):
+                    return mapped
 
         for plaza_url in candidate_plazas:
             pulser_rows = [
@@ -997,31 +1175,6 @@ class UserAgent(BaseAgent):
             if pulser_rows:
                 return self._map_llm_pulser_record(pulser_rows[0], plaza_url)
 
-        for plaza_url in candidate_plazas:
-            llm_rows = [
-                row for row in self._search_plaza(plaza_url, practice="llm")
-                if isinstance(row, dict)
-            ]
-            if llm_rows:
-                preferred = next((row for row in llm_rows if self._looks_like_llm_row(row)), llm_rows[0])
-                return map_row(preferred, plaza_url, "llm")
-
-        for plaza_url in candidate_plazas:
-            llm_role_rows = [
-                row for row in self._search_plaza(plaza_url, role="llm")
-                if isinstance(row, dict) and self._row_supports_practice(row, "chat-practice")
-            ]
-            if llm_role_rows:
-                return map_row(llm_role_rows[0], plaza_url, "chat-practice")
-
-        for plaza_url in candidate_plazas:
-            chat_rows = [
-                row for row in self._search_plaza(plaza_url, practice="chat-practice")
-                if isinstance(row, dict) and self._looks_like_llm_row(row)
-            ]
-            if chat_rows:
-                return map_row(chat_rows[0], plaza_url, "chat-practice")
-
         return None
 
     @staticmethod
@@ -1030,6 +1183,7 @@ class UserAgent(BaseAgent):
         preferences: Optional[Dict[str, Any]] = None,
         personalization: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
+        """Internal helper for compose cast preferences."""
         merged = dict(preferences or {})
         personal = dict(personalization or {})
 
@@ -1045,6 +1199,7 @@ class UserAgent(BaseAgent):
 
     @staticmethod
     def _strip_code_fences(value: str) -> str:
+        """Internal helper to strip the code fences."""
         text = str(value or "").strip()
         if not text.startswith("```"):
             return text
@@ -1052,6 +1207,7 @@ class UserAgent(BaseAgent):
 
     @classmethod
     def _extract_json_object(cls, value: Any) -> Dict[str, Any]:
+        """Internal helper to extract the JSON object."""
         if isinstance(value, dict):
             return dict(value)
 
@@ -1074,6 +1230,7 @@ class UserAgent(BaseAgent):
 
     @staticmethod
     def _normalize_script_sections(sections: Any) -> List[Dict[str, Any]]:
+        """Internal helper to normalize the script sections."""
         normalized: List[Dict[str, Any]] = []
         raw_sections = sections if isinstance(sections, list) else []
         for index, section in enumerate(raw_sections, start=1):
@@ -1117,6 +1274,7 @@ class UserAgent(BaseAgent):
         personalization: Optional[Dict[str, Any]] = None,
         format: str = "",
     ) -> str:
+        """Internal helper to build the LLM precast prompt."""
         personalization_payload = dict(personalization or {})
         source_snapshot = dict(snapshot or {})
         prompt_payload = {
@@ -1176,6 +1334,7 @@ class UserAgent(BaseAgent):
         llm_result: Any,
         personalization: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
+        """Internal helper to build the temporary cast script."""
         parsed = self._extract_json_object(llm_result)
         base_snapshot = dict(source_snapshot or {})
         normalized_sections = self._normalize_script_sections(parsed.get("sections"))
@@ -1241,6 +1400,7 @@ class UserAgent(BaseAgent):
         limit: int = 50,
         query: str = "",
     ) -> List[Dict[str, Any]]:
+        """Internal helper to fetch the remote snapshot history."""
         target_url = str(phemar.get("address") or (phemar.get("card") or {}).get("address") or "").strip()
         if not target_url:
             raise HTTPException(status_code=400, detail=f"Phemar '{phemar.get('name') or phemar.get('agent_id')}' has no reachable address")
@@ -1277,6 +1437,7 @@ class UserAgent(BaseAgent):
         phemar: Dict[str, Any],
         snapshot_id: str,
     ) -> Dict[str, Any]:
+        """Internal helper to fetch the remote snapshot."""
         normalized_snapshot_id = str(snapshot_id or "").strip()
         if not normalized_snapshot_id:
             raise HTTPException(status_code=400, detail="snapshot_id is required")
@@ -1308,7 +1469,7 @@ class UserAgent(BaseAgent):
             raise HTTPException(status_code=404, detail="Requested snapshot was not returned by the remote Phemar")
         return snapshot
 
-    def list_attas_snapshots(
+    def list_snapshots(
         self,
         *,
         application_id: str = "",
@@ -1323,6 +1484,7 @@ class UserAgent(BaseAgent):
         phemar_plaza_url: str = "",
         limit: int = 50,
     ) -> Dict[str, Any]:
+        """List remote snapshots for the selected application."""
         selected_application = self._resolve_application_selection(
             application_id=application_id,
             application_name=application_name,
@@ -1355,18 +1517,21 @@ class UserAgent(BaseAgent):
         }
 
     def _unwrap_remote_response(self, payload: Any) -> Any:
+        """Internal helper for unwrap remote response."""
         if isinstance(payload, dict) and payload.get("status") == "ok" and "result" in payload:
             return payload["result"]
         return payload
 
     @staticmethod
-    def _safe_local_filename(value: str, fallback: str = "attas-result") -> str:
+    def _safe_local_filename(value: str, fallback: str = "generated-result") -> str:
+        """Internal helper for safe local filename."""
         cleaned = "".join(char.lower() if char.isalnum() else "-" for char in str(value or ""))
         compact = "-".join(part for part in cleaned.split("-") if part)
         return compact[:80] or fallback
 
     @staticmethod
     def _parse_json_like(value: Any) -> Any:
+        """Internal helper to parse the JSON like."""
         if isinstance(value, (dict, list)):
             return value
         if value is None:
@@ -1380,12 +1545,14 @@ class UserAgent(BaseAgent):
             return raw
 
     def _saved_results_root(self) -> Optional[str]:
+        """Internal helper for saved results root."""
         root_path = getattr(self.pool, "root_path", None)
         if not isinstance(root_path, str) or not root_path:
             return None
         return root_path
 
     def _saved_artifacts_root(self) -> Optional[str]:
+        """Internal helper for saved artifacts root."""
         root = self._saved_results_root()
         if not root:
             return None
@@ -1399,6 +1566,7 @@ class UserAgent(BaseAgent):
         cast_payload: Dict[str, Any],
         title: str,
     ) -> Dict[str, str]:
+        """Internal helper for copy cast artifact to local."""
         public_url = str(cast_payload.get("public_url") or "").strip()
         if not public_url:
             return {}
@@ -1427,10 +1595,11 @@ class UserAgent(BaseAgent):
         return {
             "local_artifact_name": filename,
             "local_artifact_path": file_path,
-            "local_artifact_url": f"/api/attas/saved_artifacts/{filename}",
+            "local_artifact_url": f"/api/saved_artifacts/{filename}",
         }
 
     def _build_saved_result_summary(self, record: Dict[str, Any]) -> Dict[str, Any]:
+        """Internal helper to build the saved result summary."""
         metadata = record.get("metadata") if isinstance(record.get("metadata"), dict) else {}
         payload = self._parse_json_like(record.get("content"))
         if not isinstance(payload, dict):
@@ -1449,7 +1618,7 @@ class UserAgent(BaseAgent):
                 or temporary_script.get("name")
                 or snapshot.get("name")
                 or application.get("name")
-                or "Saved attas result"
+                or "Saved generated result"
             ).strip(),
             "saved_at": str(metadata.get("saved_at") or record.get("updated_at") or record.get("created_at") or ""),
             "application_name": str(metadata.get("application_name") or application.get("name") or "").strip(),
@@ -1464,6 +1633,7 @@ class UserAgent(BaseAgent):
         }
 
     def _list_saved_results(self, query: str = "") -> List[Dict[str, Any]]:
+        """Internal helper to list the saved results."""
         if not self.pool or not self.pool._TableExists(self.SAVED_RESULTS_TABLE):
             return []
 
@@ -1477,6 +1647,7 @@ class UserAgent(BaseAgent):
         return summaries
 
     def _save_local_result(self, result: Dict[str, Any], title: str = "") -> Dict[str, Any]:
+        """Internal helper to save the local result."""
         if not self.pool:
             raise HTTPException(status_code=400, detail="This user agent has no local pool configured")
         if not isinstance(result, dict):
@@ -1493,7 +1664,7 @@ class UserAgent(BaseAgent):
             or temporary_script.get("name")
             or snapshot.get("name")
             or application.get("name")
-            or "Saved attas result"
+            or "Saved generated result"
         ).strip()
         metadata = {
             "title": resolved_title,
@@ -1514,7 +1685,8 @@ class UserAgent(BaseAgent):
             content=result,
             metadata=metadata,
             tags=[
-                "attas",
+                "prompits",
+                "user-agent",
                 "saved-result",
                 str(application.get("name") or "").strip(),
                 str((result.get("castr") or {}).get("name") or "").strip(),
@@ -1533,6 +1705,7 @@ class UserAgent(BaseAgent):
         content: Any,
         timeout: int = 120,
     ) -> Any:
+        """Internal helper to invoke the remote practice on agent."""
         normalized_plaza = str(plaza_url or "").strip().rstrip("/")
         target_url = str(agent.get("address") or (agent.get("card") or {}).get("address") or "").strip()
         target_agent_id = str(agent.get("agent_id") or (agent.get("card") or {}).get("agent_id") or "").strip()
@@ -1575,7 +1748,7 @@ class UserAgent(BaseAgent):
         parsed = response.json() if response.content else {}
         return self._unwrap_remote_response(parsed)
 
-    def generate_attas_result(
+    def generate_result(
         self,
         *,
         application_id: str = "",
@@ -1600,6 +1773,7 @@ class UserAgent(BaseAgent):
         format: str = "",
         cache_time: Optional[int] = 300,
     ) -> Dict[str, Any]:
+        """Generate a user-agent result."""
         selected_application = self._resolve_application_selection(
             application_id=application_id,
             application_name=application_name,
@@ -1746,10 +1920,12 @@ class UserAgent(BaseAgent):
         }
 
     def setup_user_agent_routes(self):
+        """Set up the user agent routes."""
         supported_pit_types = sorted(PlazaPractice.SUPPORTED_PIT_TYPES)
 
         @self.app.get("/")
         async def index(request: Request):
+            """Route handler for GET /."""
             return self.templates.TemplateResponse(
                 request=request,
                 name="user_agent.html",
@@ -1760,8 +1936,9 @@ class UserAgent(BaseAgent):
                 },
             )
 
-        @self.app.get("/attas")
-        async def attas_index(request: Request):
+        @self.app.get("/user-agent")
+        async def user_agent_index(request: Request):
+            """Route handler for GET /user-agent."""
             return self.templates.TemplateResponse(
                 request=request,
                 name="user_agent.html",
@@ -1774,6 +1951,7 @@ class UserAgent(BaseAgent):
 
         @self.app.get("/plazas")
         async def plazas(request: Request):
+            """Route handler for GET /plazas."""
             return self.templates.TemplateResponse(
                 request=request,
                 name="plazas.html",
@@ -1782,9 +1960,11 @@ class UserAgent(BaseAgent):
 
         @self.app.get("/api/plazas_status")
         async def plazas_status(request: Request):
+            """Route handler for GET /api/plazas_status."""
             pit_type = request.query_params.get("pit_type")
 
             def _plazas_status_sync() -> Dict[str, Any]:
+                """Internal helper for plazas status sync."""
                 if pit_type:
                     selected = self._normalize_plaza_urls(request.query_params.get("plaza_url")) or list(self.user_plaza_urls)
                     plazas = []
@@ -1801,8 +1981,9 @@ class UserAgent(BaseAgent):
 
             return await run_in_threadpool(_plazas_status_sync)
 
-        @self.app.get("/api/attas/catalog")
-        async def attas_catalog(request: Request):
+        @self.app.get("/api/catalog")
+        async def catalog(request: Request):
+            """Route handler for GET /api/catalog."""
             query = str(request.query_params.get("q") or "").strip()
             party = str(request.query_params.get("party") or "").strip()
             plaza_filter = str(request.query_params.get("plaza_url") or "").strip()
@@ -1810,6 +1991,7 @@ class UserAgent(BaseAgent):
 
         @self.app.get("/api/agent_configs")
         async def list_agent_configs(request: Request):
+            """Route handler for GET /api/agent_configs."""
             query = str(request.query_params.get("q") or "").strip()
             name = str(request.query_params.get("name") or "").strip()
             owner = str(request.query_params.get("owner") or "").strip()
@@ -1819,6 +2001,7 @@ class UserAgent(BaseAgent):
             include_config = str(request.query_params.get("include_config") or "").strip().lower() in {"1", "true", "yes"}
 
             def _list_agent_configs_sync() -> Dict[str, Any]:
+                """Internal helper to list the agent configs sync."""
                 plazas = []
                 all_configs: List[Dict[str, Any]] = []
                 for plaza_url in self._resolve_config_plaza_urls(plaza_filter):
@@ -1833,6 +2016,7 @@ class UserAgent(BaseAgent):
                             agent_type=agent_type,
                             include_config=str(include_config).lower(),
                         )
+                        rows = [row for row in rows if not self._is_agent_config_disabled(row)]
                         status["agent_configs"] = rows
                         all_configs.extend(rows)
                     except Exception as exc:
@@ -1846,6 +2030,7 @@ class UserAgent(BaseAgent):
 
         @self.app.post("/api/agent_configs")
         async def save_agent_config(request: Request):
+            """Route handler for POST /api/agent_configs."""
             payload = await request.json()
             if not isinstance(payload, dict):
                 raise HTTPException(status_code=400, detail="Agent config payload must be a JSON object")
@@ -1871,6 +2056,7 @@ class UserAgent(BaseAgent):
 
         @self.app.post("/api/agent_configs/launch")
         async def launch_agent_config(request: Request):
+            """Route handler for POST /api/agent_configs/launch."""
             payload = await request.json()
             if not isinstance(payload, dict):
                 raise HTTPException(status_code=400, detail="Launch payload must be a JSON object")
@@ -1879,11 +2065,20 @@ class UserAgent(BaseAgent):
             if not selected_plaza:
                 raise HTTPException(status_code=400, detail="No plaza is configured for agent launches")
 
+            config_id = str(payload.get("config_id") or "").strip()
+            config = payload.get("config") if isinstance(payload.get("config"), dict) else None
+            await run_in_threadpool(
+                self._ensure_agent_config_launch_allowed,
+                plaza_url=selected_plaza[0],
+                config_id=config_id,
+                config=config,
+            )
+
             launch = await run_in_threadpool(
                 self._launch_plaza_agent_config,
                 plaza_url=selected_plaza[0],
-                config_id=str(payload.get("config_id") or "").strip(),
-                config=payload.get("config") if isinstance(payload.get("config"), dict) else None,
+                config_id=config_id,
+                config=config,
                 owner=str(payload.get("owner") or "").strip(),
                 name=str(payload.get("name") or "").strip(),
                 description=str(payload.get("description") or "").strip(),
@@ -1896,10 +2091,11 @@ class UserAgent(BaseAgent):
             )
             return {"status": "success", "launch": launch}
 
-        @self.app.get("/api/attas/snapshots")
-        async def attas_snapshots(request: Request):
+        @self.app.get("/api/snapshots")
+        async def snapshots(request: Request):
+            """Route handler for GET /api/snapshots."""
             return await run_in_threadpool(
-                self.list_attas_snapshots,
+                self.list_snapshots,
                 application_id=str(request.query_params.get("application_id") or "").strip(),
                 application_name=str(request.query_params.get("application_name") or "").strip(),
                 phema_id=str(request.query_params.get("phema_id") or "").strip(),
@@ -1913,14 +2109,15 @@ class UserAgent(BaseAgent):
                 limit=int(request.query_params.get("limit") or 50),
             )
 
-        @self.app.post("/api/attas/generate")
-        async def attas_generate(request: Request):
+        @self.app.post("/api/generate")
+        async def generate(request: Request):
+            """Route handler for POST /api/generate."""
             payload = await request.json()
             if not isinstance(payload, dict):
                 raise HTTPException(status_code=400, detail="Generate payload must be a JSON object")
 
             return await run_in_threadpool(
-                self.generate_attas_result,
+                self.generate_result,
                 application_id=str(payload.get("application_id") or "").strip(),
                 application_name=str(payload.get("application_name") or "").strip(),
                 phema_id=str(payload.get("phema_id") or "").strip(),
@@ -1944,13 +2141,15 @@ class UserAgent(BaseAgent):
                 cache_time=payload.get("cache_time", 300),
             )
 
-        @self.app.get("/api/attas/saved_results")
-        async def attas_saved_results(request: Request):
+        @self.app.get("/api/saved_results")
+        async def saved_results(request: Request):
+            """Route handler for GET /api/saved_results."""
             query = str(request.query_params.get("q") or "").strip()
             return {"status": "success", "results": await run_in_threadpool(self._list_saved_results, query)}
 
-        @self.app.post("/api/attas/saved_results")
-        async def attas_save_result(request: Request):
+        @self.app.post("/api/saved_results")
+        async def save_result(request: Request):
+            """Route handler for POST /api/saved_results."""
             payload = await request.json()
             if not isinstance(payload, dict):
                 raise HTTPException(status_code=400, detail="Save payload must be a JSON object")
@@ -1958,8 +2157,9 @@ class UserAgent(BaseAgent):
             saved = await run_in_threadpool(self._save_local_result, result, str(payload.get("title") or "").strip())
             return {"status": "success", "saved_result": saved}
 
-        @self.app.get("/api/attas/saved_artifacts/{filename}")
-        async def attas_saved_artifact(filename: str):
+        @self.app.get("/api/saved_artifacts/{filename}")
+        async def saved_artifact(filename: str):
+            """Route handler for GET /api/saved_artifacts/{filename}."""
             artifacts_root = self._saved_artifacts_root()
             if not artifacts_root:
                 raise HTTPException(status_code=404, detail="No local saved artifacts directory is configured")
@@ -1973,6 +2173,7 @@ class UserAgent(BaseAgent):
 
         @self.app.post("/api/send_message")
         async def api_send_message(request: Request):
+            """Route handler for POST /api/send_message."""
             try:
                 data = await request.json()
                 receiver = data.get("receiver")
@@ -1995,9 +2196,11 @@ class UserAgent(BaseAgent):
                 return {"status": "error", "message": str(exc)}
 
     def receive(self, message: Message):
+        """Handle receive for the user agent."""
         self.logger.info("Received message: %s", message)
 
     def run(self):
+        """Run the value."""
         import uvicorn
 
         uvicorn.run(self.app, host=self.host, port=self.port)

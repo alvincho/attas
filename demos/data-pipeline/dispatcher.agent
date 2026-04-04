@@ -1,0 +1,41 @@
+{
+  "name": "SQLiteADSDispatcher",
+  "host": "127.0.0.1",
+  "port": 9060,
+  "party": "ADS",
+  "type": "ads.agents.ADSDispatcherAgent",
+  "description": "Local SQLite-backed ADS dispatcher for the public data-pipeline demo.",
+  "pools": [
+    {
+      "type": "SQLitePool",
+      "name": "ads_dispatch_pool",
+      "description": "SQLite queue and normalized ADS store for the demo.",
+      "db_path": "demos/data-pipeline/storage/ads_dispatcher.sqlite"
+    }
+  ],
+  "ads": {
+    "job_capabilities": [
+      {
+        "name": "security_master",
+        "description": "Create a demo security master row for a symbol."
+      },
+      {
+        "name": "daily_price",
+        "description": "Create a demo daily price row for a symbol."
+      },
+      {
+        "name": "fundamentals",
+        "description": "Create a demo fundamentals row for a symbol."
+      },
+      {
+        "name": "financial_statements",
+        "description": "Create a demo financial statement row for a symbol."
+      },
+      {
+        "name": "news",
+        "description": "Create a demo news row for a symbol."
+      }
+    ],
+    "auto_register": false
+  }
+}

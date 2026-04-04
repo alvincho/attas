@@ -1,0 +1,44 @@
+{
+  "id": "Plaza:relay",
+  "agent_name": "Plaza",
+  "practice_id": "relay",
+  "practice_name": "Plaza Relay",
+  "practice_description": "Relay messages between agents.",
+  "practice_data": {
+    "name": "Plaza Relay",
+    "description": "Relay messages between agents.",
+    "id": "relay",
+    "cost": 0,
+    "tags": [
+      "core",
+      "plaza"
+    ],
+    "examples": [
+      "POST /relay {'receiver':'bob','content':'hi','msg_type':'message'}"
+    ],
+    "inputModes": [
+      "http-post",
+      "json"
+    ],
+    "outputModes": [
+      "json"
+    ],
+    "parameters": {
+      "receiver": {
+        "type": "string",
+        "description": "Target agent id or name."
+      },
+      "content": {
+        "type": "object",
+        "description": "Relay payload for destination practice."
+      },
+      "msg_type": {
+        "type": "string",
+        "description": "Message type used for routing."
+      }
+    },
+    "path": "/relay"
+  },
+  "is_deleted": false,
+  "updated_at": "2026-04-03T03:49:37.610710+00:00"
+}

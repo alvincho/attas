@@ -1,0 +1,40 @@
+{
+  "id": "Plaza:renew",
+  "agent_name": "Plaza",
+  "practice_id": "renew",
+  "practice_name": "Plaza Renew",
+  "practice_description": "Renew Plaza tokens.",
+  "practice_data": {
+    "name": "Plaza Renew",
+    "description": "Renew Plaza tokens.",
+    "id": "renew",
+    "cost": 0,
+    "tags": [
+      "core",
+      "plaza"
+    ],
+    "examples": [
+      "POST /renew {'agent_name':'alice','expires_in':3600}"
+    ],
+    "inputModes": [
+      "http-post",
+      "json"
+    ],
+    "outputModes": [
+      "json"
+    ],
+    "parameters": {
+      "agent_name": {
+        "type": "string",
+        "description": "Agent name bound to the token."
+      },
+      "expires_in": {
+        "type": "integer",
+        "description": "New token TTL in seconds."
+      }
+    },
+    "path": "/renew"
+  },
+  "is_deleted": false,
+  "updated_at": "2026-04-03T03:49:37.610705+00:00"
+}

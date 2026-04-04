@@ -1,25 +1,91 @@
+"""
+Regression tests for Pulser.
+
+Phemacast assembles pulse inputs, phemas, and castrs into rendered research artifacts
+and interactive tooling. These tests protect the Phemacast pipeline, demo flows, UI
+helpers, and pulser integrations.
+
+The pytest cases in this file document expected behavior through checks such as
+`test_get_pulse_data_practice_executes_agent_mapping`,
+`test_pulser_register_batches_multiple_pulse_pairs_in_single_request`,
+`test_pulser_register_payload_preserves_sample_parameters`, and
+`test_pulser_register_prefetches_shared_pulse_catalog_once`, helping guard against
+regressions as the packages evolve.
+"""
+
 import json
 import os
 import sys
 from unittest.mock import patch
 
+import pytest
+
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
-from phemacast.agents.pulser import Pulser
+from phemacast.agents.pulser import Pulser, validate_pulser_config_test_parameters
 from prompits.core.pit import PitAddress
 
 
 class FakeResponse:
+    """Response model for fake payloads."""
     def __init__(self, payload, status_code=200):
+        """Initialize the fake response."""
         self._payload = payload
         self.status_code = status_code
         self.text = json.dumps(payload)
 
     def json(self):
+        """Handle JSON for the fake response."""
         return self._payload
 
 
+def test_validate_pulser_config_test_parameters_accepts_file_backed_samples():
+    """
+    Exercise the
+    test_validate_pulser_config_test_parameters_accepts_file_backed_samples
+    regression scenario.
+    """
+    validate_pulser_config_test_parameters(
+        {
+            "supported_pulses": [
+                {
+                    "name": "sma",
+                    "pulse_address": "plaza://pulse/sma",
+                    "test_data_path": "../examples/pulses/sample.json",
+                }
+            ]
+        }
+    )
+
+
+def test_validate_pulser_config_test_parameters_requires_at_least_one_sample():
+    """
+    Exercise the
+    test_validate_pulser_config_test_parameters_requires_at_least_one_sample
+    regression scenario.
+    """
+    with pytest.raises(ValueError, match="at least one set of test parameters"):
+        validate_pulser_config_test_parameters(
+            {
+                "supported_pulses": [
+                    {
+                        "name": "quote",
+                        "pulse_address": "plaza://pulse/quote",
+                        "input_schema": {
+                            "type": "object",
+                            "properties": {"symbol": {"type": "string"}},
+                        },
+                    }
+                ]
+            }
+        )
+
+
 def test_pulser_loads_config_and_maps_input_to_output_schema(tmp_path):
+    """
+    Exercise the test_pulser_loads_config_and_maps_input_to_output_schema regression
+    scenario.
+    """
     config_path = tmp_path / "pulser.json"
     config_path.write_text(
         json.dumps(
@@ -73,8 +139,14 @@ def test_pulser_loads_config_and_maps_input_to_output_schema(tmp_path):
 
 
 def test_pulser_get_pulse_data_preserves_fetch_errors():
+    """
+    Exercise the test_pulser_get_pulse_data_preserves_fetch_errors regression
+    scenario.
+    """
     class ErrorPulser(Pulser):
+        """Represent an error pulser."""
         def fetch_pulse_payload(self, pulse_name, input_data, pulse_definition):
+            """Fetch the pulse payload."""
             return {"error": "upstream failed"}
 
     pulser = ErrorPulser(
@@ -93,9 +165,14 @@ def test_pulser_get_pulse_data_preserves_fetch_errors():
 
 
 def test_pulser_registers_on_plaza_and_advertises_pulse_practice():
+    """
+    Exercise the test_pulser_registers_on_plaza_and_advertises_pulse_practice
+    regression scenario.
+    """
     sent_payloads = []
 
     def fake_post(url, json=None, timeout=5, **kwargs):
+        """Handle fake post."""
         sent_payloads.append({"url": url, "payload": dict(json or {}), "timeout": timeout})
         return FakeResponse(
             {
@@ -153,10 +230,71 @@ def test_pulser_registers_on_plaza_and_advertises_pulse_practice():
     assert pulser.agent_id == "pulser-id-123"
 
 
+def test_pulser_register_payload_preserves_sample_parameters():
+    """
+    Exercise the test_pulser_register_payload_preserves_sample_parameters regression
+    scenario.
+    """
+    pulser = Pulser(
+        name="SamplePulser",
+        host="127.0.0.1",
+        port=8120,
+        supported_pulses=[
+            {
+                "name": "last_price",
+                "pulse_address": "plaza://pulse/last_price",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {"symbol": {"type": "string"}},
+                    "required": ["symbol"],
+                },
+                "test_data": {"symbol": "AAPL"},
+            }
+        ],
+        auto_register=False,
+    )
+
+    payload = pulser.build_register_payload("http://127.0.0.1:8011")
+    pair = payload["pulse_pulser_pairs"][0]
+
+    assert pair["test_data"]["symbol"] == "AAPL"
+    assert pair["pulse_definition"]["test_data"]["symbol"] == "AAPL"
+
+
+def test_pulser_resolves_pulse_definition_by_alias():
+    """
+    Exercise the test_pulser_resolves_pulse_definition_by_alias regression scenario.
+    """
+    pulser = Pulser(
+        name="AliasPulser",
+        host="127.0.0.1",
+        port=8120,
+        supported_pulses=[
+            {
+                "name": "company_profile",
+                "aliases": ["company_fundamentals"],
+                "pulse_address": "plaza://pulse/company_profile",
+                "input_schema": {"type": "object", "properties": {"symbol": {"type": "string"}}},
+            }
+        ],
+        auto_register=False,
+    )
+
+    pulse = pulser.resolve_pulse_definition(pulse_name="company_fundamentals")
+
+    assert pulse["name"] == "company_profile"
+    assert pulse["aliases"] == ["company_fundamentals"]
+
+
 def test_pulser_register_batches_multiple_pulse_pairs_in_single_request():
+    """
+    Exercise the test_pulser_register_batches_multiple_pulse_pairs_in_single_request
+    regression scenario.
+    """
     sent_payloads = []
 
     def fake_post(url, json=None, timeout=5, **kwargs):
+        """Handle fake post."""
         sent_payloads.append({"url": url, "payload": dict(json or {}), "timeout": timeout})
         return FakeResponse(
             {
@@ -202,11 +340,17 @@ def test_pulser_register_batches_multiple_pulse_pairs_in_single_request():
 
 
 def test_pulser_reregister_reuses_single_heartbeat_thread():
+    """
+    Exercise the test_pulser_reregister_reuses_single_heartbeat_thread regression
+    scenario.
+    """
     sent_payloads = []
     heartbeat_threads = []
 
     class FakeHeartbeatThread:
+        """Represent a fake heartbeat thread."""
         def __init__(self, target=None, daemon=None, name=None, **kwargs):
+            """Initialize the fake heartbeat thread."""
             self.target = target
             self.daemon = daemon
             self.name = name
@@ -216,13 +360,16 @@ def test_pulser_reregister_reuses_single_heartbeat_thread():
             heartbeat_threads.append(self)
 
         def start(self):
+            """Start the value."""
             self.started += 1
             self._alive = True
 
         def is_alive(self):
+            """Return whether the value is an alive."""
             return self._alive
 
     def fake_post(url, json=None, timeout=5, **kwargs):
+        """Handle fake post."""
         sent_payloads.append({"url": url, "payload": dict(json or {}), "timeout": timeout})
         return FakeResponse(
             {
@@ -272,6 +419,10 @@ def test_pulser_reregister_reuses_single_heartbeat_thread():
 
 
 def test_get_pulse_data_practice_executes_agent_mapping():
+    """
+    Exercise the test_get_pulse_data_practice_executes_agent_mapping regression
+    scenario.
+    """
     pulser = Pulser(
         pulse_address="plaza://pulse/open_price",
         input_schema={"type": "object"},
@@ -306,6 +457,10 @@ def test_get_pulse_data_practice_executes_agent_mapping():
 
 
 def test_pulser_transform_supports_dotted_keys_and_list_indexes():
+    """
+    Exercise the test_pulser_transform_supports_dotted_keys_and_list_indexes
+    regression scenario.
+    """
     pulser = Pulser(
         pulse_address="plaza://pulse/last_price",
         output_schema={
@@ -343,6 +498,10 @@ def test_pulser_transform_supports_dotted_keys_and_list_indexes():
 
 
 def test_pulser_transform_supports_arithmetic_operations():
+    """
+    Exercise the test_pulser_transform_supports_arithmetic_operations regression
+    scenario.
+    """
     pulser = Pulser(
         pulse_address="plaza://pulse/financial_statement_metrics",
         output_schema={
@@ -402,6 +561,10 @@ def test_pulser_transform_supports_arithmetic_operations():
 
 
 def test_pulser_transform_supports_mapping_lists_of_objects():
+    """
+    Exercise the test_pulser_transform_supports_mapping_lists_of_objects regression
+    scenario.
+    """
     pulser = Pulser(
         pulse_address="plaza://pulse/news_article",
         output_schema={
@@ -455,6 +618,11 @@ def test_pulser_transform_supports_mapping_lists_of_objects():
 
 
 def test_pulser_transform_includes_mapping_keys_not_present_in_output_schema():
+    """
+    Exercise the
+    test_pulser_transform_includes_mapping_keys_not_present_in_output_schema
+    regression scenario.
+    """
     pulser = Pulser(
         pulse_address="plaza://pulse/news_article",
         output_schema={
@@ -498,6 +666,10 @@ def test_pulser_transform_includes_mapping_keys_not_present_in_output_schema():
 
 
 def test_pulser_resolves_shared_plaza_pulse_schema_from_pit_address(monkeypatch):
+    """
+    Exercise the test_pulser_resolves_shared_plaza_pulse_schema_from_pit_address
+    regression scenario.
+    """
     shared_pulse_id = "11111111-1111-1111-1111-111111111111"
     shared_pulse_address = PitAddress(pit_id=shared_pulse_id, plazas=["http://127.0.0.1:8011"])
 
@@ -539,9 +711,14 @@ def test_pulser_resolves_shared_plaza_pulse_schema_from_pit_address(monkeypatch)
 
 
 def test_pulser_register_prefetches_shared_pulse_catalog_once():
+    """
+    Exercise the test_pulser_register_prefetches_shared_pulse_catalog_once
+    regression scenario.
+    """
     search_calls = []
 
     def fake_post(url, json=None, timeout=5, **kwargs):
+        """Handle fake post."""
         return FakeResponse(
             {
                 "status": "registered",
@@ -553,6 +730,7 @@ def test_pulser_register_prefetches_shared_pulse_catalog_once():
         )
 
     def fake_get(url, params=None, headers=None, timeout=5, **kwargs):
+        """Handle fake get."""
         search_calls.append({"url": url, "params": dict(params or {}), "timeout": timeout})
         return FakeResponse(
             [

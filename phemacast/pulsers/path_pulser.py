@@ -1,3 +1,14 @@
+"""
+Path pulser implementation for the Pulsers area.
+
+Phemacast assembles pulse inputs, phemas, and castrs into rendered research artifacts
+and interactive tooling. Within Phemacast, these modules implement pulse sources for
+APIs, files, bosses, MCP tools, and path-based workflows.
+
+Core types exposed here include `PathPulser`, which carry the main behavior or state
+managed by this module.
+"""
+
 from __future__ import annotations
 
 import json
@@ -13,7 +24,7 @@ from fastapi import HTTPException, Request
 from fastapi.templating import Jinja2Templates
 from starlette.concurrency import run_in_threadpool
 
-from phemacast.agents.pulser import Pulser, _resolve_path
+from phemacast.agents.pulser import Pulser, _resolve_path, validate_pulser_config_test_parameters
 from prompits.core.pit import PitAddress
 
 logger = logging.getLogger(__name__)
@@ -59,6 +70,7 @@ class PathPulser(Pulser):
     """
 
     def __init__(self, *args, **kwargs):
+        """Initialize the path pulser."""
         self._script_cache: Dict[str, str] = {}
         self._test_data_cache: Dict[str, Dict[str, Any]] = {}
         super().__init__(*args, **kwargs)
@@ -68,8 +80,10 @@ class PathPulser(Pulser):
         self._setup_path_pulser_routes()
 
     def _setup_path_pulser_routes(self) -> None:
+        """Internal helper to set up the path pulser routes."""
         @self.app.get("/")
         async def path_pulser_ui(request: Request):
+            """Route handler for GET /."""
             return self.templates.TemplateResponse(
                 request=request,
                 name="phemacast/pulsers/templates/path_pulser_editor.html",
@@ -81,6 +95,7 @@ class PathPulser(Pulser):
 
         @self.app.get("/api/config")
         async def get_path_pulser_config():
+            """Route handler for GET /api/config."""
             config = await run_in_threadpool(self._load_config_document)
             return {
                 "status": "success",
@@ -90,6 +105,7 @@ class PathPulser(Pulser):
 
         @self.app.get("/api/plaza/pulsers")
         async def get_plaza_pulsers(search: str = "", pulse_name: str = ""):
+            """Route handler for GET /api/plaza/pulsers."""
             params: Dict[str, Any] = {"pit_type": "Pulser"}
             if search.strip():
                 params["name"] = search.strip()
@@ -124,6 +140,7 @@ class PathPulser(Pulser):
 
         @self.app.get("/api/plaza/pulses")
         async def get_plaza_pulses(search: str = ""):
+            """Route handler for GET /api/plaza/pulses."""
             rows = await run_in_threadpool(self._search_plaza_directory, pit_type="Pulse", name=search.strip() or None)
             pulses = []
             for row in rows or []:
@@ -144,6 +161,7 @@ class PathPulser(Pulser):
 
         @self.app.post("/api/config")
         async def save_path_pulser_config(request: Request):
+            """Route handler for POST /api/config."""
             payload = await request.json()
             config = payload.get("config") if isinstance(payload, dict) and isinstance(payload.get("config"), dict) else payload
             if not isinstance(config, dict):
@@ -157,6 +175,7 @@ class PathPulser(Pulser):
 
         @self.app.post("/api/test-pulse")
         async def test_path_pulser_pulse(request: Request):
+            """Exercise the test_path_pulser_pulse regression scenario."""
             payload = await request.json()
             if not isinstance(payload, dict):
                 raise HTTPException(status_code=400, detail="Test payload must be a JSON object.")
@@ -173,6 +192,7 @@ class PathPulser(Pulser):
                 raise HTTPException(status_code=400, detail="config must be a JSON object when provided.")
 
             def _run_test_sync():
+                """Internal helper to run the test sync."""
                 runtime_config = config if isinstance(config, dict) else self._load_config_document()
                 runner = self.__class__(config=runtime_config, auto_register=False)
                 pulse_definition = runner.resolve_pulse_definition(pulse_name=str(pulse_name))
@@ -211,6 +231,7 @@ class PathPulser(Pulser):
             return response
 
     def _load_config_document(self) -> Dict[str, Any]:
+        """Internal helper to load the config document."""
         if self.config_path and self.config_path.exists():
             with self.config_path.open("r", encoding="utf-8") as fh:
                 loaded = json.load(fh)
@@ -219,10 +240,15 @@ class PathPulser(Pulser):
         return self._build_editor_config_document(self.raw_config or self._synthesize_runtime_config())
 
     def _save_config_document(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        """Internal helper to save the config document."""
         if not self.config_path:
             raise HTTPException(status_code=400, detail="This PathPulser was not started from a config file.")
 
         normalized = self._normalize_config_document(config)
+        try:
+            validate_pulser_config_test_parameters(normalized)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
         self.config_path.parent.mkdir(parents=True, exist_ok=True)
         self.config_path.write_text(json.dumps(normalized, indent=4), encoding="utf-8")
 
@@ -231,6 +257,7 @@ class PathPulser(Pulser):
         return self._build_editor_config_document(normalized)
 
     def _normalize_config_document(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        """Internal helper to normalize the config document."""
         document = dict(config or {})
         document.setdefault("name", self.agent_card.get("name", self.name))
         document.setdefault("type", "phemacast.pulsers.path_pulser.PathPulser")
@@ -253,6 +280,7 @@ class PathPulser(Pulser):
         return document
 
     def _build_editor_config_document(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        """Internal helper to build the editor config document."""
         document = self._normalize_config_document(config)
         source_pulses = self.supported_pulses or document.get("supported_pulses") or []
         document["supported_pulses"] = [
@@ -263,6 +291,7 @@ class PathPulser(Pulser):
         return document
 
     def _build_editor_pulse_document(self, pulse: Dict[str, Any]) -> Dict[str, Any]:
+        """Internal helper to build the editor pulse document."""
         editor_pulse = dict(pulse)
         try:
             resolved_test_data = self._load_pulse_test_data(editor_pulse)
@@ -275,6 +304,7 @@ class PathPulser(Pulser):
 
     @staticmethod
     def _normalize_config_pulse(pulse: Dict[str, Any]) -> Dict[str, Any]:
+        """Internal helper to normalize the config pulse."""
         normalized = dict(pulse)
         normalized.pop("resolved_test_data", None)
         normalized.pop("resolved_test_data_error", None)
@@ -290,6 +320,7 @@ class PathPulser(Pulser):
         return normalized
 
     def _synthesize_runtime_config(self) -> Dict[str, Any]:
+        """Internal helper to return the synthesize runtime config."""
         return {
             "name": self.agent_card.get("name", self.name),
             "type": "phemacast.pulsers.path_pulser.PathPulser",
@@ -305,6 +336,7 @@ class PathPulser(Pulser):
         }
 
     def _normalize_pulse_definition(self, pulse: Mapping[str, Any]) -> Dict[str, Any]:
+        """Internal helper to normalize the pulse definition."""
         normalized = super()._normalize_pulse_definition(pulse)
         steps = pulse.get("steps") if isinstance(pulse, Mapping) else None
         normalized["steps"] = [dict(step) for step in steps if isinstance(step, Mapping)] if isinstance(steps, list) else []
@@ -318,11 +350,34 @@ class PathPulser(Pulser):
         normalized["completion_errors"] = list(pulse.get("completion_errors") or [])
         return normalized
 
+    def _resolve_sample_parameters(self, pulse_definition: Mapping[str, Any]) -> Optional[Dict[str, Any]]:
+        """Internal helper to resolve the sample parameters."""
+        direct_sample = pulse_definition.get("test_data")
+        if isinstance(direct_sample, Mapping) and direct_sample:
+            return dict(direct_sample)
+        nested_definition = pulse_definition.get("pulse_definition")
+        nested_sample = nested_definition.get("test_data") if isinstance(nested_definition, Mapping) else {}
+        if isinstance(nested_sample, Mapping) and nested_sample:
+            return dict(nested_sample)
+        try:
+            resolved = self._load_pulse_test_data(dict(pulse_definition))
+            if isinstance(resolved, dict) and resolved:
+                return dict(resolved)
+        except Exception:
+            pass
+        input_schema = pulse_definition.get("input_schema")
+        if not isinstance(input_schema, Mapping):
+            interface = nested_definition.get("interface") if isinstance(nested_definition, Mapping) else {}
+            input_schema = interface.get("request_schema") if isinstance(interface, Mapping) else {}
+        return self._sample_payload_from_schema(input_schema)
+
     def apply_pulser_config(self, *args, **kwargs) -> None:
+        """Return the apply pulser config."""
         super().apply_pulser_config(*args, **kwargs)
         self._refresh_completion_status()
 
     def _refresh_completion_status(self) -> None:
+        """Internal helper to return the refresh completion status."""
         updated: List[Dict[str, Any]] = []
         for pulse in self.supported_pulses:
             if not isinstance(pulse, dict):
@@ -341,6 +396,7 @@ class PathPulser(Pulser):
         self._refresh_get_pulse_practice_metadata()
 
     def _with_completion_status(self, pulse_definition: Dict[str, Any]) -> Dict[str, Any]:
+        """Internal helper to return the with completion status."""
         errors = self._validate_pulse_definition(pulse_definition)
         pulse_definition["completion_errors"] = errors
         pulse_definition["is_complete"] = not errors
@@ -348,6 +404,7 @@ class PathPulser(Pulser):
         return pulse_definition
 
     def _validate_pulse_definition(self, pulse_definition: Dict[str, Any]) -> List[str]:
+        """Internal helper to validate the pulse definition."""
         errors: List[str] = []
         if not pulse_definition.get("pulse_address"):
             errors.append("Pulse must be linked to an existing Plaza pulse.")
@@ -382,6 +439,7 @@ class PathPulser(Pulser):
         return errors
 
     def fetch_pulse_payload(self, pulse_name: str, input_data: Dict[str, Any], pulse_definition: Dict[str, Any]) -> Dict[str, Any]:
+        """Fetch the pulse payload."""
         steps = pulse_definition.get("steps") or []
         if not isinstance(steps, list) or not steps:
             return {
@@ -452,6 +510,7 @@ class PathPulser(Pulser):
         pulse_address: Optional[str] = None,
         output_schema: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
+        """Return the pulse data."""
         pulse_definition = self.resolve_pulse_definition(pulse_name=pulse_name, pulse_address=pulse_address)
         active_name = pulse_name or pulse_definition.get("name")
         raw_payload = self.fetch_pulse_payload(active_name, input_data, pulse_definition) or {}
@@ -473,6 +532,7 @@ class PathPulser(Pulser):
         return {"result": materialized}
 
     def _materialize_result(self, raw_payload: Dict[str, Any], pulse_definition: Dict[str, Any], *, pulse_name: Optional[str] = None) -> Any:
+        """Internal helper for materialize result."""
         if isinstance(raw_payload, dict) and raw_payload.get("error"):
             return raw_payload
         result_path = str(pulse_definition.get("result_path") or "result")
@@ -491,6 +551,7 @@ class PathPulser(Pulser):
         context: Dict[str, Any],
         pulse_definition: Dict[str, Any],
     ) -> Any:
+        """Internal helper for execute step."""
         sources = self._fetch_step_sources(step_name=step_name, step=step, context=context)
         step_type = str(step.get("type") or ("python" if step.get("script") else "source")).strip().lower()
 
@@ -517,6 +578,7 @@ class PathPulser(Pulser):
         step: Dict[str, Any],
         context: Dict[str, Any],
     ) -> tuple[bool, Optional[str]]:
+        """Return whether the value should execute step."""
         when = step.get("when")
         if when is None:
             return True, None
@@ -558,6 +620,7 @@ class PathPulser(Pulser):
         return True, None
 
     def _resolve_condition_value(self, path: str, context: Dict[str, Any]) -> Any:
+        """Internal helper to resolve the condition value."""
         path = str(path or "").strip()
         if not path:
             return None
@@ -582,6 +645,7 @@ class PathPulser(Pulser):
         return None
 
     def _condition_has_value(self, value: Any) -> bool:
+        """Return whether the condition has value."""
         if value is None or value == "":
             return False
         if isinstance(value, (list, dict, tuple, set)) and not value:
@@ -589,6 +653,7 @@ class PathPulser(Pulser):
         return True
 
     def _fetch_step_sources(self, *, step_name: str, step: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
+        """Internal helper to fetch the step sources."""
         source_defs = step.get("sources")
         if source_defs is None and any(key in step for key in ("pulser_url", "pulser_name", "pulse_name", "pulse_address", "params", "pulser_address")):
             source_defs = [step]
@@ -619,6 +684,7 @@ class PathPulser(Pulser):
         return results
 
     def _call_source_pulser(self, *, source: Dict[str, Any], params: Dict[str, Any]) -> Any:
+        """Internal helper for call source pulser."""
         target_url = self._resolve_source_url(source)
         if not target_url:
             raise ValueError("Each path pulser source requires pulser_url, pulser_address, or a plaza-resolvable pulser_name.")
@@ -651,6 +717,7 @@ class PathPulser(Pulser):
         return self._unwrap_remote_practice_response(response.json())
 
     def _resolve_source_url(self, source: Dict[str, Any]) -> Optional[str]:
+        """Internal helper to resolve the source URL."""
         explicit = source.get("pulser_url") or source.get("url") or source.get("address")
         if explicit:
             return str(explicit).rstrip("/")
@@ -685,6 +752,7 @@ class PathPulser(Pulser):
         context: Dict[str, Any],
         pulse_definition: Dict[str, Any],
     ) -> Any:
+        """Internal helper for execute python step."""
         script = self._load_python_script(step)
         if not isinstance(script, str) or not script.strip():
             raise ValueError(f"Python step '{step_name}' requires a non-empty script.")
@@ -726,6 +794,7 @@ class PathPulser(Pulser):
         raise ValueError(f"Python step '{step_name}' did not set `result`, `output`, or `transform`.")
 
     def _load_python_script(self, step: Dict[str, Any]) -> Optional[str]:
+        """Internal helper to load the python script."""
         script = step.get("script")
         if isinstance(script, str) and script.strip():
             return script
@@ -749,6 +818,7 @@ class PathPulser(Pulser):
         return loaded
 
     def _load_pulse_test_data(self, pulse_definition: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Internal helper to load the pulse test data."""
         test_data = pulse_definition.get("test_data")
         if isinstance(test_data, Mapping) and test_data:
             return dict(test_data)
@@ -770,6 +840,7 @@ class PathPulser(Pulser):
         return dict(loaded)
 
     def _resolve_support_file_path(self, file_path: str) -> Path:
+        """Internal helper to resolve the support file path."""
         candidate = Path(str(file_path).strip()).expanduser()
         search_paths: List[Path] = []
         if candidate.is_absolute():
@@ -787,6 +858,7 @@ class PathPulser(Pulser):
         raise ValueError(f"Unable to resolve support file: {file_path} (looked in {attempted})")
 
     def _render_structure(self, value: Any, context: Dict[str, Any]) -> Any:
+        """Internal helper to render the structure."""
         if isinstance(value, str):
             return self._render_template_value(value, context)
         if isinstance(value, list):
@@ -796,6 +868,7 @@ class PathPulser(Pulser):
         return value
 
     def _render_template_value(self, template: str, context: Dict[str, Any]) -> Any:
+        """Internal helper to render the template value."""
         matches = list(_TEMPLATE_PATTERN.finditer(template))
         if not matches:
             return template
@@ -805,12 +878,14 @@ class PathPulser(Pulser):
             return _resolve_path(context, matches[0].group(1).strip())
 
         def _replace(match: re.Match[str]) -> str:
+            """Internal helper for replace."""
             resolved = _resolve_path(context, match.group(1).strip())
             return "" if resolved is None else str(resolved)
 
         return _TEMPLATE_PATTERN.sub(_replace, template)
 
     def _validate_against_schema(self, value: Any, schema: Any, *, path: str = "value") -> List[str]:
+        """Internal helper to validate the against schema."""
         if not isinstance(schema, Mapping) or not schema:
             return []
 

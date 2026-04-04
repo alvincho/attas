@@ -1,0 +1,23 @@
+{
+  "name": "DemoFileStoragePulser",
+  "type": "phemacast.pulsers.file_storage_pulser.FileStoragePulser",
+  "host": "127.0.0.1",
+  "port": 8242,
+  "plaza_url": "http://127.0.0.1:8241",
+  "party": "Demo",
+  "role": "pulser",
+  "description": "Local filesystem-backed pulser for the personal research workbench demo.",
+  "tags": ["demo", "storage", "filesystem", "pulser"],
+  "pools": [
+    {
+      "type": "FileSystemPool",
+      "name": "demo_file_storage_agent_pool",
+      "description": "Metadata and credential storage for the workbench demo pulser.",
+      "root_path": "demos/personal-research-workbench/storage/file-storage-agent"
+    }
+  ],
+  "storage": {
+    "type": "filesystem",
+    "root_path": "demos/personal-research-workbench/storage/file-storage-content"
+  }
+}

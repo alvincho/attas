@@ -1,3 +1,14 @@
+"""
+Base module for `prompits.agents.base`.
+
+Prompits provides the core HTTP-native agent runtime, Plaza coordination layer, and
+pool/practice infrastructure for FinMAS. Within Prompits, these modules provide reusable
+agent hosts and user-facing agent variants.
+
+Core types exposed here include `BaseAgent` and `PracticeInvocationRequest`, which carry
+the main behavior or state managed by this module.
+"""
+
 import logging
 import asyncio
 import inspect
@@ -17,7 +28,6 @@ from prompits.core.message import Message
 from prompits.core.init_schema import agent_practices_table_schema
 from prompits.core.pit import Pit, PitAddress
 from prompits.core.practice import Practice
-from prompits.practices.chat import ChatPractice
 from prompits.practices.plaza import PlazaCredentialStore
 import threading
 import time
@@ -58,15 +68,19 @@ class BaseAgent(Pit, ABC):
     PLAZA_REJECTED_CREDENTIAL_RETRY_DELAY = 60
     PLAZA_RECONNECT_INTERVAL = 60
     PLAZA_CONNECTION_ACTIVE_WINDOW_SEC = 60
+    MAILBOX_PRACTICE_ID = "mailbox"
+    LEGACY_REMOVED_PRACTICE_IDS = ("chat-practice", "llm")
 
     @staticmethod
     def _normalize_url(value: Any) -> str:
+        """Internal helper to normalize the URL."""
         if value is None:
             return ""
         return str(value).strip().rstrip("/")
 
     @staticmethod
     def _coerce_optional_bool(value: Any) -> Optional[bool]:
+        """Internal helper to coerce the optional bool."""
         if value is None:
             return None
         if isinstance(value, bool):
@@ -81,6 +95,7 @@ class BaseAgent(Pit, ABC):
         return None
 
     def __init__(self, name: str, host: str = "127.0.0.1", port: int = 8000, plaza_url: Optional[str] = None, agent_card: Dict[str, Any] = None, pool: Optional[Pool] = None):
+        """Initialize the base agent."""
         seed_card = agent_card or {"name": name, "role": "generic", "tags": []}
         super().__init__(
             name=name,
@@ -126,6 +141,8 @@ class BaseAgent(Pit, ABC):
         # Ensure practices list exists in card
         if "practices" not in self.agent_card:
             self.agent_card["practices"] = []
+        self._practice_persistence_batch_depth = 0
+        self._pending_practice_rows: Dict[str, Dict[str, Any]] = {}
 
         self._ensure_agent_practices_table()
         self._load_practices_info_from_pool()
@@ -150,15 +167,20 @@ class BaseAgent(Pit, ABC):
         self.site_settings: Dict[str, Any] = {}
         self._install_request_logging()
 
-        self._register_pool_operation_practices()
-        
-        # Mount Chat Practice by default
-        self.add_practice(ChatPractice())
+        self._begin_practice_persistence_batch()
+        try:
+            self._prune_legacy_practices()
+            self.add_practice_endpoint(self._mailbox_practice_metadata())
+            self._register_pool_operation_practices()
+        finally:
+            self._end_practice_persistence_batch()
         self.setup_routes()
 
     def _install_request_logging(self):
+        """Internal helper for install request logging."""
         @self.app.middleware("http")
         async def log_incoming_request(request: Request, call_next):
+            """Log the incoming request."""
             started_at = time.perf_counter()
             client_host = request.client.host if request.client else "-"
             client_port = request.client.port if request.client else "-"
@@ -187,6 +209,7 @@ class BaseAgent(Pit, ABC):
 
     @classmethod
     def _heartbeat_is_active(cls, last_active: Any) -> bool:
+        """Return whether the heartbeat is active."""
         try:
             timestamp = float(last_active or 0)
         except (TypeError, ValueError):
@@ -196,10 +219,12 @@ class BaseAgent(Pit, ABC):
         return max(0.0, time.time() - timestamp) <= cls.PLAZA_CONNECTION_ACTIVE_WINDOW_SEC
 
     def _mark_plaza_connection_alive(self, timestamp: Optional[float] = None):
+        """Internal helper for mark Plaza connection alive."""
         self.last_plaza_heartbeat_at = float(timestamp or time.time())
         self._plaza_connection_error = ""
 
     def _fetch_remote_plaza_last_active(self, headers: Optional[Dict[str, str]] = None) -> float:
+        """Internal helper to fetch the remote Plaza last active."""
         if not self.plaza_url or not self.agent_id:
             return 0.0
 
@@ -234,6 +259,7 @@ class BaseAgent(Pit, ABC):
         return float(first.get("last_active") or 0)
 
     def get_plaza_connection_status(self) -> Dict[str, Any]:
+        """Return the Plaza connection status."""
         normalized_plaza_url = self._normalize_url(self.plaza_url)
         base_status = {
             "status": "success",
@@ -280,7 +306,10 @@ class BaseAgent(Pit, ABC):
         return base_status
 
     def _load_plaza_credentials_from_pool(self):
+        """Internal helper to load the Plaza credentials from pool."""
         if not self.pool or not self.plaza_url:
+            return
+        if not self._reuse_plaza_identity():
             return
         if self.agent_id and self.api_key:
             return
@@ -299,8 +328,19 @@ class BaseAgent(Pit, ABC):
         except Exception as e:
             self.logger.warning(f"Failed loading Plaza credentials from pool: {e}")
 
+    def _reuse_plaza_identity(self) -> bool:
+        """Internal helper to return the reuse Plaza identity."""
+        meta = self.agent_card.get("meta") if isinstance(self.agent_card.get("meta"), dict) else {}
+        configured = self._coerce_optional_bool(
+            self.agent_card.get("reuse_plaza_identity")
+            if self.agent_card.get("reuse_plaza_identity") is not None
+            else meta.get("reuse_plaza_identity")
+        )
+        return True if configured is None else configured
+
     @staticmethod
     def _coerce_pit_address(value: Any) -> Optional[PitAddress]:
+        """Internal helper to coerce the pit address."""
         if value is None:
             return None
         if isinstance(value, PitAddress):
@@ -310,6 +350,7 @@ class BaseAgent(Pit, ABC):
         return None
 
     def _refresh_pit_address(self):
+        """Internal helper to return the refresh pit address."""
         if not isinstance(self.address, PitAddress):
             self.address = PitAddress.from_value(self.address)
         self.pit_address = self.address
@@ -321,17 +362,19 @@ class BaseAgent(Pit, ABC):
         self.agent_card.pop("agent_address", None)
 
     def _resolve_advertised_address(self) -> str:
-        env_address = self._normalize_url(os.getenv("PROMPITS_PUBLIC_URL"))
-        if env_address:
-            return env_address
-
+        """Internal helper to resolve the advertised address."""
         configured_address = self._normalize_url(self.agent_card.get("address"))
         if configured_address:
             return configured_address
 
+        env_address = self._normalize_url(os.getenv("PROMPITS_PUBLIC_URL"))
+        if env_address:
+            return env_address
+
         return f"http://{self.host}:{self.port}"
 
     def _resolve_accepts_inbound_from_plaza(self) -> bool:
+        """Internal helper to resolve the accepts inbound from Plaza."""
         meta = self.agent_card.get("meta", {})
         if not isinstance(meta, dict):
             meta = {}
@@ -344,6 +387,7 @@ class BaseAgent(Pit, ABC):
         return True if configured is None else configured
 
     def _sync_connectivity_metadata(self):
+        """Internal helper to synchronize the connectivity metadata."""
         meta = self.agent_card.get("meta")
         if not isinstance(meta, dict):
             meta = {}
@@ -366,7 +410,10 @@ class BaseAgent(Pit, ABC):
         meta["connectivity_mode"] = connectivity_mode
 
     def _save_plaza_credentials_to_pool(self):
+        """Internal helper to save the Plaza credentials to pool."""
         if not self.pool or not self.plaza_url:
+            return
+        if not self._reuse_plaza_identity():
             return
         if not (self.agent_id and self.api_key):
             return
@@ -381,7 +428,10 @@ class BaseAgent(Pit, ABC):
             self.logger.warning(f"Failed saving Plaza credentials to pool: {e}")
 
     def _clear_plaza_credentials_in_pool(self):
+        """Internal helper for clear Plaza credentials in pool."""
         if not self.pool or not self.plaza_url:
+            return
+        if not self._reuse_plaza_identity():
             return
         if not self.agent_id:
             return
@@ -402,6 +452,7 @@ class BaseAgent(Pit, ABC):
         timeout: Optional[int] = None,
         retries: Optional[int] = None,
     ) -> requests.Response:
+        """Internal helper for Plaza request."""
         base_url = (plaza_url or self.plaza_url or "").rstrip("/")
         if not base_url:
             raise ValueError("plaza_url is required for Plaza requests")
@@ -455,6 +506,7 @@ class BaseAgent(Pit, ABC):
         timeout: Optional[float] = None,
         retries: Optional[int] = None,
     ) -> httpx.Response:
+        """Internal helper for Plaza request async."""
         base_url = (plaza_url or self.plaza_url or "").rstrip("/")
         if not base_url:
             raise ValueError("plaza_url is required for Plaza requests")
@@ -498,47 +550,33 @@ class BaseAgent(Pit, ABC):
         raise RuntimeError(f"Plaza {method.upper()} {url} failed without a response")
 
     def _plaza_get(self, path: str, **kwargs: Any) -> requests.Response:
+        """Internal helper for Plaza get."""
         return self._plaza_request("get", path, **kwargs)
 
     def _plaza_post(self, path: str, **kwargs: Any) -> requests.Response:
+        """Internal helper for Plaza post."""
         return self._plaza_request("post", path, **kwargs)
 
-    def _authenticate_with_plaza_credentials(self) -> bool:
-        if not self.plaza_url or not self.agent_id or not self.api_key:
-            return False
-        try:
-            response = self._plaza_post(
-                "/authenticate",
-                json={"agent_id": self.agent_id, "api_key": self.api_key},
-            )
-            if response.status_code != 200:
-                self.logger.warning(f"Credential authentication failed: {response.text}")
-                return False
-            data = response.json()
-            token = data.get("token")
-            if not token:
-                self.logger.warning(f"Credential authentication returned no token.")
-                return False
-            self.plaza_token = token
-            self.token_expires_at = time.time() + data.get("expires_in", 3600)
-            return True
-        except Exception as e:
-            self.logger.error(f"Credential authentication request failed: {e}")
-            return False
-
     def _ensure_agent_practices_table(self):
+        """Internal helper to ensure the agent practices table exists."""
         if not self.pool:
             return
+        if getattr(self, "_agent_practices_table_ensured", False):
+            return
         if self.pool._TableExists(self.AGENT_PRACTICES_TABLE):
+            self._agent_practices_table_ensured = True
             return
         schema = agent_practices_table_schema()
         self.pool._CreateTable(self.AGENT_PRACTICES_TABLE, schema)
+        self._agent_practices_table_ensured = True
 
     def _practice_row_id(self, practice_id: str) -> str:
+        """Internal helper for practice row ID."""
         return f"{self.name}:{practice_id}"
 
     @staticmethod
     def _parse_practice_updated_at(value: Any) -> datetime:
+        """Internal helper to parse the practice updated at."""
         if isinstance(value, datetime):
             return value
         if isinstance(value, str):
@@ -549,6 +587,7 @@ class BaseAgent(Pit, ABC):
         return datetime.fromtimestamp(0, tz=timezone.utc)
 
     def _upsert_practice_metadata_in_card(self, metadata: Dict[str, Any]):
+        """Internal helper to return the upsert practice metadata in card."""
         practices = self.agent_card.setdefault("practices", [])
         for idx, current in enumerate(practices):
             if current.get("id") == metadata.get("id"):
@@ -557,6 +596,7 @@ class BaseAgent(Pit, ABC):
         practices.append(metadata)
 
     def _default_practice_metadata(self, practice: Practice) -> Dict[str, Any]:
+        """Internal helper to return the default practice metadata."""
         return {
             "name": practice.name,
             "description": practice.description,
@@ -570,7 +610,33 @@ class BaseAgent(Pit, ABC):
             "path": practice.path
         }
 
+    def _mailbox_practice_metadata(self) -> Dict[str, Any]:
+        """Internal helper for mailbox practice metadata."""
+        return {
+            "name": "Mailbox",
+            "description": "Default inbound message endpoint for generic agent delivery.",
+            "id": self.MAILBOX_PRACTICE_ID,
+            "cost": 0,
+            "tags": ["message", "mailbox"],
+            "examples": ["POST /mailbox {'sender':'alice','content':'hello','msg_type':'message'}"],
+            "inputModes": ["http-post", "json"],
+            "outputModes": ["json"],
+            "parameters": {
+                "sender": {"type": "string", "description": "Sending agent name or id."},
+                "receiver": {"type": "string", "description": "Target agent name or id."},
+                "content": {"type": "object", "description": "Message payload."},
+                "msg_type": {"type": "string", "description": "Message routing key."},
+            },
+            "path": "/mailbox",
+        }
+
+    def _prune_legacy_practices(self) -> None:
+        """Internal helper for prune legacy practices."""
+        for practice_id in self.LEGACY_REMOVED_PRACTICE_IDS:
+            self.delete_practice(practice_id)
+
     def _normalize_practice_metadata(self, metadata: Dict[str, Any]) -> Dict[str, Any]:
+        """Internal helper to normalize the practice metadata."""
         normalized = dict(metadata or {})
         normalized["cost"] = Practice._normalize_cost(normalized.get("cost", 0))
         return normalized
@@ -578,6 +644,7 @@ class BaseAgent(Pit, ABC):
     def _resolve_callable_practice_entries(self, practice: Practice) -> List[Dict[str, Any]]:
         # Practices can expose multiple callable endpoints (e.g., Plaza bundle).
         # If a practice does not define that expansion, we expose its default endpoint.
+        """Internal helper to resolve the callable practice entries."""
         if hasattr(practice, "get_callable_endpoints"):
             entries = practice.get_callable_endpoints()
             if isinstance(entries, list):
@@ -590,6 +657,7 @@ class BaseAgent(Pit, ABC):
         return [self._default_practice_metadata(practice)]
 
     def _build_practice_pool_row(self, practice_metadata: Dict[str, Any], is_deleted: bool = False) -> Optional[Dict[str, Any]]:
+        """Internal helper to build the practice pool row."""
         if not practice_metadata:
             return None
         practice_id = practice_metadata.get("id")
@@ -606,7 +674,36 @@ class BaseAgent(Pit, ABC):
             "updated_at": datetime.now(timezone.utc).isoformat(),
         }
 
+    def _begin_practice_persistence_batch(self):
+        """Internal helper for begin practice persistence batch."""
+        self._practice_persistence_batch_depth = max(int(self._practice_persistence_batch_depth), 0) + 1
+
+    def _end_practice_persistence_batch(self):
+        """Internal helper for end practice persistence batch."""
+        current_depth = max(int(self._practice_persistence_batch_depth), 0)
+        if current_depth == 0:
+            return
+        self._practice_persistence_batch_depth = current_depth - 1
+        if self._practice_persistence_batch_depth == 0:
+            self._flush_pending_practice_rows()
+
+    def _flush_pending_practice_rows(self):
+        """Internal helper to return the flush pending practice rows."""
+        if not self.pool:
+            self._pending_practice_rows = {}
+            return
+        rows = list((self._pending_practice_rows or {}).values())
+        self._pending_practice_rows = {}
+        if not rows:
+            return
+        self._ensure_agent_practices_table()
+        if len(rows) == 1:
+            self.pool._Insert(self.AGENT_PRACTICES_TABLE, rows[0])
+            return
+        self.pool._InsertMany(self.AGENT_PRACTICES_TABLE, rows)
+
     def _persist_practices_to_pool(self, practice_metadata_list: List[Dict[str, Any]], is_deleted: bool = False):
+        """Internal helper to persist the practices to pool."""
         if not self.pool or not practice_metadata_list:
             return
         rows = []
@@ -616,6 +713,12 @@ class BaseAgent(Pit, ABC):
                 rows.append(row)
         if not rows:
             return
+        if self._practice_persistence_batch_depth > 0:
+            for row in rows:
+                row_id = str(row.get("id") or "")
+                if row_id:
+                    self._pending_practice_rows[row_id] = row
+            return
         self._ensure_agent_practices_table()
         if len(rows) == 1:
             self.pool._Insert(self.AGENT_PRACTICES_TABLE, rows[0])
@@ -623,9 +726,11 @@ class BaseAgent(Pit, ABC):
         self.pool._InsertMany(self.AGENT_PRACTICES_TABLE, rows)
 
     def _persist_practice_to_pool(self, practice_metadata: Dict[str, Any], is_deleted: bool = False):
+        """Internal helper to persist the practice to pool."""
         self._persist_practices_to_pool([practice_metadata], is_deleted=is_deleted)
 
     def _load_practices_info_from_pool(self):
+        """Internal helper to load the practices info from pool."""
         if not self.pool:
             return
         try:
@@ -678,6 +783,7 @@ class BaseAgent(Pit, ABC):
         self.logger.info(f"Mounted practice: {practice.name}")
 
     def _register_pool_operation_practices(self):
+        """Internal helper to register the pool operation practices."""
         if not self.pool or not hasattr(self.pool, "get_operation_practices"):
             return
         try:
@@ -730,23 +836,42 @@ class BaseAgent(Pit, ABC):
         return deleted
 
     def delete_practice_endpoint(self, practice_id: str) -> bool:
+        """Delete the practice endpoint."""
         return self.delete_practice(practice_id)
 
     def setup_routes(self):
+        """Set up the routes."""
         @self.app.get("/health")
         async def health_check():
+            """Route handler for GET /health."""
             return {"status": "ok", "agent": self.name}
 
         @self.app.get("/api/local-site-settings")
         async def get_local_site_settings():
+            """Route handler for GET /api/local-site-settings."""
             return {"status": "success", "settings": self.site_settings}
 
         @self.app.get("/api/plaza_connection_status")
         async def get_plaza_connection_status():
+            """Route handler for GET /api/plaza_connection_status."""
             return await run_in_threadpool(self.get_plaza_connection_status)
+
+        @self.app.post("/mailbox")
+        async def mailbox(message: Message):
+            """Route handler for POST /mailbox."""
+            result = None
+            if hasattr(self, "receive"):
+                result = await run_in_threadpool(self.receive, message)
+                if inspect.isawaitable(result):
+                    result = await result
+            payload = {"status": "received"}
+            if result is not None:
+                payload["result"] = result
+            return payload
 
         @self.app.post("/use_practice/{practice_id}")
         async def use_practice(practice_id: str, request: PracticeInvocationRequest):
+            """Route handler for POST /use_practice/{practice_id}."""
             self.logger.debug(
                 f"Received remote UsePractice request for '{practice_id}' "
                 f"from '{request.sender}' to '{request.receiver}'"
@@ -761,7 +886,13 @@ class BaseAgent(Pit, ABC):
                 raise HTTPException(status_code=404, detail=f"Practice '{practice_id}' not found")
 
             try:
-                result = await self._execute_local_practice_async(local_practice, request.content)
+                execution_content = self._inject_remote_caller_context_for_practice(
+                    practice_id=practice_id,
+                    content=request.content,
+                    request=request,
+                    verified=verified,
+                )
+                result = await self._execute_local_practice_async(local_practice, execution_content)
             except HTTPException:
                 raise
             except Exception as exc:
@@ -777,10 +908,12 @@ class BaseAgent(Pit, ABC):
         # Lifecycle events to auto-register on startup
         @self.app.on_event("startup")
         def startup_event():
+            """Handle startup event for the base agent."""
             if self.plaza_url and self.name != "Plaza":
                 threading.Thread(target=self.register).start()
 
     def _start_heartbeat_thread(self) -> bool:
+        """Internal helper to start the heartbeat thread."""
         with self._heartbeat_thread_lock:
             current_thread = self._heartbeat_thread
             if current_thread and current_thread.is_alive():
@@ -795,6 +928,7 @@ class BaseAgent(Pit, ABC):
             return True
 
     def _start_reconnect_thread(self, initial_delay: Optional[float] = None) -> bool:
+        """Internal helper to start the reconnect thread."""
         with self._reconnect_thread_lock:
             current_thread = self._reconnect_thread
             if current_thread and current_thread.is_alive():
@@ -810,12 +944,14 @@ class BaseAgent(Pit, ABC):
             return True
 
     def _has_active_reconnect_thread(self) -> bool:
+        """Return whether the value has active reconnect thread."""
         with self._reconnect_thread_lock:
             current_thread = self._reconnect_thread
             return bool(current_thread and current_thread.is_alive())
 
     @staticmethod
     def _is_plaza_starting_response(response: Any) -> bool:
+        """Return whether the value is a Plaza starting response."""
         if response is None or getattr(response, "status_code", None) != 503:
             return False
         try:
@@ -827,6 +963,7 @@ class BaseAgent(Pit, ABC):
         return "starting" in str(getattr(response, "text", "")).lower()
 
     def _schedule_reconnect(self, reason: str, *, initial_delay: Optional[float] = None):
+        """Internal helper to schedule the reconnect."""
         self._plaza_connection_error = str(reason or "").strip() or "Plaza connection lost"
         self.plaza_token = None
         self.token_expires_at = 0.0
@@ -838,6 +975,7 @@ class BaseAgent(Pit, ABC):
             )
 
     def _reconnect_loop(self, initial_delay: float = 0.0):
+        """Internal helper for reconnect loop."""
         delay = max(float(initial_delay), 0.0)
         while True:
             if not self.plaza_url:
@@ -982,7 +1120,6 @@ class BaseAgent(Pit, ABC):
         if target_card:
             practices_list = target_card.get("practices", [])
             has_mailbox = any(p.get("id") == "mailbox" for p in practices_list)
-            has_chat = any(p.get("id") == "chat-practice" for p in practices_list)
             target_url = target_card.get("address")
         else:
             self.logger.error(f"No target card found for {receiver_addr}")
@@ -1001,11 +1138,8 @@ class BaseAgent(Pit, ABC):
                 resp = requests.post(f"{target_url}{endpoint}", json=payload, timeout=120)
             elif has_mailbox:
                 resp = requests.post(f"{target_url}/mailbox", json=payload, timeout=120)
-            elif has_chat:
-                # If only chat is available, we'll try to use the /chat endpoint
-                resp = requests.post(f"{target_url}/chat", json=payload, timeout=120)
             else:
-                self.logger.error(f"Agent {receiver_addr} has no communication practices (mailbox or chat).")
+                self.logger.error(f"Agent {receiver_addr} has no communication practice or mailbox endpoint.")
                 return False
                 
             if resp.status_code == 200:
@@ -1084,6 +1218,7 @@ class BaseAgent(Pit, ABC):
         return None
 
     def lookup_agent(self, name: str) -> Optional[str]:
+        """Look up the agent."""
         info = self.lookup_agent_info(name)
         if info:
             return info['card'].get('address')
@@ -1166,8 +1301,8 @@ class BaseAgent(Pit, ABC):
         if entry and entry.get("path"):
             path = str(entry["path"])
             return path if path.startswith("/") else f"/{path}"
-        if practice_id == "chat-practice":
-            return "/chat"
+        if practice_id == BaseAgent.MAILBOX_PRACTICE_ID:
+            return "/mailbox"
         return f"/{practice_id.replace('-', '_')}"
 
     def _resolve_remote_target(self, pit_address: Any) -> Optional[Dict[str, Any]]:
@@ -1217,6 +1352,7 @@ class BaseAgent(Pit, ABC):
 
     @staticmethod
     def _extract_bearer_token(headers: Optional[Dict[str, str]]) -> Optional[str]:
+        """Internal helper to extract the bearer token."""
         if not headers:
             return None
         auth_header = headers.get("Authorization") or headers.get("authorization")
@@ -1228,6 +1364,7 @@ class BaseAgent(Pit, ABC):
         return auth_header
 
     def _build_remote_practice_payload(self, practice_id: str, content: Any, target: Dict[str, Any]) -> Dict[str, Any]:
+        """Internal helper to build the remote practice payload."""
         caller_headers = self._ensure_token_valid() if self.plaza_url else None
         caller_token = self._extract_bearer_token(caller_headers)
         caller_direct_token = self.direct_auth_token
@@ -1244,9 +1381,48 @@ class BaseAgent(Pit, ABC):
 
     @staticmethod
     def _unwrap_remote_practice_response(payload: Any) -> Any:
+        """Internal helper for unwrap remote practice response."""
         if isinstance(payload, dict) and payload.get("status") == "ok" and "result" in payload:
             return payload["result"]
         return payload
+
+    def _inject_remote_caller_context_for_practice(
+        self,
+        *,
+        practice_id: str,
+        content: Any,
+        request: PracticeInvocationRequest,
+        verified: Dict[str, Any],
+    ) -> Any:
+        """Internal helper for inject remote caller context for the practice."""
+        if practice_id != "get_pulse_data" or not isinstance(content, dict):
+            return content
+
+        caller_pit_address = self._coerce_pit_address(request.caller_agent_address)
+        caller_context = {
+            "agent_id": str(verified.get("agent_id") or caller_pit_address.pit_id or ""),
+            "agent_name": str(verified.get("agent_name") or request.sender or ""),
+            "pit_id": str(caller_pit_address.pit_id or ""),
+            "pit_address": caller_pit_address.to_dict() if caller_pit_address else {},
+            "plaza_url": str(verified.get("plaza_url") or ""),
+            "auth_mode": str(verified.get("auth_mode") or ""),
+            "sender": str(request.sender or ""),
+        }
+
+        enriched = dict(content)
+        injected = False
+        for key in ("input_data", "params"):
+            value = enriched.get(key)
+            if not isinstance(value, dict):
+                continue
+            nested = dict(value)
+            nested.setdefault("_caller", caller_context)
+            enriched[key] = nested
+            injected = True
+
+        if not injected:
+            enriched.setdefault("_caller", caller_context)
+        return enriched
 
     async def _verify_remote_caller(
         self,
@@ -1254,6 +1430,7 @@ class BaseAgent(Pit, ABC):
         caller_plaza_token: Optional[str],
         caller_direct_token: Optional[str] = None,
     ) -> Dict[str, Any]:
+        """Internal helper for verify remote caller."""
         caller_pit_address = self._coerce_pit_address(caller_agent_address)
         if not caller_pit_address or not caller_pit_address.pit_id:
             logger.warning(f"[{self.name}] Rejecting remote UsePractice request without caller PitAddress.")
@@ -1390,6 +1567,7 @@ class BaseAgent(Pit, ABC):
         pit_address: Any = None,
         timeout: int = 30
     ) -> Any:
+        """Use the practice async."""
         local_practice = next((p for p in self.practices if p.id == practice_id), None)
         target_pit_address = self._coerce_pit_address(pit_address)
         if pit_address is None or (
@@ -1414,6 +1592,7 @@ class BaseAgent(Pit, ABC):
         async_mode: bool = False,
         timeout: int = 30
     ) -> Any:
+        """Use the practice."""
         if async_mode:
             return self.UsePracticeAsync(
                 practice_id=practice_id,

@@ -1,3 +1,15 @@
+"""
+Validation and normalization helpers for `attas.pds.validator`.
+
+Attas layers finance-oriented pulse definitions, validation rules, and personal-agent
+workflows on top of the shared runtimes. Within Attas, this area focuses on pulse-
+directory schemas, catalog loading, runtime normalization, and validation.
+
+Key definitions include `PDSDiagnostic`, `PDSValidationError`, `load_pds_json`,
+`load_pds_schema`, and `load_validated_pds_resource`, which provide the main entry
+points used by neighboring modules and tests.
+"""
+
 from __future__ import annotations
 
 import json
@@ -14,6 +26,7 @@ from attas.pds.models import JsonObject, LoadedPDSResource, PDSResource, parse_p
 
 @dataclass(frozen=True)
 class PDSDiagnostic:
+    """Represent a PDS diagnostic."""
     code: str
     message: str
     json_path: str
@@ -22,22 +35,27 @@ class PDSDiagnostic:
 
 
 class PDSValidationError(ValueError):
+    """Exception raised for PDS validation failures."""
     def __init__(self, message: str, diagnostics: List[PDSDiagnostic]):
+        """Initialize the PDS validation error."""
         super().__init__(message)
         self.diagnostics = diagnostics
 
 
 def _schema_file_path() -> Path:
+    """Internal helper to return the schema file path."""
     return Path(__file__).resolve().parents[1] / "schemas" / "pds.schema.json"
 
 
 @lru_cache(maxsize=1)
 def load_pds_schema() -> JsonObject:
+    """Load the PDS schema."""
     with _schema_file_path().open("r", encoding="utf-8") as handle:
         return json.load(handle)
 
 
 def _select_schema_branch(schema: JsonObject, data: Any) -> JsonObject:
+    """Internal helper for select schema branch."""
     if isinstance(data, dict):
         resource_type = data.get("resource_type")
         branch = schema.get("$defs", {}).get(str(resource_type))
@@ -51,6 +69,7 @@ def _select_schema_branch(schema: JsonObject, data: Any) -> JsonObject:
 
 
 def _format_error_path(error: ValidationError) -> str:
+    """Internal helper to format the error path."""
     parts = ["$"]
     for part in error.absolute_path:
         if isinstance(part, int):
@@ -61,6 +80,7 @@ def _format_error_path(error: ValidationError) -> str:
 
 
 def _flatten_errors(error: ValidationError) -> List[ValidationError]:
+    """Internal helper for flatten errors."""
     if not error.context:
         return [error]
     flattened: List[ValidationError] = []
@@ -70,11 +90,13 @@ def _flatten_errors(error: ValidationError) -> List[ValidationError]:
 
 
 def _sort_key(error: ValidationError) -> tuple[int, str, str]:
+    """Internal helper to return the sort key."""
     path_text = _format_error_path(error)
     return (len(list(error.absolute_path)), path_text, error.message)
 
 
 def validate_pds_data(data: Any, *, file_path: Optional[Path] = None) -> None:
+    """Validate the PDS data."""
     schema = load_pds_schema()
     validator = Draft202012Validator(_select_schema_branch(schema, data))
     raw_errors = list(validator.iter_errors(data))
@@ -100,6 +122,7 @@ def validate_pds_data(data: Any, *, file_path: Optional[Path] = None) -> None:
 
 
 def load_pds_json(path: Path | str) -> JsonObject:
+    """Load the PDS JSON."""
     json_path = Path(path)
     with json_path.open("r", encoding="utf-8") as handle:
         payload = json.load(handle)
@@ -112,11 +135,13 @@ def load_pds_json(path: Path | str) -> JsonObject:
 
 
 def parse_validated_pds_data(data: Dict[str, Any]) -> PDSResource:
+    """Parse the validated PDS data."""
     validate_pds_data(data)
     return parse_pds_resource(data)
 
 
 def load_validated_pds_resource(path: Path | str) -> LoadedPDSResource:
+    """Load the validated PDS resource."""
     resource_path = Path(path).resolve()
     payload = load_pds_json(resource_path)
     validate_pds_data(payload, file_path=resource_path)

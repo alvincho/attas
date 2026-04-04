@@ -1,3 +1,14 @@
+"""
+Schema definitions for `prompits.core.schema`.
+
+Prompits provides the core HTTP-native agent runtime, Plaza coordination layer, and
+pool/practice infrastructure for FinMAS. Within Prompits, the core package defines the
+shared abstractions that the rest of the runtime builds on.
+
+Core types exposed here include `DataType`, `JsonSchema`, `RowSchema`, `Schema`, and
+`TableSchema`, which carry the main behavior or state managed by this module.
+"""
+
 # Schema is an abstract class that defines the schema of data in Pool
 # it defines data structure of TupleDataItem and JsonDataItem
 # it can be used to validate data in Pool
@@ -206,8 +217,71 @@ class TableSchema(Schema):
         self.schema = schema
         self.rowSchema = RowSchema(schema.get("rowSchema", {}))
         self.primary_key = schema.get("primary_key", [])
+        self.unique_constraints = self._normalize_unique_constraints(schema.get("unique_constraints", []))
+        self.foreign_keys = self._normalize_foreign_keys(schema.get("foreign_keys", []))
         self.name = schema.get("name", "")
         self.description = schema.get("description", "")
+
+    @staticmethod
+    def _normalize_unique_constraints(value: Any) -> List[List[str]]:
+        """Internal helper to normalize the unique constraints."""
+        constraints: List[List[str]] = []
+        raw_constraints = value if isinstance(value, list) else []
+        for entry in raw_constraints:
+            if isinstance(entry, str):
+                columns = [entry.strip()]
+            elif isinstance(entry, list):
+                columns = [str(column).strip() for column in entry]
+            else:
+                continue
+            normalized = [column for column in columns if column]
+            if normalized:
+                constraints.append(normalized)
+        return constraints
+
+    @staticmethod
+    def _normalize_foreign_keys(value: Any) -> List[Dict[str, Any]]:
+        """Internal helper to normalize the foreign keys."""
+        normalized_foreign_keys: List[Dict[str, Any]] = []
+        raw_foreign_keys = value if isinstance(value, list) else []
+        for entry in raw_foreign_keys:
+            if not isinstance(entry, dict):
+                continue
+            raw_columns = entry.get("columns")
+            if isinstance(raw_columns, str):
+                columns = [raw_columns.strip()]
+            elif isinstance(raw_columns, list):
+                columns = [str(column).strip() for column in raw_columns]
+            else:
+                columns = []
+            columns = [column for column in columns if column]
+            references = entry.get("references") if isinstance(entry.get("references"), dict) else {}
+            reference_table = str(references.get("table") or "").strip()
+            raw_reference_columns = references.get("columns")
+            if isinstance(raw_reference_columns, str):
+                reference_columns = [raw_reference_columns.strip()]
+            elif isinstance(raw_reference_columns, list):
+                reference_columns = [str(column).strip() for column in raw_reference_columns]
+            else:
+                reference_columns = []
+            reference_columns = [column for column in reference_columns if column]
+            if not columns or not reference_table or not reference_columns or len(columns) != len(reference_columns):
+                continue
+            foreign_key: Dict[str, Any] = {
+                "columns": columns,
+                "references": {
+                    "table": reference_table,
+                    "columns": reference_columns,
+                },
+            }
+            on_delete = str(entry.get("on_delete") or "").strip().upper()
+            if on_delete:
+                foreign_key["on_delete"] = on_delete
+            on_update = str(entry.get("on_update") or "").strip().upper()
+            if on_update:
+                foreign_key["on_update"] = on_update
+            normalized_foreign_keys.append(foreign_key)
+        return normalized_foreign_keys
     
     def validate(self, data: Any) -> bool:
         """

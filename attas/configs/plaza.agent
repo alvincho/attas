@@ -10,8 +10,7 @@
             "name": "plaza_pool",
             "description": "Plaza Supabase pool",
             "url": {
-                "env": "SUPABASE_URL",
-                "value": "https://shwjdbugjabdgybzdhws.supabase.co"
+                "env": "SUPABASE_URL"
             },
             "key": {
                 "env": "SUPABASE_SERVICE_ROLE_KEY"

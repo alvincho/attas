@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     const body = document.body;
     const initialPlazas = JSON.parse(body.dataset.plazaUrls || '[]');
-    const historyStorageKey = `attas-user-history:${body.dataset.agentName || 'default'}`;
+    const historyStorageKey = `user-agent-history:${body.dataset.agentName || 'default'}`;
     const historyLimit = 24;
     const HEARTBEAT_ACTIVE_WINDOW_SEC = 60;
 
@@ -1152,7 +1152,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="saved-title">${escapeHtml(item.title || 'Saved Result')}</div>
                     <span class="mini-tag">${escapeHtml(item.format || 'Saved')}</span>
                 </div>
-                <p class="saved-desc">${escapeHtml(item.application_name || item.phema_name || 'Saved attas result')}</p>
+                <p class="saved-desc">${escapeHtml(item.application_name || item.phema_name || 'Saved generated result')}</p>
                 <div class="saved-meta">
                     ${item.castr_name ? `<span class="meta-chip">${escapeHtml(item.castr_name)}</span>` : ''}
                     ${item.saved_at ? `<span class="meta-chip">${escapeHtml(formatDateTime(item.saved_at))}</span>` : ''}
@@ -1303,7 +1303,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (state.party) params.set('party', state.party);
             if (state.plazaUrl) params.set('plaza_url', state.plazaUrl);
 
-            const response = await fetch(`/api/attas/catalog?${params.toString()}`);
+            const response = await fetch(`/api/catalog?${params.toString()}`);
             const payload = await response.json();
             if (!response.ok || payload.status !== 'success') {
                 throw new Error(payload.detail || payload.message || 'Failed to load Phemas');
@@ -1366,7 +1366,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 phemar_address: application.host_phemar_address || '',
                 limit: '100',
             });
-            const response = await fetch(`/api/attas/snapshots?${params.toString()}`);
+            const response = await fetch(`/api/snapshots?${params.toString()}`);
             const payload = await response.json();
             if (requestKey !== applicationKey(currentApplication() || {})) {
                 return;
@@ -1406,7 +1406,7 @@ document.addEventListener('DOMContentLoaded', () => {
         state.loadingSaved = true;
 
         try {
-            const response = await fetch('/api/attas/saved_results');
+            const response = await fetch('/api/saved_results');
             const payload = await response.json();
             if (!response.ok || payload.status !== 'success') {
                 throw new Error(payload.detail || payload.message || 'Failed to load saved results');
@@ -1853,12 +1853,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 + '        <option value="">Use saved pool</option>'
                 + '        <option value="FileSystemPool">FileSystemPool</option>'
                 + '        <option value="SQLitePool">SQLitePool</option>'
+                + '        <option value="PostgresPool">PostgresPool</option>'
                 + '        <option value="SupabasePool">SupabasePool</option>'
                 + '      </select>'
                 + '    </div>'
                 + '    <div class="launch-field">'
                 + '      <label for="launch-pool-location">Pool Location</label>'
-                + '      <input id="launch-pool-location" class="launch-input" type="text" placeholder="filesystem path, db path, or URL">'
+                + '      <input id="launch-pool-location" class="launch-input" type="text" placeholder="filesystem path, db path, DSN, or URL">'
                 + '    </div>'
                 + '  </div>'
                 + '  <div class="launch-field">'
@@ -2547,7 +2548,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setStatus('Creating your result...');
 
         try {
-            const response = await fetch('/api/attas/generate', {
+            const response = await fetch('/api/generate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -2638,7 +2639,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setStatus('Creating your snapshot...');
 
         try {
-            const response = await fetch('/api/attas/generate', {
+            const response = await fetch('/api/generate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -2729,7 +2730,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setStatus('Creating your result...');
 
         try {
-            const response = await fetch('/api/attas/generate', {
+            const response = await fetch('/api/generate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -2808,8 +2809,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const title = state.lastResult?.temporary_script?.name
                 || state.lastResult?.snapshot?.snapshot?.name
                 || state.lastResult?.application?.name
-                || 'Saved attas result';
-            const response = await fetch('/api/attas/saved_results', {
+                || 'Saved generated result';
+            const response = await fetch('/api/saved_results', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

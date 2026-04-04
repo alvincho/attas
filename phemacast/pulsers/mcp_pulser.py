@@ -1,3 +1,14 @@
+"""
+MCP pulser implementation for the Pulsers area.
+
+Phemacast assembles pulse inputs, phemas, and castrs into rendered research artifacts
+and interactive tooling. Within Phemacast, these modules implement pulse sources for
+APIs, files, bosses, MCP tools, and path-based workflows.
+
+Core types exposed here include `MCPPulser`, which carry the main behavior or state
+managed by this module.
+"""
+
 from __future__ import annotations
 
 import json
@@ -21,7 +32,7 @@ except ImportError:  # pragma: no cover - depends on optional transport support
     sse_client = None
 
 from phemacast.agents.pulser import _resolve_path
-from phemacast.pulsers.api_pulser import ApiPulser
+from phemacast.pulsers.api_pulser import APIsPulser
 
 logger = logging.getLogger(__name__)
 
@@ -29,15 +40,16 @@ _PLACEHOLDER_PATTERN = re.compile(r"\{([^{}]+)\}")
 _JSON_FENCE_PATTERN = re.compile(r"^\s*```(?:json)?\s*(.*?)\s*```\s*$", re.DOTALL)
 
 
-class MCPPulser(ApiPulser):
+class MCPPulser(APIsPulser):
     """
     Generic pulser that fetches pulse payloads by invoking MCP tools.
 
-    The editor and mapping flow are inherited from ``ApiPulser``. Each supported
+    The editor and mapping flow are inherited from ``APIsPulser``. Each supported
     pulse supplies an ``mcp`` block instead of an ``api`` block.
     """
 
     def _normalize_config_document(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        """Internal helper to normalize the config document."""
         document = super()._normalize_config_document(config)
         document["type"] = "phemacast.pulsers.mcp_pulser.MCPPulser"
         document["mcp"] = self._normalize_mcp_config(document.get("mcp"))
@@ -49,12 +61,14 @@ class MCPPulser(ApiPulser):
         return document
 
     def _normalize_config_pulse(self, pulse: Dict[str, Any]) -> Dict[str, Any]:
+        """Internal helper to normalize the config pulse."""
         normalized = super()._normalize_config_pulse(pulse)
         normalized["mcp"] = self._normalize_mcp_config(normalized.get("mcp"))
         normalized.pop("api", None)
         return normalized
 
     def _synthesize_runtime_config(self) -> Dict[str, Any]:
+        """Internal helper to return the synthesize runtime config."""
         document = super()._synthesize_runtime_config()
         document["type"] = "phemacast.pulsers.mcp_pulser.MCPPulser"
         document["mcp"] = self._normalize_mcp_config(self.raw_config.get("mcp") or self.config.get("mcp"))
@@ -62,6 +76,7 @@ class MCPPulser(ApiPulser):
 
     @staticmethod
     def _normalize_mcp_config(config: Any) -> Dict[str, Any]:
+        """Internal helper to normalize the MCP config."""
         if not isinstance(config, Mapping):
             return {}
 
@@ -93,12 +108,14 @@ class MCPPulser(ApiPulser):
         return normalized
 
     def _merge_mcp_config(self, *configs: Any) -> Dict[str, Any]:
+        """Internal helper to merge the MCP config."""
         merged: Dict[str, Any] = {}
         for config in configs:
             merged = self._deep_merge_dicts(merged, self._normalize_mcp_config(config))
         return merged
 
     def _deep_merge_dicts(self, base: Dict[str, Any], overlay: Dict[str, Any]) -> Dict[str, Any]:
+        """Internal helper for deep merge dicts."""
         merged = dict(base)
         for key, value in overlay.items():
             if isinstance(value, Mapping) and isinstance(merged.get(key), Mapping):
@@ -110,6 +127,7 @@ class MCPPulser(ApiPulser):
         return merged
 
     def _resolve_mcp_api_key(self, mcp_config: Mapping[str, Any]) -> tuple[str | None, str | None]:
+        """Internal helper to resolve the MCP API key."""
         if mcp_config.get("api_key") is not None:
             return self._resolve_api_key_value(mcp_config.get("api_key")), None
 
@@ -122,6 +140,7 @@ class MCPPulser(ApiPulser):
         return self._resolve_api_key_value(self.config.get("api_key")), None
 
     def _missing_mcp_api_key_message(self, mcp_config: Mapping[str, Any]) -> str | None:
+        """Internal helper to return the missing MCP API key message."""
         api_key, _api_key_id = self._resolve_mcp_api_key(mcp_config)
         if api_key:
             return None
@@ -144,6 +163,7 @@ class MCPPulser(ApiPulser):
         return None
 
     def _build_render_context(self, input_data: Dict[str, Any], mcp_config: Mapping[str, Any]) -> Dict[str, Any]:
+        """Internal helper to build the render context."""
         context = dict(input_data or {})
         api_key, api_key_id = self._resolve_mcp_api_key(mcp_config)
         if api_key is not None:
@@ -154,6 +174,7 @@ class MCPPulser(ApiPulser):
         return context
 
     def _resolve_template_token(self, context: Mapping[str, Any], token: str) -> Any:
+        """Internal helper to resolve the template token."""
         value = _resolve_path(context, token)
         if value is not None:
             return value
@@ -162,6 +183,7 @@ class MCPPulser(ApiPulser):
         return None
 
     def _render_template_value(self, value: Any, context: Mapping[str, Any]) -> Any:
+        """Internal helper to render the template value."""
         if isinstance(value, str):
             trimmed = value.strip()
             if trimmed.startswith("env:"):
@@ -177,6 +199,7 @@ class MCPPulser(ApiPulser):
                 return value if resolved is None else resolved
 
             def _replace(match: re.Match[str]) -> str:
+                """Internal helper for replace."""
                 resolved = self._resolve_template_token(context, match.group(1).strip())
                 return match.group(0) if resolved is None else str(resolved)
 
@@ -194,6 +217,7 @@ class MCPPulser(ApiPulser):
         return value
 
     def _prepare_mcp_request(self, pulse_definition: Dict[str, Any], input_data: Dict[str, Any]) -> tuple[Dict[str, Any], str, Dict[str, Any]]:
+        """Internal helper to prepare the MCP request."""
         merged_config = self._merge_mcp_config(self.raw_config.get("mcp"), self.config.get("mcp"), pulse_definition.get("mcp"))
         missing_api_key_message = self._missing_mcp_api_key_message(merged_config)
         if missing_api_key_message:
@@ -224,6 +248,7 @@ class MCPPulser(ApiPulser):
         return rendered_config, tool_name, arguments
 
     async def _call_mcp_tool_async(self, mcp_config: Dict[str, Any], tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """Internal helper for call MCP tool async."""
         transport = str(mcp_config.get("transport") or "stdio").strip().lower()
         if transport == "http":
             return await self._call_mcp_tool_over_http_async(mcp_config, tool_name, arguments)
@@ -240,10 +265,12 @@ class MCPPulser(ApiPulser):
         return result.model_dump(mode="python") if hasattr(result, "model_dump") else dict(result)
 
     def _call_mcp_tool_sync(self, mcp_config: Dict[str, Any], tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """Internal helper for call MCP tool sync."""
         return anyio.run(self._call_mcp_tool_async, mcp_config, tool_name, arguments)
 
     @staticmethod
     def _build_jsonrpc_message(method: str, *, params: Dict[str, Any] | None = None, request_id: str | None = None) -> Dict[str, Any]:
+        """Internal helper to build the jsonrpc message."""
         payload: Dict[str, Any] = {
             "jsonrpc": "2.0",
             "method": method,
@@ -256,6 +283,7 @@ class MCPPulser(ApiPulser):
 
     @staticmethod
     def _extract_sse_json_events(text: str) -> list[Any]:
+        """Internal helper to extract the sse JSON events."""
         events: list[Any] = []
         for block in text.split("\n\n"):
             lines = [line for line in block.splitlines() if line.startswith("data:")]
@@ -271,6 +299,7 @@ class MCPPulser(ApiPulser):
         return events
 
     def _parse_jsonrpc_http_response(self, response: Any) -> Any:
+        """Internal helper to parse the jsonrpc HTTP response."""
         response.raise_for_status()
         content_type = str(response.headers.get("content-type") or "").lower()
 
@@ -300,6 +329,7 @@ class MCPPulser(ApiPulser):
         return payload
 
     async def _call_mcp_tool_over_http_async(self, mcp_config: Dict[str, Any], tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """Internal helper for call MCP tool over HTTP async."""
         url = str(mcp_config.get("url") or "").strip()
         if not url:
             raise ValueError("HTTP MCP transport requires a url.")
@@ -356,6 +386,7 @@ class MCPPulser(ApiPulser):
 
     @asynccontextmanager
     async def _open_mcp_transport(self, mcp_config: Dict[str, Any]):
+        """Internal helper to open the MCP transport."""
         transport = str(mcp_config.get("transport") or "stdio").strip().lower()
         if transport == "stdio":
             command = str(mcp_config.get("command") or "").strip()
@@ -388,6 +419,7 @@ class MCPPulser(ApiPulser):
 
     @staticmethod
     def _extract_text_fragments(content: Iterable[Any]) -> list[str]:
+        """Internal helper to extract the text fragments."""
         fragments: list[str] = []
         for item in content:
             if not isinstance(item, Mapping):
@@ -408,6 +440,7 @@ class MCPPulser(ApiPulser):
 
     @staticmethod
     def _maybe_parse_json_text(text: str) -> Any:
+        """Internal helper for maybe parse JSON text."""
         candidate = text.strip()
         fenced = _JSON_FENCE_PATTERN.match(candidate)
         if fenced:
@@ -420,6 +453,7 @@ class MCPPulser(ApiPulser):
             return None
 
     def _extract_mcp_payload(self, result: Any) -> Any:
+        """Internal helper to extract the MCP payload."""
         if hasattr(result, "model_dump"):
             result = result.model_dump(mode="python")
 
@@ -458,6 +492,7 @@ class MCPPulser(ApiPulser):
         return result
 
     def _redact_value(self, value: Any, key_hint: str | None = None) -> Any:
+        """Internal helper to return the redact value."""
         if key_hint and self._is_sensitive_key(key_hint):
             return "***redacted***"
         if isinstance(value, Mapping):
@@ -467,6 +502,7 @@ class MCPPulser(ApiPulser):
         return value
 
     def fetch_pulse_payload(self, pulse_name: str, input_data: Dict[str, Any], pulse_definition: Dict[str, Any]) -> Dict[str, Any]:
+        """Fetch the pulse payload."""
         self.last_fetch_debug = {
             "pulse_name": pulse_name,
             "input_data": dict(input_data or {}),

@@ -1,0 +1,149 @@
+{
+  "id": "60b9df10-00b7-4a1b-9080-a1c66fe8e4f5",
+  "agent_id": "60b9df10-00b7-4a1b-9080-a1c66fe8e4f5",
+  "name": "Schema: pulse_pulser_pairs",
+  "type": "Schema",
+  "description": "Built-in table schema for pulse-to-pulser availability records.",
+  "owner": "Plaza",
+  "address": "",
+  "meta": {
+    "schema_name": "pulse_pulser_pairs",
+    "schema_kind": "table",
+    "schema": {
+      "name": "pulse_pulser_pairs",
+      "description": "Pulse-to-pulser availability index for fast pulser lookup.",
+      "primary_key": [
+        "id"
+      ],
+      "rowSchema": {
+        "id": {
+          "type": "string"
+        },
+        "pulse_id": {
+          "type": "string"
+        },
+        "pulse_directory_id": {
+          "type": "string"
+        },
+        "pulse_name": {
+          "type": "string"
+        },
+        "pulse_address": {
+          "type": "string"
+        },
+        "pulse_definition": {
+          "type": "json"
+        },
+        "status": {
+          "type": "string"
+        },
+        "is_complete": {
+          "type": "boolean"
+        },
+        "completion_status": {
+          "type": "string"
+        },
+        "completion_errors": {
+          "type": "json"
+        },
+        "pulser_id": {
+          "type": "string"
+        },
+        "pulser_directory_id": {
+          "type": "string"
+        },
+        "pulser_name": {
+          "type": "string"
+        },
+        "pulser_address": {
+          "type": "string"
+        },
+        "input_schema": {
+          "type": "json"
+        },
+        "updated_at": {
+          "type": "datetime"
+        }
+      }
+    }
+  },
+  "card": {
+    "name": "Schema: pulse_pulser_pairs",
+    "description": "Built-in table schema for pulse-to-pulser availability records.",
+    "pit_type": "Schema",
+    "owner": "Plaza",
+    "tags": [
+      "schema",
+      "system",
+      "table"
+    ],
+    "pit_address": {
+      "pit_id": "60b9df10-00b7-4a1b-9080-a1c66fe8e4f5",
+      "plazas": [
+        "http://127.0.0.1:8011"
+      ]
+    },
+    "meta": {
+      "schema_name": "pulse_pulser_pairs",
+      "schema_kind": "table",
+      "schema": {
+        "name": "pulse_pulser_pairs",
+        "description": "Pulse-to-pulser availability index for fast pulser lookup.",
+        "primary_key": [
+          "id"
+        ],
+        "rowSchema": {
+          "id": {
+            "type": "string"
+          },
+          "pulse_id": {
+            "type": "string"
+          },
+          "pulse_directory_id": {
+            "type": "string"
+          },
+          "pulse_name": {
+            "type": "string"
+          },
+          "pulse_address": {
+            "type": "string"
+          },
+          "pulse_definition": {
+            "type": "json"
+          },
+          "status": {
+            "type": "string"
+          },
+          "is_complete": {
+            "type": "boolean"
+          },
+          "completion_status": {
+            "type": "string"
+          },
+          "completion_errors": {
+            "type": "json"
+          },
+          "pulser_id": {
+            "type": "string"
+          },
+          "pulser_directory_id": {
+            "type": "string"
+          },
+          "pulser_name": {
+            "type": "string"
+          },
+          "pulser_address": {
+            "type": "string"
+          },
+          "input_schema": {
+            "type": "json"
+          },
+          "updated_at": {
+            "type": "datetime"
+          }
+        }
+      }
+    }
+  },
+  "updated_at": "2026-04-03T03:49:37.571662+00:00"
+}

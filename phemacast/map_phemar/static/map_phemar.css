@@ -1,0 +1,124 @@
+.window-surface--mindmap .mindmap-shape-preview--branch {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--mind-line-strong);
+  border-radius: 0;
+  background: #fff;
+  box-shadow: none;
+  transform: rotate(45deg);
+}
+
+.window-surface--mindmap .mindmap-node--branch .mindmap-node-surface {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
+  text-align: center;
+}
+
+.window-surface--mindmap .mindmap-node--branch .mindmap-node-surface::before {
+  content: none;
+}
+
+.window-surface--mindmap .mindmap-node--branch.selected .mindmap-node-surface {
+  border: 0;
+  box-shadow: none;
+}
+
+.window-surface--mindmap .mindmap-node-frame--branch {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.window-surface--mindmap .mindmap-node-frame--branch polygon {
+  fill: #fff;
+  stroke: var(--mind-line-strong);
+  stroke-width: 2.5;
+  vector-effect: non-scaling-stroke;
+  filter: drop-shadow(0 10px 22px rgba(15, 23, 42, 0.08));
+}
+
+.window-surface--mindmap .mindmap-node--branch.branch-incomplete .mindmap-node-frame--branch polygon {
+  stroke: #dc2626;
+}
+
+.window-surface--mindmap .mindmap-node--branch.selected .mindmap-node-frame--branch polygon {
+  stroke: var(--mind-accent);
+  filter:
+    drop-shadow(0 0 0 4px rgba(37, 99, 235, 0.14))
+    drop-shadow(0 18px 30px rgba(15, 23, 42, 0.12));
+}
+
+.window-surface--mindmap .mindmap-node--branch.branch-incomplete.selected .mindmap-node-frame--branch polygon {
+  stroke: #dc2626;
+  filter:
+    drop-shadow(0 0 0 4px rgba(220, 38, 38, 0.16))
+    drop-shadow(0 18px 30px rgba(15, 23, 42, 0.12));
+}
+
+.window-surface--mindmap .mindmap-node--branch .mindmap-node-title {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 1;
+  width: min(52%, 260px);
+  max-width: 52%;
+  margin: 0;
+  text-align: center;
+  transform: translate(-50%, -50%);
+  text-wrap: balance;
+}
+
+.window-surface--mindmap .mindmap-node-handle--branch-in {
+  border-color: var(--mind-line-strong);
+  box-shadow: none;
+}
+
+.window-surface--mindmap .mindmap-node-handle--passive {
+  cursor: default;
+}
+
+.window-surface--mindmap .mindmap-node-handle-label {
+  position: absolute;
+  display: inline-block;
+  font: 700 11px/1.1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--mind-text-soft);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.window-surface--mindmap .mindmap-node-handle--side-left .mindmap-node-handle-label {
+  right: calc(100% + 8px);
+  transform: translateY(-50%);
+  top: 50%;
+}
+
+.window-surface--mindmap .mindmap-node-handle--side-right .mindmap-node-handle-label {
+  left: calc(100% + 8px);
+  transform: translateY(-50%);
+  top: 50%;
+}
+
+.window-surface--mindmap .mindmap-node-handle--side-top .mindmap-node-handle-label {
+  left: 50%;
+  bottom: calc(100% + 8px);
+  transform: translateX(-50%);
+}
+
+.window-surface--mindmap .mindmap-node-handle--side-bottom .mindmap-node-handle-label {
+  left: 50%;
+  top: calc(100% + 8px);
+  transform: translateX(-50%);
+}

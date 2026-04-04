@@ -1,0 +1,57 @@
+{
+  "id": "agent-config:plaza",
+  "agent_id": "agent-config:plaza",
+  "name": "plaza",
+  "type": "AgentConfig",
+  "description": "",
+  "owner": "Plaza",
+  "address": "",
+  "meta": {
+    "resource_type": "agent_config",
+    "agent_type": "prompits.core.plaza.PlazaAgent",
+    "role": "coordinator",
+    "tags": [
+      "mediator"
+    ],
+    "config": {
+      "name": "plaza",
+      "role": "coordinator",
+      "tags": [
+        "mediator"
+      ],
+      "pools": [
+        {
+          "type": "FileSystemPool",
+          "name": "plaza_pool",
+          "description": "Local Plaza pool",
+          "root_path": "prompits/tests/fixtures/storage/plaza"
+        }
+      ],
+      "type": "prompits.core.plaza.PlazaAgent",
+      "practices": [
+        {
+          "type": "prompits.practices.plaza.PlazaPractice",
+          "params": {}
+        }
+      ]
+    },
+    "created_at": "2026-04-03T03:49:37.572898+00:00",
+    "updated_at": "2026-04-03T03:49:37.572898+00:00"
+  },
+  "card": {
+    "name": "plaza",
+    "description": "",
+    "owner": "Plaza",
+    "role": "coordinator",
+    "tags": [
+      "mediator"
+    ],
+    "pit_type": "AgentConfig",
+    "meta": {
+      "resource_type": "agent_config",
+      "agent_type": "prompits.core.plaza.PlazaAgent",
+      "config_id": "agent-config:plaza"
+    }
+  },
+  "updated_at": "2026-04-03T03:49:37.572898+00:00"
+}

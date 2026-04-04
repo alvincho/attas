@@ -1,3 +1,18 @@
+"""
+Regression tests for API Pulser.
+
+Phemacast assembles pulse inputs, phemas, and castrs into rendered research artifacts
+and interactive tooling. These tests protect the Phemacast pipeline, demo flows, UI
+helpers, and pulser integrations.
+
+The pytest cases in this file document expected behavior through checks such as
+`test_api_pulser_supports_collection_mapping_from_dict_payload`,
+`test_api_pulser_supports_collection_mapping_from_list_payload`,
+`test_api_pulser_resolves_api_key_from_environment`, and
+`test_api_pulser_resolves_api_key_from_pulser_registry_by_id`, helping guard against
+regressions as the packages evolve.
+"""
+
 import os
 import socket
 import sys
@@ -5,39 +20,185 @@ from pathlib import Path
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
-from phemacast.pulsers.api_pulser import ApiPulser
+from phemacast.pulsers.api_pulser import APIsPulser
 
 
 class FakeHttpResponse:
+    """Response model for fake HTTP payloads."""
     def __init__(self, payload=None):
+        """Initialize the fake HTTP response."""
         self._payload = payload if payload is not None else {"price": 214.37}
 
     def raise_for_status(self):
+        """Return the raise for the status."""
         return None
 
     def json(self):
+        """Handle JSON for the fake HTTP response."""
         return self._payload
 
 
 class FakeHttpClient:
+    """Represent a fake HTTP client."""
     def __init__(self, capture, payload=None):
+        """Initialize the fake HTTP client."""
         self.capture = capture
         self.payload = payload
 
     def __enter__(self):
+        """Enter the context manager."""
         return self
 
     def __exit__(self, exc_type, exc, tb):
+        """Exit the context manager."""
         return False
 
     def request(self, method, url, headers=None):
+        """Request the value."""
         self.capture["method"] = method
         self.capture["url"] = url
         self.capture["headers"] = dict(headers or {})
         return FakeHttpResponse(self.payload)
 
 
+class FakeHttpClientSequence:
+    """Represent a fake HTTP client sequence."""
+    def __init__(self, capture, payload=None):
+        """Initialize the fake HTTP client sequence."""
+        self.capture = capture
+        self.payload = payload if payload is not None else {"ok": True}
+
+    def __enter__(self):
+        """Enter the context manager."""
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        """Exit the context manager."""
+        return False
+
+    def request(self, method, url, headers=None):
+        """Request the value."""
+        self.capture.setdefault("requests", []).append(
+            {
+                "method": method,
+                "url": url,
+                "headers": dict(headers or {}),
+            }
+        )
+        return FakeHttpResponse(self.payload)
+
+
+def test_apis_pulser_initializes_from_supported_pulse_config():
+    """
+    Exercise the test_apis_pulser_initializes_from_supported_pulse_config regression
+    scenario.
+    """
+    pulser = APIsPulser(
+        config={
+            "name": "APIsPulserSmoke",
+            "supported_pulses": [
+                {
+                    "name": "quote",
+                    "pulse_address": "plaza://pulse/quote",
+                    "api": {"url": "https://example.test/quote/{symbol}", "method": "GET"},
+                }
+            ],
+        },
+        auto_register=False,
+    )
+
+    assert isinstance(pulser, APIsPulser)
+    assert pulser.supported_pulses[0]["name"] == "quote"
+
+
+def test_apis_pulser_routes_supported_pulses_to_multiple_api_sources(monkeypatch):
+    """
+    Exercise the test_apis_pulser_routes_supported_pulses_to_multiple_api_sources
+    regression scenario.
+    """
+    capture = {}
+    monkeypatch.setattr(
+        "phemacast.pulsers.api_pulser.httpx.Client",
+        lambda timeout=10.0: FakeHttpClientSequence(capture),
+    )
+
+    pulser = APIsPulser(
+        config={
+            "name": "MultiSourceAPIsPulser",
+            "credentials": [
+                {"id": "market_token", "value": "market-secret", "param": "token"},
+                {"id": "news_header", "value": "news-secret", "header": "x-news-key"},
+            ],
+            "apis": [
+                {"id": "market", "base_url": "https://market.example.test/v1", "api_key_id": "market_token"},
+                {"id": "news", "base_url": "https://news.example.test/v2", "api_key_id": "news_header"},
+            ],
+            "supported_pulses": [
+                {
+                    "name": "last_price",
+                    "pulse_address": "plaza://pulse/last_price",
+                    "api": {
+                        "api_id": "market",
+                        "path": "quote/{symbol}",
+                        "method": "GET",
+                    },
+                },
+                {
+                    "name": "news_headline",
+                    "pulse_address": "plaza://pulse/news_headline",
+                    "api": {
+                        "api_id": "news",
+                        "endpoint": "/headlines/{symbol}",
+                        "method": "GET",
+                    },
+                },
+            ],
+        },
+        auto_register=False,
+    )
+
+    pulser.fetch_pulse_payload("last_price", {"symbol": "AAPL"}, pulser.supported_pulses[0])
+    pulser.fetch_pulse_payload("news_headline", {"symbol": "AAPL"}, pulser.supported_pulses[1])
+
+    assert len(capture["requests"]) == 2
+    assert capture["requests"][0]["url"] == "https://market.example.test/v1/quote/AAPL?token=market-secret"
+    assert capture["requests"][1]["url"] == "https://news.example.test/v2/headlines/AAPL"
+    assert capture["requests"][1]["headers"]["x-news-key"] == "news-secret"
+
+
+def test_apis_pulser_returns_clear_error_when_api_source_id_is_unknown():
+    """
+    Exercise the test_apis_pulser_returns_clear_error_when_api_source_id_is_unknown
+    regression scenario.
+    """
+    pulser = APIsPulser(
+        config={
+            "name": "UnknownSourcePulser",
+            "supported_pulses": [
+                {
+                    "name": "quote",
+                    "pulse_address": "plaza://pulse/quote",
+                    "api": {
+                        "api_id": "missing",
+                        "path": "/quote/{symbol}",
+                        "method": "GET",
+                    },
+                }
+            ],
+        },
+        auto_register=False,
+    )
+
+    payload = pulser.fetch_pulse_payload("quote", {"symbol": "AAPL"}, pulser.supported_pulses[0])
+
+    assert payload == {"error": "Unknown api_id 'missing' in pulse API config."}
+
+
 def test_api_pulser_resolves_api_key_from_environment(monkeypatch):
+    """
+    Exercise the test_api_pulser_resolves_api_key_from_environment regression
+    scenario.
+    """
     capture = {}
     monkeypatch.setenv("DEMO_MARKET_KEY", "secret-from-env")
     monkeypatch.setattr(
@@ -45,7 +206,7 @@ def test_api_pulser_resolves_api_key_from_environment(monkeypatch):
         lambda timeout=10.0: FakeHttpClient(capture),
     )
 
-    pulser = ApiPulser(
+    pulser = APIsPulser(
         config={
             "name": "EnvApiPulser",
             "description": "Resolves env-backed secrets",
@@ -72,13 +233,18 @@ def test_api_pulser_resolves_api_key_from_environment(monkeypatch):
         pulser.supported_pulses[0],
     )
 
-    assert payload == {"price": 214.37}
+    assert payload["price"] == 214.37
+    assert payload["_input"]["symbol"] == "AAPL"
     assert capture["method"] == "GET"
     assert capture["url"] == "https://example.test/quote/AAPL"
     assert capture["headers"]["x-api-key"] == "secret-from-env"
 
 
 def test_api_pulser_resolves_api_key_from_pulser_registry_by_id(monkeypatch):
+    """
+    Exercise the test_api_pulser_resolves_api_key_from_pulser_registry_by_id
+    regression scenario.
+    """
     capture = {}
     monkeypatch.setenv("MARKET_REGISTRY_KEY", "registry-secret")
     monkeypatch.setattr(
@@ -86,7 +252,7 @@ def test_api_pulser_resolves_api_key_from_pulser_registry_by_id(monkeypatch):
         lambda timeout=10.0: FakeHttpClient(capture),
     )
 
-    pulser = ApiPulser(
+    pulser = APIsPulser(
         config={
             "name": "RegistryApiPulser",
             "api_keys": [
@@ -114,13 +280,18 @@ def test_api_pulser_resolves_api_key_from_pulser_registry_by_id(monkeypatch):
 
 
 def test_api_pulser_resolves_api_key_from_pulser_registry_to_query_param(monkeypatch):
+    """
+    Exercise the
+    test_api_pulser_resolves_api_key_from_pulser_registry_to_query_param regression
+    scenario.
+    """
     capture = {}
     monkeypatch.setattr(
         "phemacast.pulsers.api_pulser.httpx.Client",
         lambda timeout=10.0: FakeHttpClient(capture),
     )
 
-    pulser = ApiPulser(
+    pulser = APIsPulser(
         config={
             "name": "RegistryQueryParamPulser",
             "api_keys": [
@@ -148,9 +319,14 @@ def test_api_pulser_resolves_api_key_from_pulser_registry_to_query_param(monkeyp
 
 
 def test_api_pulser_returns_clear_error_when_registry_api_key_is_missing(monkeypatch):
+    """
+    Exercise the
+    test_api_pulser_returns_clear_error_when_registry_api_key_is_missing regression
+    scenario.
+    """
     monkeypatch.delenv("FINNHUB_API_KEY", raising=False)
 
-    pulser = ApiPulser(
+    pulser = APIsPulser(
         config={
             "name": "MissingRegistryApiKeyPulser",
             "api_keys": [
@@ -177,12 +353,16 @@ def test_api_pulser_returns_clear_error_when_registry_api_key_is_missing(monkeyp
 
 
 def test_api_pulser_returns_clear_error_when_dns_resolution_fails(monkeypatch):
+    """
+    Exercise the test_api_pulser_returns_clear_error_when_dns_resolution_fails
+    regression scenario.
+    """
     monkeypatch.setattr(
         "phemacast.pulsers.api_pulser.httpx.Client",
         lambda timeout=10.0: (_ for _ in ()).throw(socket.gaierror(8, "nodename nor servname provided, or not known")),
     )
 
-    pulser = ApiPulser(
+    pulser = APIsPulser(
         config={
             "name": "DnsFailurePulser",
             "api_keys": [
@@ -209,6 +389,10 @@ def test_api_pulser_returns_clear_error_when_dns_resolution_fails(monkeypatch):
 
 
 def test_api_pulser_prefers_pulse_level_literal_api_key(monkeypatch):
+    """
+    Exercise the test_api_pulser_prefers_pulse_level_literal_api_key regression
+    scenario.
+    """
     capture = {}
     monkeypatch.setenv("DEMO_MARKET_KEY", "secret-from-env")
     monkeypatch.setattr(
@@ -216,7 +400,7 @@ def test_api_pulser_prefers_pulse_level_literal_api_key(monkeypatch):
         lambda timeout=10.0: FakeHttpClient(capture),
     )
 
-    pulser = ApiPulser(
+    pulser = APIsPulser(
         config={
             "name": "LiteralApiPulser",
             "api_key": {"env": "DEMO_MARKET_KEY"},
@@ -241,6 +425,10 @@ def test_api_pulser_prefers_pulse_level_literal_api_key(monkeypatch):
 
 
 def test_api_pulser_root_path_supports_templates_and_keeps_input(monkeypatch):
+    """
+    Exercise the test_api_pulser_root_path_supports_templates_and_keeps_input
+    regression scenario.
+    """
     capture = {}
     payload = {
         "Time Series (Daily)": {
@@ -259,7 +447,7 @@ def test_api_pulser_root_path_supports_templates_and_keeps_input(monkeypatch):
         lambda timeout=10.0: FakeHttpClient(capture, payload),
     )
 
-    pulser = ApiPulser(
+    pulser = APIsPulser(
         config={
             "name": "HistoricalApiPulser",
             "supported_pulses": [
@@ -294,6 +482,10 @@ def test_api_pulser_root_path_supports_templates_and_keeps_input(monkeypatch):
 
 
 def test_api_pulser_supports_arithmetic_mapping_after_root_path(monkeypatch):
+    """
+    Exercise the test_api_pulser_supports_arithmetic_mapping_after_root_path
+    regression scenario.
+    """
     capture = {}
     payload = {
         "annualReports": [
@@ -310,7 +502,7 @@ def test_api_pulser_supports_arithmetic_mapping_after_root_path(monkeypatch):
         lambda timeout=10.0: FakeHttpClient(capture, payload),
     )
 
-    pulser = ApiPulser(
+    pulser = APIsPulser(
         config={
             "name": "FinancialStatementApiPulser",
             "supported_pulses": [
@@ -350,6 +542,10 @@ def test_api_pulser_supports_arithmetic_mapping_after_root_path(monkeypatch):
 
 
 def test_api_pulser_supports_collection_mapping_from_dict_payload(monkeypatch):
+    """
+    Exercise the test_api_pulser_supports_collection_mapping_from_dict_payload
+    regression scenario.
+    """
     capture = {}
     payload = {
         "feed": [
@@ -376,7 +572,7 @@ def test_api_pulser_supports_collection_mapping_from_dict_payload(monkeypatch):
         lambda timeout=10.0: FakeHttpClient(capture, payload),
     )
 
-    pulser = ApiPulser(
+    pulser = APIsPulser(
         config={
             "name": "NewsCollectionPulser",
             "supported_pulses": [
@@ -417,6 +613,10 @@ def test_api_pulser_supports_collection_mapping_from_dict_payload(monkeypatch):
 
 
 def test_api_pulser_supports_collection_mapping_from_list_payload(monkeypatch):
+    """
+    Exercise the test_api_pulser_supports_collection_mapping_from_list_payload
+    regression scenario.
+    """
     capture = {}
     payload = [
         {
@@ -439,7 +639,7 @@ def test_api_pulser_supports_collection_mapping_from_list_payload(monkeypatch):
         lambda timeout=10.0: FakeHttpClient(capture, payload),
     )
 
-    pulser = ApiPulser(
+    pulser = APIsPulser(
         config={
             "name": "ListNewsCollectionPulser",
             "supported_pulses": [
@@ -479,6 +679,10 @@ def test_api_pulser_supports_collection_mapping_from_list_payload(monkeypatch):
 
 
 def test_api_pulser_collection_mapping_respects_requested_article_limit(monkeypatch):
+    """
+    Exercise the test_api_pulser_collection_mapping_respects_requested_article_limit
+    regression scenario.
+    """
     capture = {}
     payload = {
         "feed": [
@@ -497,7 +701,7 @@ def test_api_pulser_collection_mapping_respects_requested_article_limit(monkeypa
         lambda timeout=10.0: FakeHttpClient(capture, payload),
     )
 
-    pulser = ApiPulser(
+    pulser = APIsPulser(
         config={
             "name": "LimitedNewsCollectionPulser",
             "supported_pulses": [
@@ -546,9 +750,14 @@ def test_api_pulser_collection_mapping_respects_requested_article_limit(monkeypa
 
 
 def test_alpha_vantage_config_uses_registry_query_param_and_defines_multiple_pulses():
+    """
+    Exercise the
+    test_alpha_vantage_config_uses_registry_query_param_and_defines_multiple_pulses
+    regression scenario.
+    """
     config_path = Path(__file__).resolve().parents[2] / "attas" / "configs" / "alpha_vantage.pulser"
 
-    pulser = ApiPulser(config=str(config_path), auto_register=False)
+    pulser = APIsPulser(config=str(config_path), auto_register=False)
 
     assert pulser.config["api_keys"][0]["id"] == "alpha_vantage"
     assert pulser.config["api_keys"][0]["param"] == "apikey"
@@ -570,9 +779,13 @@ def test_alpha_vantage_config_uses_registry_query_param_and_defines_multiple_pul
 
 
 def test_alpha_vantage_overview_config_exposes_grouped_overview_metrics():
+    """
+    Exercise the test_alpha_vantage_overview_config_exposes_grouped_overview_metrics
+    regression scenario.
+    """
     config_path = Path(__file__).resolve().parents[2] / "attas" / "configs" / "alpha_vantage.pulser"
 
-    pulser = ApiPulser(config=str(config_path), auto_register=False)
+    pulser = APIsPulser(config=str(config_path), auto_register=False)
     overview_pulses = [
         pulse for pulse in pulser.config["supported_pulses"]
         if "function=OVERVIEW" in pulse.get("api", {}).get("url", "")
@@ -622,9 +835,14 @@ def test_alpha_vantage_overview_config_exposes_grouped_overview_metrics():
 
 
 def test_alpha_vantage_config_exposes_all_shared_financial_statement_pulses():
+    """
+    Exercise the
+    test_alpha_vantage_config_exposes_all_shared_financial_statement_pulses
+    regression scenario.
+    """
     config_path = Path(__file__).resolve().parents[2] / "attas" / "configs" / "alpha_vantage.pulser"
 
-    pulser = ApiPulser(config=str(config_path), auto_register=False)
+    pulser = APIsPulser(config=str(config_path), auto_register=False)
     statement_names = {
         pulse["name"]
         for pulse in pulser.config["supported_pulses"]
@@ -649,9 +867,14 @@ def test_alpha_vantage_config_exposes_all_shared_financial_statement_pulses():
 
 
 def test_finnhub_config_uses_registry_query_param_and_defines_shared_pulses():
+    """
+    Exercise the
+    test_finnhub_config_uses_registry_query_param_and_defines_shared_pulses
+    regression scenario.
+    """
     config_path = Path(__file__).resolve().parents[2] / "attas" / "configs" / "finnhub.pulser"
 
-    pulser = ApiPulser(config=str(config_path), auto_register=False)
+    pulser = APIsPulser(config=str(config_path), auto_register=False)
 
     assert pulser.config["api_keys"][0]["id"] == "finnhub"
     assert pulser.config["api_keys"][0]["param"] == "token"
@@ -667,9 +890,13 @@ def test_finnhub_config_uses_registry_query_param_and_defines_shared_pulses():
 
 
 def test_finnhub_config_exposes_grouped_profile_and_metric_fields():
+    """
+    Exercise the test_finnhub_config_exposes_grouped_profile_and_metric_fields
+    regression scenario.
+    """
     config_path = Path(__file__).resolve().parents[2] / "attas" / "configs" / "finnhub.pulser"
 
-    pulser = ApiPulser(config=str(config_path), auto_register=False)
+    pulser = APIsPulser(config=str(config_path), auto_register=False)
     grouped_pulses = [
         pulse for pulse in pulser.config["supported_pulses"]
         if pulse["name"] in {"market_cap", "valuation_multiples", "profitability_metrics", "beta_and_volatility"}
@@ -698,9 +925,14 @@ def test_finnhub_config_exposes_grouped_profile_and_metric_fields():
 
 
 def test_marketstack_config_uses_registry_query_param_and_defines_shared_pulses():
+    """
+    Exercise the
+    test_marketstack_config_uses_registry_query_param_and_defines_shared_pulses
+    regression scenario.
+    """
     config_path = Path(__file__).resolve().parents[2] / "attas" / "configs" / "market_stack.pulser"
 
-    pulser = ApiPulser(config=str(config_path), auto_register=False)
+    pulser = APIsPulser(config=str(config_path), auto_register=False)
 
     assert pulser.config["api_keys"][0]["id"] == "marketstack"
     assert pulser.config["api_keys"][0]["param"] == "access_key"
@@ -714,9 +946,14 @@ def test_marketstack_config_uses_registry_query_param_and_defines_shared_pulses(
 
 
 def test_marketstack_config_exposes_intraday_quote_and_tickerinfo_fields():
+    """
+    Exercise the
+    test_marketstack_config_exposes_intraday_quote_and_tickerinfo_fields regression
+    scenario.
+    """
     config_path = Path(__file__).resolve().parents[2] / "attas" / "configs" / "market_stack.pulser"
 
-    pulser = ApiPulser(config=str(config_path), auto_register=False)
+    pulser = APIsPulser(config=str(config_path), auto_register=False)
     grouped_pulses = [
         pulse for pulse in pulser.config["supported_pulses"]
         if pulse["name"] in {"bid_ask_quote", "business_description"}

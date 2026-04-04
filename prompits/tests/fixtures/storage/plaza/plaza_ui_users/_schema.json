@@ -1,0 +1,45 @@
+{
+  "name": "plaza_ui_users",
+  "description": "Plaza UI users authenticated through Supabase Auth with local role assignments.",
+  "primary_key": [
+    "id"
+  ],
+  "rowSchema": {
+    "id": {
+      "type": "string"
+    },
+    "username": {
+      "type": "string"
+    },
+    "email": {
+      "type": "string"
+    },
+    "display_name": {
+      "type": "string"
+    },
+    "profile_public": {
+      "type": "boolean"
+    },
+    "public_email": {
+      "type": "boolean"
+    },
+    "role": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string"
+    },
+    "auth_provider": {
+      "type": "string"
+    },
+    "created_at": {
+      "type": "datetime"
+    },
+    "updated_at": {
+      "type": "datetime"
+    },
+    "last_sign_in_at": {
+      "type": "datetime"
+    }
+  }
+}

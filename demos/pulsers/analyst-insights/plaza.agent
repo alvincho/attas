@@ -1,0 +1,22 @@
+{
+  "name": "analyst-insight-demo-plaza",
+  "role": "coordinator",
+  "tags": ["demo", "pulser", "analyst", "registry"],
+  "host": "127.0.0.1",
+  "port": 8266,
+  "pools": [
+    {
+      "type": "FileSystemPool",
+      "name": "analyst_insight_demo_plaza_pool",
+      "description": "Local Plaza storage for the analyst insight pulser demo.",
+      "root_path": "demos/pulsers/analyst-insights/storage/plaza"
+    }
+  ],
+  "type": "prompits.core.plaza.PlazaAgent",
+  "practices": [
+    {
+      "type": "prompits.practices.plaza.PlazaPractice",
+      "params": {}
+    }
+  ]
+}

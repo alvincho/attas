@@ -1,0 +1,325 @@
+{
+    "name": "MapPhemar",
+    "type": "phemacast.agents.map_phemar.MapPhemarAgent",
+    "host": "127.0.0.1",
+    "port": 0,
+    "role": "phemar",
+    "tags": [
+        "diagram",
+        "phema",
+        "phemar",
+        "workflow",
+        "map-phemar"
+    ],
+    "pools": [
+        {
+            "type": "FileSystemPool",
+            "name": "map_phemar_pool",
+            "description": "Local pool for diagram-backed Phemas managed through the MapPhemar editor.",
+            "root_path": "/Users/alvincho/Library/Mobile Documents/com~apple~CloudDocs/Documents/Projects/DevOps/Retis/FinMAS/phemacast/personal_agent/storage/saved_files/map_phemar/pool"
+        }
+    ],
+    "phemar": {
+        "description": "MapPhemar is a diagram-first Phemar agent that edits, saves, and serves diagram-backed Phemas on Plaza.",
+        "tags": [
+            "diagram",
+            "workflow",
+            "map-phemar"
+        ],
+        "supported_phemas": [
+            {
+                "id": "phema-mnh8up4z-qnv7op",
+                "phema_id": "phema-mnh8up4z-qnv7op",
+                "name": "Diagram 1",
+                "description": "Diagram-backed Phema managed by MapPhemar.",
+                "owner": "",
+                "address": "plaza://phema/phema-mnh8up4z-qnv7op",
+                "pit_type": "Phema",
+                "pit_address": {
+                    "pit_id": "phema-mnh8up4z-qnv7op",
+                    "plazas": []
+                },
+                "tags": [
+                    "diagram",
+                    "map-phemar"
+                ],
+                "input_schema": {},
+                "output_schema": {},
+                "sections": [
+                    {
+                        "name": "Rectangle 01",
+                        "description": "Uses a rectangle shape configuration. 1 inbound and 1 outbound connection.",
+                        "modifier": "",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": "Shape: Rectangle"
+                            }
+                        ]
+                    }
+                ],
+                "resolution_mode": "dynamic",
+                "snapshot_cache_time": 0,
+                "meta": {
+                    "builder": "MapPhemar",
+                    "kind": "diagram",
+                    "resolution_mode": "dynamic",
+                    "map_phemar": {
+                        "version": 1,
+                        "diagram": {
+                            "plazaUrl": "http://127.0.0.1:8011",
+                            "showGrid": true,
+                            "inspectorWidth": 320,
+                            "expandedSourcePaths": [],
+                            "nextNodeIndex": 1,
+                            "nextEdgeIndex": 2,
+                            "nodes": [
+                                {
+                                    "id": "mind-boundary-input",
+                                    "role": "input",
+                                    "type": "pill",
+                                    "title": "Input",
+                                    "subtitle": "",
+                                    "body": "",
+                                    "x": 8.685082872928177,
+                                    "y": 28.38888888888889,
+                                    "w": 16,
+                                    "h": 10,
+                                    "pulserMode": "specific",
+                                    "pulserId": "",
+                                    "pulserName": "",
+                                    "pulserAddress": "",
+                                    "practiceId": "get_pulse_data",
+                                    "pulseName": "",
+                                    "pulseAddress": "",
+                                    "inputSchema": {},
+                                    "outputSchema": {},
+                                    "inputSchemaText": "{}",
+                                    "outputSchemaText": "{}",
+                                    "inputSchemaError": "",
+                                    "outputSchemaError": "",
+                                    "paramsText": "{}",
+                                    "conditionExpression": "",
+                                    "branchInputSide": "left",
+                                    "branchYesSide": "right",
+                                    "branchNoSide": "right",
+                                    "branchInputMode": "any",
+                                    "branchYesMode": "all",
+                                    "branchNoMode": "all"
+                                },
+                                {
+                                    "id": "mind-boundary-output",
+                                    "role": "output",
+                                    "type": "pill",
+                                    "title": "Output",
+                                    "subtitle": "",
+                                    "body": "",
+                                    "x": 62.552486187845304,
+                                    "y": 33.94444444444444,
+                                    "w": 16,
+                                    "h": 10,
+                                    "pulserMode": "specific",
+                                    "pulserId": "",
+                                    "pulserName": "",
+                                    "pulserAddress": "",
+                                    "practiceId": "get_pulse_data",
+                                    "pulseName": "",
+                                    "pulseAddress": "",
+                                    "inputSchema": {},
+                                    "outputSchema": {},
+                                    "inputSchemaText": "{}",
+                                    "outputSchemaText": "{}",
+                                    "inputSchemaError": "",
+                                    "outputSchemaError": "",
+                                    "paramsText": "{}",
+                                    "conditionExpression": "",
+                                    "branchInputSide": "left",
+                                    "branchYesSide": "right",
+                                    "branchNoSide": "right",
+                                    "branchInputMode": "any",
+                                    "branchYesMode": "all",
+                                    "branchNoMode": "all"
+                                },
+                                {
+                                    "id": "mind-node-mnh6xkue-hfcyt4",
+                                    "role": "",
+                                    "type": "rectangle",
+                                    "title": "Rectangle 01",
+                                    "subtitle": "",
+                                    "body": "",
+                                    "x": 33.59116022099448,
+                                    "y": 18.541666666666668,
+                                    "w": 22,
+                                    "h": 14,
+                                    "pulserMode": "specific",
+                                    "pulserId": "",
+                                    "pulserName": "",
+                                    "pulserAddress": "",
+                                    "practiceId": "get_pulse_data",
+                                    "pulseName": "",
+                                    "pulseAddress": "",
+                                    "inputSchema": {},
+                                    "outputSchema": {},
+                                    "inputSchemaText": "{}",
+                                    "outputSchemaText": "{}",
+                                    "inputSchemaError": "",
+                                    "outputSchemaError": "",
+                                    "paramsText": "{}",
+                                    "conditionExpression": "",
+                                    "branchInputSide": "left",
+                                    "branchYesSide": "right",
+                                    "branchNoSide": "right",
+                                    "branchInputMode": "any",
+                                    "branchYesMode": "all",
+                                    "branchNoMode": "all"
+                                }
+                            ],
+                            "edges": [
+                                {
+                                    "id": "mind-edge-mnh6xn7l-qu7248",
+                                    "from": "mind-boundary-input",
+                                    "to": "mind-node-mnh6xkue-hfcyt4",
+                                    "label": "",
+                                    "fromAnchor": "right",
+                                    "toAnchor": "left",
+                                    "mappingText": "{}",
+                                    "route": ""
+                                },
+                                {
+                                    "id": "mind-edge-mnh6xsan-wavhwm",
+                                    "from": "mind-node-mnh6xkue-hfcyt4",
+                                    "to": "mind-boundary-output",
+                                    "label": "",
+                                    "fromAnchor": "right",
+                                    "toAnchor": "left",
+                                    "mappingText": "{}",
+                                    "route": ""
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            {
+                "id": "dc605d1c-ea82-559a-bc43-8a4369d54646",
+                "phema_id": "dc605d1c-ea82-559a-bc43-8a4369d54646",
+                "name": "Diagram 1",
+                "description": "Diagram-backed Phema managed by MapPhemar.",
+                "owner": "",
+                "address": "plaza://phema/dc605d1c-ea82-559a-bc43-8a4369d54646",
+                "pit_type": "Phema",
+                "pit_address": {
+                    "pit_id": "dc605d1c-ea82-559a-bc43-8a4369d54646",
+                    "plazas": []
+                },
+                "tags": [
+                    "diagram",
+                    "map-phemar"
+                ],
+                "input_schema": {},
+                "output_schema": {},
+                "sections": [
+                    {
+                        "name": "Diagram Flow",
+                        "description": "Auto-generated from MapPhemar.",
+                        "modifier": "",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": "This Phema is diagram-backed. Load it in the diagram editor to inspect or modify the workflow."
+                            }
+                        ]
+                    }
+                ],
+                "resolution_mode": "dynamic",
+                "snapshot_cache_time": 0,
+                "meta": {
+                    "builder": "MapPhemar",
+                    "kind": "diagram",
+                    "resolution_mode": "dynamic",
+                    "map_phemar": {
+                        "version": 1,
+                        "diagram": {
+                            "plazaUrl": "http://127.0.0.1:8011",
+                            "showGrid": true,
+                            "inspectorWidth": 320,
+                            "expandedSourcePaths": [],
+                            "nextNodeIndex": 0,
+                            "nextEdgeIndex": 0,
+                            "nodes": [
+                                {
+                                    "id": "mind-boundary-input",
+                                    "role": "input",
+                                    "type": "pill",
+                                    "title": "Input",
+                                    "subtitle": "",
+                                    "body": "",
+                                    "x": 12,
+                                    "y": 42,
+                                    "w": 16,
+                                    "h": 10,
+                                    "pulserMode": "specific",
+                                    "pulserId": "",
+                                    "pulserName": "",
+                                    "pulserAddress": "",
+                                    "practiceId": "get_pulse_data",
+                                    "pulseName": "",
+                                    "pulseAddress": "",
+                                    "inputSchema": {},
+                                    "outputSchema": {},
+                                    "inputSchemaText": "{}",
+                                    "outputSchemaText": "{}",
+                                    "inputSchemaError": "",
+                                    "outputSchemaError": "",
+                                    "paramsText": "{}",
+                                    "conditionExpression": "",
+                                    "branchInputSide": "left",
+                                    "branchYesSide": "right",
+                                    "branchNoSide": "right",
+                                    "branchInputMode": "any",
+                                    "branchYesMode": "all",
+                                    "branchNoMode": "all"
+                                },
+                                {
+                                    "id": "mind-boundary-output",
+                                    "role": "output",
+                                    "type": "pill",
+                                    "title": "Output",
+                                    "subtitle": "",
+                                    "body": "",
+                                    "x": 62,
+                                    "y": 42,
+                                    "w": 16,
+                                    "h": 10,
+                                    "pulserMode": "specific",
+                                    "pulserId": "",
+                                    "pulserName": "",
+                                    "pulserAddress": "",
+                                    "practiceId": "get_pulse_data",
+                                    "pulseName": "",
+                                    "pulseAddress": "",
+                                    "inputSchema": {},
+                                    "outputSchema": {},
+                                    "inputSchemaText": "{}",
+                                    "outputSchemaText": "{}",
+                                    "inputSchemaError": "",
+                                    "outputSchemaError": "",
+                                    "paramsText": "{}",
+                                    "conditionExpression": "",
+                                    "branchInputSide": "left",
+                                    "branchYesSide": "right",
+                                    "branchNoSide": "right",
+                                    "branchInputMode": "any",
+                                    "branchYesMode": "all",
+                                    "branchNoMode": "all"
+                                }
+                            ],
+                            "edges": []
+                        }
+                    }
+                }
+            }
+        ]
+    },
+    "description": "MapPhemar is a diagram-first Phemar agent that edits, saves, and serves diagram-backed Phemas on Plaza."
+}

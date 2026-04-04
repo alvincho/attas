@@ -1,3 +1,14 @@
+"""
+Regression tests for User UI.
+
+Prompits provides the core HTTP-native agent runtime, Plaza coordination layer, and
+pool/practice infrastructure for FinMAS. These tests lock down Prompits runtime
+behavior, Plaza features, and storage integrations.
+
+The pytest cases in this file document expected behavior through checks such as
+`test_user_agent_dashboard`, helping guard against regressions as the packages evolve.
+"""
+
 import sys
 import os
 import pytest
@@ -9,7 +20,8 @@ from prompits.tests.test_support import build_agent_from_config
 
 @pytest.fixture(scope="module")
 def setup_plaza_and_user():
-    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../attas/configs'))
+    """Set up the Plaza and user."""
+    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), 'fixtures/configs'))
     plaza_cfg = os.path.join(base_dir, "plaza.agent")
     agent = build_agent_from_config(plaza_cfg)
     with TestClient(agent.app) as client:
@@ -17,6 +29,7 @@ def setup_plaza_and_user():
 
 @pytest.mark.asyncio
 async def test_user_agent_dashboard(setup_plaza_and_user):
+    """Exercise the test_user_agent_dashboard regression scenario."""
     client = setup_plaza_and_user
 
     # 1. Verify Plaza-hosted UI root loads

@@ -1,3 +1,14 @@
+"""
+SQLite module for `prompits.pools.sqlite`.
+
+Prompits provides the core HTTP-native agent runtime, Plaza coordination layer, and
+pool/practice infrastructure for FinMAS. Within Prompits, the pools package implements
+storage adapters and pool-specific helpers.
+
+Core types exposed here include `SQLitePool`, which carry the main behavior or state
+managed by this module.
+"""
+
 import sqlite3
 import json
 import os
@@ -17,6 +28,7 @@ class SQLitePool(Pool):
     """
 
     def __init__(self, name: str, description: str, db_path: str):
+        """Initialize the sq lite pool."""
         super().__init__(
             name,
             description,
@@ -27,8 +39,19 @@ class SQLitePool(Pool):
         self.cursor = None
         self.connect()
 
+    def _prepare_db_path(self):
+        """Internal helper to prepare the database path."""
+        db_path = str(self.db_path or "").strip()
+        if not db_path or db_path == ":memory:" or db_path.startswith("file:"):
+            return
+        parent_dir = os.path.dirname(os.path.abspath(db_path))
+        if parent_dir:
+            os.makedirs(parent_dir, exist_ok=True)
+
     def connect(self):
+        """Connect the value."""
         try:
+            self._prepare_db_path()
             self.conn = sqlite3.connect(
                 self.db_path,
                 timeout=60.0,
@@ -37,14 +60,19 @@ class SQLitePool(Pool):
             )
             self.conn.execute('PRAGMA journal_mode=WAL')
             self.conn.execute('PRAGMA busy_timeout=30000')
+            self.conn.execute('PRAGMA foreign_keys=ON')
             self.cursor = self.conn.cursor()
             self.is_connected = True
             return True
         except Exception as e:
-            print(f"Error connecting to database: {e}")
+            self.conn = None
+            self.cursor = None
+            self.is_connected = False
+            print(f"Error connecting to database '{self.db_path}': {e}")
             return False
 
     def disconnect(self):
+        """Disconnect the value."""
         try:
             if self.conn:
                 self.conn.close()
@@ -67,6 +95,7 @@ class SQLitePool(Pool):
             return self.connect()
 
     def _get_sqlite_type(self, column_type: DataType) -> str:
+        """Internal helper to return the SQLite type."""
         type_map = {
             DataType.STRING: 'TEXT',
             DataType.INTEGER: 'INTEGER',
@@ -78,9 +107,11 @@ class SQLitePool(Pool):
         return type_map.get(column_type, 'TEXT')
 
     def _TableExists(self, table_name: str) -> bool:
+        """Return whether the table exists for value."""
         try:
             with self.lock:
-                self._ensure_connection()
+                if not self._ensure_connection() or not self.conn:
+                    return False
                 cursor = self.conn.cursor()
                 cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name=?", (table_name,))
                 return bool(cursor.fetchone())
@@ -89,16 +120,58 @@ class SQLitePool(Pool):
             return False
 
     def _CreateTable(self, table_name: str, schema: TableSchema):
+        """Internal helper to create the table."""
         try:
             with self.lock:
-                self._ensure_connection()
-                columns = []
+                if not self._ensure_connection() or not self.conn:
+                    return False
+                column_definitions = []
                 for column_name, column_spec in schema.rowSchema.columns.items():
-                    col_type = DataType.from_string(column_spec["type"])
-                    sqlite_type = self._get_sqlite_type(col_type)
-                    columns.append(f"{column_name} {sqlite_type}")
+                    explicit_sql_type = str(column_spec.get("sql_type") or "").strip()
+                    if explicit_sql_type:
+                        sqlite_type = explicit_sql_type
+                    else:
+                        col_type = DataType.from_string(column_spec["type"])
+                        sqlite_type = self._get_sqlite_type(col_type)
+                    column_definitions.append(f"{column_name} {sqlite_type}")
 
-                create_table_sql = f"CREATE TABLE IF NOT EXISTS {table_name} ({', '.join(columns)})"
+                primary_key_columns = [
+                    column
+                    for column in getattr(schema, "primary_key", []) or []
+                    if column in schema.rowSchema.columns
+                ]
+                unique_constraints = []
+                for constraint in getattr(schema, "unique_constraints", []) or []:
+                    unique_columns = [column for column in constraint if column in schema.rowSchema.columns]
+                    if unique_columns:
+                        unique_constraints.append(f"UNIQUE ({', '.join(unique_columns)})")
+
+                foreign_keys = []
+                for foreign_key in getattr(schema, "foreign_keys", []) or []:
+                    foreign_key_columns = [column for column in foreign_key.get("columns", []) if column in schema.rowSchema.columns]
+                    references = foreign_key.get("references") if isinstance(foreign_key.get("references"), dict) else {}
+                    reference_table = str(references.get("table") or "").strip()
+                    reference_columns = [column for column in references.get("columns", []) if column]
+                    if not foreign_key_columns or not reference_table or not reference_columns or len(foreign_key_columns) != len(reference_columns):
+                        continue
+                    clause = (
+                        f"FOREIGN KEY ({', '.join(foreign_key_columns)}) "
+                        f"REFERENCES {reference_table} ({', '.join(reference_columns)})"
+                    )
+                    on_delete = str(foreign_key.get("on_delete") or "").strip().upper()
+                    if on_delete:
+                        clause += f" ON DELETE {on_delete}"
+                    on_update = str(foreign_key.get("on_update") or "").strip().upper()
+                    if on_update:
+                        clause += f" ON UPDATE {on_update}"
+                    foreign_keys.append(clause)
+
+                table_parts = list(column_definitions)
+                if primary_key_columns:
+                    table_parts.append(f"PRIMARY KEY ({', '.join(primary_key_columns)})")
+                table_parts.extend(unique_constraints)
+                table_parts.extend(foreign_keys)
+                create_table_sql = f"CREATE TABLE IF NOT EXISTS {table_name} ({', '.join(table_parts)})"
                 cursor = self.conn.cursor()
                 cursor.execute(create_table_sql)
                 self.conn.commit()
@@ -108,9 +181,11 @@ class SQLitePool(Pool):
             return False
 
     def _Insert(self, table_name: str, data: Dict[str, Any]):
+        """Internal helper for insert."""
         try:
             with self.lock:
-                self._ensure_connection()
+                if not self._ensure_connection() or not self.conn:
+                    return False
                 columns = list(data.keys())
                 values = list(data.values())
                 placeholders = ', '.join(['?' for _ in columns])
@@ -123,7 +198,7 @@ class SQLitePool(Pool):
                     else:
                         serialized_values.append(v)
 
-                sql = f"INSERT OR REPLACE INTO {table_name} ({columns_str}) VALUES ({placeholders})"
+                sql = self._build_insert_sql(table_name, columns)
                 cursor = self.conn.cursor()
                 cursor.execute(sql, serialized_values)
                 self.conn.commit()
@@ -134,11 +209,13 @@ class SQLitePool(Pool):
             return False
 
     def _InsertMany(self, table_name: str, data_list: List[Dict[str, Any]]):
+        """Internal helper for insert many."""
         try:
             if not data_list:
                 return True
             with self.lock:
-                self._ensure_connection()
+                if not self._ensure_connection() or not self.conn:
+                    return False
                 columns = list(data_list[0].keys())
                 placeholders = ', '.join(['?' for _ in columns])
                 columns_str = ', '.join(columns)
@@ -154,7 +231,7 @@ class SQLitePool(Pool):
                             row.append(value)
                     serialized_rows.append(row)
 
-                sql = f"INSERT OR REPLACE INTO {table_name} ({columns_str}) VALUES ({placeholders})"
+                sql = self._build_insert_sql(table_name, columns)
                 cursor = self.conn.cursor()
                 cursor.executemany(sql, serialized_rows)
                 self.conn.commit()
@@ -165,9 +242,11 @@ class SQLitePool(Pool):
             return False
 
     def _Query(self, query: str, params: List[Any]=None):
+        """Internal helper to query the value."""
         try:
             with self.lock:
-                self._ensure_connection()
+                if not self._ensure_connection() or not self.conn:
+                    return []
                 cursor = self.conn.cursor()
                 cursor.execute(query, params or [])
                 return cursor.fetchall()
@@ -176,9 +255,11 @@ class SQLitePool(Pool):
             return []
 
     def _GetTableData(self, table_name: str, id_or_where: Union[str, Dict]=None, table_schema: TableSchema=None) -> List[Dict[str, Any]]:
+        """Internal helper to return the table data."""
         try:
             with self.lock:
-                self._ensure_connection()
+                if not self._ensure_connection() or not self.conn:
+                    return []
                 if not id_or_where:
                     sql = f"SELECT * FROM {table_name}"
                     params = []
@@ -223,6 +304,70 @@ class SQLitePool(Pool):
             print(f"GetTableData Error: {e}")
             return []
 
+    def _table_unique_conflict_targets(self, table_name: str) -> List[List[str]]:
+        """Internal helper to return the table unique conflict targets."""
+        if not self.conn:
+            return []
+        cursor = self.conn.cursor()
+        candidates: List[List[str]] = []
+
+        cursor.execute(f"PRAGMA table_info('{table_name}')")
+        pk_rows = cursor.fetchall()
+        pk_columns = [
+            row[1]
+            for row in sorted((row for row in pk_rows if len(row) > 5 and int(row[5] or 0) > 0), key=lambda item: int(item[5] or 0))
+            if row[1]
+        ]
+        if pk_columns:
+            candidates.append(pk_columns)
+
+        cursor.execute(f"PRAGMA index_list('{table_name}')")
+        for index_row in cursor.fetchall():
+            if len(index_row) < 3 or not int(index_row[2] or 0):
+                continue
+            if len(index_row) > 4 and int(index_row[4] or 0):
+                continue
+            index_name = index_row[1]
+            cursor.execute(f"PRAGMA index_info('{index_name}')")
+            index_columns = [row[2] for row in cursor.fetchall() if len(row) > 2 and row[2]]
+            if index_columns:
+                candidates.append(index_columns)
+
+        seen = set()
+        normalized: List[List[str]] = []
+        for candidate in candidates:
+            key = tuple(candidate)
+            if not candidate or key in seen:
+                continue
+            seen.add(key)
+            normalized.append(candidate)
+        return normalized
+
+    def _build_insert_sql(self, table_name: str, columns: List[str]) -> str:
+        """Internal helper to build the insert SQL."""
+        placeholders = ', '.join(['?' for _ in columns])
+        columns_str = ', '.join(columns)
+        candidates = self._table_unique_conflict_targets(table_name)
+        matching_candidates = [candidate for candidate in candidates if all(column in columns for column in candidate)]
+        if matching_candidates:
+            conflict_columns = sorted(
+                matching_candidates,
+                key=lambda candidate: (len(candidate), tuple(column != "id" for column in candidate)),
+                reverse=True,
+            )[0]
+            update_columns = [column for column in columns if column not in conflict_columns]
+            if update_columns:
+                updates = ', '.join(f"{column}=excluded.{column}" for column in update_columns)
+                return (
+                    f"INSERT INTO {table_name} ({columns_str}) VALUES ({placeholders}) "
+                    f"ON CONFLICT ({', '.join(conflict_columns)}) DO UPDATE SET {updates}"
+                )
+            return (
+                f"INSERT INTO {table_name} ({columns_str}) VALUES ({placeholders}) "
+                f"ON CONFLICT ({', '.join(conflict_columns)}) DO NOTHING"
+            )
+        return f"INSERT INTO {table_name} ({columns_str}) VALUES ({placeholders})"
+
     def store_memory(
         self,
         content: Any,
@@ -232,6 +377,7 @@ class SQLitePool(Pool):
         memory_type: str = "text",
         table_name: Optional[str] = None,
     ) -> Dict[str, Any]:
+        """Handle store memory for the sq lite pool."""
         memory_table = table_name or self.MEMORY_TABLE
         if not self._TableExists(memory_table):
             self._CreateTable(memory_table, self.memory_table_schema())
@@ -252,6 +398,7 @@ class SQLitePool(Pool):
         limit: int = 10,
         table_name: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
+        """Search the memory."""
         if not query:
             return []
         memory_table = table_name or self.MEMORY_TABLE
@@ -283,6 +430,7 @@ class SQLitePool(Pool):
         return results
 
     def create_table_practice(self):
+        """Create the table practice."""
         return self._build_operation_practice(
             operation_id="pool-create-table",
             name="Pool Create Table",
@@ -296,6 +444,7 @@ class SQLitePool(Pool):
         )
 
     def table_exists_practice(self):
+        """Return whether the table exists for practice."""
         return self._build_operation_practice(
             operation_id="pool-table-exists",
             name="Pool Table Exists",
@@ -308,6 +457,7 @@ class SQLitePool(Pool):
         )
 
     def insert_practice(self):
+        """Handle insert practice for the sq lite pool."""
         return self._build_operation_practice(
             operation_id="pool-insert",
             name="Pool Insert",
@@ -321,6 +471,7 @@ class SQLitePool(Pool):
         )
 
     def query_practice(self):
+        """Query the practice."""
         return self._build_operation_practice(
             operation_id="pool-query",
             name="Pool Query",
@@ -334,6 +485,7 @@ class SQLitePool(Pool):
         )
 
     def get_table_data_practice(self):
+        """Return the table data practice."""
         return self._build_operation_practice(
             operation_id="pool-get-table-data",
             name="Pool Get Table Data",
@@ -352,6 +504,7 @@ class SQLitePool(Pool):
         )
 
     def connect_practice(self):
+        """Connect the practice."""
         return self._build_operation_practice(
             operation_id="pool-connect",
             name="Pool Connect",
@@ -362,6 +515,7 @@ class SQLitePool(Pool):
         )
 
     def disconnect_practice(self):
+        """Disconnect the practice."""
         return self._build_operation_practice(
             operation_id="pool-disconnect",
             name="Pool Disconnect",
@@ -372,6 +526,7 @@ class SQLitePool(Pool):
         )
 
     def store_memory_practice(self):
+        """Handle store memory practice for the sq lite pool."""
         return self._build_operation_practice(
             operation_id="pool-store-memory",
             name="Pool Store Memory",
@@ -396,6 +551,7 @@ class SQLitePool(Pool):
         )
 
     def search_memory_practice(self):
+        """Search the memory practice."""
         return self._build_operation_practice(
             operation_id="pool-search-memory",
             name="Pool Search Memory",

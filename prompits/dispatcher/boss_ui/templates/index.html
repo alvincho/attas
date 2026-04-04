@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Dispatcher Boss</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/agent_ui_shared.css?v={{ asset_version or 'dev' }}">
+    <link rel="stylesheet" href="{{ url_for('boss_static', path='boss.css') }}?v={{ asset_version or 'dev' }}">
+    <script defer src="/static/agent_theme.js?v={{ asset_version or 'dev' }}"></script>
+    <script defer src="/static/agent_connection.js?v={{ asset_version or 'dev' }}"></script>
+</head>
+<body data-page="{{ initial_payload.current_page or 'issue' }}">
+    <main class="shell">
+        <section class="hero agent-sticky-header">
+            <div class="hero-topline">
+                <div class="hero-copy hero-copy-compact">
+                    <h1>Dispatcher Boss Deck</h1>
+                </div>
+                <div class="hero-actions">
+                    <button type="button" class="ghost-btn" id="hero-metrics-refresh">Refresh Metrics</button>
+                </div>
+            </div>
+            {% set hero_metrics = initial_payload.hero_metrics or {} %}
+            <div class="hero-metrics-shell">
+                <div class="hero-section-label">Dispatcher Metrics</div>
+                <div class="hero-metrics-grid" id="hero-metrics-grid" data-hero-metrics-status="{{ hero_metrics.status or 'idle' }}">
+                    {% for metric in hero_metrics.metrics or [] %}
+                    <article
+                        class="hero-metric-card{% if not metric.available %} is-unavailable{% endif %}"
+                        data-hero-metric-id="{{ metric.id }}"
+                    >
+                        <div class="hero-metric-label">{{ metric.label }}</div>
+                        <div class="hero-metric-value">{% if metric.available %}{{ metric.count }}{% else %}--{% endif %}</div>
+                    </article>
+                    {% endfor %}
+                    {% for metric in [
+                        {"id": "queued_jobs", "label": "Queued Jobs"},
+                        {"id": "workers_online", "label": "Workers Online"},
+                    ] %}
+                    <article
+                        class="hero-metric-card{% if (hero_metrics.status or 'idle') != 'success' %} is-unavailable{% endif %}"
+                        data-hero-metric-id="{{ metric.id }}"
+                    >
+                        <div class="hero-metric-label">{{ metric.label }}</div>
+                        <div class="hero-metric-value">--</div>
+                    </article>
+                    {% endfor %}
+                </div>
+            </div>
+        </section>
+
+        <div class="layout">
+            <aside class="panel nav-sidebar">
+                <div class="panel-head">
+                    <div class="sidebar-title-block">
+                        <h2>Navigation</h2>
+                        <div class="muted">Switch between core boss functions.</div>
+                    </div>
+                    <button type="button" class="ghost-btn sidebar-toggle" id="sidebar-toggle" aria-expanded="true" aria-label="Collapse sidebar">
+                        <span class="sidebar-toggle-glyph" aria-hidden="true">⇤</span>
+                        <span class="sidebar-toggle-text">Collapse</span>
+                    </button>
+                </div>
+                <nav class="boss-nav-stack">
+                    <a href="/" class="boss-nav-link{% if (initial_payload.current_page or 'issue') == 'issue' %} is-active{% endif %}" data-page-link="issue">
+                        <span class="nav-icon">I</span>
+                        <div class="nav-copy">
+                            <span class="nav-label">Issue Job</span>
+                            <span class="nav-hint">Dispatch collection tasks.</span>
+                        </div>
+                    </a>
+                    <a href="/schedule" class="boss-nav-link{% if (initial_payload.current_page or 'issue') == 'schedule' %} is-active{% endif %}" data-page-link="schedule">
+                        <span class="nav-icon">C</span>
+                        <div class="nav-copy">
+                            <span class="nav-label">Schedule</span>
+                            <span class="nav-hint">Queue timed releases.</span>
+                        </div>
+                    </a>
+                    <a href="/monitor" class="boss-nav-link{% if (initial_payload.current_page or 'issue') == 'monitor' %} is-active{% endif %}" data-page-link="monitor">
+                        <span class="nav-icon">M</span>
+                        <div class="nav-copy">
+                            <span class="nav-label">Monitor</span>
+                            <span class="nav-hint">Watch dispatcher and workers.</span>
+                        </div>
+                    </a>
+                    <a href="/settings" class="boss-nav-link{% if (initial_payload.current_page or 'issue') == 'settings' %} is-active{% endif %}" data-page-link="settings">
+                        <span class="nav-icon">S</span>
+                        <div class="nav-copy">
+                            <span class="nav-label">Settings</span>
+                            <span class="nav-hint">Agent configuration.</span>
+                        </div>
+                    </a>
+                    <a href="/db" class="boss-nav-link{% if (initial_payload.current_page or 'issue') == 'db' %} is-active{% endif %}" data-page-link="db">
+                        <span class="nav-icon">D</span>
+                        <div class="nav-copy">
+                            <span class="nav-label">DB Viewer</span>
+                            <span class="nav-hint">Browse tables and run SQL.</span>
+                        </div>
+                    </a>
+                </nav>
+            </aside>
+
+            <section class="stack">
+                <!-- ISSUE PAGE -->
+                <div class="page-content" data-page-id="issue">
+                    <section class="panel">
+                        <div class="panel-head">
+                            <div>
+                                <h2>Dispatch Console</h2>
+                                <div class="muted">Issue a new collection job to the dispatcher.</div>
+                            </div>
+                            <span class="status" id="boss-status-chip">Ready</span>
+                        </div>
+                        <form id="boss-job-form" class="stack" style="margin-top: 20px;">
+                            <div class="editor-grid">
+                                <div class="field full-span">
+                                    <label for="dispatcher-address">Dispatcher Address</label>
+                                    <input id="dispatcher-address" name="dispatcher_address" type="url" placeholder="http://127.0.0.1:8060">
+                                </div>
+                                <div class="field">
+                                    <label for="required-capability">Job Name</label>
+                                    <select id="required-capability" name="required_capability">
+                                        {% for option in initial_payload.job_options %}
+                                        <option value="{{ option.id }}">{{ option.label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="field">
+                                    <div class="field-heading-row">
+                                        <label for="priority">Priority</label>
+                                        <div class="field-inline-note">Lower numbers dispatch sooner; 100 is normal, smaller is urgent, larger is background.</div>
+                                    </div>
+                                    <input id="priority" name="priority" type="number" min="0" step="10" value="100" placeholder="100">
+                                </div>
+                                <div class="field full-span" id="job-parameters-field" hidden>
+                                    <div class="field-heading-row">
+                                        <div class="field-heading-copy">
+                                            <label>Parameters</label>
+                                            <div class="field-inline-note">Job-specific controls stay mirrored into the payload JSON below.</div>
+                                        </div>
+                                        <button type="button" class="ghost-btn field-collapse-toggle" id="job-parameters-toggle" aria-expanded="false" aria-controls="job-parameters-body" aria-label="Expand parameters">
+                                            <span class="field-collapse-glyph" id="job-parameters-toggle-glyph" aria-hidden="true">+</span>
+                                            <span id="job-parameters-toggle-text">Expand</span>
+                                        </button>
+                                    </div>
+                                    <div id="job-parameters-body" class="parameter-shell-wrap" hidden>
+                                        <div id="job-parameters" class="parameter-shell"></div>
+                                    </div>
+                                </div>
+                                <div class="field full-span">
+                                    <label for="payload-json">Payload JSON</label>
+                                    <textarea id="payload-json" name="payload" spellcheck="false" style="min-height: 120px;">{}</textarea>
+                                </div>
+                            </div>
+                            <div class="toolbar" style="margin-top: 10px;">
+                                <button type="submit" class="primary-btn">Issue Job</button>
+                                <button type="button" class="ghost-btn" id="boss-fill-daily-price">Load Example</button>
+                            </div>
+                        </form>
+                    </section>
+                    <section class="panel">
+                        <div class="panel-head">
+                            <div>
+                                <h2>Latest Result</h2>
+                                <div class="muted">Submission response from the dispatcher.</div>
+                            </div>
+                        </div>
+                        <div id="boss-result" class="submit-result-shell">
+                            <div class="empty-state">No job submitted yet.</div>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- SCHEDULE PAGE -->
+                <div class="page-content" data-page-id="schedule">
+                    <section class="panel">
+                        <div class="panel-head">
+                            <div>
+                                <h2>Schedule Console</h2>
+                                <div class="muted">Store boss-local jobs and let this agent issue them when their scheduled time arrives.</div>
+                            </div>
+                            <span class="status" id="schedule-status-chip">Ready</span>
+                        </div>
+                        <form id="schedule-job-form" class="stack" style="margin-top: 20px;">
+                            <div class="editor-grid">
+                                <div class="field full-span">
+                                    <label for="schedule-dispatcher-address">Dispatcher Address</label>
+                                    <input id="schedule-dispatcher-address" name="schedule_dispatcher_address" type="url" placeholder="http://127.0.0.1:8060">
+                                </div>
+                                <div class="field">
+                                    <label for="schedule-required-capability">Job Name</label>
+                                    <select id="schedule-required-capability" name="schedule_required_capability">
+                                        {% for option in initial_payload.job_options %}
+                                        <option value="{{ option.id }}">{{ option.label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="field">
+                                    <label for="schedule-repeat-frequency">Repeat Frequency</label>
+                                    <select id="schedule-repeat-frequency" name="schedule_repeat_frequency">
+                                        <option value="once">Once</option>
+                                        <option value="daily">Daily</option>
+                                        <option value="weekly">Weekly</option>
+                                        <option value="monthly">Monthly</option>
+                                    </select>
+                                </div>
+                                <div class="field">
+                                    <label for="schedule-name">Schedule Label</label>
+                                    <input id="schedule-name" name="schedule_name" type="text" placeholder="Optional label for this timed job">
+                                </div>
+                                <div class="field">
+                                    <label for="schedule-symbols">Targets</label>
+                                    <input id="schedule-symbols" name="schedule_symbols" type="text" placeholder="item-a, item-b">
+                                </div>
+                                <div class="field full-span schedule-rule-field schedule-rule-once">
+                                    <label for="schedule-at">Run At</label>
+                                    <input id="schedule-at" name="schedule_at" type="datetime-local">
+                                </div>
+                                <div class="field full-span schedule-rule-field schedule-rule-repeat">
+                                    <label for="schedule-times">Run Times</label>
+                                    <input id="schedule-times" name="schedule_times" type="text" placeholder="06:00, 12:30, 18:00" inputmode="text" autocapitalize="off" autocomplete="off" spellcheck="false">
+                                    <div class="field-note">Use comma-separated 24-hour times so one schedule can issue more than once per day.</div>
+                                </div>
+                                <div class="field full-span schedule-rule-field schedule-rule-weekly">
+                                    <label>Days Of Week</label>
+                                    <div class="schedule-weekday-grid">
+                                        <label class="schedule-weekday-pill"><input type="checkbox" name="schedule_weekday" value="mon">Mon</label>
+                                        <label class="schedule-weekday-pill"><input type="checkbox" name="schedule_weekday" value="tue">Tue</label>
+                                        <label class="schedule-weekday-pill"><input type="checkbox" name="schedule_weekday" value="wed">Wed</label>
+                                        <label class="schedule-weekday-pill"><input type="checkbox" name="schedule_weekday" value="thu">Thu</label>
+                                        <label class="schedule-weekday-pill"><input type="checkbox" name="schedule_weekday" value="fri">Fri</label>
+                                        <label class="schedule-weekday-pill"><input type="checkbox" name="schedule_weekday" value="sat">Sat</label>
+                                        <label class="schedule-weekday-pill"><input type="checkbox" name="schedule_weekday" value="sun">Sun</label>
+                                    </div>
+                                </div>
+                                <div class="field full-span schedule-rule-field schedule-rule-monthly">
+                                    <label for="schedule-days-of-month">Days Of Month</label>
+                                    <input id="schedule-days-of-month" name="schedule_days_of_month" type="text" placeholder="1, 15, 28" inputmode="numeric" autocapitalize="off" autocomplete="off" spellcheck="false">
+                                    <div class="field-note">Pick one or more calendar days. Short months automatically use their last day when needed.</div>
+                                </div>
+                                <div class="field full-span">
+                                    <label for="schedule-payload-json">Payload JSON</label>
+                                    <textarea id="schedule-payload-json" name="schedule_payload" spellcheck="false" style="min-height: 120px;">{}</textarea>
+                                </div>
+                            </div>
+                            <div class="muted" id="schedule-timezone-note">Schedules use your browser time zone.</div>
+                            <div class="muted">The boss agent needs to stay running for due schedules to be issued automatically.</div>
+                            <div class="toolbar" style="margin-top: 10px;">
+                                <button type="submit" class="primary-btn">Create Schedule</button>
+                                <button type="button" class="ghost-btn" id="schedule-fill-daily-price">Load Example</button>
+                                <button type="button" class="ghost-btn" id="schedule-refresh">Refresh Scheduled Jobs</button>
+                            </div>
+                        </form>
+                    </section>
+
+                    <section class="panel">
+                        <div class="panel-head">
+                            <div>
+                                <h2>Scheduled Jobs</h2>
+                                <div class="muted" id="schedule-list-meta">0 schedules found.</div>
+                            </div>
+                        </div>
+                        <div id="schedule-list" class="pulse-list schedule-list">
+                            <div class="empty-state">Create a scheduled job to start the queue.</div>
+                        </div>
+                    </section>
+
+                    <div id="schedule-history-modal" class="monitor-modal-shell" hidden>
+                        <div class="monitor-modal-backdrop" data-close-schedule-history-modal="true"></div>
+                        <section class="monitor-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="schedule-history-modal-title">
+                            <div class="monitor-modal-head">
+                                <div>
+                                    <h3 id="schedule-history-modal-title">Schedule Job History</h3>
+                                    <div class="muted" id="schedule-history-modal-meta">Select a schedule to inspect related issued jobs.</div>
+                                </div>
+                                <button type="button" class="ghost-btn monitor-modal-close" id="schedule-history-modal-close" aria-label="Close schedule job history">Close</button>
+                            </div>
+                            <div id="schedule-history-modal-body" class="job-detail-shell">
+                                <div class="empty-state">Choose a schedule to inspect related jobs.</div>
+                            </div>
+                        </section>
+                    </div>
+                </div>
+
+                <!-- MONITOR PAGE -->
+                <div class="page-content" data-page-id="monitor">
+                    <section class="panel monitor-control-panel is-collapsible is-collapsed" id="monitor-control-panel">
+                        <div class="panel-head">
+                            <div>
+                                <h2>Operations Monitor</h2>
+                                <div class="muted">Track dispatcher health, worker heartbeat status, and queue pressure across the dispatcher floor.</div>
+                            </div>
+                            <div class="monitor-panel-head-actions">
+                                <span class="status" id="jobs-status-chip">Idle</span>
+                                <button type="button" class="ghost-btn monitor-panel-toggle" id="monitor-panel-toggle" aria-expanded="false">
+                                    <span class="monitor-panel-toggle-glyph" id="monitor-panel-toggle-glyph" aria-hidden="true">+</span>
+                                    <span id="monitor-panel-toggle-text">Expand</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="monitor-panel-body" data-monitor-panel-body>
+                            <div class="editor-grid" style="margin-top: 20px;">
+                                <div class="field full-span">
+                                    <label for="jobs-dispatcher-address">Dispatcher Address</label>
+                                    <input id="jobs-dispatcher-address" name="jobs_dispatcher_address" type="url" placeholder="http://127.0.0.1:8060">
+                                </div>
+                            </div>
+                            <div id="monitor-overview" class="monitor-overview-grid" style="margin-top: 18px;">
+                                <article class="monitor-metric-card">
+                                    <div class="monitor-metric-label">Dispatcher</div>
+                                    <div class="monitor-metric-value">Waiting</div>
+                                    <div class="monitor-metric-copy">No dispatcher status loaded yet.</div>
+                                </article>
+                                <article class="monitor-metric-card">
+                                    <div class="monitor-metric-label">Workers</div>
+                                    <div class="monitor-metric-value">0</div>
+                                    <div class="monitor-metric-copy">No worker heartbeat data yet.</div>
+                                </article>
+                                <article class="monitor-metric-card">
+                                    <div class="monitor-metric-label">Ready Queue</div>
+                                    <div class="monitor-metric-value">0</div>
+                                    <div class="monitor-metric-copy">Queued jobs waiting for workers.</div>
+                                </article>
+                                <article class="monitor-metric-card">
+                                    <div class="monitor-metric-label">Attention</div>
+                                    <div class="monitor-metric-value">0</div>
+                                    <div class="monitor-metric-copy">Failed, paused, or stale floor activity.</div>
+                                </article>
+                            </div>
+                        </div>
+                    </section>
+
+                    <div class="monitor-tab-toolbar">
+                        <div class="monitor-tab-row" role="tablist" aria-label="Monitor tabs">
+                            <button type="button" class="monitor-tab is-active" data-monitor-tab="jobs" aria-selected="true">Jobs</button>
+                            <button type="button" class="monitor-tab" data-monitor-tab="dispatcher" aria-selected="false">Dispatcher</button>
+                            <button type="button" class="monitor-tab" data-monitor-tab="workers" aria-selected="false">Workers</button>
+                        </div>
+                        <div class="monitor-tab-actions">
+                            <button type="button" class="primary-btn" id="monitor-refresh">Refresh Monitor</button>
+                        </div>
+                    </div>
+
+                    <div class="monitor-tab-panel is-active" data-monitor-panel="jobs">
+                        <div class="monitor-split">
+                            <section class="panel">
+                                <div class="panel-head">
+                                    <div>
+                                        <h2>Queue Drilldown</h2>
+                                        <div class="muted" id="jobs-list-meta">0 jobs found.</div>
+                                    </div>
+                                </div>
+                                <div class="editor-grid job-list-filter-grid" style="margin-bottom: 12px;">
+                                    <div class="field">
+                                        <label for="job-filter-capability">Job Name</label>
+                                        <input id="job-filter-capability" type="text" placeholder="Dispatcher Job">
+                                    </div>
+                                    <div class="field">
+                                        <label for="job-filter-status">Status</label>
+                                        <select id="job-filter-status">
+                                            <option value="">All statuses</option>
+                                            <option value="queued">Queued</option>
+                                            <option value="claimed">Claimed</option>
+                                            <option value="stopping">Stopping</option>
+                                            <option value="stopped">Stopped</option>
+                                            <option value="paused">Paused</option>
+                                            <option value="completed">Completed</option>
+                                            <option value="failed">Failed</option>
+                                            <option value="retry">Retry</option>
+                                            <option value="cancelled">Cancelled</option>
+                                            <option value="deleted">Deleted</option>
+                                        </select>
+                                    </div>
+                                    <div class="field">
+                                        <label for="job-filter-sort">Sort By</label>
+                                        <select id="job-filter-sort">
+                                            <option value="time_desc" selected>Latest Time</option>
+                                            <option value="name_asc">Job Name</option>
+                                            <option value="status_asc">Status</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div id="jobs-list" class="pulse-list">
+                                    <div class="empty-state">Refresh the dispatcher to load jobs.</div>
+                                </div>
+                            </section>
+                            <section class="panel">
+                                <div id="job-detail-meta" hidden>Select a job.</div>
+                                <span class="status" id="job-action-status-chip" hidden>Awaiting Selection</span>
+                                <div class="toolbar job-action-bar" style="margin-bottom: 12px;">
+                                    <button type="button" class="ghost-btn" id="job-pause" disabled>Pause Job</button>
+                                    <button type="button" class="ghost-btn" id="job-stop" disabled>Stop Job</button>
+                                    <button type="button" class="ghost-btn" id="job-resume" disabled>Resume Job</button>
+                                    <button type="button" class="danger-btn" id="job-cancel" disabled>Cancel Job</button>
+                                </div>
+                                <div id="job-detail" class="job-detail-shell">
+                                    <div class="empty-state">Select a job to inspect its state.</div>
+                                </div>
+                            </section>
+                        </div>
+                    </div>
+
+                    <div class="monitor-tab-panel" data-monitor-panel="dispatcher">
+                        <section class="panel">
+                            <div class="panel-head">
+                                <div>
+                                    <h2>Dispatcher Status</h2>
+                                    <div class="muted" id="dispatcher-summary-meta">No dispatcher status loaded yet.</div>
+                                </div>
+                            </div>
+                            <div id="dispatcher-summary" class="monitor-detail-shell">
+                                <div class="empty-state">Refresh the floor to inspect dispatcher state.</div>
+                            </div>
+                        </section>
+                    </div>
+
+                    <div class="monitor-tab-panel" data-monitor-panel="workers">
+                        <section class="panel">
+                            <div class="panel-head">
+                                <div>
+                                    <h2>Worker Roster</h2>
+                                    <div class="muted" id="worker-status-meta">No worker heartbeat data loaded yet.</div>
+                                </div>
+                                <div class="worker-roster-head-actions">
+                                    <label class="worker-filter-control" for="worker-status-filter">
+                                        <span>Worker Status</span>
+                                        <select id="worker-status-filter">
+                                            <option value="online" selected>Online Only</option>
+                                            <option value="stale">Stale Only</option>
+                                            <option value="offline">Offline Only</option>
+                                            <option value="all">All Workers</option>
+                                        </select>
+                                    </label>
+                                </div>
+                            </div>
+                            <div id="worker-status-list" class="pulse-list worker-roster">
+                                <div class="empty-state">Workers will appear after they register with the dispatcher.</div>
+                            </div>
+                        </section>
+                    </div>
+
+                    <div id="worker-job-modal" class="monitor-modal-shell" hidden>
+                        <div class="monitor-modal-backdrop" data-close-worker-job-modal="true"></div>
+                        <section class="monitor-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="worker-job-modal-title">
+                            <div class="monitor-modal-head">
+                                <div>
+                                    <h3 id="worker-job-modal-title">Current Job Detail</h3>
+                                    <div class="muted" id="worker-job-modal-meta">Select an active worker job to inspect it.</div>
+                                </div>
+                                <button type="button" class="ghost-btn monitor-modal-close" id="worker-job-modal-close" aria-label="Close current job detail">Close</button>
+                            </div>
+                            <div id="worker-job-modal-body" class="job-detail-shell">
+                                <div class="empty-state">Choose a worker job to inspect its detail.</div>
+                            </div>
+                        </section>
+                    </div>
+
+                    <div id="worker-history-modal" class="monitor-modal-shell" hidden>
+                        <div class="monitor-modal-backdrop" data-close-worker-history-modal="true"></div>
+                        <section class="monitor-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="worker-history-modal-title">
+                            <div class="monitor-modal-head">
+                                <div>
+                                    <h3 id="worker-history-modal-title">Work History</h3>
+                                    <div class="muted" id="worker-history-modal-meta">Select a worker to inspect recent jobs.</div>
+                                </div>
+                                <button type="button" class="ghost-btn monitor-modal-close" id="worker-history-modal-close" aria-label="Close work history">Close</button>
+                            </div>
+                            <div id="worker-history-modal-body" class="job-detail-shell">
+                                <div class="empty-state">Choose a worker to inspect recent work history.</div>
+                            </div>
+                        </section>
+                    </div>
+                </div>
+
+                <!-- SETTINGS PAGE -->
+                <div class="page-content" data-page-id="settings">
+                    <section class="panel">
+                        <div class="panel-head">
+                            <div>
+                                <h2>Console Profile</h2>
+                                <div class="muted">Agent runtime settings and connectivity.</div>
+                            </div>
+                            <span class="status" id="settings-status-chip">Local Defaults</span>
+                        </div>
+                        <form id="boss-settings-form" class="stack" style="margin-top: 20px;">
+                            <input id="settings-load-local-input" type="file" accept=".json,application/json" hidden>
+                            <div class="editor-grid">
+                                <div class="field full-span">
+                                    <label for="settings-plaza-url-input">Plaza URL</label>
+                                    <input id="settings-plaza-url-input" type="url" placeholder="http://127.0.0.1:8211">
+                                </div>
+                                <div class="field">
+                                    <label for="settings-dispatcher-party">Dispatcher Party</label>
+                                    <select id="settings-dispatcher-party">
+                                        <option value="{{ initial_payload.dispatcher_party or initial_payload.settings_defaults.dispatcher_party or 'Prompits' }}">{{ initial_payload.dispatcher_party or initial_payload.settings_defaults.dispatcher_party or 'Prompits' }}</option>
+                                    </select>
+                                </div>
+                                <div class="field">
+                                    <label for="settings-dispatcher-select">Discovered Dispatcher</label>
+                                    <select id="settings-dispatcher-select">
+                                        <option value="">Auto-select discovered dispatcher</option>
+                                    </select>
+                                </div>
+                                <div class="field full-span">
+                                    <label for="settings-dispatcher-address">Default Dispatcher Address</label>
+                                    <input id="settings-dispatcher-address" type="url" placeholder="http://127.0.0.1:8060">
+                                </div>
+                                <div class="field">
+                                    <label for="settings-monitor-refresh-sec">Monitor Auto Refresh (sec)</label>
+                                    <input id="settings-monitor-refresh-sec" type="number" min="0" step="1" placeholder="0">
+                                </div>
+                                <div class="field">
+                                    <label>Available JobCaps</label>
+                                    <div class="chip-row" id="settings-jobcaps-chips">
+                                        {% for option in initial_payload.job_options %}
+                                        <span class="chip">{{ option.label }}</span>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="toolbar" style="margin-top: 10px;">
+                                <button type="button" class="ghost-btn" id="settings-connect-plaza">Connect Plaza</button>
+                                <button type="button" class="ghost-btn" id="settings-save-local">Save Local</button>
+                                <button type="button" class="ghost-btn" id="settings-load-local">Load Local</button>
+                                <button type="submit" class="primary-btn">Save Settings</button>
+                                <button type="button" class="ghost-btn" id="settings-reset">Reset Defaults</button>
+                            </div>
+                        </form>
+                    </section>
+                    <div class="monitor-split">
+                        <section class="panel">
+                            <div class="panel-head">
+                                <div>
+                                    <h2>Runtime Summary</h2>
+                                    <div class="muted">Current agent state.</div>
+                                </div>
+                            </div>
+                            <div class="stack" style="gap: 12px;">
+                                <div class="field">
+                                    <label>Boss Name</label>
+                                    <div id="settings-boss-name" class="chip" style="width: fit-content;">{{ initial_payload.runtime_summary.boss_name }}</div>
+                                </div>
+                                <div class="field">
+                                    <label>Agent ID</label>
+                                    <div id="settings-agent-id" style="font-family: var(--mono); font-size: 0.85rem;">{{ initial_payload.runtime_summary.agent_id or 'Not registered' }}</div>
+                                </div>
+                                <div class="field">
+                                    <label>Plaza URL</label>
+                                    <div id="settings-plaza-url" style="font-family: var(--mono); font-size: 0.85rem;">{{ initial_payload.runtime_summary.plaza_url or 'Not configured' }}</div>
+                                </div>
+                                <div class="field">
+                                    <label>Dispatcher Party</label>
+                                    <div id="settings-current-party" style="font-family: var(--mono); font-size: 0.85rem;">{{ initial_payload.runtime_summary.dispatcher_party or initial_payload.dispatcher_party or 'Not configured' }}</div>
+                                </div>
+                                <div class="field">
+                                    <label>Current Dispatcher</label>
+                                    <div id="settings-current-dispatcher" style="font-family: var(--mono); font-size: 0.85rem;">{{ initial_payload.dispatcher_address or 'Not configured' }}</div>
+                                </div>
+                                <div class="field">
+                                    <label>Discovered Dispatchers</label>
+                                    <div id="settings-dispatcher-count" class="chip" style="width: fit-content;">{{ (initial_payload.plaza_status.dispatchers or []) | length }}</div>
+                                </div>
+                            </div>
+                        </section>
+                        <section class="panel">
+                            <div class="panel-head">
+                                <div>
+                                    <h2>Plaza Detail</h2>
+                                    <div class="muted">Live Plaza connection payload.</div>
+                                </div>
+                            </div>
+                            <div id="settings-plaza-detail" class="json-tree-shell">Refresh Plaza to inspect status.</div>
+                        </section>
+                    </div>
+                </div>
+
+                <!-- DB PAGE -->
+                <div class="page-content" data-page-id="db">
+                    <section class="panel db-workbench-panel">
+                        <div class="panel-head">
+                            <div>
+                                <h2>Dispatcher Database</h2>
+                                <div class="muted">Browse dispatcher tables or run read-only SQL queries.</div>
+                            </div>
+                            <span class="status" id="db-status-chip">Idle</span>
+                        </div>
+                        <div class="db-workbench-body">
+                            <div class="field">
+                                <label for="db-dispatcher-address">Dispatcher Address</label>
+                                <input id="db-dispatcher-address" type="url" placeholder="http://127.0.0.1:8060">
+                            </div>
+                            <div class="db-tab-toolbar">
+                                <div class="db-tab-row" role="tablist" aria-label="Database tools">
+                                    <button type="button" class="db-tab is-active" data-db-tab="viewer" aria-selected="true">DB Viewer</button>
+                                    <button type="button" class="db-tab" data-db-tab="sql" aria-selected="false">SQL Console</button>
+                                </div>
+                            </div>
+                            <div class="db-tab-panel is-active" data-db-panel="viewer">
+                                <div class="editor-grid">
+                                    <div class="field">
+                                        <label for="db-table-name">Table</label>
+                                        <select id="db-table-name">
+                                            {% for table in initial_payload.db_tables %}
+                                            <option value="{{ table.name }}">{{ table.label }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="field">
+                                        <label for="db-table-limit">Row Limit</label>
+                                        <input id="db-table-limit" type="number" min="1" max="500" step="1" value="100">
+                                    </div>
+                                </div>
+                                <div class="toolbar">
+                                    <button type="button" class="primary-btn" id="db-load-table">Load Table</button>
+                                    <button type="button" class="ghost-btn" id="db-refresh-tables">Refresh Tables</button>
+                                </div>
+                            </div>
+                            <div class="db-tab-panel db-sql-panel" data-db-panel="sql">
+                                <div class="muted">Read-only SQL only: <code>SELECT</code>, <code>WITH</code>, <code>PRAGMA</code>, or <code>EXPLAIN</code>.</div>
+                                <div class="stack" style="gap: 12px;">
+                                    <div class="field">
+                                        <label for="db-sql">SQL</label>
+                                        <textarea id="db-sql" spellcheck="false" style="min-height: 180px;">SELECT * FROM dispatcher_jobs ORDER BY updated_at DESC LIMIT 25;</textarea>
+                                    </div>
+                                    <div class="editor-grid">
+                                        <div class="field">
+                                            <label for="db-params-json">Params JSON</label>
+                                            <textarea id="db-params-json" spellcheck="false" style="min-height: 100px;">[]</textarea>
+                                        </div>
+                                        <div class="field">
+                                            <label for="db-query-limit">Fetch Limit</label>
+                                            <input id="db-query-limit" type="number" min="1" max="1000" step="1" value="200">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="toolbar">
+                                    <button type="button" class="primary-btn" id="db-run-query">Run SQL</button>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                    <section class="panel db-result-panel">
+                        <div class="panel-head">
+                            <div>
+                                <h2>Result Grid</h2>
+                                <div class="muted" id="db-result-meta">Load a table or run a query.</div>
+                            </div>
+                        </div>
+                        <div id="db-result" class="table-result-shell">
+                            <div class="empty-state">No database result loaded yet.</div>
+                        </div>
+                    </section>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <script>
+        window.__DISPATCHER_BOSS_INITIAL__ = {{ initial_payload | tojson }};
+    </script>
+    <script src="{{ url_for('boss_static', path='boss.js') }}?v={{ asset_version or 'dev' }}"></script>
+</body>
+</html>

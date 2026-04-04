@@ -181,6 +181,8 @@ create table if not exists public.plaza_ui_users (
     username text,
     email text not null,
     display_name text,
+    profile_public boolean not null default false,
+    public_email boolean not null default false,
     role text not null default 'user',
     status text not null default 'active',
     auth_provider text not null default 'password',
@@ -194,6 +196,12 @@ alter table if exists public.plaza_ui_users
 
 alter table if exists public.plaza_ui_users
     add column if not exists auth_provider text not null default 'password';
+
+alter table if exists public.plaza_ui_users
+    add column if not exists profile_public boolean not null default false;
+
+alter table if exists public.plaza_ui_users
+    add column if not exists public_email boolean not null default false;
 
 create index if not exists idx_plaza_ui_users_email
     on public.plaza_ui_users (email);
@@ -209,6 +217,50 @@ create index if not exists idx_plaza_ui_users_status
 
 create index if not exists idx_plaza_ui_users_auth_provider
     on public.plaza_ui_users (auth_provider);
+
+create index if not exists idx_plaza_ui_users_profile_public
+    on public.plaza_ui_users (profile_public);
+
+create table if not exists public.plaza_ui_agent_keys (
+    id text primary key,
+    user_id text not null,
+    username text,
+    display_name text,
+    email text,
+    name text not null,
+    secret text not null,
+    status text not null default 'active',
+    created_at timestamptz not null default timezone('utc', now()),
+    updated_at timestamptz not null default timezone('utc', now()),
+    last_used_at timestamptz
+);
+
+alter table if exists public.plaza_ui_agent_keys
+    add column if not exists username text;
+
+alter table if exists public.plaza_ui_agent_keys
+    add column if not exists display_name text;
+
+alter table if exists public.plaza_ui_agent_keys
+    add column if not exists email text;
+
+alter table if exists public.plaza_ui_agent_keys
+    add column if not exists status text not null default 'active';
+
+alter table if exists public.plaza_ui_agent_keys
+    add column if not exists last_used_at timestamptz;
+
+create index if not exists idx_plaza_ui_agent_keys_user_id
+    on public.plaza_ui_agent_keys (user_id);
+
+create index if not exists idx_plaza_ui_agent_keys_status
+    on public.plaza_ui_agent_keys (status);
+
+create index if not exists idx_plaza_ui_agent_keys_user_status
+    on public.plaza_ui_agent_keys (user_id, status);
+
+create index if not exists idx_plaza_ui_agent_keys_updated_at
+    on public.plaza_ui_agent_keys (updated_at desc);
 
 create table if not exists public.phemas (
     id text primary key,
@@ -446,5 +498,6 @@ alter table if exists public.plaza_directory enable row level security;
 alter table if exists public.agent_practices enable row level security;
 alter table if exists public.pulse_pulser_pairs enable row level security;
 alter table if exists public.plaza_ui_users enable row level security;
+alter table if exists public.plaza_ui_agent_keys enable row level security;
 alter table if exists public.phemas enable row level security;
 alter table if exists public.plaza_tokens enable row level security;

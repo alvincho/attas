@@ -4,13 +4,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>attas | Phema Editor</title>
+    <title>Prompits | Phema Editor</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600&family=Manrope:wght@400;500;600;700;800&display=swap"
         rel="stylesheet">
-    <link rel="stylesheet" href="/static/attas_ui_shared.css?v=20260327a">
-    <script defer src="/static/attas_theme.js?v=20260327a"></script>
+    <link rel="stylesheet" href="/static/agent_ui_shared.css?v=20260327a">
+    <script defer src="/static/agent_theme.js?v=20260327a"></script>
     <script defer src="/static/agent_connection.js?v=20260327a"></script>
     <style>
         :root {
@@ -1550,8 +1550,8 @@
         };
 
         document.addEventListener('DOMContentLoaded', async () => {
-            window.attasAgentConnection?.mount({ pollMs: 15000 });
-            window.attasAgentConnection?.mountStickyHeader({ selector: '.topbar.agent-sticky-header', topOffset: 12 });
+            window.agentConnection?.mount({ pollMs: 15000 });
+            window.agentConnection?.mountStickyHeader({ selector: '.topbar.agent-sticky-header', topOffset: 12 });
             bindEvents();
             if (!state.phemaId && !managerMode) {
                 addSection();
@@ -4070,6 +4070,30 @@
                         : isPlainObject(fallback.output_schema)
                             ? fallback.output_schema
                             : {};
+            const testData = isPlainObject(base.test_data)
+                ? base.test_data
+                : isPlainObject(nested.test_data)
+                    ? nested.test_data
+                    : isPlainObject(base.resolved_test_data)
+                        ? base.resolved_test_data
+                        : isPlainObject(fallback.test_data)
+                            ? fallback.test_data
+                            : isPlainObject(fallback.resolved_test_data)
+                                ? fallback.resolved_test_data
+                                : {};
+            const resolvedTestData = isPlainObject(base.resolved_test_data)
+                ? base.resolved_test_data
+                : isPlainObject(nested.resolved_test_data)
+                    ? nested.resolved_test_data
+                    : isPlainObject(fallback.resolved_test_data)
+                        ? fallback.resolved_test_data
+                        : {};
+            const testDataPath = String(
+                base.test_data_path
+                || nested.test_data_path
+                || fallback.test_data_path
+                || ''
+            ).trim();
             const pulseId = String(nested.id || base.pulse_id || base.resource_id || fallback.pulse_id || fallback.id || '').trim();
             const pulseName = String(nested.name || base.pulse_name || base.name || fallback.pulse_name || fallback.name || '').trim();
             const fallbackTitle = pulseName || pulseId.split('.').filter(Boolean).pop() || fallback.pulse_address || 'Pulse';
@@ -4094,6 +4118,9 @@
                 },
                 input_schema: requestSchema,
                 output_schema: responseSchema,
+                test_data: testData,
+                resolved_test_data: resolvedTestData,
+                test_data_path: testDataPath,
             };
         }
 
@@ -4224,6 +4251,9 @@
         function derivePulserTestPayload(definition) {
             if (definition && typeof definition.test_data === 'object' && !Array.isArray(definition.test_data)) {
                 return definition.test_data;
+            }
+            if (definition && typeof definition.resolved_test_data === 'object' && !Array.isArray(definition.resolved_test_data)) {
+                return definition.resolved_test_data;
             }
             const schema = definition && typeof definition.input_schema === 'object' && !Array.isArray(definition.input_schema)
                 ? definition.input_schema

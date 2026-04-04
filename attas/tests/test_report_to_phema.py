@@ -1,3 +1,18 @@
+"""
+Regression tests for Report To Phema.
+
+Attas layers finance-oriented pulse definitions, validation rules, and personal-agent
+workflows on top of the shared runtimes. These tests cover Attas-specific pulse
+definitions, validation flows, and personal-agent integration points.
+
+The pytest cases in this file document expected behavior through checks such as
+`test_convert_report_payload_parses_dynamic_placeholders_and_input_schema`,
+`test_convert_report_payload_uses_ollama_to_divide_sections_and_generate_metadata`,
+`test_convert_report_file_reads_pdf_pages_as_sections`, and
+`test_convert_report_file_reads_pptx_slides_as_sections`, helping guard against
+regressions as the packages evolve.
+"""
+
 import csv
 import json
 import os
@@ -23,6 +38,10 @@ from attas.utils.report_to_phema import (
 
 
 def test_convert_report_file_splits_markdown_and_writes_static_phema(tmp_path):
+    """
+    Exercise the test_convert_report_file_splits_markdown_and_writes_static_phema
+    regression scenario.
+    """
     reports_dir = tmp_path / "reports"
     output_dir = tmp_path / "phemas"
     reports_dir.mkdir()
@@ -66,6 +85,11 @@ def test_convert_report_file_splits_markdown_and_writes_static_phema(tmp_path):
 
 
 def test_convert_report_payload_parses_dynamic_placeholders_and_input_schema():
+    """
+    Exercise the
+    test_convert_report_payload_parses_dynamic_placeholders_and_input_schema
+    regression scenario.
+    """
     payload = convert_report_payload(
         {
             "name": "Company Brief",
@@ -102,6 +126,11 @@ def test_convert_report_payload_parses_dynamic_placeholders_and_input_schema():
 
 
 def test_convert_reports_handles_json_specs_and_preserves_relative_paths(tmp_path):
+    """
+    Exercise the
+    test_convert_reports_handles_json_specs_and_preserves_relative_paths regression
+    scenario.
+    """
     reports_dir = tmp_path / "reports"
     output_dir = tmp_path / "phemas"
     nested_dir = reports_dir / "nested"
@@ -156,6 +185,10 @@ def test_convert_reports_handles_json_specs_and_preserves_relative_paths(tmp_pat
 
 
 def test_convert_report_file_reads_pdf_pages_as_sections(tmp_path):
+    """
+    Exercise the test_convert_report_file_reads_pdf_pages_as_sections regression
+    scenario.
+    """
     reports_dir = tmp_path / "reports"
     output_dir = tmp_path / "phemas"
     reports_dir.mkdir()
@@ -183,6 +216,10 @@ def test_convert_report_file_reads_pdf_pages_as_sections(tmp_path):
 
 
 def test_convert_report_file_reads_pptx_slides_as_sections(tmp_path):
+    """
+    Exercise the test_convert_report_file_reads_pptx_slides_as_sections regression
+    scenario.
+    """
     reports_dir = tmp_path / "reports"
     output_dir = tmp_path / "phemas"
     reports_dir.mkdir()
@@ -215,21 +252,31 @@ def test_convert_report_file_reads_pptx_slides_as_sections(tmp_path):
 
 
 def test_convert_report_payload_uses_ollama_to_divide_sections_and_generate_metadata(monkeypatch):
+    """
+    Exercise the
+    test_convert_report_payload_uses_ollama_to_divide_sections_and_generate_metadata
+    regression scenario.
+    """
     class FakeResponse:
+        """Response model for fake payloads."""
         def __init__(self, payload):
+            """Initialize the fake response."""
             self._payload = payload
             self.status_code = 200
             self.content = json.dumps(payload).encode("utf-8")
 
         def raise_for_status(self):
+            """Return the raise for the status."""
             return None
 
         def json(self):
+            """Handle JSON for the fake response."""
             return self._payload
 
     captured = {}
 
     def fake_post(url, json=None, timeout=None, **kwargs):
+        """Handle fake post."""
         captured["url"] = url
         captured["json"] = dict(json or {})
         captured["timeout"] = timeout
@@ -303,6 +350,10 @@ def test_convert_report_payload_uses_ollama_to_divide_sections_and_generate_meta
 
 
 def test_convert_report_file_appends_model_name_to_output_filename(tmp_path):
+    """
+    Exercise the test_convert_report_file_appends_model_name_to_output_filename
+    regression scenario.
+    """
     reports_dir = tmp_path / "reports"
     output_dir = tmp_path / "phemas"
     reports_dir.mkdir()
@@ -321,6 +372,9 @@ def test_convert_report_file_appends_model_name_to_output_filename(tmp_path):
 
 
 def test_main_emits_detail_logs_and_stdout_summary(tmp_path, capsys):
+    """
+    Exercise the test_main_emits_detail_logs_and_stdout_summary regression scenario.
+    """
     reports_dir = tmp_path / "reports"
     output_dir = tmp_path / "phemas"
     reports_dir.mkdir()
@@ -371,11 +425,16 @@ def test_main_emits_detail_logs_and_stdout_summary(tmp_path, capsys):
 
 
 def test_main_uses_all_default_models_when_model_flag_is_omitted(monkeypatch, tmp_path, capsys):
+    """
+    Exercise the test_main_uses_all_default_models_when_model_flag_is_omitted
+    regression scenario.
+    """
     import attas.utils.report_to_phema as report_to_phema_module
 
     events = []
 
     def fake_convert_reports(**kwargs):
+        """Handle fake convert reports."""
         events.append(("convert", kwargs["ollama_model"], kwargs["ollama_keep_alive"]))
         output_dir = Path(kwargs["output_dir"])
         model = kwargs["ollama_model"]
@@ -384,6 +443,7 @@ def test_main_uses_all_default_models_when_model_flag_is_omitted(monkeypatch, tm
         return [path]
 
     def fake_warm_ollama_model(model, **kwargs):
+        """Handle fake warm ollama model."""
         events.append(("warm", model, kwargs["keep_alive"]))
         return True
 
@@ -414,6 +474,10 @@ def test_main_uses_all_default_models_when_model_flag_is_omitted(monkeypatch, tm
 
 
 def test_main_refines_prompt_template_and_saves_best_candidate(monkeypatch, tmp_path, capsys):
+    """
+    Exercise the test_main_refines_prompt_template_and_saves_best_candidate
+    regression scenario.
+    """
     import attas.utils.report_to_phema as report_to_phema_module
 
     reports_dir = tmp_path / "reports"
@@ -438,12 +502,15 @@ def test_main_refines_prompt_template_and_saves_best_candidate(monkeypatch, tmp_
     )
 
     def fake_warm_ollama_model(*args, **kwargs):
+        """Handle fake warm ollama model."""
         return True
 
     def fake_generate_refined_prompt_template(**kwargs):
+        """Handle fake generate refined prompt template."""
         return next(candidates)
 
     def fake_evaluate_prompt_template(**kwargs):
+        """Handle fake evaluate prompt template."""
         template = kwargs["prompt_template_text"]
         if template.startswith("candidate two"):
             payload = {
@@ -507,6 +574,10 @@ def test_main_refines_prompt_template_and_saves_best_candidate(monkeypatch, tmp_
 
 
 def test_main_refine_prompt_stops_early_when_all_sections_have_metadata(monkeypatch, tmp_path, capsys):
+    """
+    Exercise the test_main_refine_prompt_stops_early_when_all_sections_have_metadata
+    regression scenario.
+    """
     import attas.utils.report_to_phema as report_to_phema_module
 
     reports_dir = tmp_path / "reports"
@@ -526,13 +597,16 @@ def test_main_refine_prompt_stops_early_when_all_sections_have_metadata(monkeypa
     calls = {"generated": 0}
 
     def fake_warm_ollama_model(*args, **kwargs):
+        """Handle fake warm ollama model."""
         return True
 
     def fake_generate_refined_prompt_template(**kwargs):
+        """Handle fake generate refined prompt template."""
         calls["generated"] += 1
         return "candidate one\n[[CURRENT_NAME_HINT]]\n[[CURRENT_DESCRIPTION_HINT]]\n[[CHUNK_BLOCK]]\n"
 
     def fake_evaluate_prompt_template(**kwargs):
+        """Handle fake evaluate prompt template."""
         template = kwargs["prompt_template_text"]
         if template.startswith("candidate one"):
             payload = {

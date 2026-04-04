@@ -1,0 +1,10 @@
+{
+  "bucket_name": "demo-assets",
+  "created_at": "2026-04-02T03:29:36Z",
+  "owner_agent_id": "FileStoragePulser",
+  "owner_agent_name": "FileStoragePulser",
+  "status": "created",
+  "storage_backend": "filesystem",
+  "updated_at": "2026-04-02T03:29:36Z",
+  "visibility": "private"
+}

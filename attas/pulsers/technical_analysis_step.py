@@ -1,6 +1,18 @@
+"""
+Technical Analysis pipeline step for the Pulsers area.
+
+Attas layers finance-oriented pulse definitions, validation rules, and personal-agent
+workflows on top of the shared runtimes. Within Attas, these modules define finance-
+oriented pulse providers and transformation steps.
+
+It mainly publishes constants such as `EFFECTIVE_INPUT` that are consumed elsewhere in
+the codebase.
+"""
+
 # Shared technical-analysis calculator for PathPulser pulse definitions.
 
 def _is_blank(value):
+    """Return whether the value is a blank."""
     if value in (None, ""):
         return True
     if isinstance(value, (list, dict, tuple, set)) and not value:
@@ -9,6 +21,7 @@ def _is_blank(value):
 
 
 def _effective_input():
+    """Internal helper for effective input."""
     merged = {}
     if isinstance(previous_output, dict):
         for key, value in previous_output.items():
@@ -29,6 +42,7 @@ EFFECTIVE_INPUT = _effective_input()
 
 
 def _param(name, fallback=None):
+    """Internal helper for param."""
     value = EFFECTIVE_INPUT.get(name)
     if value not in (None, ""):
         return value
@@ -39,6 +53,7 @@ def _param(name, fallback=None):
 
 
 def _param_int(name, fallback=None):
+    """Internal helper for param int."""
     value = _param(name, fallback)
     if value in (None, ""):
         raise ValueError(f"Missing required integer parameter: {name}")
@@ -49,6 +64,7 @@ def _param_int(name, fallback=None):
 
 
 def _param_float(name, fallback=None):
+    """Internal helper for param float."""
     value = _param(name, fallback)
     if value in (None, ""):
         raise ValueError(f"Missing required numeric parameter: {name}")
@@ -56,23 +72,27 @@ def _param_float(name, fallback=None):
 
 
 def _number(value, default=0.0):
+    """Internal helper for number."""
     if value in (None, ""):
         return float(default)
     return float(value)
 
 
 def _ensure(condition, message):
+    """Internal helper to ensure the value exists."""
     if not condition:
         raise ValueError(message)
 
 
 def _safe_ratio(numerator, denominator, when_zero=0.0):
+    """Internal helper for safe ratio."""
     if denominator == 0:
         return float(when_zero)
     return float(numerator) / float(denominator)
 
 
 def _normalize_bars():
+    """Internal helper to normalize the bars."""
     raw_bars = EFFECTIVE_INPUT.get("ohlc_series") or []
     _ensure(isinstance(raw_bars, list) and raw_bars, "ohlc_series must be a non-empty array.")
 
@@ -108,6 +128,7 @@ def _normalize_bars():
 
 
 def _price_value(bar, field):
+    """Internal helper to return the price value."""
     selected = str(field or "close")
     if selected == "open":
         return bar["open"]
@@ -127,32 +148,39 @@ def _price_value(bar, field):
 
 
 def _price_series(bars, field):
+    """Internal helper for price series."""
     return [_price_value(bar, field) for bar in bars]
 
 
 def _closes(bars):
+    """Internal helper for closes."""
     return [bar["close"] for bar in bars]
 
 
 def _highs(bars):
+    """Internal helper for highs."""
     return [bar["high"] for bar in bars]
 
 
 def _lows(bars):
+    """Internal helper for lows."""
     return [bar["low"] for bar in bars]
 
 
 def _volumes(bars):
+    """Internal helper for volumes."""
     return [bar["volume"] for bar in bars]
 
 
 def _last_window(values, window, label):
+    """Internal helper for last window."""
     _ensure(window > 0, f"{label} must be greater than 0.")
     _ensure(len(values) >= window, f"{label} requires at least {window} observations.")
     return values[-window:]
 
 
 def _sma_series(values, window):
+    """Internal helper for sma series."""
     window_values = _last_window(values, window, "SMA")
     if len(values) == window:
         return [sum(window_values) / float(window)]
@@ -166,6 +194,7 @@ def _sma_series(values, window):
 
 
 def _ema_series(values, window):
+    """Internal helper for ema series."""
     _ensure(window > 0, "EMA window must be greater than 0.")
     _ensure(len(values) >= window, f"EMA requires at least {window} observations.")
     multiplier = 2.0 / (float(window) + 1.0)
@@ -178,6 +207,7 @@ def _ema_series(values, window):
 
 
 def _wma_series(values, window):
+    """Internal helper for wma series."""
     _ensure(window > 0, "WMA window must be greater than 0.")
     _ensure(len(values) >= window, f"WMA requires at least {window} observations.")
     weights = list(range(1, window + 1))
@@ -190,6 +220,7 @@ def _wma_series(values, window):
 
 
 def _wilder_average_series(values, window):
+    """Internal helper for wilder average series."""
     _ensure(window > 0, "Wilder window must be greater than 0.")
     _ensure(len(values) >= window, f"Wilder smoothing requires at least {window} observations.")
     current = sum(values[:window]) / float(window)
@@ -201,6 +232,7 @@ def _wilder_average_series(values, window):
 
 
 def _stddev(values):
+    """Internal helper for stddev."""
     _ensure(values, "Standard deviation requires at least one observation.")
     mean = sum(values) / float(len(values))
     variance = sum((value - mean) ** 2 for value in values) / float(len(values))
@@ -208,6 +240,7 @@ def _stddev(values):
 
 
 def _rsi_series(values, window):
+    """Internal helper for rsi series."""
     _ensure(window > 0, "RSI window must be greater than 0.")
     _ensure(len(values) >= window + 1, f"RSI requires at least {window + 1} observations.")
     changes = [values[index] - values[index - 1] for index in range(1, len(values))]
@@ -236,6 +269,7 @@ def _rsi_series(values, window):
 
 
 def _true_range_values(bars, include_first=True):
+    """Internal helper to return the true range values."""
     _ensure(len(bars) >= 1, "True range requires at least one bar.")
     values = []
     if include_first:
@@ -255,6 +289,7 @@ def _true_range_values(bars, include_first=True):
 
 
 def _directional_components(bars):
+    """Internal helper for directional components."""
     _ensure(len(bars) >= 2, "Directional indicators require at least two bars.")
     true_ranges = []
     plus_dms = []
@@ -289,6 +324,7 @@ def _directional_components(bars):
 
 
 def _money_flow_multiplier(bar):
+    """Internal helper for money flow multiplier."""
     spread = bar["high"] - bar["low"]
     if spread == 0:
         return 0.0
@@ -296,6 +332,7 @@ def _money_flow_multiplier(bar):
 
 
 def _adl_series(bars, start_value):
+    """Internal helper for adl series."""
     total = float(start_value)
     series = []
     for bar in bars:
@@ -305,6 +342,7 @@ def _adl_series(bars, start_value):
 
 
 def _obv_series(bars, start_value):
+    """Internal helper for obv series."""
     _ensure(len(bars) >= 1, "OBV requires at least one bar.")
     total = float(start_value)
     series = [total]
@@ -320,6 +358,7 @@ def _obv_series(bars, start_value):
 
 
 def _last_index_of_max(values):
+    """Internal helper for last index of max."""
     best_index = 0
     best_value = values[0]
     for index, value in enumerate(values):
@@ -330,6 +369,7 @@ def _last_index_of_max(values):
 
 
 def _last_index_of_min(values):
+    """Internal helper for last index of min."""
     best_index = 0
     best_value = values[0]
     for index, value in enumerate(values):
@@ -340,6 +380,7 @@ def _last_index_of_min(values):
 
 
 def _macd_line_series(values, fast_window, slow_window):
+    """Internal helper for macd line series."""
     fast_series = _ema_series(values, fast_window)
     slow_series = _ema_series(values, slow_window)
     aligned_fast = fast_series[-len(slow_series) :]
@@ -347,6 +388,7 @@ def _macd_line_series(values, fast_window, slow_window):
 
 
 def _ppo_series(values, fast_window, slow_window):
+    """Internal helper for ppo series."""
     fast_series = _ema_series(values, fast_window)
     slow_series = _ema_series(values, slow_window)
     aligned_fast = fast_series[-len(slow_series) :]
@@ -354,6 +396,7 @@ def _ppo_series(values, fast_window, slow_window):
 
 
 def _dmi_series(bars, window):
+    """Internal helper for dmi series."""
     true_ranges, plus_dms, minus_dms, _vp, _vm, _bp, _utr = _directional_components(bars)
     tr_average = _wilder_average_series(true_ranges, window)
     plus_average = _wilder_average_series(plus_dms, window)
@@ -372,6 +415,7 @@ def _dmi_series(bars, window):
 
 
 def _pack_series(bars, start_index, values):
+    """Internal helper for pack series."""
     _ensure(isinstance(values, list) and values, "Indicator produced no time-series values.")
     _ensure(start_index >= 0, "Indicator start index must be non-negative.")
     _ensure(start_index + len(values) <= len(bars), "Indicator series is longer than the available OHLC bars.")
@@ -390,6 +434,7 @@ def _pack_series(bars, start_index, values):
 
 
 def _compute_indicator():
+    """Internal helper for compute indicator."""
     bars = _normalize_bars()
     pulse_name = str(pulse.get("name") or pulse.get("pulse_name") or "").strip()
     _ensure(pulse_name, "Pulse name is required.")

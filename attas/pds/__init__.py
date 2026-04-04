@@ -1,3 +1,14 @@
+"""
+Public package exports for `attas.pds`.
+
+Attas layers finance-oriented pulse definitions, validation rules, and personal-agent
+workflows on top of the shared runtimes. Within Attas, this area focuses on pulse-
+directory schemas, catalog loading, runtime normalization, and validation.
+
+It re-exports symbols such as `CatalogItem`, `Concept`, `Derivation`, `ExternalRef`, and
+`Governance` so callers can import the package through a stable surface.
+"""
+
 from attas.pds.catalog import (
     InvalidPDSResource,
     PDSCatalogBundle,

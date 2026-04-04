@@ -1,0 +1,57 @@
+{
+  "name": "ADSDispatcher",
+  "host": "127.0.0.1",
+  "port": 8060,
+  "plaza_url": "http://127.0.0.1:8011",
+  "party": "ADS",
+  "type": "ads.agents.ADSDispatcherAgent",
+  "description": "Queue-based Attas Data Services dispatcher.",
+  "pools": [
+    {
+      "type": "PostgresPool",
+      "name": "ads_dispatch_pool",
+      "description": "Shared ADS PostgreSQL queue and normalized data store",
+      "schema": {
+        "env": "ADS_POSTGRES_SCHEMA",
+        "fallback": "public"
+      },
+      "sslmode": {
+        "env": "ADS_POSTGRES_SSLMODE",
+        "fallback": "disable"
+      }
+    }
+  ],
+  "ads": {
+    "job_capabilities": [
+      {
+        "name": "US Listed Sec to security master",
+        "description": "Refresh the U.S. listed security master from Nasdaq Trader symbol directories."
+      },
+      {
+        "name": "US Filing Bulk",
+        "description": "Download SEC EDGAR companyfacts.zip and submissions.zip into raw ADS SEC tables."
+      },
+      {
+        "name": "US Filing Mapping",
+        "description": "Map one company's SEC companyfacts and submissions rows into ADS fundamentals and financial statements."
+      },
+      {
+        "name": "YFinance EOD",
+        "description": "Fetch Yahoo Finance end-of-day prices."
+      },
+      {
+        "name": "YFinance US Market EOD",
+        "description": "Queue per-symbol Yahoo Finance end-of-day jobs for active USD securities oldest-first."
+      },
+      {
+        "name": "TWSE Market EOD",
+        "description": "Fetch Taiwan Stock Exchange market-wide end-of-day prices."
+      },
+      {
+        "name": "RSS News",
+        "description": "Fetch SEC, CFTC, and BLS RSS feeds into ads_news."
+      }
+    ],
+    "auto_register": true
+  }
+}

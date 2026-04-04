@@ -1,3 +1,14 @@
+"""
+Phemar module for `phemacast.agents.phemar`.
+
+Phemacast assembles pulse inputs, phemas, and castrs into rendered research artifacts
+and interactive tooling. Within Phemacast, the agents package contains the actor roles
+that build, bind, and render phemas.
+
+Core types exposed here include `GeneratePhemaPractice`, `Phemar`, and
+`SnapshotPhemaPractice`, which carry the main behavior or state managed by this module.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -34,6 +45,7 @@ ConfigInput = Union[str, Path, Mapping[str, Any]]
 
 
 def _read_config(config: ConfigInput) -> Dict[str, Any]:
+    """Internal helper to read the config."""
     if isinstance(config, Mapping):
         return dict(config)
 
@@ -43,6 +55,7 @@ def _read_config(config: ConfigInput) -> Dict[str, Any]:
 
 
 def _merge_tags(*tag_groups: Any) -> List[str]:
+    """Internal helper to merge the tags."""
     merged: List[str] = []
     for group in tag_groups:
         if not group:
@@ -58,6 +71,7 @@ class GeneratePhemaPractice(Practice):
     """Expose `agent.generate_phema()` as a mounted callable practice."""
 
     def __init__(self):
+        """Initialize the generate phema practice."""
         super().__init__(
             name="Generate Phema",
             description="Resolve a Phema blueprint into a static payload using Plaza pulser practices.",
@@ -70,6 +84,7 @@ class GeneratePhemaPractice(Practice):
         )
 
     def bind(self, agent):
+        """Bind the value."""
         super().bind(agent)
         supported = getattr(agent, "supported_phemas", [])
         self.parameters = {
@@ -98,10 +113,12 @@ class GeneratePhemaPractice(Practice):
         }
 
     def mount(self, app):
+        """Mount the value."""
         router = APIRouter()
 
         @router.post(self.path)
         async def generate_phema(message: Message):
+            """Route handler for POST requests."""
             content = message.content or {}
             if not isinstance(content, dict):
                 raise HTTPException(status_code=400, detail="Phemar content must be a JSON object.")
@@ -110,6 +127,7 @@ class GeneratePhemaPractice(Practice):
         app.include_router(router)
 
     def execute(self, **kwargs) -> Any:
+        """Handle execute for the generate phema practice."""
         if not self.agent:
             raise RuntimeError("GeneratePhemaPractice is not bound to an agent.")
 
@@ -126,6 +144,7 @@ class SnapshotPhemaPractice(Practice):
     """Expose `agent.snapshot_phema()` as a mounted callable practice."""
 
     def __init__(self):
+        """Initialize the snapshot phema practice."""
         super().__init__(
             name="Snapshot Phema",
             description="Generate or reuse a cached static snapshot for a Phema using live Plaza pulse data.",
@@ -138,6 +157,7 @@ class SnapshotPhemaPractice(Practice):
         )
 
     def bind(self, agent):
+        """Bind the value."""
         super().bind(agent)
         supported = getattr(agent, "supported_phemas", [])
         self.parameters = {
@@ -170,10 +190,12 @@ class SnapshotPhemaPractice(Practice):
         }
 
     def mount(self, app):
+        """Mount the value."""
         router = APIRouter()
 
         @router.post(self.path)
         async def snapshot_phema(message: Message):
+            """Route handler for POST requests."""
             content = message.content or {}
             if not isinstance(content, dict):
                 raise HTTPException(status_code=400, detail="Phemar content must be a JSON object.")
@@ -182,6 +204,7 @@ class SnapshotPhemaPractice(Practice):
         app.include_router(router)
 
     def execute(self, **kwargs) -> Any:
+        """Handle execute for the snapshot phema practice."""
         if not self.agent:
             raise RuntimeError("SnapshotPhemaPractice is not bound to an agent.")
 
@@ -223,6 +246,7 @@ class Phemar(StandbyAgent):
         supported_phemas: Optional[List[Dict[str, Any]]] = None,
         auto_register: bool = True,
     ):
+        """Initialize the phemar."""
         config_data = _read_config(config) if config is not None else {}
         resolved_config_path = config_path
         if resolved_config_path is None and isinstance(config, (str, Path)):
@@ -290,6 +314,7 @@ class Phemar(StandbyAgent):
 
     @classmethod
     def from_config(cls, config: ConfigInput, **kwargs: Any) -> "Phemar":
+        """Build an instance from config."""
         return cls(config=config, **kwargs)
 
     @classmethod
@@ -301,6 +326,7 @@ class Phemar(StandbyAgent):
         timeout_sec: int = 10,
         **kwargs: Any,
     ) -> Tuple["Phemar", uvicorn.Server, threading.Thread]:
+        """Start the from config."""
         agent = cls.from_config(config, **kwargs)
         server_config = uvicorn.Config(agent.app, host=agent.host, port=agent.port, log_level=log_level)
         server = uvicorn.Server(server_config)
@@ -323,6 +349,7 @@ class Phemar(StandbyAgent):
         raise RuntimeError(f"Timed out waiting for agent at {health_url}")
 
     def register(self, *, start_reconnect_on_failure: bool = True, request_retries: Optional[int] = None):
+        """Register the value."""
         if self.plaza_token and time.time() < (self.token_expires_at - 60):
             return
         res = super().register(
@@ -355,8 +382,10 @@ class Phemar(StandbyAgent):
         return res
 
     def _setup_phemar_routes(self) -> None:
+        """Internal helper to set up the phemar routes."""
         @self.app.get("/")
         async def phemar_ui(request: Request):
+            """Route handler for GET /."""
             return self.templates.TemplateResponse(
                 request=request,
                 name="phema_editor.html",
@@ -372,6 +401,7 @@ class Phemar(StandbyAgent):
 
         @self.app.get("/phemas/editor")
         async def phemar_editor(request: Request):
+            """Route handler for GET /phemas/editor."""
             return self.templates.TemplateResponse(
                 request=request,
                 name="phema_editor.html",
@@ -387,6 +417,7 @@ class Phemar(StandbyAgent):
 
         @self.app.get("/phemas/editor/{phema_id}")
         async def phemar_editor_existing(request: Request, phema_id: str):
+            """Route handler for GET /phemas/editor/{phema_id}."""
             return self.templates.TemplateResponse(
                 request=request,
                 name="phema_editor.html",
@@ -402,6 +433,7 @@ class Phemar(StandbyAgent):
 
         @self.app.get("/api/config")
         async def get_phemar_config():
+            """Route handler for GET /api/config."""
             return {
                 "status": "success",
                 "config": self._load_config_document(),
@@ -410,6 +442,7 @@ class Phemar(StandbyAgent):
 
         @self.app.get("/api/plazas_status")
         async def get_plaza_status(request: Request):
+            """Route handler for GET /api/plazas_status."""
             pit_type = request.query_params.get("pit_type")
             params = {"pit_type": pit_type} if pit_type else None
             if not self.plaza_url:
@@ -427,14 +460,17 @@ class Phemar(StandbyAgent):
 
         @self.app.get("/api/phemas")
         async def list_phemas(q: str = ""):
+            """Route handler for GET /api/phemas."""
             return {"status": "success", "phemas": self._list_local_phemas(query=q)}
 
         @self.app.get("/api/local/phemas")
         async def list_local_phemas(q: str = ""):
+            """Route handler for GET /api/local/phemas."""
             return {"status": "success", "phemas": self._list_local_phemas(query=q)}
 
         @self.app.get("/api/phemas/{phema_id}")
         async def get_phema(phema_id: str):
+            """Route handler for GET /api/phemas/{phema_id}."""
             row = self._get_local_phema_row(phema_id)
             if row is None:
                 raise HTTPException(status_code=404, detail="Phema not found")
@@ -442,6 +478,7 @@ class Phemar(StandbyAgent):
 
         @self.app.get("/api/plaza/phemas")
         async def list_plaza_phemas(q: str = ""):
+            """Route handler for GET /api/plaza/phemas."""
             phemas, plaza_error = self._safe_list_plaza_phemas(query=q)
             return {
                 "status": "success" if not plaza_error else "degraded",
@@ -452,6 +489,7 @@ class Phemar(StandbyAgent):
 
         @self.app.get("/api/plaza/phemas/{phema_id}")
         async def get_plaza_phema(phema_id: str):
+            """Route handler for GET /api/plaza/phemas/{phema_id}."""
             row = self._get_plaza_phema_row(phema_id)
             if row is None:
                 raise HTTPException(status_code=404, detail="Phema not found on Plaza")
@@ -459,6 +497,7 @@ class Phemar(StandbyAgent):
 
         @self.app.get("/api/phema-snapshots")
         async def list_phema_snapshots(q: str = "", phema_id: str = "", limit: int = 50):
+            """Route handler for GET /api/phema-snapshots."""
             return {
                 "status": "success",
                 "snapshots": self._list_snapshot_history(query=q, phema_id=phema_id, limit=limit),
@@ -466,6 +505,7 @@ class Phemar(StandbyAgent):
 
         @self.app.get("/api/phema-snapshots/{snapshot_id}")
         async def get_phema_snapshot(snapshot_id: str):
+            """Route handler for GET /api/phema-snapshots/{snapshot_id}."""
             row = self._get_snapshot_row(snapshot_id)
             if row is None:
                 raise HTTPException(status_code=404, detail="Phema snapshot not found")
@@ -473,11 +513,13 @@ class Phemar(StandbyAgent):
 
         @self.app.delete("/api/phema-snapshots/{snapshot_id}")
         async def delete_phema_snapshot(snapshot_id: str):
+            """Route handler for DELETE /api/phema-snapshots/{snapshot_id}."""
             self._delete_snapshot_row(snapshot_id)
             return {"status": "success", "snapshot_id": snapshot_id}
 
         @self.app.get("/phema-snapshots/{snapshot_id}/view", response_class=HTMLResponse)
         async def view_phema_snapshot(snapshot_id: str):
+            """Route handler for GET /phema-snapshots/{snapshot_id}/view."""
             row = self._get_snapshot_row(snapshot_id)
             if row is None:
                 raise HTTPException(status_code=404, detail="Phema snapshot not found")
@@ -632,6 +674,7 @@ class Phemar(StandbyAgent):
 
         @self.app.get("/api/phemar/manager")
         async def get_manager_context(q_local: str = "", q_plaza: str = ""):
+            """Route handler for GET /api/phemar/manager."""
             plaza_phemas, plaza_error = self._safe_list_plaza_phemas(query=q_plaza)
             return {
                 "status": "success",
@@ -649,6 +692,7 @@ class Phemar(StandbyAgent):
 
         @self.app.post("/api/phemas")
         async def save_phema(request: Request):
+            """Route handler for POST /api/phemas."""
             payload = await request.json()
             phema_payload = payload.get("phema") if isinstance(payload, dict) and isinstance(payload.get("phema"), dict) else payload
             if not isinstance(phema_payload, dict):
@@ -657,11 +701,13 @@ class Phemar(StandbyAgent):
 
         @self.app.delete("/api/phemas/{phema_id}")
         async def delete_phema(phema_id: str):
+            """Route handler for DELETE /api/phemas/{phema_id}."""
             self._delete_local_phema(phema_id)
             return {"status": "success", "phema_id": phema_id}
 
         @self.app.post("/api/plaza/phemas/register")
         async def register_phema_on_plaza(request: Request):
+            """Route handler for POST /api/plaza/phemas/register."""
             payload = await request.json()
             if not isinstance(payload, dict):
                 raise HTTPException(status_code=400, detail="Plaza registration payload must be a JSON object.")
@@ -674,11 +720,13 @@ class Phemar(StandbyAgent):
 
         @self.app.delete("/api/plaza/phemas/{phema_id}")
         async def deregister_phema_from_plaza(phema_id: str):
+            """Route handler for DELETE /api/plaza/phemas/{phema_id}."""
             self._deregister_phema_from_plaza(phema_id)
             return {"status": "success", "phema_id": phema_id}
 
         @self.app.post("/api/pulsers/test")
         async def run_pulser_test(request: Request):
+            """Route handler for POST /api/pulsers/test."""
             payload = await request.json()
             if not isinstance(payload, dict):
                 raise HTTPException(status_code=400, detail="Pulser test payload must be a JSON object.")
@@ -712,6 +760,7 @@ class Phemar(StandbyAgent):
 
         @self.app.post("/api/generate-phema")
         async def generate_phema_api(request: Request):
+            """Route handler for POST /api/generate-phema."""
             payload = await request.json()
             if not isinstance(payload, dict):
                 raise HTTPException(status_code=400, detail="Generate payload must be a JSON object.")
@@ -725,6 +774,7 @@ class Phemar(StandbyAgent):
 
         @self.app.post("/api/phemas/snapshot")
         async def snapshot_phema_api(request: Request):
+            """Route handler for POST /api/phemas/snapshot."""
             payload = await request.json()
             if not isinstance(payload, dict):
                 raise HTTPException(status_code=400, detail="Snapshot payload must be a JSON object.")
@@ -741,6 +791,7 @@ class Phemar(StandbyAgent):
 
         @self.app.post("/api/phemas/static")
         async def save_static_phema(request: Request):
+            """Route handler for POST /api/phemas/static."""
             payload = await request.json()
             if not isinstance(payload, dict):
                 raise HTTPException(status_code=400, detail="Static Phema payload must be a JSON object.")
@@ -760,6 +811,7 @@ class Phemar(StandbyAgent):
 
     @staticmethod
     def _normalize_supported_phemas(raw_supported_phemas: Any) -> List[Phema]:
+        """Internal helper to normalize the supported phemas."""
         if not raw_supported_phemas:
             return []
 
@@ -774,17 +826,20 @@ class Phemar(StandbyAgent):
 
     @staticmethod
     def _phema_summary(phema: Phema) -> Dict[str, Any]:
+        """Internal helper to return the phema summary."""
         return {
             "phema_id": phema.phema_id,
             "name": phema.name,
             "address": phema.resolved_address,
             "tags": list(phema.tags),
             "input_schema": dict(phema.input_schema),
+            "output_schema": dict(getattr(phema, "output_schema", {}) or {}),
             "sections": [section.to_dict() for section in phema.sections],
             "snapshot_cache_time": int(getattr(phema, "snapshot_cache_time", 0) or 0),
         }
 
     def _refresh_supported_phema_metadata(self) -> None:
+        """Internal helper for refresh supported phema metadata."""
         meta = dict(self.agent_card.get("meta") or {})
         meta["supported_phemas"] = [self._phema_summary(phema) for phema in self.supported_phemas]
         self.agent_card["meta"] = meta
@@ -797,6 +852,7 @@ class Phemar(StandbyAgent):
                     self._persist_practice_to_pool(entry, is_deleted=False)
 
     def _ensure_local_phema_table(self) -> None:
+        """Internal helper to ensure the local phema table exists."""
         if not self.pool:
             return
         if self.pool._TableExists(self.PHEMA_TABLE):
@@ -804,6 +860,7 @@ class Phemar(StandbyAgent):
         self.pool._CreateTable(self.PHEMA_TABLE, phemas_table_schema())
 
     def _ensure_snapshot_table(self) -> None:
+        """Internal helper to ensure the snapshot table exists."""
         if not self.pool:
             return
         if self.pool._TableExists(self.PHEMA_SNAPSHOT_TABLE):
@@ -812,6 +869,7 @@ class Phemar(StandbyAgent):
 
     @staticmethod
     def _parse_snapshot_cache_seconds(*values: Any) -> int:
+        """Internal helper to parse the snapshot cache seconds."""
         for value in values:
             if value is None or value == "":
                 continue
@@ -824,6 +882,7 @@ class Phemar(StandbyAgent):
 
     @staticmethod
     def _parse_datetime(value: Any) -> Optional[datetime]:
+        """Internal helper to parse the datetime."""
         if isinstance(value, datetime):
             return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
         if isinstance(value, str) and value:
@@ -836,10 +895,12 @@ class Phemar(StandbyAgent):
 
     @staticmethod
     def _snapshot_params_hash(params: Dict[str, Any]) -> str:
+        """Internal helper to return the snapshot params hash."""
         serialized = json.dumps(params or {}, sort_keys=True, separators=(",", ":"), default=str)
         return hashlib.sha256(serialized.encode("utf-8")).hexdigest()
 
     def _load_snapshot_rows(self) -> List[Dict[str, Any]]:
+        """Internal helper to load the snapshot rows."""
         if self.pool:
             self._ensure_snapshot_table()
             rows = self.pool._GetTableData(self.PHEMA_SNAPSHOT_TABLE) or []
@@ -847,6 +908,7 @@ class Phemar(StandbyAgent):
         return [dict(row) for row in self._snapshot_rows.values()]
 
     def _normalize_snapshot_row(self, row: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Internal helper to normalize the snapshot row."""
         if not isinstance(row, dict):
             return None
         snapshot_id = str(row.get("id") or "").strip()
@@ -876,6 +938,7 @@ class Phemar(StandbyAgent):
         }
 
     def _persist_snapshot_row(self, row: Dict[str, Any]) -> None:
+        """Internal helper to persist the snapshot row."""
         if self.pool:
             self._ensure_snapshot_table()
             persisted = self.pool._Insert(self.PHEMA_SNAPSHOT_TABLE, row)
@@ -884,6 +947,7 @@ class Phemar(StandbyAgent):
         self._snapshot_rows[str(row.get("id") or "")] = dict(row)
 
     def _get_snapshot_row(self, snapshot_id: str) -> Optional[Dict[str, Any]]:
+        """Internal helper to return the snapshot row."""
         if not snapshot_id:
             return None
         if self.pool:
@@ -901,6 +965,7 @@ class Phemar(StandbyAgent):
         phema_id: str = "",
         limit: int = 50,
     ) -> List[Dict[str, Any]]:
+        """Internal helper to list the snapshot history."""
         rows = [self._normalize_snapshot_row(row) for row in self._load_snapshot_rows()]
         rows = [row for row in rows if row]
         normalized_phema_id = str(phema_id or "").strip()
@@ -925,6 +990,7 @@ class Phemar(StandbyAgent):
         return rows[: max(int(limit), 0)]
 
     def _is_snapshot_fresh(self, row: Dict[str, Any], cache_ttl_seconds: int, now: Optional[datetime] = None) -> bool:
+        """Return whether the value is a snapshot fresh."""
         if cache_ttl_seconds <= 0:
             return False
         current_time = now or datetime.now(timezone.utc)
@@ -943,6 +1009,7 @@ class Phemar(StandbyAgent):
         params_hash: str,
         cache_ttl_seconds: int,
     ) -> Optional[Dict[str, Any]]:
+        """Internal helper to find the cached snapshot."""
         if cache_ttl_seconds <= 0:
             return None
         current_time = datetime.now(timezone.utc)
@@ -955,6 +1022,7 @@ class Phemar(StandbyAgent):
         return None
 
     def _normalize_phema_row(self, row: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Internal helper to normalize the phema row."""
         if not isinstance(row, dict):
             return None
         phema_id = str(row.get("id") or row.get("phema_id") or row.get("agent_id") or "").strip()
@@ -977,6 +1045,7 @@ class Phemar(StandbyAgent):
             "address": str(row.get("address") or ""),
             "tags": list(row.get("tags") or []),
             "input_schema": dict(row.get("input_schema") or {}),
+            "output_schema": dict(row.get("output_schema") or {}),
             "sections": sections,
             "resolution_mode": resolution_mode,
             "meta": meta,
@@ -985,6 +1054,7 @@ class Phemar(StandbyAgent):
         }
 
     def _delete_pool_row(self, table_name: str, row_id: str) -> None:
+        """Internal helper to delete the pool row."""
         if not self.pool or not row_id:
             return
 
@@ -1015,6 +1085,7 @@ class Phemar(StandbyAgent):
             supabase.table(table_name).delete().eq("id", row_id).execute()
 
     def _delete_snapshot_row(self, snapshot_id: str) -> None:
+        """Internal helper to delete the snapshot row."""
         if not snapshot_id:
             raise HTTPException(status_code=400, detail="snapshot_id is required")
         existing = self._get_snapshot_row(snapshot_id)
@@ -1024,6 +1095,7 @@ class Phemar(StandbyAgent):
         self._snapshot_rows.pop(snapshot_id, None)
 
     def _bootstrap_local_phema_store(self) -> None:
+        """Internal helper for bootstrap local phema store."""
         if not self.pool:
             return
         try:
@@ -1067,6 +1139,7 @@ class Phemar(StandbyAgent):
             return
 
     def _synthesize_runtime_config(self) -> Dict[str, Any]:
+        """Internal helper to return the synthesize runtime config."""
         return {
             "name": self.agent_card.get("name", self.name),
             "type": "phemacast.agents.phemar.Phemar",
@@ -1086,6 +1159,7 @@ class Phemar(StandbyAgent):
         }
 
     def _normalize_config_document(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        """Internal helper to normalize the config document."""
         document = dict(config or {})
         document.setdefault("name", self.agent_card.get("name", self.name))
         document.setdefault("type", "phemacast.agents.phemar.Phemar")
@@ -1124,6 +1198,7 @@ class Phemar(StandbyAgent):
         return document
 
     def _load_config_document(self) -> Dict[str, Any]:
+        """Internal helper to load the config document."""
         if self.config_path and self.config_path.exists():
             with self.config_path.open("r", encoding="utf-8") as fh:
                 loaded = json.load(fh)
@@ -1132,6 +1207,7 @@ class Phemar(StandbyAgent):
         return self._normalize_config_document(self.raw_config or self._synthesize_runtime_config())
 
     def _save_config_document(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        """Internal helper to save the config document."""
         normalized = self._normalize_config_document(config)
         if self.config_path:
             self.config_path.parent.mkdir(parents=True, exist_ok=True)
@@ -1144,16 +1220,19 @@ class Phemar(StandbyAgent):
 
     @staticmethod
     def _serialize_config_phema(entry: Any) -> Dict[str, Any]:
+        """Internal helper to serialize the config phema."""
         if isinstance(entry, Phema):
             return entry.to_dict()
         return Phema.from_dict(dict(entry)).to_dict()
 
     @staticmethod
     def _new_phema_id(name: str) -> str:
+        """Internal helper for new phema ID."""
         normalized_name = str(name or "").strip().lower() or f"phema-{uuid.uuid4().hex[:8]}"
         return str(uuid.uuid5(uuid.NAMESPACE_URL, f"phemar-phema:{normalized_name}"))
 
     def _row_for_phema(self, phema: Phema) -> Dict[str, Any]:
+        """Internal helper to return the row for the phema."""
         row = phema.to_dict()
         timestamps = self._phema_timestamps.get(phema.phema_id, {})
         now = datetime.now(timezone.utc).isoformat()
@@ -1162,6 +1241,7 @@ class Phemar(StandbyAgent):
         return row
 
     def _sync_supported_phemas_from_local_rows(self, rows: List[Dict[str, Any]]) -> None:
+        """Internal helper to synchronize the supported phemas from local rows."""
         loaded: List[Phema] = []
         for row in rows:
             normalized = self._normalize_phema_row(row)
@@ -1178,6 +1258,7 @@ class Phemar(StandbyAgent):
         plaza_rows: Optional[List[Dict[str, Any]]] = None,
         plaza_lookup_failed: bool = False,
     ) -> List[Dict[str, Any]]:
+        """Internal helper to list the local phemas."""
         rows: List[Dict[str, Any]] = []
         if self.pool:
             self._ensure_local_phema_table()
@@ -1218,6 +1299,7 @@ class Phemar(StandbyAgent):
         plaza_rows: Optional[List[Dict[str, Any]]] = None,
         plaza_lookup_failed: bool = False,
     ) -> List[Dict[str, Any]]:
+        """Internal helper to return the annotate local phemas with Plaza status."""
         if not rows:
             return []
 
@@ -1276,6 +1358,7 @@ class Phemar(StandbyAgent):
         return annotated
 
     def _safe_list_plaza_phemas(self, query: str = "") -> Tuple[List[Dict[str, Any]], str]:
+        """Internal helper for safe list Plaza phemas."""
         try:
             return self._list_plaza_phemas(query=query), ""
         except requests.RequestException as exc:
@@ -1284,6 +1367,7 @@ class Phemar(StandbyAgent):
             return [], str(exc)
 
     def _get_local_phema(self, phema_id: str) -> Optional[Phema]:
+        """Internal helper to return the local phema."""
         row = self._get_local_phema_row(phema_id)
         if row:
             return Phema.from_dict(row)
@@ -1293,6 +1377,7 @@ class Phemar(StandbyAgent):
         return None
 
     def _get_local_phema_row(self, phema_id: str) -> Optional[Dict[str, Any]]:
+        """Internal helper to return the local phema row."""
         if self.pool and phema_id:
             self._ensure_local_phema_table()
             rows = self.pool._GetTableData(self.PHEMA_TABLE, {"id": phema_id}) or []
@@ -1304,6 +1389,7 @@ class Phemar(StandbyAgent):
         return None
 
     def _persist_supported_phemas(self) -> None:
+        """Internal helper to persist the supported phemas."""
         config = self._load_config_document()
         nested = dict(config.get("phemar") or {})
         nested["supported_phemas"] = [phema.to_dict() for phema in self.supported_phemas]
@@ -1311,6 +1397,7 @@ class Phemar(StandbyAgent):
         self._save_config_document(config)
 
     def _save_local_phema(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Internal helper to save the local phema."""
         if not isinstance(payload, dict):
             raise HTTPException(status_code=400, detail="Phema payload must be an object.")
 
@@ -1367,6 +1454,7 @@ class Phemar(StandbyAgent):
         return self._row_for_phema(phema)
 
     def _delete_local_phema(self, phema_id: str) -> None:
+        """Internal helper to delete the local phema."""
         if not phema_id:
             raise HTTPException(status_code=404, detail="Phema not found")
         remaining = [phema for phema in self.supported_phemas if phema.phema_id != phema_id]
@@ -1380,6 +1468,7 @@ class Phemar(StandbyAgent):
         self._refresh_supported_phema_metadata()
 
     def _plaza_owner_values(self) -> set[str]:
+        """Internal helper to return the Plaza owner values."""
         values = {self.name}
         if self.agent_id:
             values.add(str(self.agent_id))
@@ -1389,10 +1478,12 @@ class Phemar(StandbyAgent):
         return {value for value in values if value}
 
     def _can_edit_plaza_phema(self, row: Mapping[str, Any]) -> bool:
+        """Return whether the value can edit Plaza phema."""
         owner = str(row.get("owner") or (row.get("card") or {}).get("owner") or "").strip()
         return bool(owner and owner in self._plaza_owner_values())
 
     def _normalize_plaza_phema_row(self, row: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Internal helper to normalize the Plaza phema row."""
         if not isinstance(row, dict):
             return None
         card = row.get("card") if isinstance(row.get("card"), dict) else {}
@@ -1427,6 +1518,7 @@ class Phemar(StandbyAgent):
         return normalized
 
     def _list_plaza_phemas(self, query: str = "") -> List[Dict[str, Any]]:
+        """Internal helper to list the Plaza phemas."""
         rows = self._search_directory(pit_type="Phema")
         normalized_rows = [self._normalize_plaza_phema_row(row) for row in rows]
         normalized_rows = [row for row in normalized_rows if row]
@@ -1449,6 +1541,7 @@ class Phemar(StandbyAgent):
         return normalized_rows
 
     def _get_plaza_phema_row(self, phema_id: str) -> Optional[Dict[str, Any]]:
+        """Internal helper to return the Plaza phema row."""
         if not phema_id:
             return None
         matches = self._search_directory(agent_id=phema_id, pit_type="Phema")
@@ -1467,6 +1560,7 @@ class Phemar(StandbyAgent):
         phema_id: Optional[str] = None,
         registration_mode: Optional[str] = None,
     ) -> Dict[str, Any]:
+        """Internal helper to register the phema on Plaza."""
         if not self.plaza_url:
             raise HTTPException(status_code=400, detail="Plaza URL is not configured for this Phemar")
 
@@ -1510,6 +1604,7 @@ class Phemar(StandbyAgent):
         return normalized or payload
 
     def _deregister_phema_from_plaza(self, phema_id: str) -> None:
+        """Internal helper for deregister phema from Plaza."""
         if not self.plaza_url:
             raise HTTPException(status_code=400, detail="Plaza URL is not configured for this Phemar")
         existing = self._get_plaza_phema_row(phema_id)
@@ -1537,6 +1632,7 @@ class Phemar(StandbyAgent):
         tags: Optional[List[Any]] = None,
         meta: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
+        """Internal helper to save the static phema."""
         source_phema = self._resolve_phema(phema=phema, phema_id=phema_id, phema_name=phema_name)
         generated = self.generate_phema(
             phema=source_phema,
@@ -1568,11 +1664,13 @@ class Phemar(StandbyAgent):
         tags: Optional[List[Any]] = None,
         meta: Optional[Dict[str, Any]] = None,
     ) -> Phema:
+        """Internal helper to build the static snapshot phema."""
         snapshot_time = datetime.now(timezone.utc).isoformat()
         fetch_catalog: List[Dict[str, Any]] = []
         fetch_id_by_signature: Dict[str, str] = {}
 
         def _pit_address_dict(value: Any = None, *, fallback_id: Any = None) -> Dict[str, Any]:
+            """Internal helper for pit address dict."""
             candidate = value if value not in (None, "") else fallback_id
             pit_address = PitAddress.from_value(candidate)
             if not pit_address.pit_id and candidate not in (None, ""):
@@ -1584,6 +1682,7 @@ class Phemar(StandbyAgent):
             return pit_address.to_dict() if pit_address.pit_id else {}
 
         def _register_fetch(entry: Dict[str, Any]) -> str:
+            """Internal helper to register the fetch."""
             fetch_payload = dict(entry.get("result") or {}) if isinstance(entry.get("result"), dict) else {}
             fetch_meta = dict(fetch_payload.get("fetch") or {}) if isinstance(fetch_payload.get("fetch"), dict) else {}
             fetch_record = {
@@ -1620,6 +1719,7 @@ class Phemar(StandbyAgent):
             return fetch_id
 
         def _extract_snapshot_value(entry: Dict[str, Any]) -> Any:
+            """Internal helper to extract the snapshot value."""
             result_payload = dict(entry.get("result") or {}) if isinstance(entry.get("result"), dict) else {}
             if entry.get("field_path"):
                 return result_payload.get("display_value")
@@ -1684,6 +1784,7 @@ class Phemar(StandbyAgent):
                 "owner": str(owner or source_phema.owner or self.name).strip(),
                 "tags": merged_tags,
                 "input_schema": dict(source_phema.input_schema),
+                "output_schema": dict(getattr(source_phema, "output_schema", {}) or {}),
                 "sections": static_sections,
                 "meta": merged_meta,
                 "resolution_mode": "static",
@@ -1702,6 +1803,7 @@ class Phemar(StandbyAgent):
         cache_seconds: Optional[Any] = None,
         cache_ttl_seconds: Optional[Any] = None,
     ) -> Dict[str, Any]:
+        """Return the snapshot phema."""
         source_phema = self._resolve_phema(phema=phema, phema_id=phema_id, phema_name=phema_name)
         runtime_params = dict(params or input_data or {})
         resolved_cache_ttl = self._parse_snapshot_cache_seconds(
@@ -1780,6 +1882,7 @@ class Phemar(StandbyAgent):
 
     @staticmethod
     def _resolve_path(data: Any, path: str) -> Any:
+        """Internal helper to resolve the path."""
         current = data
         remaining = str(path or "").strip()
         if not remaining:
@@ -1821,6 +1924,7 @@ class Phemar(StandbyAgent):
 
     @staticmethod
     def _assign_path(data: Dict[str, Any], path: str, value: Any) -> None:
+        """Internal helper to return the assign path."""
         current = data
         parts = [part for part in str(path or "").split(".") if part]
         if not parts:
@@ -1834,6 +1938,7 @@ class Phemar(StandbyAgent):
         current[parts[-1]] = value
 
     def _project_selected_fields(self, payload: Any, selected_fields: List[str]) -> Any:
+        """Internal helper for project selected fields."""
         if not selected_fields:
             return payload
         if not isinstance(payload, (dict, list)):
@@ -1846,6 +1951,7 @@ class Phemar(StandbyAgent):
         return projected or {}
 
     def _normalize_content_item(self, item: Any) -> Dict[str, Any]:
+        """Internal helper to normalize the content item."""
         if isinstance(item, str):
             pit_address = PitAddress.from_value(item)
             if pit_address.pit_id:
@@ -1894,6 +2000,7 @@ class Phemar(StandbyAgent):
         phema_id: Optional[str] = None,
         phema_name: Optional[str] = None,
     ) -> Phema:
+        """Internal helper to resolve the phema."""
         if isinstance(phema, Phema):
             return phema
         if isinstance(phema, Mapping):
@@ -1918,6 +2025,7 @@ class Phemar(StandbyAgent):
         raise ValueError("Phema is required. Provide `phema`, `phema_id`, or `phema_name`.")
 
     def _search_directory(self, **params: Any) -> List[Dict[str, Any]]:
+        """Internal helper to search the directory."""
         if not self.plaza_url:
             return []
 
@@ -1939,6 +2047,7 @@ class Phemar(StandbyAgent):
         return payload if isinstance(payload, list) else []
 
     def _resolve_target_pit_address(self, definition: Mapping[str, Any]) -> Optional[PitAddress]:
+        """Internal helper to resolve the target pit address."""
         explicit_address = definition.get("pit_address")
         if isinstance(explicit_address, Mapping):
             return self._coerce_pit_address(explicit_address)
@@ -1977,6 +2086,7 @@ class Phemar(StandbyAgent):
         return self._coerce_pit_address((results[0].get("card") or {}).get("pit_address"))
 
     def _resolve_pulser_fetch_cost(self, definition: Mapping[str, Any], target: Optional[PitAddress]) -> float:
+        """Internal helper to resolve the pulser fetch cost."""
         pulser_id = str((definition.get("pulser_id") or (target.pit_id if target else "") or "")).strip()
         if not pulser_id:
             return 0
@@ -1999,6 +2109,7 @@ class Phemar(StandbyAgent):
 
     @staticmethod
     def _build_content_fetch_cache_key(definition: Mapping[str, Any], merged_params: Mapping[str, Any]) -> str:
+        """Internal helper to build the content fetch cache key."""
         return json.dumps(
             {
                 "pulse_name": definition.get("pulse_name"),
@@ -2017,6 +2128,7 @@ class Phemar(StandbyAgent):
         params: Dict[str, Any],
         cache: Optional[Dict[str, Dict[str, Any]]] = None,
     ) -> Dict[str, Any]:
+        """Internal helper to fetch the pulse content."""
         pulse_name = definition.get("pulse_name")
         pulse_address = definition.get("pulse_address")
         merged_params = dict(params or {})
@@ -2113,6 +2225,7 @@ class Phemar(StandbyAgent):
         params: Dict[str, Any],
         cache: Optional[Dict[str, Dict[str, Any]]] = None,
     ) -> Dict[str, Any]:
+        """Internal helper to fetch the content item."""
         if definition.get("static"):
             return {
                 "status": "ok",
@@ -2144,6 +2257,7 @@ class Phemar(StandbyAgent):
         params: Optional[Dict[str, Any]] = None,
         input_data: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
+        """Generate the phema."""
         resolved_phema = self._resolve_phema(phema=phema, phema_id=phema_id, phema_name=phema_name)
         runtime_params = dict(params or input_data or {})
 

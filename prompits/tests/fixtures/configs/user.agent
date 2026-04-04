@@ -1,0 +1,30 @@
+{
+    "name": "user-agent",
+    "type": "prompits.agents.user.UserAgent",
+    "host": "127.0.0.1",
+    "port": 8034,
+    "plaza_url": "http://127.0.0.1:8011",
+    "plaza_urls": [
+        "http://127.0.0.1:8011"
+    ],
+    "pools": [
+        {
+            "type": "FileSystemPool",
+            "name": "user_agent_pool",
+            "description": "Local pool for the Prompits user-agent UI.",
+            "root_path": "prompits/tests/fixtures/storage/user_agent"
+        }
+    ],
+    "agent_card": {
+        "name": "user-agent",
+        "description": "Prompits user-agent UI for multi-plaza discovery and result generation.",
+        "role": "frontend",
+        "tags": ["ui", "dashboard", "orchestration"]
+    },
+    "user_agent": {
+        "plaza_urls": [
+            "http://127.0.0.1:8011"
+        ],
+        "applications": []
+    }
+}

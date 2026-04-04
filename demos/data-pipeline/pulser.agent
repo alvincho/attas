@@ -1,0 +1,19 @@
+{
+  "name": "SQLiteADSPulser",
+  "host": "127.0.0.1",
+  "port": 9062,
+  "party": "ADS",
+  "type": "ads.pulser.ADSPulser",
+  "description": "ADS pulser exposing the local SQLite-backed demo tables.",
+  "pools": [
+    {
+      "type": "SQLitePool",
+      "name": "ads_pulser_pool",
+      "description": "Shared demo ADS data store.",
+      "db_path": "demos/data-pipeline/storage/ads_dispatcher.sqlite"
+    }
+  ],
+  "ads": {
+    "auto_register": false
+  }
+}

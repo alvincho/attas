@@ -1,3 +1,18 @@
+"""
+Regression tests for Path Pulser.
+
+Phemacast assembles pulse inputs, phemas, and castrs into rendered research artifacts
+and interactive tooling. These tests protect the Phemacast pipeline, demo flows, UI
+helpers, and pulser integrations.
+
+The pytest cases in this file document expected behavior through checks such as
+`test_path_pulser_editor_hydrates_file_backed_test_data_for_runner`,
+`test_path_pulser_conditionally_fetches_branch_steps`,
+`test_path_pulser_loads_relative_script_and_test_data_files`, and
+`test_path_pulser_applies_mapping_to_composed_result`, helping guard against regressions
+as the packages evolve.
+"""
+
 import json
 import os
 import sys
@@ -12,20 +27,28 @@ from prompits.tests.test_support import build_agent_from_config
 
 
 class FakePostResponse:
+    """Response model for fake post payloads."""
     def __init__(self, payload, status_code=200):
+        """Initialize the fake post response."""
         self._payload = payload
         self.status_code = status_code
         self.text = json.dumps(payload)
         self.content = self.text.encode("utf-8")
 
     def json(self):
+        """Handle JSON for the fake post response."""
         return self._payload
 
 
 def test_path_pulser_combines_multiple_upstream_pulsers(monkeypatch):
+    """
+    Exercise the test_path_pulser_combines_multiple_upstream_pulsers regression
+    scenario.
+    """
     captured = []
 
     def fake_post(url, json=None, timeout=30):
+        """Handle fake post."""
         captured.append({"url": url, "json": json, "timeout": timeout})
         pulse_name = json["content"]["pulse_name"]
         params = json["content"]["params"]
@@ -114,7 +137,12 @@ def test_path_pulser_combines_multiple_upstream_pulsers(monkeypatch):
 
 
 def test_path_pulser_applies_mapping_to_composed_result(monkeypatch):
+    """
+    Exercise the test_path_pulser_applies_mapping_to_composed_result regression
+    scenario.
+    """
     def fake_post(url, json=None, timeout=30):
+        """Handle fake post."""
         pulse_name = json["content"]["pulse_name"]
         if pulse_name == "last_price":
             return FakePostResponse({"symbol": "MSFT", "last_price": 401.25, "currency": "USD"})
@@ -162,9 +190,14 @@ def test_path_pulser_applies_mapping_to_composed_result(monkeypatch):
 
 
 def test_path_pulser_conditionally_fetches_branch_steps(monkeypatch):
+    """
+    Exercise the test_path_pulser_conditionally_fetches_branch_steps regression
+    scenario.
+    """
     captured = []
 
     def fake_post(url, json=None, timeout=30):
+        """Handle fake post."""
         captured.append({"url": url, "json": json, "timeout": timeout})
         return FakePostResponse(
             {
@@ -277,9 +310,14 @@ def test_path_pulser_conditionally_fetches_branch_steps(monkeypatch):
 
 
 def test_path_pulser_includes_remote_caller_metadata_for_upstream_calls(monkeypatch):
+    """
+    Exercise the test_path_pulser_includes_remote_caller_metadata_for_upstream_calls
+    regression scenario.
+    """
     captured = []
 
     def fake_post(url, json=None, timeout=30):
+        """Handle fake post."""
         captured.append({"url": url, "json": json, "timeout": timeout})
         return FakePostResponse({"symbol": "AAPL", "last_price": 214.37})
 
@@ -330,7 +368,12 @@ def test_path_pulser_includes_remote_caller_metadata_for_upstream_calls(monkeypa
 
 
 def test_path_pulser_unwraps_remote_practice_results(monkeypatch):
+    """
+    Exercise the test_path_pulser_unwraps_remote_practice_results regression
+    scenario.
+    """
     def fake_post(url, json=None, timeout=30):
+        """Handle fake post."""
         return FakePostResponse(
             {
                 "status": "ok",
@@ -369,7 +412,13 @@ def test_path_pulser_unwraps_remote_practice_results(monkeypatch):
 
 
 def test_path_pulser_marks_unfinished_when_final_step_does_not_match_output_schema(monkeypatch):
+    """
+    Exercise the
+    test_path_pulser_marks_unfinished_when_final_step_does_not_match_output_schema
+    regression scenario.
+    """
     def fake_post(url, json=None, timeout=30):
+        """Handle fake post."""
         return FakePostResponse({"symbol": "AAPL", "last_price": 214.37})
 
     monkeypatch.setattr("phemacast.pulsers.path_pulser.requests.post", fake_post)
@@ -418,6 +467,10 @@ def test_path_pulser_marks_unfinished_when_final_step_does_not_match_output_sche
 
 
 def test_path_pulser_has_config_ui_and_test_endpoint(tmp_path, monkeypatch):
+    """
+    Exercise the test_path_pulser_has_config_ui_and_test_endpoint regression
+    scenario.
+    """
     pool_dir = tmp_path / "storage"
     config_path = tmp_path / "demo_path.pulser"
     config_path.write_text(
@@ -467,6 +520,7 @@ def test_path_pulser_has_config_ui_and_test_endpoint(tmp_path, monkeypatch):
     )
 
     def fake_post(url, json=None, timeout=30):
+        """Handle fake post."""
         return FakePostResponse({"symbol": json["content"]["params"]["symbol"], "last_price": 133.7, "currency": "USD"})
 
     monkeypatch.setattr("phemacast.pulsers.path_pulser.requests.post", fake_post)
@@ -496,6 +550,12 @@ def test_path_pulser_has_config_ui_and_test_endpoint(tmp_path, monkeypatch):
         assert payload["name"] == "DemoPathPulser"
         assert payload["supported_pulses"][0]["test_data"]["symbol"] == "NVDA"
         assert payload["supported_pulses"][0]["steps"][0]["name"] == "compose"
+
+        invalid_payload = json.loads(json.dumps(payload))
+        invalid_payload["supported_pulses"][0]["test_data"] = {}
+        invalid_save = client.post("/api/config", json={"config": invalid_payload})
+        assert invalid_save.status_code == 400
+        assert "at least one set of test parameters" in invalid_save.json()["detail"]
 
         payload["description"] = "Updated path pulser"
         payload["supported_pulses"][0]["result_path"] = "steps.compose"
@@ -530,6 +590,10 @@ def test_path_pulser_has_config_ui_and_test_endpoint(tmp_path, monkeypatch):
 
 
 def test_path_pulser_editor_hydrates_file_backed_test_data_for_runner(tmp_path):
+    """
+    Exercise the test_path_pulser_editor_hydrates_file_backed_test_data_for_runner
+    regression scenario.
+    """
     config_dir = tmp_path / "configs"
     data_dir = tmp_path / "data"
     pool_dir = tmp_path / "storage"
@@ -644,6 +708,10 @@ def test_path_pulser_editor_hydrates_file_backed_test_data_for_runner(tmp_path):
 
 
 def test_path_pulser_loads_relative_script_and_test_data_files(tmp_path):
+    """
+    Exercise the test_path_pulser_loads_relative_script_and_test_data_files
+    regression scenario.
+    """
     config_dir = tmp_path / "configs"
     script_dir = tmp_path / "scripts"
     data_dir = tmp_path / "data"

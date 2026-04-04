@@ -1,3 +1,14 @@
+"""
+Pathfinding helpers for `prompits.core.pathfinder`.
+
+Prompits provides the core HTTP-native agent runtime, Plaza coordination layer, and
+pool/practice infrastructure for FinMAS. Within Prompits, the core package defines the
+shared abstractions that the rest of the runtime builds on.
+
+Core types exposed here include `FileMetricExporter`, `Pathfinder`, `PathfinderState`,
+and `PathfinderStatus`, which carry the main behavior or state managed by this module.
+"""
+
 # Pathfinder is a service
 # It takes a pathway and parameters
 # the run method runs the posts in the pathway with the given parameters
@@ -45,6 +56,7 @@ class PathfinderState:
     PathfinderState is a class that contains the state of a pathway run.
     """
     def __init__(self, pouch: Pouch):
+        """Initialize the pathfinder state."""
         self.pouch = pouch
         self.status : PathfinderStatus = PathfinderStatus.STANDBY
         self.pathway : Pathway = None

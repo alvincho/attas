@@ -1,3 +1,15 @@
+"""
+Typed data models for `attas.pds.models`.
+
+Attas layers finance-oriented pulse definitions, validation rules, and personal-agent
+workflows on top of the shared runtimes. Within Attas, this area focuses on pulse-
+directory schemas, catalog loading, runtime normalization, and validation.
+
+Key definitions include `BasePDSResource`, `CatalogItem`, `Concept`, and
+`parse_pds_resource`, which provide the main entry points used by neighboring modules
+and tests.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -28,11 +40,13 @@ JsonObject = Dict[str, Any]
 
 
 def _split_known_fields(payload: JsonObject, known_fields: List[str]) -> JsonObject:
+    """Internal helper for split known fields."""
     return {key: value for key, value in payload.items() if key not in known_fields}
 
 
 @dataclass(frozen=True)
 class ExternalRef:
+    """Represent an external ref."""
     system: str
     ref: str
     relation: RelationType
@@ -43,6 +57,7 @@ class ExternalRef:
 
 @dataclass(frozen=True)
 class Concept:
+    """Represent a concept."""
     definition: str
     entity_types: List[str] = field(default_factory=list)
     tags: List[str] = field(default_factory=list)
@@ -56,6 +71,7 @@ class Concept:
 
 @dataclass(frozen=True)
 class PulseInterface:
+    """Represent a pulse interface."""
     schema_language: str
     request_schema: JsonObject
     response_schema: JsonObject
@@ -64,6 +80,7 @@ class PulseInterface:
 
 @dataclass(frozen=True)
 class Interop:
+    """Represent an interop."""
     aliases: List[str] = field(default_factory=list)
     external_refs: List[ExternalRef] = field(default_factory=list)
     related_pulses: List[str] = field(default_factory=list)
@@ -72,6 +89,7 @@ class Interop:
 
 @dataclass(frozen=True)
 class Derivation:
+    """Represent a derivation."""
     input_pulse_ids: List[str] = field(default_factory=list)
     method_type: Optional[str] = None
     method_ref: Optional[str] = None
@@ -82,6 +100,7 @@ class Derivation:
 
 @dataclass(frozen=True)
 class Governance:
+    """Represent a governance."""
     owner: Optional[str] = None
     license: Optional[str] = None
     created_at: Optional[str] = None
@@ -93,11 +112,13 @@ class Governance:
 
 @dataclass(frozen=True)
 class CatalogItem:
+    """Represent a catalog item."""
     ref: str
 
 
 @dataclass(frozen=True)
 class BasePDSResource:
+    """Represent a base PDS resource."""
     pds_version: str
     resource_type: ResourceType
     id: str
@@ -106,6 +127,7 @@ class BasePDSResource:
 
 @dataclass(frozen=True)
 class PulseDefinition(BasePDSResource):
+    """Represent a pulse definition."""
     title: str
     description: str
     pulse_class: PulseClass
@@ -123,6 +145,7 @@ class PulseDefinition(BasePDSResource):
 
 @dataclass(frozen=True)
 class PulseProfile(BasePDSResource):
+    """Represent a pulse profile."""
     base_pulse_id: str
     application: Optional[str] = None
     constraints: JsonObject = field(default_factory=dict)
@@ -133,6 +156,7 @@ class PulseProfile(BasePDSResource):
 
 @dataclass(frozen=True)
 class PulseMapping(BasePDSResource):
+    """Represent a pulse mapping."""
     pulse_id: str
     source_system: str
     relation: RelationType
@@ -149,6 +173,7 @@ class PulseMapping(BasePDSResource):
 
 @dataclass(frozen=True)
 class PulseCatalog(BasePDSResource):
+    """Represent a pulse catalog."""
     items: List[CatalogItem]
     title: Optional[str] = None
     description: Optional[str] = None
@@ -161,12 +186,14 @@ PDSResource = Union[PulseDefinition, PulseProfile, PulseMapping, PulseCatalog]
 
 @dataclass(frozen=True)
 class LoadedPDSResource:
+    """Represent a loaded PDS resource."""
     resource: PDSResource
     raw_data: JsonObject
     source_path: Path
 
 
 def _parse_external_ref(payload: JsonObject) -> ExternalRef:
+    """Internal helper to parse the external ref."""
     return ExternalRef(
         system=str(payload["system"]),
         ref=str(payload["ref"]),
@@ -178,6 +205,7 @@ def _parse_external_ref(payload: JsonObject) -> ExternalRef:
 
 
 def _parse_concept(payload: JsonObject) -> Concept:
+    """Internal helper to parse the concept."""
     return Concept(
         definition=str(payload["definition"]),
         entity_types=list(payload.get("entity_types") or []),
@@ -204,6 +232,7 @@ def _parse_concept(payload: JsonObject) -> Concept:
 
 
 def _parse_interface(payload: JsonObject) -> PulseInterface:
+    """Internal helper to parse the interface."""
     return PulseInterface(
         schema_language=str(payload["schema_language"]),
         request_schema=dict(payload.get("request_schema") or {}),
@@ -213,6 +242,7 @@ def _parse_interface(payload: JsonObject) -> PulseInterface:
 
 
 def _parse_interop(payload: JsonObject) -> Interop:
+    """Internal helper to parse the interop."""
     refs = [_parse_external_ref(item) for item in payload.get("external_refs") or [] if isinstance(item, dict)]
     return Interop(
         aliases=list(payload.get("aliases") or []),
@@ -223,6 +253,7 @@ def _parse_interop(payload: JsonObject) -> Interop:
 
 
 def _parse_derivation(payload: JsonObject) -> Derivation:
+    """Internal helper to parse the derivation."""
     return Derivation(
         input_pulse_ids=list(payload.get("input_pulse_ids") or []),
         method_type=payload.get("method_type"),
@@ -237,6 +268,7 @@ def _parse_derivation(payload: JsonObject) -> Derivation:
 
 
 def _parse_governance(payload: JsonObject) -> Governance:
+    """Internal helper to parse the governance."""
     return Governance(
         owner=payload.get("owner"),
         license=payload.get("license"),
@@ -252,6 +284,7 @@ def _parse_governance(payload: JsonObject) -> Governance:
 
 
 def parse_pds_resource(payload: JsonObject) -> PDSResource:
+    """Parse the PDS resource."""
     resource_type = str(payload["resource_type"])
     common = {
         "pds_version": str(payload["pds_version"]),

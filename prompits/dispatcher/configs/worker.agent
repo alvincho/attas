@@ -1,0 +1,37 @@
+{
+  "name": "DispatcherWorker",
+  "host": "127.0.0.1",
+  "plaza_url": "http://127.0.0.1:8011",
+  "party": "Prompits",
+  "type": "prompits.dispatcher.agents.DispatcherWorkerAgent",
+  "description": "Generic worker that claims jobs from the dispatcher.",
+  "pools": [
+    {
+      "type": "PostgresPool",
+      "name": "dispatcher_worker_pool",
+      "description": "Shared dispatcher worker state",
+      "schema": {
+        "env": "PROMPITS_DISPATCHER_POSTGRES_SCHEMA",
+        "fallback": "public"
+      },
+      "sslmode": {
+        "env": "PROMPITS_DISPATCHER_POSTGRES_SSLMODE",
+        "fallback": "disable"
+      }
+    }
+  ],
+  "dispatcher": {
+    "capabilities": [
+      "echo job"
+    ],
+    "job_capabilities": [
+      {
+        "name": "echo job",
+        "callable": "prompits.dispatcher.examples.job_caps:echo_job_cap",
+        "disabled": false
+      }
+    ],
+    "poll_interval_sec": 10,
+    "auto_register": true
+  }
+}

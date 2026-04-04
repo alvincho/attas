@@ -1,3 +1,14 @@
+"""
+OpenAI pulser implementation for the Pulsers area.
+
+Attas layers finance-oriented pulse definitions, validation rules, and personal-agent
+workflows on top of the shared runtimes. Within Attas, these modules define finance-
+oriented pulse providers and transformation steps.
+
+Core types exposed here include `OpenAIPulser`, which carry the main behavior or state
+managed by this module.
+"""
+
 import os
 import json
 import logging
@@ -10,23 +21,27 @@ from starlette.concurrency import run_in_threadpool
 from prompits.core.pit import PitAddress
 
 load_dotenv()
-from phemacast.agents.pulser import Pulser
-from prompits.practices.chat import ChatPractice
+from phemacast.agents.pulser import Pulser, validate_pulser_config_test_parameters
 from prompits.practices.embeddings import EmbeddingPractice
 
 logger = logging.getLogger(__name__)
 
 class OpenAIPulser(Pulser):
     """
-    Pulser agent that provides LLM capabilities using local Ollama.
+    Pulser agent that provides LLM-backed pulse delivery.
     
     Exposes:
     - Pulse: llm_chat
-    - Practice: ChatPractice (for /chat and /list_models)
     - Practice: EmbeddingPractice (for /embeddings)
+    - Route: /list_models for editor-side provider discovery
     """
 
+    DEFAULT_OLLAMA_URL = "http://127.0.0.1:11434/api/generate"
+    DEFAULT_OPENAI_URL = "https://api.openai.com/v1/chat/completions"
+    DEFAULT_OPENAI_MODELS = ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-3.5-turbo"]
+
     def __init__(self, *args, **kwargs):
+        """Initialize the open ai pulser."""
         kwargs['auto_register'] = False
         super().__init__(*args, **kwargs)
         
@@ -38,25 +53,55 @@ class OpenAIPulser(Pulser):
         base_url = self.raw_config.get("base_url")
         model = self.raw_config.get("model")
         
-        # Configure providers for practices
         practice_config = {
             "base_url": base_url,
             "model": model,
             "api_key": api_key
         }
         
-        # Detect provider from base_url
-        provider = "ollama"
-        if base_url and "openai.com" in base_url.lower():
-            provider = "openai"
+        provider = self._detect_provider(base_url)
             
-        # Add practices
-        self.add_practice(ChatPractice(provider=provider, config=practice_config))
         self.add_practice(EmbeddingPractice(provider=provider, config=practice_config))
         
-        logger.info(f"[OpenAIPulser] Initialized as '{provider}' with practices and llm_chat pulse.")
+        logger.info(f"[OpenAIPulser] Initialized as '{provider}' with llm_chat pulse and embeddings.")
+
+    @staticmethod
+    def _detect_provider(base_url: Optional[str]) -> str:
+        """Internal helper for detect provider."""
+        if base_url and "openai.com" in str(base_url).lower():
+            return "openai"
+        return "ollama"
+
+    def _list_ollama_models(self) -> list[str]:
+        """Internal helper to list the ollama models."""
+        base_url = str(self.raw_config.get("base_url") or self.DEFAULT_OLLAMA_URL)
+        tags_url = base_url.replace("/api/generate", "/api/tags")
+        response = requests.get(tags_url, timeout=5)
+        response.raise_for_status()
+        models_data = response.json().get("models", [])
+        return [str(model.get("name") or "") for model in models_data if str(model.get("name") or "").strip()]
+
+    def _list_openai_models(self) -> list[str]:
+        """Internal helper to list the OpenAI models."""
+        api_key = self.raw_config.get("api_key") or os.environ.get("OPENAI_API_KEY")
+        if not api_key:
+            return list(self.DEFAULT_OPENAI_MODELS)
+        headers = {"Authorization": f"Bearer {api_key}"}
+        try:
+            response = requests.get("https://api.openai.com/v1/models", headers=headers, timeout=5)
+            response.raise_for_status()
+            models_data = response.json().get("data", [])
+            models = sorted(
+                str(model.get("id") or "")
+                for model in models_data
+                if "gpt" in str(model.get("id") or "")
+            )
+            return models or list(self.DEFAULT_OPENAI_MODELS)
+        except Exception:
+            return list(self.DEFAULT_OPENAI_MODELS)
 
     def _load_config_document(self) -> Dict[str, Any]:
+        """Internal helper to load the config document."""
         if self.config_path and self.config_path.exists():
             with self.config_path.open("r", encoding="utf-8") as fh:
                 loaded = json.load(fh)
@@ -65,8 +110,13 @@ class OpenAIPulser(Pulser):
         return self._build_editor_config_document(self.raw_config or {})
 
     def _save_config_document(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        """Internal helper to save the config document."""
+        normalized = self._normalize_config_document(config)
+        try:
+            validate_pulser_config_test_parameters(normalized)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
         if self.config_path:
-            normalized = self._normalize_config_document(config)
             with self.config_path.open("w", encoding="utf-8") as fh:
                 json.dump(normalized, fh, indent=4)
             self.raw_config = dict(normalized)
@@ -76,6 +126,7 @@ class OpenAIPulser(Pulser):
         return self._build_editor_config_document(config)
 
     def _build_editor_config_document(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        """Internal helper to build the editor config document."""
         document = dict(config or {})
         document.setdefault("name", self.agent_card.get("name", self.name))
         document.setdefault("type", "attas.pulsers.openai_pulser.OpenAIPulser")
@@ -100,6 +151,7 @@ class OpenAIPulser(Pulser):
         return document
 
     def _normalize_config_document(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        """Internal helper to normalize the config document."""
         document = dict(config or {})
         document.setdefault("name", self.agent_card.get("name", self.name))
         document.setdefault("type", "attas.pulsers.openai_pulser.OpenAIPulser")
@@ -133,6 +185,7 @@ class OpenAIPulser(Pulser):
         return document
 
     def _normalize_editor_pulse(self, pulse: Dict[str, Any], document: Dict[str, Any]) -> Dict[str, Any]:
+        """Internal helper to normalize the editor pulse."""
         normalized = dict(pulse)
         pulse_api = dict(normalized.get("api") or {})
         if not pulse_api.get("url") and document.get("base_url"):
@@ -148,6 +201,7 @@ class OpenAIPulser(Pulser):
         return normalized
 
     def _normalize_saved_pulse(self, pulse: Dict[str, Any], document: Dict[str, Any]) -> Dict[str, Any]:
+        """Internal helper to normalize the saved pulse."""
         normalized = dict(pulse)
         pulse_api = dict(normalized.get("api") or {})
         pulse_address = PitAddress.from_value(normalized.get("pulse_address"))
@@ -165,8 +219,10 @@ class OpenAIPulser(Pulser):
         return normalized
 
     def _setup_ui_routes(self) -> None:
+        """Internal helper to set up the UI routes."""
         @self.app.get("/")
         async def editor_ui(request: Request):
+            """Route handler for GET /."""
             return self.templates.TemplateResponse(
                 request=request,
                 name="attas/pulsers/templates/openai_pulser_editor.html",
@@ -178,6 +234,7 @@ class OpenAIPulser(Pulser):
 
         @self.app.get("/api/config")
         async def get_config():
+            """Route handler for GET /api/config."""
             config = await run_in_threadpool(self._load_config_document)
             return {
                 "status": "success",
@@ -185,8 +242,26 @@ class OpenAIPulser(Pulser):
                 "config_path": str(self.config_path) if self.config_path else None,
             }
 
+        @self.app.get("/list_models")
+        async def list_models(provider: str = ""):
+            """Route handler for GET /list_models."""
+            selected_provider = str(provider or self._detect_provider(self.raw_config.get("base_url"))).strip().lower()
+            try:
+                if selected_provider == "openai":
+                    models = await run_in_threadpool(self._list_openai_models)
+                elif selected_provider == "ollama":
+                    models = await run_in_threadpool(self._list_ollama_models)
+                else:
+                    raise HTTPException(status_code=400, detail=f"Unsupported provider: {selected_provider}")
+            except HTTPException:
+                raise
+            except Exception as exc:
+                raise HTTPException(status_code=500, detail=str(exc)) from exc
+            return {"status": "success", "provider": selected_provider, "models": models}
+
         @self.app.get("/api/plaza/pulses")
         async def get_plaza_pulses(search: str = ""):
+            """Route handler for GET /api/plaza/pulses."""
             rows = await run_in_threadpool(self._search_plaza_directory, pit_type="Pulse", name=search.strip() or None)
             pulses = []
             for row in rows or []:
@@ -207,6 +282,7 @@ class OpenAIPulser(Pulser):
 
         @self.app.post("/api/config")
         async def save_config(request: Request):
+            """Route handler for POST /api/config."""
             payload = await request.json()
             config = payload.get("config") if isinstance(payload, dict) and isinstance(payload.get("config"), dict) else payload
             if not isinstance(config, dict):
@@ -220,6 +296,7 @@ class OpenAIPulser(Pulser):
 
         @self.app.post("/api/test-pulse")
         async def test_pulse(request: Request):
+            """Exercise the test_pulse regression scenario."""
             payload = await request.json()
             if not isinstance(payload, dict):
                 raise HTTPException(status_code=400, detail="Test payload must be a JSON object.")
@@ -236,6 +313,7 @@ class OpenAIPulser(Pulser):
                 raise HTTPException(status_code=400, detail="config must be a JSON object when provided.")
 
             def _run_test_sync():
+                """Internal helper to run the test sync."""
                 runtime_config = config if isinstance(config, dict) else self._load_config_document()
                 runner = self.__class__(config=runtime_config, auto_register=False)
                 pulse_definition = runner.resolve_pulse_definition(pulse_name=str(pulse_name))
@@ -281,6 +359,7 @@ class OpenAIPulser(Pulser):
 
         @self.app.post("/api/model-info")
         async def model_info(request: Request):
+            """Route handler for POST /api/model-info."""
             payload = await request.json()
             model = payload.get("model")
             base_url = self.raw_config.get("base_url") or "http://localhost:11434/api/generate"
@@ -307,6 +386,7 @@ class OpenAIPulser(Pulser):
         return super().fetch_pulse_payload(pulse_name, input_data, pulse_definition)
 
     def _handle_llm_chat(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Internal helper to handle the LLM chat."""
         prompt = input_data.get("prompt")
         if not prompt:
             return {"error": "Prompt is required for llm_chat pulse."}

@@ -1,0 +1,32 @@
+{
+  "name": "Dispatcher",
+  "host": "127.0.0.1",
+  "plaza_url": "http://127.0.0.1:8011",
+  "party": "Prompits",
+  "type": "prompits.dispatcher.agents.DispatcherAgent",
+  "description": "Queue-based Prompits dispatcher.",
+  "pools": [
+    {
+      "type": "PostgresPool",
+      "name": "dispatcher_pool",
+      "description": "Shared dispatcher PostgreSQL state",
+      "schema": {
+        "env": "PROMPITS_DISPATCHER_POSTGRES_SCHEMA",
+        "fallback": "public"
+      },
+      "sslmode": {
+        "env": "PROMPITS_DISPATCHER_POSTGRES_SSLMODE",
+        "fallback": "disable"
+      }
+    }
+  ],
+  "dispatcher": {
+    "job_capabilities": [
+      {
+        "name": "echo job",
+        "description": "Echo back a minimal result payload."
+      }
+    ],
+    "auto_register": true
+  }
+}

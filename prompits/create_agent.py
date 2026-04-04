@@ -1,8 +1,20 @@
+"""
+Agent creation helpers and entry points for Prompits.
+
+Prompits provides the core HTTP-native agent runtime, Plaza coordination layer, and
+pool/practice infrastructure for FinMAS.
+
+Key definitions include `AgentNameFilter`, `create_agent_from_config`, `build_agent`,
+and `load_agent_config`, which provide the main entry points used by neighboring modules
+and tests.
+"""
+
 import argparse
 import sys
 import os
+import socket
 
-# Automatically add the project root (attas directory) to sys.path
+# Automatically add the project root to sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import logging
@@ -24,7 +36,9 @@ if load_dotenv is not None:
     load_dotenv()
 
 class AgentNameFilter(logging.Filter):
+    """Represent an agent name filter."""
     def filter(self, record):
+        """Handle filter for the agent name filter."""
         if not hasattr(record, 'agent_name'):
             record.agent_name = 'Main'
         return True
@@ -38,8 +52,14 @@ for handler in logging.root.handlers:
 
 logger = logging.getLogger(__name__)
 
+REMOVED_LEGACY_PRACTICE_TYPES = {
+    "prompits.practices.chat.ChatPractice",
+    "prompits.practices.llm.LLMPractice",
+}
+
 
 def _coerce_path_list(value):
+    """Internal helper to coerce the path list."""
     if value is None:
         return []
     if isinstance(value, str):
@@ -57,6 +77,7 @@ def _coerce_path_list(value):
 
 
 def _resolve_config_paths(paths, config_dir):
+    """Internal helper to resolve the config paths."""
     resolved = []
     seen = set()
     for path in _coerce_path_list(paths):
@@ -78,6 +99,7 @@ def _resolve_config_paths(paths, config_dir):
 
 
 def _extract_plaza_practice_params(config):
+    """Internal helper to extract the Plaza practice params."""
     raw_config = config.get("raw_config") or {}
     config_dir = config.get("config_dir")
     collected_sources = []
@@ -109,6 +131,7 @@ def _extract_plaza_practice_params(config):
 
 
 def resolve_practice_params(config, practice_info):
+    """Resolve the practice params."""
     practice_params = dict(practice_info.get("params", {}) or {})
     practice_type = practice_info.get("type", "")
     config_dir = config.get("config_dir")
@@ -133,9 +156,14 @@ def resolve_practice_params(config, practice_info):
 
 
 def instantiate_practice_from_config(config, practice_info):
+    """Return the instantiate practice from config."""
     practice_type = practice_info.get("type")
     if not practice_type:
         return None
+    if practice_type in REMOVED_LEGACY_PRACTICE_TYPES:
+        raise ValueError(
+            f"{practice_type} has been removed. Use a dedicated LLM pulser config instead."
+        )
 
     module_name, class_name = practice_type.rsplit(".", 1)
     module = importlib.import_module(module_name)
@@ -144,9 +172,10 @@ def instantiate_practice_from_config(config, practice_info):
     return practice_cls(**practice_params)
 
 def _resolve_config_value(value):
+    """Internal helper to resolve the config value."""
     if isinstance(value, dict):
         env_name = value.get("env") or value.get("name")
-        fallback = value.get("value")
+        fallback = value.get("value", value.get("fallback"))
         if env_name:
             resolved = os.getenv(str(env_name))
             if resolved not in (None, ""):
@@ -167,6 +196,7 @@ def _resolve_config_value(value):
     return value
 
 def _instantiate_pool(pool_config: dict, default_name: str):
+    """Internal helper for instantiate pool."""
     pool_type = pool_config.get("type")
     pool_name = pool_config.get("name", default_name)
     pool_desc = pool_config.get("description", "Agent Storage")
@@ -179,6 +209,22 @@ def _instantiate_pool(pool_config: dict, default_name: str):
         from prompits.pools.sqlite import SQLitePool
         db_path = pool_config.get("db_path", "agent.db")
         return SQLitePool(pool_name, pool_desc, db_path)
+    if pool_type == "PostgresPool":
+        from prompits.pools.postgres import PostgresPool
+        dsn = _resolve_config_value(
+            pool_config.get("dsn")
+            or pool_config.get("conninfo")
+            or pool_config.get("database_url")
+        )
+        schema = _resolve_config_value(pool_config.get("schema") or pool_config.get("schema_name")) or "public"
+        sslmode = _resolve_config_value(pool_config.get("sslmode")) or ""
+        return PostgresPool(
+            pool_name,
+            pool_desc,
+            dsn=dsn or "",
+            schema=schema or "public",
+            sslmode=sslmode,
+        )
     if pool_type == "SupabasePool":
         from prompits.pools.supabase import SupabasePool
         url = _resolve_config_value(pool_config.get("url"))
@@ -186,8 +232,82 @@ def _instantiate_pool(pool_config: dict, default_name: str):
         return SupabasePool(pool_name, url, key, pool_desc)
     raise ValueError(f"Unsupported pool type: {pool_type}")
 
+
+def _coerce_optional_bool(value):
+    """Internal helper to coerce the optional bool."""
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return bool(value)
+    lowered = str(value).strip().lower()
+    if lowered in {"1", "true", "yes", "y", "on"}:
+        return True
+    if lowered in {"0", "false", "no", "n", "off"}:
+        return False
+    return None
+
+
+def _normalize_config_path(value):
+    """Internal helper to normalize the config path."""
+    candidate = str(value or "").strip()
+    if not candidate:
+        return ""
+    return os.path.realpath(os.path.abspath(os.path.expanduser(candidate)))
+
+
+def _should_apply_process_network_overrides(config):
+    """Return whether the value should apply process network overrides."""
+    if not isinstance(config, dict):
+        return True
+
+    env_config_path = _normalize_config_path(os.getenv("PROMPITS_AGENT_CONFIG"))
+    if not env_config_path:
+        return True
+
+    current_config_path = _normalize_config_path(config.get("config_path"))
+    if not current_config_path:
+        return True
+
+    return env_config_path == current_config_path
+
+
+def _config_prefers_ephemeral_identity(config_data):
+    """Internal helper to return the config prefers ephemeral identity."""
+    if not isinstance(config_data, dict):
+        return False
+    agent_type = str(config_data.get("type") or "").strip()
+    if agent_type.endswith("ADSWorkerAgent"):
+        return True
+    agent_card = config_data.get("agent_card") if isinstance(config_data.get("agent_card"), dict) else {}
+    meta = agent_card.get("meta") if isinstance(agent_card.get("meta"), dict) else {}
+    configured = agent_card.get("reuse_plaza_identity")
+    if configured is None:
+        configured = meta.get("reuse_plaza_identity")
+    coerced = _coerce_optional_bool(configured)
+    return coerced is False
+
+
+def _find_free_port(bind_host):
+    """Internal helper to find the free port."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.bind((str(bind_host or "127.0.0.1"), 0))
+        return int(sock.getsockname()[1])
+
+
+def _port_is_available(bind_host, port):
+    """Return whether the port is available."""
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            sock.bind((str(bind_host or "127.0.0.1"), int(port)))
+            return True
+    except OSError:
+        return False
+
 def load_agent_config(config_path=None, name=None, role=None, tags_str=None):
     # Values from CLI/Args
+    """Load the agent config."""
     current_name = name
     current_role = role
     current_tags_str = tags_str
@@ -221,12 +341,34 @@ def load_agent_config(config_path=None, name=None, role=None, tags_str=None):
         if not has_pools_list:
             raise ValueError("Agent config must define at least one pool via non-empty 'pools'.")
 
+    if not config_data.get("host"):
+        config_data["host"] = host
+    if config_data.get("port") in (None, "", 0):
+        config_data["port"] = _find_free_port(str(config_data.get("host") or host))
+    elif (
+        _config_prefers_ephemeral_identity(config_data)
+        and not os.getenv("PROMPITS_PORT")
+        and not os.getenv("PORT")
+        and not _port_is_available(str(config_data.get("host") or host), config_data.get("port"))
+    ):
+        requested_port = int(config_data.get("port"))
+        config_data["port"] = _find_free_port(str(config_data.get("host") or host))
+        logger.warning(
+            "Configured port %s is already in use for %s. Remapping to free port %s.",
+            requested_port,
+            str(config_data.get("name") or current_name or "agent"),
+            config_data["port"],
+        )
+
     if not current_name:
         raise ValueError("Agent name is required.")
     
     current_role = current_role or "generic"
     current_tags_str = current_tags_str or ""
     tags = [t.strip() for t in current_tags_str.split(",") if t.strip()]
+    host = config_data.get("host", host)
+    port = int(config_data.get("port", port))
+    plaza_url = config_data.get("plaza_url", plaza_url)
 
     return {
         "name": current_name,
@@ -245,6 +387,7 @@ def load_agent_config(config_path=None, name=None, role=None, tags_str=None):
     }
 
 def create_agent_from_config(config):
+    """Create the agent from config."""
     raw_config = config.get("raw_config") or {}
     agent_card = dict(raw_config.get("agent_card") or {})
     agent_card.update({
@@ -314,6 +457,7 @@ def create_agent_from_config(config):
 
 
 def _apply_runtime_overrides(config):
+    """Internal helper for apply runtime overrides."""
     if not isinstance(config, dict):
         return config
 
@@ -321,43 +465,54 @@ def _apply_runtime_overrides(config):
     if plaza_url:
         config["plaza_url"] = plaza_url
 
-    bind_host = str(os.getenv("PROMPITS_BIND_HOST") or "").strip()
-    if bind_host:
-        config["host"] = bind_host
+    if _should_apply_process_network_overrides(config):
+        bind_host = str(os.getenv("PROMPITS_BIND_HOST") or "").strip()
+        if bind_host:
+            config["host"] = bind_host
 
-    bind_port = str(os.getenv("PROMPITS_PORT") or os.getenv("PORT") or "").strip()
-    if bind_port:
-        try:
-            config["port"] = int(bind_port)
-        except ValueError as exc:
-            raise ValueError(f"Invalid port override: {bind_port}") from exc
+        bind_port = str(os.getenv("PROMPITS_PORT") or os.getenv("PORT") or "").strip()
+        if bind_port:
+            try:
+                config["port"] = int(bind_port)
+            except ValueError as exc:
+                raise ValueError(f"Invalid port override: {bind_port}") from exc
 
     return config
 
 
 def build_agent(config):
+    """Build the agent."""
     resolved_config = _apply_runtime_overrides(dict(config))
     agent = create_agent_from_config(resolved_config)
 
     public_url = str(os.getenv("PROMPITS_PUBLIC_URL") or "").strip().rstrip("/")
-    if public_url:
+    if public_url and _should_apply_process_network_overrides(resolved_config):
         agent.agent_card["address"] = public_url
     else:
-        agent.agent_card["address"] = agent.agent_card.get("address") or f"http://{agent.host}:{agent.port}"
+        agent.agent_card["address"] = f"http://{agent.host}:{agent.port}"
 
     if hasattr(agent, "_refresh_pit_address"):
         agent._refresh_pit_address()
 
     practices_config = resolved_config.get("practices", [])
-    for practice_info in practices_config:
-        practice_instance = instantiate_practice_from_config(resolved_config, practice_info)
-        if practice_instance is None:
-            continue
-        agent.add_practice(practice_instance)
+    begin_batch = getattr(agent, "_begin_practice_persistence_batch", None)
+    end_batch = getattr(agent, "_end_practice_persistence_batch", None)
+    if callable(begin_batch):
+        begin_batch()
+    try:
+        for practice_info in practices_config:
+            practice_instance = instantiate_practice_from_config(resolved_config, practice_info)
+            if practice_instance is None:
+                continue
+            agent.add_practice(practice_instance)
+    finally:
+        if callable(end_batch):
+            end_batch()
 
     return agent
 
 def main():
+    """Run the main entry point."""
     parser = argparse.ArgumentParser(description="Create and Run a Distributed Agent.")
     parser.add_argument("--name", help="Name of the agent")
     parser.add_argument("--role", help="Role of the agent")

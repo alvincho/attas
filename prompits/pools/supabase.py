@@ -1,3 +1,14 @@
+"""
+Supabase module for `prompits.pools.supabase`.
+
+Prompits provides the core HTTP-native agent runtime, Plaza coordination layer, and
+pool/practice infrastructure for FinMAS. Within Prompits, the pools package implements
+storage adapters and pool-specific helpers.
+
+Core types exposed here include `SupabasePool`, which carry the main behavior or state
+managed by this module.
+"""
+
 import json
 import os
 import re
@@ -42,8 +53,10 @@ class SupabasePool(Pool):
         "connect timeout",
         "timed out",
     )
+    OBSERVED_SCHEMA_PROBE_SKIP_TABLES = {"plaza_directory"}
 
     def __init__(self, name: str, url: str, key: str, description: str = None):
+        """Initialize the Supabase pool."""
         super().__init__(
             name,
             description,
@@ -55,6 +68,8 @@ class SupabasePool(Pool):
         self._unsupported_table_columns: Dict[str, set[str]] = {}
         self._observed_table_columns: Dict[str, set[str]] = {}
         self._create_table_notice_tables: set[str] = set()
+        self._missing_batch_rpc_notice_tables: set[str] = set()
+        self._disabled_batch_upsert_tables: set[str] = set()
         self._connectivity_retry_after: float = 0.0
         self._last_connectivity_error: str = ""
         self._last_connectivity_warning_at: float = 0.0
@@ -63,6 +78,7 @@ class SupabasePool(Pool):
 
     @classmethod
     def _http_timeout_seconds(cls) -> float:
+        """Internal helper for HTTP timeout seconds."""
         raw_value = str(
             os.getenv("PLAZA_SUPABASE_TIMEOUT_SEC")
             or os.getenv("SUPABASE_HTTP_TIMEOUT_SEC")
@@ -76,10 +92,12 @@ class SupabasePool(Pool):
 
     @staticmethod
     def _normalize_url(value: Any) -> str:
+        """Internal helper to normalize the URL."""
         return str(value or "").strip().rstrip("/")
 
     @classmethod
     def _validated_url(cls, value: Any) -> str:
+        """Internal helper to return the validated URL."""
         normalized = cls._normalize_url(value)
         if not normalized:
             return ""
@@ -90,16 +108,67 @@ class SupabasePool(Pool):
 
     @classmethod
     def _is_connectivity_error(cls, error: Exception) -> bool:
+        """Return whether the value is a connectivity error."""
         message = str(error or "").strip().lower()
         if not message:
             return False
         return any(marker in message for marker in cls.CONNECTIVITY_ERROR_MARKERS)
 
+    @staticmethod
+    def _extract_error_code(error: Exception) -> str:
+        """Internal helper to extract the error code."""
+        if isinstance(error, dict):
+            return str(error.get("code") or "").strip()
+        args = getattr(error, "args", ())
+        if args:
+            first = args[0]
+            if isinstance(first, dict):
+                return str(first.get("code") or "").strip()
+        return ""
+
+    @classmethod
+    def _is_missing_rpc_error(cls, error: Exception) -> bool:
+        """Return whether the value is a missing rpc error."""
+        code = cls._extract_error_code(error)
+        if code == "PGRST202":
+            return True
+        message = str(error or "").lower()
+        return "could not find the function" in message and "schema cache" in message
+
+    def _batch_rpc_name(self, table_name: str) -> Optional[str]:
+        """Internal helper to return the batch rpc name."""
+        disabled = getattr(self, "_disabled_batch_upsert_tables", None)
+        if disabled is None:
+            disabled = set()
+            self._disabled_batch_upsert_tables = disabled
+        if table_name in disabled:
+            return None
+        return self.BATCH_UPSERT_RPC_BY_TABLE.get(table_name)
+
+    def _disable_batch_rpc(self, table_name: str, rpc_name: str):
+        """Internal helper for disable batch rpc."""
+        disabled = getattr(self, "_disabled_batch_upsert_tables", None)
+        if disabled is None:
+            disabled = set()
+            self._disabled_batch_upsert_tables = disabled
+        disabled.add(table_name)
+
+        notices = getattr(self, "_missing_batch_rpc_notice_tables", None)
+        if notices is None:
+            notices = set()
+            self._missing_batch_rpc_notice_tables = notices
+        if table_name in notices:
+            return
+        notices.add(table_name)
+        print(f"[{self.name}] Info: batch RPC '{rpc_name}' is unavailable for '{table_name}'; using direct table upsert.")
+
     def _connectivity_backoff_active(self) -> bool:
+        """Internal helper to return the connectivity backoff active."""
         retry_after = float(getattr(self, "_connectivity_retry_after", 0.0) or 0.0)
         return retry_after > time.time()
 
     def _record_connectivity_issue(self, error: Exception, *, context: str):
+        """Internal helper for record connectivity issue."""
         message = str(error or "").strip() or error.__class__.__name__
         normalized_url = self._validated_url(self.url)
         parsed = urlparse(normalized_url) if normalized_url else None
@@ -122,6 +191,7 @@ class SupabasePool(Pool):
             self._last_connectivity_warning_at = now
 
     def _build_client_options(self):
+        """Internal helper to build the client options."""
         try:
             import httpx
             from supabase.lib.client_options import ClientOptions
@@ -143,6 +213,7 @@ class SupabasePool(Pool):
             return None
 
     def connect(self):
+        """Connect the value."""
         normalized_url = self._validated_url(self.url)
         if not normalized_url or not str(self.key or "").strip():
             self.supabase = None
@@ -168,11 +239,13 @@ class SupabasePool(Pool):
             return False
 
     def disconnect(self):
+        """Disconnect the value."""
         self.supabase = None
         self.is_connected = False
         return True
             
     def _ensure_connection(self):
+        """Internal helper to ensure the connection exists."""
         if self._connectivity_backoff_active():
             return False
         if not self.is_connected or not self.supabase:
@@ -180,6 +253,7 @@ class SupabasePool(Pool):
         return True
 
     def _TableExists(self, table_name: str) -> bool:
+        """Return whether the table exists for value."""
         if self._connectivity_backoff_active():
             return True
         if not self._ensure_connection(): return False
@@ -195,6 +269,7 @@ class SupabasePool(Pool):
 
     def _CreateTable(self, table_name: str, schema: TableSchema):
         # Supabase API does not support table creation via client standardly
+        """Internal helper to create the table."""
         notice_tables = getattr(self, "_create_table_notice_tables", None)
         if notice_tables is None:
             notice_tables = set()
@@ -206,17 +281,35 @@ class SupabasePool(Pool):
         return True
 
     def _Insert(self, table_name: str, data: Dict[str, Any]):
+        """Internal helper for insert."""
         if not self._ensure_connection(): return False
         with self.lock:
+            batch_rpc = self._batch_rpc_name(table_name)
+            if batch_rpc:
+                try:
+                    self.supabase.rpc(batch_rpc, {"entries": [data]}).execute()
+                    return True
+                except Exception as e:
+                    if self._is_connectivity_error(e):
+                        self._record_connectivity_issue(e, context=f"upserting into '{table_name}'")
+                        return False
+                    if self._is_missing_rpc_error(e):
+                        self._disable_batch_rpc(table_name, batch_rpc)
+                    else:
+                        print(
+                            f"[{self.name}] Warning: batch RPC '{batch_rpc}' failed for '{table_name}'; "
+                            f"falling back to table upsert: {e}"
+                        )
             return self._upsert_with_schema_fallback(table_name, data, batch_label="data")
 
     def _InsertMany(self, table_name: str, data_list: List[Dict[str, Any]]):
+        """Internal helper for insert many."""
         if not data_list:
             return True
         if not self._ensure_connection():
             return False
         with self.lock:
-            batch_rpc = self.BATCH_UPSERT_RPC_BY_TABLE.get(table_name)
+            batch_rpc = self._batch_rpc_name(table_name)
             if batch_rpc:
                 try:
                     self.supabase.rpc(batch_rpc, {"entries": data_list}).execute()
@@ -225,14 +318,18 @@ class SupabasePool(Pool):
                     if self._is_connectivity_error(e):
                         self._record_connectivity_issue(e, context=f"batch upserting into '{table_name}'")
                         return False
-                    print(
-                        f"[{self.name}] Warning: batch RPC '{batch_rpc}' failed for '{table_name}'; "
-                        f"falling back to table upsert: {e}"
-                    )
+                    if self._is_missing_rpc_error(e):
+                        self._disable_batch_rpc(table_name, batch_rpc)
+                    else:
+                        print(
+                            f"[{self.name}] Warning: batch RPC '{batch_rpc}' failed for '{table_name}'; "
+                            f"falling back to table upsert: {e}"
+                        )
             return self._upsert_with_schema_fallback(table_name, data_list, batch_label="batch data")
 
     @staticmethod
     def _extract_missing_column_name(error: Exception) -> Optional[str]:
+        """Internal helper to extract the missing column name."""
         message = str(error or "")
         match = re.search(r"Could not find the '([^']+)' column", message)
         if match:
@@ -241,6 +338,7 @@ class SupabasePool(Pool):
 
     @staticmethod
     def _drop_columns_from_payload(payload: Union[Dict[str, Any], List[Dict[str, Any]]], columns: set[str]) -> Union[Dict[str, Any], List[Dict[str, Any]]]:
+        """Internal helper to return the drop columns from payload."""
         if isinstance(payload, dict):
             return {key: value for key, value in payload.items() if key not in columns}
         return [
@@ -251,6 +349,7 @@ class SupabasePool(Pool):
 
     @staticmethod
     def _payload_columns(payload: Union[Dict[str, Any], List[Dict[str, Any]]]) -> set[str]:
+        """Internal helper to return the payload columns."""
         if isinstance(payload, dict):
             return set(payload.keys())
         columns: set[str] = set()
@@ -260,11 +359,15 @@ class SupabasePool(Pool):
         return columns
 
     def _get_observed_table_columns(self, table_name: str) -> set[str]:
+        """Internal helper to return the observed table columns."""
         observed_table_columns = getattr(self, "_observed_table_columns", None)
         if observed_table_columns is None:
             observed_table_columns = {}
             self._observed_table_columns = observed_table_columns
         if table_name in observed_table_columns:
+            return observed_table_columns[table_name]
+        if table_name in self.OBSERVED_SCHEMA_PROBE_SKIP_TABLES:
+            observed_table_columns[table_name] = set()
             return observed_table_columns[table_name]
         try:
             response = self.supabase.table(table_name).select("*").limit(1).execute()
@@ -278,6 +381,7 @@ class SupabasePool(Pool):
         return observed_table_columns[table_name]
 
     def _upsert_with_schema_fallback(self, table_name: str, payload: Union[Dict[str, Any], List[Dict[str, Any]]], *, batch_label: str) -> bool:
+        """Internal helper for upsert with schema fallback."""
         unsupported_table_columns = getattr(self, "_unsupported_table_columns", None)
         if unsupported_table_columns is None:
             unsupported_table_columns = {}
@@ -337,6 +441,7 @@ class SupabasePool(Pool):
             return []
 
     def _GetTableData(self, table_name: str, id_or_where: Union[str, Dict]=None, table_schema: TableSchema=None) -> List[Dict[str, Any]]:
+        """Internal helper to return the table data."""
         if not self._ensure_connection(): return []
         try:
             with self.lock:
@@ -366,6 +471,7 @@ class SupabasePool(Pool):
         memory_type: str = "text",
         table_name: Optional[str] = None,
     ) -> Dict[str, Any]:
+        """Handle store memory for the Supabase pool."""
         memory_table = table_name or self.MEMORY_TABLE
         record = self._normalize_memory_record(
             content=content,
@@ -384,6 +490,7 @@ class SupabasePool(Pool):
         limit: int = 10,
         table_name: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
+        """Search the memory."""
         if not query:
             return []
         memory_table = table_name or self.MEMORY_TABLE
@@ -393,6 +500,7 @@ class SupabasePool(Pool):
         return matches[: max(int(limit), 0)]
 
     def create_table_practice(self):
+        """Create the table practice."""
         return self._build_operation_practice(
             operation_id="pool-create-table",
             name="Pool Create Table",
@@ -406,6 +514,7 @@ class SupabasePool(Pool):
         )
 
     def table_exists_practice(self):
+        """Return whether the table exists for practice."""
         return self._build_operation_practice(
             operation_id="pool-table-exists",
             name="Pool Table Exists",
@@ -418,6 +527,7 @@ class SupabasePool(Pool):
         )
 
     def insert_practice(self):
+        """Handle insert practice for the Supabase pool."""
         return self._build_operation_practice(
             operation_id="pool-insert",
             name="Pool Insert",
@@ -431,6 +541,7 @@ class SupabasePool(Pool):
         )
 
     def query_practice(self):
+        """Query the practice."""
         return self._build_operation_practice(
             operation_id="pool-query",
             name="Pool Query",
@@ -444,6 +555,7 @@ class SupabasePool(Pool):
         )
 
     def get_table_data_practice(self):
+        """Return the table data practice."""
         return self._build_operation_practice(
             operation_id="pool-get-table-data",
             name="Pool Get Table Data",
@@ -462,6 +574,7 @@ class SupabasePool(Pool):
         )
 
     def connect_practice(self):
+        """Connect the practice."""
         return self._build_operation_practice(
             operation_id="pool-connect",
             name="Pool Connect",
@@ -472,6 +585,7 @@ class SupabasePool(Pool):
         )
 
     def disconnect_practice(self):
+        """Disconnect the practice."""
         return self._build_operation_practice(
             operation_id="pool-disconnect",
             name="Pool Disconnect",
@@ -482,6 +596,7 @@ class SupabasePool(Pool):
         )
 
     def store_memory_practice(self):
+        """Handle store memory practice for the Supabase pool."""
         return self._build_operation_practice(
             operation_id="pool-store-memory",
             name="Pool Store Memory",
@@ -506,6 +621,7 @@ class SupabasePool(Pool):
         )
 
     def search_memory_practice(self):
+        """Search the memory practice."""
         return self._build_operation_practice(
             operation_id="pool-search-memory",
             name="Pool Search Memory",

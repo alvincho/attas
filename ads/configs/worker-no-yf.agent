@@ -1,0 +1,64 @@
+{
+  "name": "ADSWorker",
+  "host": "127.0.0.1",
+  "plaza_url": "http://127.0.0.1:8011",
+  "party": "ADS",
+  "type": "ads.agents.ADSWorkerAgent",
+  "description": "ADS collector worker that claims jobs from the dispatcher.",
+  "pools": [
+    {
+      "type": "PostgresPool",
+      "name": "ads_worker_pool",
+      "description": "Shared ADS PostgreSQL state",
+      "schema": {
+        "env": "ADS_POSTGRES_SCHEMA",
+        "fallback": "public"
+      },
+      "sslmode": {
+        "env": "ADS_POSTGRES_SSLMODE",
+        "fallback": "disable"
+      }
+    }
+  ],
+  "ads": {
+    "capabilities": [
+      "US Listed Sec to security master",
+      "US Filing Bulk",
+      "US Filing Mapping",
+      "yfinance eod",
+      "yfinance us market eod",
+      "twse market eod",
+      "rss news"
+    ],
+    "job_capabilities": [
+      {
+        "name": "US Listed Sec to security master",
+        "type": "ads.us_listed:USListedSecJobCap",
+        "disabled": false
+      },
+      {
+        "name": "US Filing Bulk",
+        "type": "ads.sec:USFilingBulkJobCap",
+        "disabled": false
+      },
+      {
+        "name": "US Filing Mapping",
+        "type": "ads.sec:USFilingMappingJobCap",
+        "disabled": false
+      },
+      {
+        "name": "TWSE Market EOD",
+        "type": "ads.twse:TWSEMarketEODJobCap",
+        "disabled": false
+      },
+      {
+        "name": "RSS News",
+        "type": "ads.rss_news:RSSNewsJobCap",
+        "disabled": false
+      }
+    ],
+    "poll_interval_sec": 10,
+    "yfinance_request_cooldown_sec": 120,
+    "auto_register": true
+  }
+}

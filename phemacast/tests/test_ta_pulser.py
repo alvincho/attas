@@ -1,3 +1,16 @@
+"""
+Regression tests for TA Pulser.
+
+Phemacast assembles pulse inputs, phemas, and castrs into rendered research artifacts
+and interactive tooling. These tests protect the Phemacast pipeline, demo flows, UI
+helpers, and pulser integrations.
+
+The pytest cases in this file document expected behavior through checks such as
+`test_ta_pulser_fetches_ohlc_series_from_upstream_when_date_range_is_provided` and
+`test_ta_pulser_config_exposes_seeded_indicator_catalog`, helping guard against
+regressions as the packages evolve.
+"""
+
 import json
 import os
 import sys
@@ -13,17 +26,24 @@ from phemacast.pulsers.path_pulser import PathPulser
 
 
 class FakePostResponse:
+    """Response model for fake post payloads."""
     def __init__(self, payload, status_code=200):
+        """Initialize the fake post response."""
         self._payload = payload
         self.status_code = status_code
         self.text = json.dumps(payload)
         self.content = self.text.encode("utf-8")
 
     def json(self):
+        """Handle JSON for the fake post response."""
         return self._payload
 
 
 def test_ta_pulser_config_exposes_seeded_indicator_catalog():
+    """
+    Exercise the test_ta_pulser_config_exposes_seeded_indicator_catalog regression
+    scenario.
+    """
     root = Path(__file__).resolve().parents[2]
     config_path = root / "attas" / "configs" / "ta.pulser"
     seed_path = root / "attas" / "init_pits" / "init_pulse_technical_analysis.json"
@@ -48,6 +68,8 @@ def test_ta_pulser_config_exposes_seeded_indicator_catalog():
     assert "end_date" in sma_pulse["input_schema"]["properties"]
     assert "ohlc_series" not in sma_pulse["input_schema"]["required"]
     assert sma_pulse["steps"][0]["name"] == "load_ohlc_series"
+    assert sma_pulse["test_data"]["symbol"] == payload["symbol"]
+    assert sma_pulse["pulse_definition"]["test_data"]["symbol"] == payload["symbol"]
 
     sma_result = pulser.get_pulse_data(dict(payload), pulse_name="sma")
     assert len(sma_result["values"]) == 141
@@ -94,8 +116,18 @@ def test_ta_pulser_config_exposes_seeded_indicator_catalog():
         assert sma_editor_pulse["resolved_test_data"]["interval"] == payload["interval"]
         assert sma_editor_pulse["resolved_test_data"]["timestamp"] == payload["timestamp"]
 
+    register_payload = pulser.build_register_payload("http://127.0.0.1:8011")
+    sma_pair = next(entry for entry in register_payload["pulse_pulser_pairs"] if entry["pulse_name"] == "sma")
+    assert sma_pair["test_data"]["symbol"] == payload["symbol"]
+    assert sma_pair["pulse_definition"]["test_data"]["symbol"] == payload["symbol"]
+
 
 def test_ta_pulser_fetches_ohlc_series_from_upstream_when_date_range_is_provided(monkeypatch):
+    """
+    Exercise the
+    test_ta_pulser_fetches_ohlc_series_from_upstream_when_date_range_is_provided
+    regression scenario.
+    """
     root = Path(__file__).resolve().parents[2]
     config_path = root / "attas" / "configs" / "ta.pulser"
     test_data_path = root / "attas" / "examples" / "pulses" / "technical_analysis_test_data.json"
@@ -104,6 +136,7 @@ def test_ta_pulser_fetches_ohlc_series_from_upstream_when_date_range_is_provided
     captured = []
 
     def fake_post(url, json=None, timeout=30):
+        """Handle fake post."""
         captured.append({"url": url, "json": json, "timeout": timeout})
         assert json["content"]["pulse_name"] == "ohlc_bar_series"
         return FakePostResponse(

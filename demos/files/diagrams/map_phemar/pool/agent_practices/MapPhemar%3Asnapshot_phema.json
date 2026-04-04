@@ -1,0 +1,64 @@
+{
+  "id": "MapPhemar:snapshot_phema",
+  "agent_name": "MapPhemar",
+  "practice_id": "snapshot_phema",
+  "practice_name": "Snapshot Phema",
+  "practice_description": "Generate or reuse a cached static snapshot for a Phema using live Plaza pulse data.",
+  "practice_data": {
+    "name": "Snapshot Phema",
+    "description": "Generate or reuse a cached static snapshot for a Phema using live Plaza pulse data.",
+    "id": "snapshot_phema",
+    "cost": 0,
+    "tags": [
+      "phemar",
+      "phema",
+      "snapshot",
+      "cache"
+    ],
+    "examples": [
+      "POST /snapshot_phema {'phema_id': 'macro-brief', 'params': {'ticker': 'AAPL'}, 'cache_time': 900}"
+    ],
+    "inputModes": [
+      "http-post",
+      "json"
+    ],
+    "outputModes": [
+      "json"
+    ],
+    "parameters": {
+      "phema_id": {
+        "type": "string",
+        "description": "Optional Phema id registered on Plaza or preloaded into the agent.",
+        "enum": [
+          "phema-mnh8up4z-qnv7op"
+        ]
+      },
+      "phema_name": {
+        "type": "string",
+        "description": "Optional Phema name when resolving from Plaza or config.",
+        "enum": [
+          "Diagram 1"
+        ]
+      },
+      "phema": {
+        "type": "object",
+        "description": "Inline Phema payload to snapshot without directory lookup."
+      },
+      "params": {
+        "type": "object",
+        "description": "Input parameters forwarded to matching pulsers."
+      },
+      "input": {
+        "type": "object",
+        "description": "Alias for params when invoked by other agents."
+      },
+      "cache_time": {
+        "type": "integer",
+        "description": "Cache lifetime in seconds before regenerating a new static snapshot."
+      }
+    },
+    "path": "/snapshot_phema"
+  },
+  "is_deleted": false,
+  "updated_at": "2026-04-03T02:52:07.582264+00:00"
+}

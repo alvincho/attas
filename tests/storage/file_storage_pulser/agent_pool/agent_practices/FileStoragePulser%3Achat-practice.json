@@ -1,0 +1,38 @@
+{
+  "id": "FileStoragePulser:chat-practice",
+  "agent_name": "FileStoragePulser",
+  "practice_id": "chat-practice",
+  "practice_name": "ChatPractice",
+  "practice_description": "Enables LLM interaction via ollama.",
+  "practice_data": {
+    "name": "ChatPractice",
+    "description": "Enables LLM interaction via ollama.",
+    "id": "chat-practice",
+    "cost": 0,
+    "tags": [
+      "llm",
+      "chat",
+      "ollama"
+    ],
+    "examples": [
+      "POST /chat {'prompt': 'Tell me a joke'}"
+    ],
+    "inputModes": [
+      "http-post",
+      "json"
+    ],
+    "outputModes": [
+      "json"
+    ],
+    "parameters": {
+      "prompt": {
+        "type": "text",
+        "description": "Enter your prompt or paragraph for the LLM",
+        "placeholder": "Write a short summary about AI..."
+      }
+    },
+    "path": "/chat_practice"
+  },
+  "is_deleted": true,
+  "updated_at": "2026-04-03T03:35:32.596129+00:00"
+}

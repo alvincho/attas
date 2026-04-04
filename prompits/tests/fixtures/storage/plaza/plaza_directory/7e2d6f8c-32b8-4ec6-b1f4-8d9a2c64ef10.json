@@ -1,0 +1,120 @@
+{
+  "id": "7e2d6f8c-32b8-4ec6-b1f4-8d9a2c64ef10",
+  "agent_id": "7e2d6f8c-32b8-4ec6-b1f4-8d9a2c64ef10",
+  "name": "Schema: plaza_ui_agent_keys",
+  "type": "Schema",
+  "description": "Built-in table schema for Plaza UI user-managed agent owner keys.",
+  "owner": "Plaza",
+  "address": "",
+  "meta": {
+    "schema_name": "plaza_ui_agent_keys",
+    "schema_kind": "table",
+    "schema": {
+      "name": "plaza_ui_agent_keys",
+      "description": "Named Plaza owner keys that let UI users claim ownership for registered agents.",
+      "primary_key": [
+        "id"
+      ],
+      "rowSchema": {
+        "id": {
+          "type": "string"
+        },
+        "user_id": {
+          "type": "string"
+        },
+        "username": {
+          "type": "string"
+        },
+        "display_name": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "secret": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "created_at": {
+          "type": "datetime"
+        },
+        "updated_at": {
+          "type": "datetime"
+        },
+        "last_used_at": {
+          "type": "datetime"
+        }
+      }
+    }
+  },
+  "card": {
+    "name": "Schema: plaza_ui_agent_keys",
+    "description": "Built-in table schema for Plaza UI user-managed agent owner keys.",
+    "pit_type": "Schema",
+    "owner": "Plaza",
+    "tags": [
+      "schema",
+      "system",
+      "table",
+      "auth"
+    ],
+    "pit_address": {
+      "pit_id": "7e2d6f8c-32b8-4ec6-b1f4-8d9a2c64ef10",
+      "plazas": [
+        "http://127.0.0.1:8011"
+      ]
+    },
+    "meta": {
+      "schema_name": "plaza_ui_agent_keys",
+      "schema_kind": "table",
+      "schema": {
+        "name": "plaza_ui_agent_keys",
+        "description": "Named Plaza owner keys that let UI users claim ownership for registered agents.",
+        "primary_key": [
+          "id"
+        ],
+        "rowSchema": {
+          "id": {
+            "type": "string"
+          },
+          "user_id": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "secret": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "datetime"
+          },
+          "updated_at": {
+            "type": "datetime"
+          },
+          "last_used_at": {
+            "type": "datetime"
+          }
+        }
+      }
+    }
+  },
+  "updated_at": "2026-04-03T03:49:37.571666+00:00"
+}

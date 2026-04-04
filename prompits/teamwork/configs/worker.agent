@@ -1,0 +1,26 @@
+{
+  "name": "TeamWorker",
+  "host": "127.0.0.1",
+  "port": 8071,
+  "plaza_url": "http://127.0.0.1:8011",
+  "party": "Prompits",
+  "type": "prompits.teamwork.agents.TeamWorkerAgent",
+  "description": "Generic teamwork worker that discovers a manager through Plaza.",
+  "manager": {
+    "manager_party": "Prompits"
+  },
+  "worker": {
+    "capabilities": [
+      "echo job"
+    ],
+    "job_capabilities": [
+      {
+        "name": "echo job",
+        "callable": "prompits.dispatcher.examples.job_caps:echo_job_cap",
+        "disabled": false
+      }
+    ],
+    "poll_interval_sec": 10,
+    "auto_register": true
+  }
+}

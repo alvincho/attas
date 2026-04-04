@@ -1,7 +1,22 @@
+"""
+Regression tests for YFinance Pulser.
+
+Phemacast assembles pulse inputs, phemas, and castrs into rendered research artifacts
+and interactive tooling. These tests protect the Phemacast pipeline, demo flows, UI
+helpers, and pulser integrations.
+
+The pytest cases in this file document expected behavior through checks such as
+`test_yfinance_pulser_agent_config_loads_via_shared_agent_factory`,
+`test_yfinance_pulser_normalizes_yfinance_news_payload`,
+`test_yfinance_config_declares_supported_pulses`, and
+`test_yfinance_config_keeps_first_pulse_stable`, helping guard against regressions as
+the packages evolve.
+"""
+
 import json
 import os
 import sys
-from datetime import date
+from datetime import date, datetime, timezone
 from pathlib import Path
 from unittest.mock import patch
 
@@ -15,34 +30,45 @@ from prompits.tests.test_support import build_agent_from_config
 
 
 class FakeResponse:
+    """Response model for fake payloads."""
     def __init__(self, payload, status_code=200):
+        """Initialize the fake response."""
         self._payload = payload
         self.status_code = status_code
 
     def json(self):
+        """Handle JSON for the fake response."""
         return self._payload
 
 
 class FakeSeries(dict):
+    """Represent a fake series."""
     @property
     def index(self):
+        """Return the index."""
         return list(self.keys())
 
     @property
     def values(self):
+        """Return the values."""
         return list(self.values())
 
 
 class _FakeLoc:
+    """Represent a fake loc."""
     def __init__(self, rows):
+        """Initialize the fake loc."""
         self.rows = rows
 
     def __getitem__(self, key):
+        """Handle getitem for the fake loc."""
         return FakeSeries(self.rows[key])
 
 
 class FakeStatementFrame:
+    """Represent a fake statement frame."""
     def __init__(self, rows):
+        """Initialize the fake statement frame."""
         self.rows = {row: dict(values) for row, values in rows.items()}
         self.index = list(self.rows.keys())
         self.columns = list(next(iter(self.rows.values())).keys()) if self.rows else []
@@ -51,6 +77,10 @@ class FakeStatementFrame:
 
 
 def test_yfinance_pulser_maps_snapshot_into_supported_pulses(monkeypatch):
+    """
+    Exercise the test_yfinance_pulser_maps_snapshot_into_supported_pulses regression
+    scenario.
+    """
     snapshot = {
         "symbol": "AAPL",
         "last_price": 214.37,
@@ -190,6 +220,10 @@ def test_yfinance_pulser_maps_snapshot_into_supported_pulses(monkeypatch):
 
 
 def test_yfinance_pulser_returns_error_when_symbol_missing():
+    """
+    Exercise the test_yfinance_pulser_returns_error_when_symbol_missing regression
+    scenario.
+    """
     pulser = YFinancePulser(auto_register=False)
 
     assert pulser.get_pulse_data({}, pulse_name="last_price") == {
@@ -198,7 +232,9 @@ def test_yfinance_pulser_returns_error_when_symbol_missing():
 
 
 def test_yfinance_pulser_exposes_ohlc_bar_series(monkeypatch):
+    """Exercise the test_yfinance_pulser_exposes_ohlc_bar_series regression scenario."""
     def fake_load_ohlc_bar_series(self, symbol, *, interval, start_date, end_date):
+        """Handle fake load ohlc bar series."""
         return {
             "symbol": symbol,
             "interval": interval,
@@ -268,8 +304,136 @@ def test_yfinance_pulser_exposes_ohlc_bar_series(monkeypatch):
     }
 
 
+def test_yfinance_pulser_exposes_company_news(monkeypatch):
+    """Exercise the test_yfinance_pulser_exposes_company_news regression scenario."""
+    def fake_load_company_news(self, symbol, *, number_of_articles):
+        """Handle fake load company news."""
+        return {
+            "symbol": symbol,
+            "number_of_articles": number_of_articles,
+            "articles": [
+                {
+                    "headline": "Apple expands AI features",
+                    "published_at": "2026-03-28T09:30:00Z",
+                    "publisher": "Example Wire",
+                    "summary": "Apple previewed new device intelligence features.",
+                    "url": "https://example.com/apple-ai",
+                },
+                {
+                    "headline": "Apple supplier demand improves",
+                    "published_at": "2026-03-28T08:45:00Z",
+                    "publisher": "Market Desk",
+                    "url": "https://example.com/apple-suppliers",
+                },
+            ],
+            "source": "yfinance",
+        }
+
+    monkeypatch.setattr(YFinancePulser, "_load_company_news", fake_load_company_news)
+
+    pulser = YFinancePulser(auto_register=False)
+    pulse = pulser.resolve_pulse_definition(pulse_name="news_article")
+
+    assert pulse["pulse_address"] == "5f82c4c9-ac00-587c-9e43-547557081ab6"
+    assert pulser.get_pulse_data(
+        {"symbol": "AAPL", "number_of_articles": 2},
+        pulse_name="news_article",
+    ) == {
+        "symbol": "AAPL",
+        "number_of_articles": 2,
+        "articles": [
+            {
+                "headline": "Apple expands AI features",
+                "published_at": "2026-03-28T09:30:00Z",
+                "publisher": "Example Wire",
+                "summary": "Apple previewed new device intelligence features.",
+                "url": "https://example.com/apple-ai",
+            },
+            {
+                "headline": "Apple supplier demand improves",
+                "published_at": "2026-03-28T08:45:00Z",
+                "publisher": "Market Desk",
+                "url": "https://example.com/apple-suppliers",
+            },
+        ],
+        "source": "yfinance",
+    }
+
+
+def test_yfinance_pulser_normalizes_yfinance_news_payload(monkeypatch):
+    """
+    Exercise the test_yfinance_pulser_normalizes_yfinance_news_payload regression
+    scenario.
+    """
+    class FakeTicker:
+        """Represent a fake ticker."""
+        def get_news(self, count=10):
+            """Return the news."""
+            assert count == 2
+            return [
+                {
+                    "content": {
+                        "title": "Apple launches a new enterprise feature",
+                        "pubDate": "2026-03-28T09:30:00Z",
+                        "summary": "The launch expands Apple's enterprise offering.",
+                        "canonicalUrl": {"url": "https://example.com/apple-enterprise"},
+                        "provider": {"displayName": "Example News"},
+                    }
+                },
+                {
+                    "title": "Supply chain commentary turns positive",
+                    "providerPublishTime": 1710000000,
+                    "publisher": "Desk Feed",
+                    "link": "https://example.com/apple-supply-chain",
+                },
+                {
+                    "content": {
+                        "title": "Incomplete article that should be skipped",
+                    }
+                },
+            ]
+
+    class FakeYFinanceModule:
+        """Represent a fake y finance module."""
+        @staticmethod
+        def Ticker(_symbol):
+            """Handle ticker for the fake y finance module."""
+            return FakeTicker()
+
+    monkeypatch.setattr("attas.pulsers.yfinance_pulser.yf", FakeYFinanceModule)
+
+    pulser = YFinancePulser(auto_register=False)
+    payload = pulser._load_company_news("AAPL", number_of_articles=2)
+
+    assert payload == {
+        "symbol": "AAPL",
+        "number_of_articles": 2,
+        "articles": [
+            {
+                "headline": "Apple launches a new enterprise feature",
+                "published_at": "2026-03-28T09:30:00Z",
+                "publisher": "Example News",
+                "summary": "The launch expands Apple's enterprise offering.",
+                "url": "https://example.com/apple-enterprise",
+            },
+            {
+                "headline": "Supply chain commentary turns positive",
+                "published_at": datetime.fromtimestamp(1710000000, tz=timezone.utc).isoformat().replace("+00:00", "Z"),
+                "publisher": "Desk Feed",
+                "url": "https://example.com/apple-supply-chain",
+            },
+        ],
+        "source": "yfinance",
+    }
+
+
 def test_yfinance_pulser_maps_income_statement_pulses(monkeypatch):
+    """
+    Exercise the test_yfinance_pulser_maps_income_statement_pulses regression
+    scenario.
+    """
     def fake_income_statement_snapshot(self, symbol, period_type):
+        """Return the fake income statement snapshot."""
         base = {
             "symbol": symbol,
             "currency": "USD",
@@ -347,6 +511,10 @@ def test_yfinance_pulser_maps_income_statement_pulses(monkeypatch):
 
 
 def test_yfinance_pulser_extracts_income_statement_snapshot_from_frames(monkeypatch):
+    """
+    Exercise the test_yfinance_pulser_extracts_income_statement_snapshot_from_frames
+    regression scenario.
+    """
     annual_frame = FakeStatementFrame(
         {
             "Total Revenue": {
@@ -387,8 +555,10 @@ def test_yfinance_pulser_extracts_income_statement_snapshot_from_frames(monkeypa
     )
 
     class FakeYFinanceModule:
+        """Represent a fake y finance module."""
         @staticmethod
         def Ticker(_symbol):
+            """Handle ticker for the fake y finance module."""
             return object()
 
     monkeypatch.setattr("attas.pulsers.yfinance_pulser.yf", FakeYFinanceModule)
@@ -425,10 +595,15 @@ def test_yfinance_pulser_extracts_income_statement_snapshot_from_frames(monkeypa
 
 
 def test_yfinance_pulser_agent_config_loads_via_shared_agent_factory():
+    """
+    Exercise the test_yfinance_pulser_agent_config_loads_via_shared_agent_factory
+    regression scenario.
+    """
     config_path = Path(__file__).resolve().parents[2] / "attas" / "configs" / "yfinance.pulser"
     sent_payloads = []
 
     def fake_post(url, json=None, timeout=5, **kwargs):
+        """Handle fake post."""
         sent_payloads.append({"url": url, "payload": dict(json or {}), "timeout": timeout})
         return FakeResponse(
             {
@@ -462,20 +637,31 @@ def test_yfinance_pulser_agent_config_loads_via_shared_agent_factory():
     income_statement_revenue = next(
         pulse for pulse in agent.supported_pulses if pulse["name"] == "income_statement_revenue"
     )
+    news_article = next(pulse for pulse in agent.supported_pulses if pulse["name"] == "news_article")
     revenue_pair = next(
         entry for entry in sent_payloads[0]["payload"]["pulse_pulser_pairs"]
         if entry["pulse_name"] == "income_statement_revenue"
     )
+    news_pair = next(
+        entry for entry in sent_payloads[0]["payload"]["pulse_pulser_pairs"]
+        if entry["pulse_name"] == "news_article"
+    )
     assert last_price_pulse["mapping"]["last_price"] == "last_price"
     assert last_price_pulse["output_schema"]["properties"]["last_price"]["type"] == "number"
     assert income_statement_revenue["pulse_address"] == "ffcb1f67-ddbc-5706-903f-73915f91f04a"
+    assert news_article["pulse_address"] == "5f82c4c9-ac00-587c-9e43-547557081ab6"
+    assert news_pair["pulse_address"] == "5f82c4c9-ac00-587c-9e43-547557081ab6"
     assert revenue_pair["pulse_id"] == "urn:plaza:pulse:income.statement.revenue"
     assert any(pulse["name"] == "market_state" for pulse in agent.supported_pulses)
     assert any(pulse["name"] == "income_statement_eps" for pulse in agent.supported_pulses)
+    assert any(pulse["name"] == "news_article" for pulse in agent.supported_pulses)
     assert any(pulse["name"] == "valuation_multiples" for pulse in agent.supported_pulses)
 
 
 def test_yfinance_config_declares_supported_pulses():
+    """
+    Exercise the test_yfinance_config_declares_supported_pulses regression scenario.
+    """
     config_path = Path(__file__).resolve().parents[2] / "attas" / "configs" / "yfinance.pulser"
     config = json.loads(config_path.read_text(encoding="utf-8"))
 
@@ -487,9 +673,14 @@ def test_yfinance_config_declares_supported_pulses():
     assert any(pulse["name"] == "income_statement_revenue" for pulse in config["supported_pulses"])
     assert any(pulse["name"] == "income_statement_eps" for pulse in config["supported_pulses"])
     assert any(pulse["name"] == "market_state" for pulse in config["supported_pulses"])
+    assert any(pulse["name"] == "news_article" for pulse in config["supported_pulses"])
 
 
 def test_yfinance_supported_pulses_cover_snapshot_fields(monkeypatch):
+    """
+    Exercise the test_yfinance_supported_pulses_cover_snapshot_fields regression
+    scenario.
+    """
     monkeypatch.setattr(
         YFinancePulser,
         "_get_ticker_fast_info",
@@ -589,6 +780,9 @@ def test_yfinance_supported_pulses_cover_snapshot_fields(monkeypatch):
 
 
 def test_yfinance_config_keeps_first_pulse_stable():
+    """
+    Exercise the test_yfinance_config_keeps_first_pulse_stable regression scenario.
+    """
     config_path = Path(__file__).resolve().parents[2] / "attas" / "configs" / "yfinance.pulser"
     payload = json.loads(config_path.read_text(encoding="utf-8"))
 
@@ -598,6 +792,10 @@ def test_yfinance_config_keeps_first_pulse_stable():
 
 
 def test_yfinance_pulser_has_dedicated_ui_and_test_endpoint(tmp_path, monkeypatch):
+    """
+    Exercise the test_yfinance_pulser_has_dedicated_ui_and_test_endpoint regression
+    scenario.
+    """
     pool_dir = tmp_path / "storage"
     config_path = tmp_path / "demo_yfinance.agent"
     config_path.write_text(
@@ -666,7 +864,7 @@ def test_yfinance_pulser_has_dedicated_ui_and_test_endpoint(tmp_path, monkeypatc
         assert root.status_code == 200
         assert "DemoYFinancePulser Config" in root.text
         assert "Search Supported Pulses" in root.text
-        assert "APIPulser Details" in root.text
+        assert "APIsPulser Details" in root.text
         assert "Pulse Details" in root.text
         assert "Pulse Test Data JSON" in root.text
         assert "Test Runner" in root.text
@@ -681,6 +879,12 @@ def test_yfinance_pulser_has_dedicated_ui_and_test_endpoint(tmp_path, monkeypatc
         payload = current.json()["config"]
         assert payload["name"] == "DemoYFinancePulser"
         assert payload["supported_pulses"][0]["test_data"]["symbol"] == "MSFT"
+
+        invalid_payload = json.loads(json.dumps(payload))
+        invalid_payload["supported_pulses"][0]["test_data"] = {}
+        invalid_save = client.post("/api/config", json={"config": invalid_payload})
+        assert invalid_save.status_code == 400
+        assert "at least one set of test parameters" in invalid_save.json()["detail"]
 
         payload["description"] = "Updated yfinance pulser"
         payload["supported_pulses"][0]["test_data"] = {"symbol": "NVDA"}

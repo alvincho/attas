@@ -1,0 +1,7 @@
+hello-plaza/storage/
+personal-research-workbench/storage/
+data-pipeline/storage/
+pulsers/file-storage/storage/
+pulsers/analyst-insights/storage/
+pulsers/yfinance/storage/
+pulsers/llm/storage/

@@ -1,3 +1,15 @@
+"""
+Catalog loading and lookup helpers for `attas.pds.catalog`.
+
+Attas layers finance-oriented pulse definitions, validation rules, and personal-agent
+workflows on top of the shared runtimes. Within Attas, this area focuses on pulse-
+directory schemas, catalog loading, runtime normalization, and validation.
+
+Key definitions include `InvalidPDSResource`, `PDSCatalogBundle`, `PDSResourceIndex`,
+`build_pds_resource_index`, and `load_catalog_bundle`, which provide the main entry
+points used by neighboring modules and tests.
+"""
+
 from __future__ import annotations
 
 import json
@@ -17,6 +29,7 @@ from attas.pds.validator import PDSDiagnostic, PDSValidationError, load_validate
 
 @dataclass(frozen=True)
 class InvalidPDSResource:
+    """Represent an invalid PDS resource."""
     resource_id: str
     source_path: Path
     diagnostics: List[PDSDiagnostic]
@@ -24,6 +37,7 @@ class InvalidPDSResource:
 
 @dataclass
 class PDSResourceIndex:
+    """Represent a PDS resource index."""
     resources_by_id: Dict[str, LoadedPDSResource] = field(default_factory=dict)
     invalid_by_id: Dict[str, InvalidPDSResource] = field(default_factory=dict)
     diagnostics: List[PDSDiagnostic] = field(default_factory=list)
@@ -31,6 +45,7 @@ class PDSResourceIndex:
 
 @dataclass
 class PDSCatalogBundle:
+    """Represent a PDS catalog bundle."""
     catalog: LoadedPDSResource
     definitions: Dict[str, LoadedPDSResource] = field(default_factory=dict)
     profiles: Dict[str, LoadedPDSResource] = field(default_factory=dict)
@@ -44,6 +59,7 @@ class PDSCatalogBundle:
 
     @property
     def resolved_resources_by_id(self) -> Dict[str, LoadedPDSResource]:
+        """Return the resolved resources by ID."""
         grouped: Dict[str, LoadedPDSResource] = {}
         grouped.update(self.definitions)
         grouped.update(self.profiles)
@@ -53,10 +69,12 @@ class PDSCatalogBundle:
 
 
 def _candidate_json_files(directory: Path) -> List[Path]:
+    """Internal helper for candidate JSON files."""
     return sorted(path for path in directory.glob("*.json") if path.is_file())
 
 
 def _read_resource_id(path: Path) -> Optional[str]:
+    """Internal helper to read the resource ID."""
     try:
         with path.open("r", encoding="utf-8") as handle:
             payload = json.load(handle)
@@ -68,6 +86,7 @@ def _read_resource_id(path: Path) -> Optional[str]:
 
 
 def build_pds_resource_index(search_directories: Iterable[Path | str]) -> PDSResourceIndex:
+    """Build the PDS resource index."""
     index = PDSResourceIndex()
     seen_paths: Set[Path] = set()
     for directory_value in search_directories:
@@ -115,6 +134,7 @@ def build_pds_resource_index(search_directories: Iterable[Path | str]) -> PDSRes
 
 
 def _append_resolved_resource(bundle: PDSCatalogBundle, loaded: LoadedPDSResource) -> None:
+    """Internal helper to append the resolved resource."""
     resource = loaded.resource
     if isinstance(resource, PulseDefinition):
         bundle.definitions[resource.id] = loaded
@@ -132,6 +152,7 @@ def load_catalog_bundle(
     search_directories: Optional[Iterable[Path | str]] = None,
     resolve_imports: bool = True,
 ) -> PDSCatalogBundle:
+    """Load the catalog bundle."""
     loaded_catalog = load_validated_pds_resource(catalog_path)
     if not isinstance(loaded_catalog.resource, PulseCatalog):
         raise TypeError(f"{loaded_catalog.source_path} is not a pulse_catalog")
@@ -215,6 +236,7 @@ def resolve_catalog_by_id(
     *,
     resolve_imports: bool = True,
 ) -> PDSCatalogBundle:
+    """Resolve the catalog by ID."""
     index = build_pds_resource_index([directory])
     loaded = index.resources_by_id.get(catalog_id)
     if loaded is None:

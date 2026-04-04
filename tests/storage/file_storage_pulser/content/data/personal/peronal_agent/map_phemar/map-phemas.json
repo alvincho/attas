@@ -1,0 +1,117 @@
+{
+  "phemas": [
+    {
+      "created_at": "2026-04-02T08:31:36.624Z",
+      "description": "Diagram-backed Phema managed by MapPhemar.",
+      "id": "phema-mnh70k67-2sy0ui",
+      "input_schema": {},
+      "meta": {
+        "builder": "MapPhemar",
+        "kind": "diagram",
+        "map_phemar": {
+          "diagram": {
+            "edges": [],
+            "expandedSourcePaths": [],
+            "inspectorWidth": 320,
+            "nextEdgeIndex": 0,
+            "nextNodeIndex": 0,
+            "nodes": [
+              {
+                "body": "",
+                "branchInputMode": "any",
+                "branchInputSide": "left",
+                "branchNoMode": "all",
+                "branchNoSide": "right",
+                "branchYesMode": "all",
+                "branchYesSide": "right",
+                "conditionExpression": "",
+                "h": 10,
+                "id": "mind-boundary-input",
+                "inputSchema": {},
+                "inputSchemaError": "",
+                "inputSchemaText": "{}",
+                "outputSchema": {},
+                "outputSchemaError": "",
+                "outputSchemaText": "{}",
+                "paramsText": "{}",
+                "practiceId": "get_pulse_data",
+                "pulseAddress": "",
+                "pulseName": "",
+                "pulserAddress": "",
+                "pulserId": "",
+                "pulserMode": "specific",
+                "pulserName": "",
+                "role": "input",
+                "subtitle": "",
+                "title": "Input",
+                "type": "pill",
+                "w": 16,
+                "x": 12,
+                "y": 42
+              },
+              {
+                "body": "",
+                "branchInputMode": "any",
+                "branchInputSide": "left",
+                "branchNoMode": "all",
+                "branchNoSide": "right",
+                "branchYesMode": "all",
+                "branchYesSide": "right",
+                "conditionExpression": "",
+                "h": 10,
+                "id": "mind-boundary-output",
+                "inputSchema": {},
+                "inputSchemaError": "",
+                "inputSchemaText": "{}",
+                "outputSchema": {},
+                "outputSchemaError": "",
+                "outputSchemaText": "{}",
+                "paramsText": "{}",
+                "practiceId": "get_pulse_data",
+                "pulseAddress": "",
+                "pulseName": "",
+                "pulserAddress": "",
+                "pulserId": "",
+                "pulserMode": "specific",
+                "pulserName": "",
+                "role": "output",
+                "subtitle": "",
+                "title": "Output",
+                "type": "pill",
+                "w": 16,
+                "x": 62,
+                "y": 42
+              }
+            ],
+            "plazaUrl": "http://127.0.0.1:8011",
+            "showGrid": true
+          },
+          "version": 1
+        },
+        "resolution_mode": "dynamic"
+      },
+      "name": "Diagram 1",
+      "output_schema": {},
+      "phema_id": "phema-mnh70k67-2sy0ui",
+      "resolution_mode": "dynamic",
+      "sections": [
+        {
+          "content": [
+            {
+              "text": "This Phema is diagram-backed. Load it in the diagram editor to inspect or modify the workflow.",
+              "type": "text"
+            }
+          ],
+          "description": "Auto-generated from MapPhemar.",
+          "modifier": "",
+          "name": "Diagram Flow"
+        }
+      ],
+      "tags": [
+        "diagram",
+        "map-phemar"
+      ],
+      "updated_at": "2026-04-02T08:31:36.624Z"
+    }
+  ]
+}

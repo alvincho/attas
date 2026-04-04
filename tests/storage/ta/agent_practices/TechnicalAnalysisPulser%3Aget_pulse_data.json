@@ -109,17 +109,27 @@
               "1wk",
               "1mo"
             ],
-            "description": "Bar interval used by the supplied OHLC series."
+            "description": "Bar interval used by the supplied OHLC series or the fetched market-data series."
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Inclusive lower-bound bar timestamp used when fetching OHLC bars from an upstream time-series pulser."
+          },
+          "end_date": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Inclusive upper-bound bar timestamp used when fetching OHLC bars from an upstream time-series pulser and as the default series cutoff when timestamp is omitted."
           },
           "timestamp": {
             "type": "string",
             "format": "date-time",
-            "description": "Upper-bound bar timestamp for the returned indicator series; include bars up to and including this bar."
+            "description": "Upper-bound bar timestamp for the returned indicator series. Optional when end_date is provided."
           },
           "ohlc_series": {
             "type": "array",
             "minItems": 2,
-            "description": "Ordered OHLC bar series sorted ascending by timestamp.",
+            "description": "Ordered OHLC bar series sorted ascending by timestamp. Optional when symbol, interval, start_date, and end_date are provided.",
             "items": {
               "type": "object",
               "properties": {
@@ -174,8 +184,6 @@
           }
         },
         "required": [
-          "ohlc_series",
-          "timestamp",
           "interval",
           "window"
         ],
@@ -185,5 +193,5 @@
     "path": "/get_pulse_data"
   },
   "is_deleted": false,
-  "updated_at": "2026-03-27T12:14:13.136453+00:00"
+  "updated_at": "2026-04-02T05:24:50.810088+00:00"
 }

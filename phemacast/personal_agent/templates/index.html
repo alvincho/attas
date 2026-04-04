@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page_title or "Phemacast Personal Agent" }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='personal_agent.css') }}?v={{ asset_version or 'dev' }}">
+    <link rel="stylesheet" href="{{ url_for('map_phemar_static', path='map_phemar.css') }}?v={{ asset_version or 'dev' }}">
+</head>
+<body>
+    <div id="root"></div>
+    <script>
+        window.__PHEMACAST_PERSONAL_AGENT_BOOTSTRAP__ = {{ initial_payload | tojson }};
+        window.__PHEMACAST_PERSONAL_AGENT_ASSET_VERSION__ = {{ (asset_version or 'dev') | tojson }};
+    </script>
+    <script src="{{ url_for('map_phemar_static', path='map_phemar_shared.js') }}?v={{ asset_version or 'dev' }}"></script>
+    <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script type="text/babel" data-presets="react" src="{{ url_for('static', path='personal_agent.jsx') }}?v={{ asset_version or 'dev' }}"></script>
+</body>
+</html>

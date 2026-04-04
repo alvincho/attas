@@ -68,8 +68,7 @@ A practice is a mounted capability. It publishes metadata into the agent card an
 
 Examples in this repository:
 
-- `ChatPractice`: default `/chat` interface, backed by Ollama or OpenAI
-- `LLMPractice`: dedicated `/llm` interface with a separate practice id
+- built-in `mailbox`: default message ingress for generic agents
 - `EmbeddingsPractice`: embedding generation
 - `PlazaPractice`: register, renew, authenticate, search, heartbeat, relay
 - pool operation practices auto-mounted from the configured pool
@@ -109,6 +108,14 @@ Prompits supports two communication styles:
 
 The second path is the more structured one. The caller includes its `PitAddress` plus either a Plaza token or a shared direct token. The receiver verifies that identity before executing the practice.
 
+Planned `prompits` capabilities include:
+
+- stronger Plaza-backed authentication and permission checks for remote
+  `UsePractice(...)` calls
+- a pre-execution workflow where agents can negotiate cost, confirm payment terms,
+  and complete payment before `UsePractice(...)` runs
+- clearer trust and economic boundaries for cross-agent collaboration
+
 ## Repository Layout
 
 ```text
@@ -139,7 +146,7 @@ pip install fastapi "uvicorn[standard]" requests httpx pydantic python-dotenv js
 Optional dependencies:
 
 - `pip install supabase` if you want to use `SupabasePool`
-- a running Ollama instance if you want local LLM-backed chat or `LLMPractice`
+- a running Ollama instance if you want local llm pulser demos or embeddings
 
 ## Quickstart
 
@@ -161,7 +168,7 @@ In a second terminal:
 python3 prompits/create_agent.py --config prompits/examples/worker.agent
 ```
 
-The worker auto-registers with Plaza on startup, persists its credentials in the local filesystem pool, and exposes the default `chat-practice`.
+The worker auto-registers with Plaza on startup, persists its credentials in the local filesystem pool, and exposes the default `mailbox` endpoint.
 
 ### 3. Start the Browser-Facing User Agent
 
@@ -233,6 +240,13 @@ Prompits agents are configured with JSON files, usually using the `.agent` suffi
   - `"env:SUPABASE_SERVICE_ROLE_KEY"`
   - `"${SUPABASE_SERVICE_ROLE_KEY}"`
 
+### AgentConfig Contract
+
+- `AgentConfig` is not stored in a dedicated `agent_configs` table.
+- `AgentConfig` is registered as a Plaza directory entry with `type = "AgentConfig"` inside `plaza_directory`.
+- Saved `AgentConfig` payloads must be sanitized before persistence. Do not persist runtime-only fields such as `uuid`, `id`, `ip`, `ip_address`, `host`, `port`, `address`, `pit_address`, `plaza_url`, `plaza_urls`, `agent_id`, `api_key`, or bearer-token fields.
+- Do not reintroduce a separate `agent_configs` table or a read-before-write save flow for `AgentConfig`. Plaza directory registration is the intended source of truth.
+
 ## Built-In HTTP Surface
 
 ### BaseAgent Endpoints
@@ -240,12 +254,10 @@ Prompits agents are configured with JSON files, usually using the `.agent` suffi
 - `GET /health`: liveness probe
 - `POST /use_practice/{practice_id}`: verified remote practice execution
 
-### Chat and LLM Practices
+### Messaging and LLM Pulsers
 
-- `POST /chat`: default chat capability mounted by `BaseAgent`
-- `GET /list_models`: provider model discovery for `ChatPractice`
-- `POST /llm`: dedicated LLM capability if `LLMPractice` is mounted
-- `GET /llm_models`: provider model discovery for `LLMPractice`
+- `POST /mailbox`: default inbound message endpoint mounted by `BaseAgent`
+- `GET /list_models`: provider model discovery exposed by llm pulsers such as `OpenAIPulser`
 
 ### Plaza Endpoints
 
@@ -265,11 +277,10 @@ Plaza also serves:
 
 ## Programmatic Usage
 
-The tests show the most reliable examples of programmatic usage. A typical remote-call flow looks like this:
+The tests show the most reliable examples of programmatic usage. A typical message-send flow looks like this:
 
 ```python
 from prompits.agents.standby import StandbyAgent
-from prompits.practices.llm import LLMPractice
 
 caller = StandbyAgent(
     name="caller",
@@ -279,26 +290,16 @@ caller = StandbyAgent(
     agent_card={"name": "caller", "role": "client", "tags": ["demo"]},
 )
 
-target = StandbyAgent(
-    name="llm-agent",
-    host="127.0.0.1",
-    port=9002,
-    plaza_url="http://127.0.0.1:8211",
-    agent_card={"name": "llm-agent", "role": "llm", "tags": ["demo"]},
-)
-target.add_practice(LLMPractice())
-
 caller.register()
-target.register()
 
-result = caller.UsePractice(
-    "llm",
+result = caller.send(
+    "http://127.0.0.1:9002",
     {"prompt": "Return a short greeting."},
-    pit_address=target.pit_address,
+    msg_type="message",
 )
 ```
 
-If `pit_address` points back to the local agent, `UsePractice(...)` executes locally. Otherwise it resolves the target through Plaza and makes a verified HTTP call.
+For structured cross-agent execution, use `UsePractice(...)` with a mounted practice such as `get_pulse_data` on a pulser.
 
 ## Development and Testing
 
@@ -330,7 +331,7 @@ That makes this codebase a stronger basis for an open source release, especially
 
 - an infrastructure layer for multi-agent systems
 - a framework for discovery, identity, routing, and practice execution
-- a base runtime that higher-level systems such as `phemacast` build on top of
+- a base runtime that higher-level agent systems can build on top of
 
 ## Further Reading
 

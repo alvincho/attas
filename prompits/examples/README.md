@@ -1,6 +1,6 @@
 # Prompits Example Configs
 
-These files are minimal local examples for the current Prompits runtime. They are intentionally simpler than the `attas/configs/` fixtures and are meant for open source documentation, demos, and first-run onboarding.
+These files are minimal local examples for the current Prompits runtime. They are meant for open source documentation, demos, and first-run onboarding.
 
 ## Files
 

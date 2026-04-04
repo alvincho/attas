@@ -1,3 +1,14 @@
+"""
+Filesystem module for `prompits.pools.filesystem`.
+
+Prompits provides the core HTTP-native agent runtime, Plaza coordination layer, and
+pool/practice infrastructure for FinMAS. Within Prompits, the pools package implements
+storage adapters and pool-specific helpers.
+
+Core types exposed here include `FileSystemPool`, which carry the main behavior or state
+managed by this module.
+"""
+
 import os
 import json
 import shutil
@@ -16,6 +27,7 @@ class FileSystemPool(Pool):
     """
 
     def __init__(self, name: str, description: str, root_path: str):
+        """Initialize the file system pool."""
         super().__init__(
             name,
             description,
@@ -25,12 +37,14 @@ class FileSystemPool(Pool):
         self.connect()
 
     def connect(self):
+        """Connect the value."""
         if not os.path.exists(self.root_path):
             os.makedirs(self.root_path, exist_ok=True)
         self.is_connected = True
         return True
 
     def disconnect(self):
+        """Disconnect the value."""
         self.is_connected = False
         return True
 
@@ -40,13 +54,16 @@ class FileSystemPool(Pool):
 
     def _safe_item_id(self, item_id: str) -> str:
         # Encode IDs (e.g., containing URLs) into filesystem-safe filenames.
+        """Internal helper for safe item ID."""
         return quote(str(item_id), safe="")
 
     def _TableExists(self, table_name: str) -> bool:
+        """Return whether the table exists for value."""
         with self.lock:
             return os.path.exists(self._get_table_path(table_name))
 
     def _CreateTable(self, table_name: str, schema: TableSchema):
+        """Internal helper to create the table."""
         with self.lock:
             table_path = self._get_table_path(table_name)
             if not os.path.exists(table_path):
@@ -57,6 +74,7 @@ class FileSystemPool(Pool):
             return True
 
     def _Insert(self, table_name: str, data: Dict[str, Any]):
+        """Internal helper for insert."""
         with self.lock:
             table_path = self._get_table_path(table_name)
             if not os.path.exists(table_path):
@@ -78,6 +96,7 @@ class FileSystemPool(Pool):
                 return False
 
     def _InsertMany(self, table_name: str, data_list: List[Dict[str, Any]]):
+        """Internal helper for insert many."""
         for data in data_list or []:
             if not self._Insert(table_name, data):
                 return False
@@ -86,10 +105,12 @@ class FileSystemPool(Pool):
     def _Query(self, query: str, params: Union[List[Any], Dict[str, Any]]=None):
         # FileSystemPool doesn't support complex queries easily.
         # Maybe basic listing?
+        """Internal helper to query the value."""
         print(f"[{self.name}] Query not standardly supported in FileSystemPool. Use GetTableData.")
         return []
 
     def _GetTableData(self, table_name: str, id_or_where: Union[str, Dict]=None, table_schema: TableSchema=None) -> List[Dict[str, Any]]:
+        """Internal helper to return the table data."""
         with self.lock:
             table_path = self._get_table_path(table_name)
             if not os.path.exists(table_path):
@@ -138,6 +159,7 @@ class FileSystemPool(Pool):
         memory_type: str = "text",
         table_name: Optional[str] = None,
     ) -> Dict[str, Any]:
+        """Handle store memory for the file system pool."""
         memory_table = table_name or self.MEMORY_TABLE
         if not self._TableExists(memory_table):
             self._CreateTable(memory_table, self.memory_table_schema())
@@ -158,6 +180,7 @@ class FileSystemPool(Pool):
         limit: int = 10,
         table_name: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
+        """Search the memory."""
         if not query:
             return []
         memory_table = table_name or self.MEMORY_TABLE
@@ -167,6 +190,7 @@ class FileSystemPool(Pool):
         return matches[: max(int(limit), 0)]
 
     def create_table_practice(self):
+        """Create the table practice."""
         return self._build_operation_practice(
             operation_id="pool-create-table",
             name="Pool Create Table",
@@ -181,6 +205,7 @@ class FileSystemPool(Pool):
         )
 
     def table_exists_practice(self):
+        """Return whether the table exists for practice."""
         return self._build_operation_practice(
             operation_id="pool-table-exists",
             name="Pool Table Exists",
@@ -193,6 +218,7 @@ class FileSystemPool(Pool):
         )
 
     def insert_practice(self):
+        """Handle insert practice for the file system pool."""
         return self._build_operation_practice(
             operation_id="pool-insert",
             name="Pool Insert",
@@ -206,6 +232,7 @@ class FileSystemPool(Pool):
         )
 
     def query_practice(self):
+        """Query the practice."""
         return self._build_operation_practice(
             operation_id="pool-query",
             name="Pool Query",
@@ -219,6 +246,7 @@ class FileSystemPool(Pool):
         )
 
     def get_table_data_practice(self):
+        """Return the table data practice."""
         return self._build_operation_practice(
             operation_id="pool-get-table-data",
             name="Pool Get Table Data",
@@ -237,6 +265,7 @@ class FileSystemPool(Pool):
         )
 
     def connect_practice(self):
+        """Connect the practice."""
         return self._build_operation_practice(
             operation_id="pool-connect",
             name="Pool Connect",
@@ -247,6 +276,7 @@ class FileSystemPool(Pool):
         )
 
     def disconnect_practice(self):
+        """Disconnect the practice."""
         return self._build_operation_practice(
             operation_id="pool-disconnect",
             name="Pool Disconnect",
@@ -257,6 +287,7 @@ class FileSystemPool(Pool):
         )
 
     def store_memory_practice(self):
+        """Handle store memory practice for the file system pool."""
         return self._build_operation_practice(
             operation_id="pool-store-memory",
             name="Pool Store Memory",
@@ -281,6 +312,7 @@ class FileSystemPool(Pool):
         )
 
     def search_memory_practice(self):
+        """Search the memory practice."""
         return self._build_operation_practice(
             operation_id="pool-search-memory",
             name="Pool Search Memory",

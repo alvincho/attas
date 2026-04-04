@@ -1,0 +1,2128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ agent_name }} Storage Console</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;500;600&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            color-scheme: light;
+            --bg: #f3f6fb;
+            --ink: #0e1726;
+            --muted: #516072;
+            --panel: rgba(255, 255, 255, 0.92);
+            --panel-strong: #ffffff;
+            --line: rgba(93, 114, 143, 0.18);
+            --accent: #1d4ed8;
+            --accent-soft: rgba(29, 78, 216, 0.08);
+            --accent-warm: #ea580c;
+            --success: #15803d;
+            --danger: #b91c1c;
+            --shadow: 0 24px 70px rgba(12, 18, 31, 0.08);
+            --radius-lg: 28px;
+            --radius-md: 18px;
+            --radius-sm: 12px;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            color: var(--ink);
+            font-family: "Manrope", sans-serif;
+            background:
+                radial-gradient(circle at top left, rgba(29, 78, 216, 0.12), transparent 34%),
+                radial-gradient(circle at bottom right, rgba(234, 88, 12, 0.12), transparent 30%),
+                linear-gradient(180deg, #f7faff 0%, #eef4fb 100%);
+        }
+
+        body.modal-open {
+            overflow: hidden;
+        }
+
+        .shell {
+            width: min(1380px, calc(100vw - 32px));
+            margin: 0 auto;
+            padding: 28px 0 44px;
+        }
+
+        .hero {
+            position: relative;
+            overflow: hidden;
+            padding: 30px 32px;
+            border-radius: 32px;
+            background:
+                linear-gradient(135deg, rgba(9, 18, 34, 0.98), rgba(27, 48, 82, 0.94)),
+                #111827;
+            color: #eff6ff;
+            box-shadow: var(--shadow);
+        }
+
+        .hero,
+        .panel,
+        .stack {
+            align-self: start;
+            height: auto;
+        }
+
+        .hero::after {
+            content: "";
+            position: absolute;
+            inset: auto -60px -90px auto;
+            width: 280px;
+            height: 280px;
+            border-radius: 999px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.18), transparent 70%);
+            pointer-events: none;
+        }
+
+        .hero-header {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 18px;
+        }
+
+        .hero-body {
+            position: relative;
+            z-index: 1;
+            display: grid;
+            gap: 18px;
+        }
+
+        .hero-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.9fr);
+            gap: 22px;
+            align-items: start;
+        }
+
+        .eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 14px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.08);
+            color: rgba(239, 246, 255, 0.9);
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        h1 {
+            margin: 18px 0 10px;
+            font-family: "Fraunces", serif;
+            font-size: clamp(2rem, 4vw, 3.35rem);
+            line-height: 0.98;
+            letter-spacing: -0.03em;
+        }
+
+        .hero p {
+            margin: 0;
+            max-width: 48rem;
+            color: rgba(226, 232, 240, 0.88);
+            line-height: 1.75;
+            font-size: 1rem;
+        }
+
+        .hero-chip-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .hero-chip,
+        .glass-note {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 0;
+            padding: 10px 14px;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            background: rgba(255, 255, 255, 0.08);
+            color: rgba(239, 246, 255, 0.94);
+            font-size: 0.82rem;
+        }
+
+        .glass-note {
+            width: 100%;
+            border-radius: 22px;
+            align-items: flex-start;
+            padding: 18px;
+            line-height: 1.6;
+        }
+
+        .hero-aside {
+            display: grid;
+            gap: 14px;
+        }
+
+        .hero-metric {
+            padding: 18px;
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .hero-metric-label {
+            color: rgba(191, 219, 254, 0.78);
+            font-size: 0.76rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-weight: 700;
+        }
+
+        .hero-metric-value {
+            margin-top: 10px;
+            font-size: 1.1rem;
+            font-weight: 800;
+            line-height: 1.35;
+            word-break: break-word;
+        }
+
+        .status-bar {
+            margin-top: 18px;
+            padding: 14px 16px;
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: rgba(239, 246, 255, 0.92);
+            font-weight: 600;
+        }
+
+        .status-bar.success { color: #bbf7d0; }
+        .status-bar.error { color: #fecaca; }
+
+        .layout {
+            display: grid;
+            grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+            gap: 20px;
+            margin-top: 22px;
+            align-items: start;
+        }
+
+        .stack {
+            display: grid;
+            gap: 20px;
+            align-content: start;
+            grid-auto-rows: max-content;
+        }
+
+        .panel {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(18px);
+        }
+
+        .panel-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 14px;
+            padding: 20px 22px 0;
+        }
+
+        .panel-head h2,
+        .panel-head h3 {
+            margin: 0;
+            font-size: 1.08rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+        }
+
+        .panel-copy {
+            margin-top: 8px;
+            color: var(--muted);
+            line-height: 1.65;
+            font-size: 0.92rem;
+        }
+
+        .panel-body {
+            padding: 16px 22px 22px;
+        }
+
+        .panel-tools {
+            display: inline-flex;
+            flex-wrap: wrap;
+            align-items: flex-start;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+
+        .collapse-toggle {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            min-height: 42px;
+            padding: 0 14px;
+            border-radius: 999px;
+            border: 1px solid rgba(93, 114, 143, 0.2);
+            background: rgba(255, 255, 255, 0.86);
+            color: var(--ink);
+            font-weight: 800;
+            letter-spacing: 0.01em;
+            cursor: pointer;
+            transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+        }
+
+        .collapse-toggle:hover,
+        .collapse-toggle:focus-visible {
+            transform: translateY(-1px);
+            border-color: rgba(29, 78, 216, 0.24);
+            box-shadow: 0 14px 24px rgba(15, 23, 42, 0.08);
+            outline: none;
+        }
+
+        .hero .collapse-toggle {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.14);
+            color: rgba(239, 246, 255, 0.96);
+        }
+
+        .collapse-toggle-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 1.3rem;
+            height: 1.3rem;
+            border-radius: 999px;
+            background: rgba(14, 23, 38, 0.08);
+            font-size: 0.92rem;
+            line-height: 1;
+        }
+
+        .hero .collapse-toggle-icon {
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        .collapsible-content[hidden] {
+            display: none !important;
+        }
+
+        .collapsible-block.is-collapsed .panel-copy {
+            display: none;
+        }
+
+        .collapsible-block.is-collapsed .panel-head {
+            padding-bottom: 18px;
+        }
+
+        .hero.collapsible-block.is-collapsed {
+            padding-bottom: 24px;
+        }
+
+        .hero.collapsible-block.is-collapsed .hero-header {
+            margin-bottom: 0;
+        }
+
+        .field-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 16px;
+        }
+
+        .field {
+            display: grid;
+            gap: 8px;
+        }
+
+        .field.full {
+            grid-column: 1 / -1;
+        }
+
+        .field-tools {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .file-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: rgba(29, 78, 216, 0.08);
+            color: var(--accent);
+            font-size: 0.78rem;
+            font-weight: 700;
+            word-break: break-word;
+        }
+
+        label {
+            color: var(--muted);
+            font-size: 0.78rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        input,
+        textarea,
+        select,
+        button {
+            font: inherit;
+        }
+
+        input,
+        textarea,
+        select {
+            width: 100%;
+            padding: 13px 14px;
+            border-radius: 14px;
+            border: 1px solid rgba(93, 114, 143, 0.2);
+            background: rgba(255, 255, 255, 0.92);
+            color: var(--ink);
+            transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+        }
+
+        textarea {
+            min-height: 110px;
+            resize: vertical;
+        }
+
+        input:focus,
+        textarea:focus,
+        select:focus {
+            outline: none;
+            border-color: rgba(29, 78, 216, 0.42);
+            box-shadow: 0 0 0 4px rgba(29, 78, 216, 0.08);
+        }
+
+        .actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            min-height: 48px;
+            padding: 0 18px;
+            border: 1px solid rgba(93, 114, 143, 0.18);
+            border-radius: 14px;
+            cursor: pointer;
+            transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+        }
+
+        .btn:hover,
+        .btn:focus-visible {
+            transform: translateY(-1px);
+            box-shadow: 0 16px 28px rgba(15, 23, 42, 0.08);
+        }
+
+        .btn-primary {
+            border-color: rgba(29, 78, 216, 0.16);
+            background: linear-gradient(135deg, #1d4ed8, #2563eb);
+            color: #eff6ff;
+            font-weight: 800;
+        }
+
+        .btn-ghost {
+            background: rgba(255, 255, 255, 0.82);
+            color: var(--ink);
+            font-weight: 700;
+        }
+
+        .primary-btn,
+        .ghost-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            min-height: 44px;
+            padding: 0 16px;
+            border-radius: 14px;
+            cursor: pointer;
+            transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+        }
+
+        .primary-btn:hover,
+        .primary-btn:focus-visible,
+        .ghost-btn:hover,
+        .ghost-btn:focus-visible {
+            transform: translateY(-1px);
+            box-shadow: 0 16px 28px rgba(15, 23, 42, 0.08);
+            outline: none;
+        }
+
+        .primary-btn {
+            border: 1px solid rgba(29, 78, 216, 0.16);
+            background: linear-gradient(135deg, #1d4ed8, #2563eb);
+            color: #eff6ff;
+            font-weight: 800;
+        }
+
+        .ghost-btn {
+            border: 1px solid rgba(93, 114, 143, 0.18);
+            background: rgba(255, 255, 255, 0.86);
+            color: var(--ink);
+            font-weight: 700;
+        }
+
+        .status {
+            border-radius: 16px;
+            padding: 12px 14px;
+            font-size: 0.95rem;
+            border: 1px solid rgba(93, 114, 143, 0.18);
+            background: rgba(255, 255, 255, 0.78);
+            color: var(--ink);
+        }
+
+        .status.success {
+            border-color: rgba(21, 128, 61, 0.24);
+            color: var(--success);
+            background: rgba(21, 128, 61, 0.08);
+        }
+
+        .status.error {
+            border-color: rgba(185, 28, 28, 0.24);
+            color: var(--danger);
+            background: rgba(185, 28, 28, 0.08);
+        }
+
+        .editor-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 14px;
+        }
+
+        .json-tree-shell {
+            border: 1px solid rgba(93, 114, 143, 0.14);
+            border-radius: 20px;
+            background: #0f172a;
+            color: #e2e8f0;
+            padding: 16px 18px;
+            min-height: 120px;
+            overflow: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+            font-family: "IBM Plex Mono", monospace;
+            font-size: 0.82rem;
+            line-height: 1.65;
+        }
+
+        .json-tree-shell.compact {
+            min-height: 90px;
+            max-height: calc(10 * 1.65em + 32px);
+        }
+
+        .json-tree-shell.result {
+            min-height: 220px;
+        }
+
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            background: rgba(16, 28, 48, 0.44);
+            backdrop-filter: blur(10px);
+        }
+
+        .modal-card {
+            width: min(960px, 100%);
+            max-height: min(88vh, 960px);
+            overflow: auto;
+            background: var(--panel-strong);
+            border: 1px solid rgba(93, 114, 143, 0.18);
+            border-radius: 28px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            padding: 20px;
+        }
+
+        .backend-shell {
+            border-radius: 22px;
+            border: 1px solid rgba(93, 114, 143, 0.16);
+            background:
+                radial-gradient(circle at top left, rgba(29, 78, 216, 0.08), transparent 35%),
+                linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(247, 250, 255, 0.92));
+            padding: 18px;
+        }
+
+        .backend-shell.hidden {
+            display: none;
+        }
+
+        .backend-title {
+            margin: 0 0 6px;
+            font-family: "Fraunces", serif;
+            font-size: 1.1rem;
+            line-height: 1.1;
+        }
+
+        .backend-note {
+            margin: 0 0 14px;
+            color: var(--muted);
+            line-height: 1.6;
+            font-size: 0.92rem;
+        }
+
+        .signal-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        .signal {
+            padding: 14px;
+            border-radius: 18px;
+            border: 1px solid rgba(93, 114, 143, 0.12);
+            background: rgba(255, 255, 255, 0.86);
+        }
+
+        .signal strong {
+            display: block;
+            font-size: 0.82rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--muted);
+        }
+
+        .signal span {
+            display: block;
+            margin-top: 10px;
+            font-weight: 800;
+            font-size: 1rem;
+            line-height: 1.45;
+            word-break: break-word;
+        }
+
+        .pulse-list {
+            display: grid;
+            gap: 12px;
+        }
+
+        .pulse-card {
+            width: 100%;
+            padding: 16px 18px;
+            border-radius: 20px;
+            border: 1px solid rgba(93, 114, 143, 0.14);
+            background: rgba(255, 255, 255, 0.78);
+            text-align: left;
+            cursor: pointer;
+            transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+        }
+
+        .pulse-card:hover,
+        .pulse-card:focus-visible {
+            transform: translateY(-1px);
+            border-color: rgba(29, 78, 216, 0.24);
+            box-shadow: 0 16px 28px rgba(15, 23, 42, 0.08);
+            outline: none;
+        }
+
+        .pulse-card.active {
+            border-color: rgba(29, 78, 216, 0.32);
+            background: linear-gradient(180deg, rgba(29, 78, 216, 0.08), rgba(255, 255, 255, 0.94));
+            box-shadow: 0 18px 32px rgba(29, 78, 216, 0.12);
+        }
+
+        .pulse-card-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .pulse-card h3 {
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 800;
+        }
+
+        .pulse-pill {
+            padding: 6px 10px;
+            border-radius: 999px;
+            background: var(--accent-soft);
+            color: var(--accent);
+            font-size: 0.75rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .pulse-card p {
+            margin: 10px 0 0;
+            color: var(--muted);
+            line-height: 1.65;
+            font-size: 0.92rem;
+        }
+
+        .pulse-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .pulse-meta span {
+            padding: 7px 10px;
+            border-radius: 999px;
+            background: rgba(14, 23, 38, 0.05);
+            color: var(--muted);
+            font-size: 0.76rem;
+            font-weight: 700;
+        }
+
+        .pulse-detail {
+            padding: 18px;
+            border-radius: 22px;
+            border: 1px solid rgba(93, 114, 143, 0.14);
+            background:
+                radial-gradient(circle at top right, rgba(29, 78, 216, 0.08), transparent 32%),
+                rgba(255, 255, 255, 0.9);
+        }
+
+        .pulse-detail-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 14px;
+        }
+
+        .pulse-detail-head h3 {
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+        }
+
+        .pulse-detail-subtitle {
+            margin-top: 6px;
+            color: var(--muted);
+            font-size: 0.9rem;
+            line-height: 1.55;
+        }
+
+        .pulse-detail-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 14px;
+            margin-bottom: 14px;
+        }
+
+        .pulse-detail-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 10px;
+            border-radius: 999px;
+            background: rgba(14, 23, 38, 0.05);
+            color: var(--muted);
+            font-size: 0.76rem;
+            font-weight: 700;
+        }
+
+        .pulse-tabs {
+            display: inline-flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .pulse-tab {
+            min-height: 40px;
+            padding: 0 14px;
+            border-radius: 999px;
+            border: 1px solid rgba(93, 114, 143, 0.18);
+            background: rgba(255, 255, 255, 0.86);
+            color: var(--ink);
+            font-weight: 800;
+            cursor: pointer;
+            transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+        }
+
+        .pulse-tab:hover,
+        .pulse-tab:focus-visible {
+            transform: translateY(-1px);
+            border-color: rgba(29, 78, 216, 0.24);
+            box-shadow: 0 14px 24px rgba(15, 23, 42, 0.08);
+            outline: none;
+        }
+
+        .pulse-tab.active {
+            border-color: rgba(29, 78, 216, 0.2);
+            background: linear-gradient(135deg, #1d4ed8, #2563eb);
+            color: #eff6ff;
+        }
+
+        pre {
+            margin: 0;
+            padding: 18px;
+            border-radius: 20px;
+            border: 1px solid rgba(93, 114, 143, 0.14);
+            background: #0f172a;
+            color: #e2e8f0;
+            overflow: auto;
+            font-family: "IBM Plex Mono", monospace;
+            font-size: 0.8rem;
+            line-height: 1.7;
+        }
+
+        .legend {
+            display: grid;
+            gap: 12px;
+        }
+
+        .legend-item {
+            padding: 16px;
+            border-radius: 20px;
+            border: 1px solid rgba(93, 114, 143, 0.14);
+            background: rgba(255, 255, 255, 0.86);
+        }
+
+        .legend-item strong {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 0.88rem;
+            letter-spacing: 0.02em;
+        }
+
+        .legend-item span {
+            color: var(--muted);
+            line-height: 1.65;
+            font-size: 0.9rem;
+        }
+
+        .mono {
+            font-family: "IBM Plex Mono", monospace;
+        }
+
+        @media (max-width: 1080px) {
+            .hero-grid,
+            .layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 760px) {
+            .shell {
+                width: min(100vw - 20px, 100%);
+                padding-top: 18px;
+            }
+
+            .hero,
+            .panel {
+                border-radius: 24px;
+            }
+
+            .hero,
+            .panel-body,
+            .panel-head {
+                padding-left: 18px;
+                padding-right: 18px;
+            }
+
+            .field-grid,
+            .signal-grid,
+            .editor-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .hero-header,
+            .panel-head {
+                flex-direction: column;
+            }
+
+            .panel-tools,
+            .actions {
+                width: 100%;
+                justify-content: flex-start;
+            }
+
+            .pulse-detail-head {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="shell">
+        <section class="hero collapsible-block" data-collapsible>
+            <div class="hero-header">
+                <div class="eyebrow">System Storage Console</div>
+                <button class="collapse-toggle" type="button" aria-expanded="true" aria-label="Collapse section">
+                    <span class="collapse-toggle-label">Collapse</span>
+                    <span class="collapse-toggle-icon" aria-hidden="true">-</span>
+                </button>
+            </div>
+            <div class="hero-body collapsible-content">
+                <div class="hero-grid">
+                    <div>
+                        <h1>{{ agent_name }} Storage Console</h1>
+                        <p>Configure the backing store behind this pulser’s S3-style buckets. Filesystem mode keeps objects on local disk. S3 mode stores logical buckets under a configured backing bucket and prefix, while bucket privacy is still enforced by the pulser itself.</p>
+                        <div class="hero-chip-row">
+                            <span class="hero-chip mono" id="config-path-chip">{{ config_path or "No config file attached" }}</span>
+                            <span class="hero-chip" id="active-backend-chip">Backend: loading…</span>
+                        </div>
+                    </div>
+                    <div class="hero-aside">
+                        <div class="hero-metric">
+                            <div class="hero-metric-label">Active Backend</div>
+                            <div class="hero-metric-value" id="hero-backend-value">Loading…</div>
+                        </div>
+                        <div class="glass-note">
+                            <div>
+                                <strong>Access model</strong><br>
+                                Private buckets stay scoped to the creating agent. Public buckets are shared across verified callers. The storage pulse set includes <span class="mono">list_bucket</span>, <span class="mono">bucket_create</span>, <span class="mono">bucket_browse</span>, <span class="mono">object_save</span>, and <span class="mono">object_load</span>.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="status" class="status-bar">Loading config…</div>
+            </div>
+        </section>
+
+        <section class="layout">
+            <div class="stack">
+                <section class="panel collapsible-block" data-collapsible>
+                    <div class="panel-head">
+                        <div>
+                            <h2>Pulser Envelope</h2>
+                            <div class="panel-copy">Lightweight service metadata that will be saved alongside the backend settings.</div>
+                        </div>
+                        <div class="panel-tools">
+                            <div class="actions">
+                                <button class="btn btn-ghost" id="reload-btn" type="button">Reload</button>
+                                <button class="btn btn-primary" id="save-btn" type="button">Save Config</button>
+                            </div>
+                            <button class="collapse-toggle" type="button" aria-expanded="true" aria-label="Collapse section">
+                                <span class="collapse-toggle-label">Collapse</span>
+                                <span class="collapse-toggle-icon" aria-hidden="true">-</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="panel-body collapsible-content">
+                        <div class="field-grid">
+                            <div class="field">
+                                <label for="pulser-name">Pulser Name</label>
+                                <input id="pulser-name" type="text" placeholder="FileStoragePulser">
+                            </div>
+                            <div class="field">
+                                <label for="pulser-party">Party</label>
+                                <input id="pulser-party" type="text" placeholder="System">
+                            </div>
+                            <div class="field full">
+                                <label for="pulser-description">Description</label>
+                                <textarea id="pulser-description" placeholder="Describe the pulser surface and storage role."></textarea>
+                            </div>
+                            <div class="field full">
+                                <label for="pulser-tags">Tags</label>
+                                <input id="pulser-tags" type="text" placeholder="storage, s3, bucket, object, system">
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="panel collapsible-block" data-collapsible>
+                    <div class="panel-head">
+                        <div>
+                            <h2>Backend Storage</h2>
+                            <div class="panel-copy">Choose the physical backing store. The pulser’s bucket ACL rules stay the same in both modes.</div>
+                        </div>
+                        <div class="panel-tools">
+                            <button class="collapse-toggle" type="button" aria-expanded="true" aria-label="Collapse section">
+                                <span class="collapse-toggle-label">Collapse</span>
+                                <span class="collapse-toggle-icon" aria-hidden="true">-</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="panel-body collapsible-content">
+                        <div class="field-grid">
+                            <div class="field full">
+                                <label for="storage-type">Backend Type</label>
+                                <select id="storage-type">
+                                    <option value="filesystem">filesystem</option>
+                                    <option value="s3">s3</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div id="filesystem-fields" class="backend-shell">
+                            <h3 class="backend-title">Filesystem Root</h3>
+                            <p class="backend-note">Store objects under a local directory tree. Use absolute paths or workspace-relative paths.</p>
+                            <div class="field-grid">
+                                <div class="field full">
+                                    <label for="filesystem-root-path">Filesystem Root Path</label>
+                                    <input id="filesystem-root-path" type="text" placeholder="tests/storage/file_storage_pulser/content">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="s3-fields" class="backend-shell hidden">
+                            <h3 class="backend-title">S3 Backing Namespace</h3>
+                            <p class="backend-note">Logical buckets are stored beneath this backing bucket and prefix. Credential fields accept raw values or env-style strings like <span class="mono">env:AWS_ACCESS_KEY_ID</span>.</p>
+                            <div class="field-grid">
+                                <div class="field">
+                                    <label for="s3-bucket">Backing S3 Bucket</label>
+                                    <input id="s3-bucket" type="text" placeholder="backend-root-bucket">
+                                </div>
+                                <div class="field">
+                                    <label for="s3-prefix">Prefix</label>
+                                    <input id="s3-prefix" type="text" placeholder="workspace-a/file-storage">
+                                </div>
+                                <div class="field">
+                                    <label for="s3-region-name">Region Name</label>
+                                    <input id="s3-region-name" type="text" placeholder="us-east-1">
+                                </div>
+                                <div class="field">
+                                    <label for="s3-endpoint-url">Endpoint URL</label>
+                                    <input id="s3-endpoint-url" type="text" placeholder="https://s3.amazonaws.com">
+                                </div>
+                                <div class="field">
+                                    <label for="s3-access-key-id">AWS Access Key ID</label>
+                                    <input id="s3-access-key-id" type="text" placeholder="env:AWS_ACCESS_KEY_ID">
+                                </div>
+                                <div class="field">
+                                    <label for="s3-secret-access-key">AWS Secret Access Key</label>
+                                    <input id="s3-secret-access-key" type="text" placeholder="env:AWS_SECRET_ACCESS_KEY">
+                                </div>
+                                <div class="field full">
+                                    <label for="s3-session-token">AWS Session Token</label>
+                                    <input id="s3-session-token" type="text" placeholder="env:AWS_SESSION_TOKEN">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="panel collapsible-block" data-collapsible>
+                    <div class="panel-head">
+                        <div>
+                            <h2>Supported Pulses</h2>
+                            <div class="panel-copy">These storage operations are fixed by the agent runtime and shown here as a quick operator reference.</div>
+                        </div>
+                        <div class="panel-tools">
+                            <button class="collapse-toggle" type="button" aria-expanded="true" aria-label="Collapse section">
+                                <span class="collapse-toggle-label">Collapse</span>
+                                <span class="collapse-toggle-icon" aria-hidden="true">-</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="panel-body collapsible-content">
+                        <div id="pulse-list" class="pulse-list"></div>
+                    </div>
+                </section>
+            </div>
+
+            <div class="stack">
+                <section class="panel collapsible-block" data-collapsible>
+                    <div class="panel-head">
+                        <div>
+                            <h2>Pulse Details</h2>
+                            <div class="panel-copy">Select a supported pulse on the left to inspect its definition or built-in test payload.</div>
+                        </div>
+                        <div class="panel-tools">
+                            <button id="test-pulse-btn" class="ghost-btn" type="button">Test Data</button>
+                            <button class="collapse-toggle" type="button" aria-expanded="true" aria-label="Collapse section">
+                                <span class="collapse-toggle-label">Collapse</span>
+                                <span class="collapse-toggle-icon" aria-hidden="true">-</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="panel-body collapsible-content">
+                        <section class="pulse-detail">
+                            <div class="pulse-detail-head">
+                                <div>
+                                    <h3 id="pulse-detail-title">Pulse Definition</h3>
+                                    <div id="pulse-detail-subtitle" class="pulse-detail-subtitle">Click a supported pulse to inspect its definition and built-in test payload.</div>
+                                </div>
+                                <div class="pulse-tabs">
+                                    <button id="pulse-tab-definition" class="pulse-tab active" type="button" data-pulse-view="definition">Pulse Definition</button>
+                                    <button id="pulse-tab-test" class="pulse-tab" type="button" data-pulse-view="test">Pulse Test</button>
+                                </div>
+                            </div>
+                            <div id="pulse-detail-meta" class="pulse-detail-meta"></div>
+                            <pre id="pulse-detail-json">{}</pre>
+                        </section>
+                    </div>
+                </section>
+
+                <section class="panel collapsible-block" data-collapsible>
+                    <div class="panel-head">
+                        <div>
+                            <h2>Backend Signals</h2>
+                            <div class="panel-copy">A compact summary of how this config will behave when the pulser starts.</div>
+                        </div>
+                        <div class="panel-tools">
+                            <button class="collapse-toggle" type="button" aria-expanded="true" aria-label="Collapse section">
+                                <span class="collapse-toggle-label">Collapse</span>
+                                <span class="collapse-toggle-icon" aria-hidden="true">-</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="panel-body collapsible-content">
+                        <div class="signal-grid">
+                            <div class="signal">
+                                <strong>Resolved mode</strong>
+                                <span id="summary-backend-type">loading…</span>
+                            </div>
+                            <div class="signal">
+                                <strong>Bucket model</strong>
+                                <span>Logical S3-style buckets</span>
+                            </div>
+                            <div class="signal">
+                                <strong>Public access</strong>
+                                <span>Shared across verified callers</span>
+                            </div>
+                            <div class="signal">
+                                <strong>Private access</strong>
+                                <span>Scoped to creator identity</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="panel collapsible-block" data-collapsible>
+                    <div class="panel-head">
+                        <div>
+                            <h2>Operating Notes</h2>
+                            <div class="panel-copy">A few sharp edges worth keeping visible while you tune the backend.</div>
+                        </div>
+                        <div class="panel-tools">
+                            <button class="collapse-toggle" type="button" aria-expanded="true" aria-label="Collapse section">
+                                <span class="collapse-toggle-label">Collapse</span>
+                                <span class="collapse-toggle-icon" aria-hidden="true">-</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="panel-body collapsible-content">
+                        <div class="legend">
+                            <div class="legend-item">
+                                <strong>Filesystem mode</strong>
+                                <span>Best for local development, quick testing, and single-host deployments. The pulser stores object bytes plus internal metadata documents under the configured root.</span>
+                            </div>
+                            <div class="legend-item">
+                                <strong>S3 mode</strong>
+                                <span>Best for shared or durable storage. The pulser does not create real AWS buckets per logical bucket; it uses one backing bucket and enforces access in the agent layer.</span>
+                            </div>
+                            <div class="legend-item">
+                                <strong>Credential values</strong>
+                                <span>For credential-like fields you can enter plain text, <span class="mono">env:VAR_NAME</span>, or a JSON object such as <span class="mono">{"env":"AWS_ACCESS_KEY_ID"}</span>.</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="panel collapsible-block" data-collapsible>
+                    <div class="panel-head">
+                        <div>
+                            <h2>Saved Preview</h2>
+                            <div class="panel-copy">Exactly what will be written back to the attached config file.</div>
+                        </div>
+                        <div class="panel-tools">
+                            <button class="collapse-toggle" type="button" aria-expanded="true" aria-label="Collapse section">
+                                <span class="collapse-toggle-label">Collapse</span>
+                                <span class="collapse-toggle-icon" aria-hidden="true">-</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="panel-body collapsible-content">
+                        <pre id="config-preview">{}</pre>
+                    </div>
+                </section>
+            </div>
+        </section>
+    </main>
+
+    <div id="test-runner-modal-root"></div>
+
+    <script>
+        const state = {
+            config: null,
+            selectedPulseIndex: 0,
+            selectedPulseView: 'definition',
+            testPanelOpen: false,
+            testDrafts: {},
+        };
+
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function escapeAttribute(value) {
+            return escapeHtml(value);
+        }
+
+        function prettyJson(value) {
+            try {
+                return JSON.stringify(value ?? {}, null, 2);
+            } catch (_error) {
+                return String(value ?? '');
+            }
+        }
+
+        function titleizePulseName(value) {
+            return String(value || 'Unnamed pulse')
+                .replace(/[_-]+/g, ' ')
+                .replace(/\b\w/g, (char) => char.toUpperCase());
+        }
+
+        function splitTags(value) {
+            return String(value || '')
+                .split(',')
+                .map((item) => item.trim())
+                .filter(Boolean);
+        }
+
+        function renderJsonShellInto(node, value) {
+            if (!node) return;
+            node.textContent = typeof value === 'string' ? value : prettyJson(value);
+        }
+
+        function parseObjectField(rawValue, label) {
+            const trimmed = String(rawValue || '').trim();
+            if (!trimmed) return {};
+            try {
+                const parsed = JSON.parse(trimmed);
+                if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+                    throw new Error(`${label} must be a JSON object.`);
+                }
+                return parsed;
+            } catch (error) {
+                throw new Error(error.message.includes(label) ? error.message : `${label} must be valid JSON.`);
+            }
+        }
+
+        function setStatus(message, tone = '') {
+            const node = document.getElementById('status');
+            node.textContent = message;
+            node.className = `status-bar${tone ? ` ${tone}` : ''}`;
+        }
+
+        function formatStorageValue(value) {
+            if (value === null || value === undefined || value === '') return '';
+            if (typeof value === 'object') return JSON.stringify(value);
+            return String(value);
+        }
+
+        function parseLooseValue(value) {
+            const trimmed = String(value || '').trim();
+            if (!trimmed) return '';
+            if ((trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
+                try {
+                    return JSON.parse(trimmed);
+                } catch (_error) {
+                    return trimmed;
+                }
+            }
+            return trimmed;
+        }
+
+        function ensureDefaults(config) {
+            const next = { ...(config || {}) };
+            next.name = next.name || '{{ agent_name }}';
+            next.party = next.party || 'System';
+            next.description = next.description || '';
+            next.tags = Array.isArray(next.tags) ? next.tags : [];
+            next.supported_pulses = Array.isArray(next.supported_pulses) ? next.supported_pulses : [];
+            const storage = next.storage && typeof next.storage === 'object' ? { ...next.storage } : {};
+            storage.type = String(storage.type || 'filesystem').trim().toLowerCase() || 'filesystem';
+            if (storage.type === 's3') {
+                storage.bucket = storage.bucket || storage.bucket_name || '';
+                storage.prefix = storage.prefix || '';
+                storage.region_name = storage.region_name || storage.region || '';
+                storage.endpoint_url = storage.endpoint_url || '';
+                storage.aws_access_key_id = storage.aws_access_key_id || '';
+                storage.aws_secret_access_key = storage.aws_secret_access_key || '';
+                storage.aws_session_token = storage.aws_session_token || '';
+            } else {
+                storage.type = 'filesystem';
+                storage.root_path = storage.root_path || storage.path || 'storage/file_storage_pulser';
+            }
+            next.storage = storage;
+            return next;
+        }
+
+        function populateInputs() {
+            if (!state.config) return;
+            document.getElementById('pulser-name').value = state.config.name || '';
+            document.getElementById('pulser-party').value = state.config.party || 'System';
+            document.getElementById('pulser-description').value = state.config.description || '';
+            document.getElementById('pulser-tags').value = (state.config.tags || []).join(', ');
+            document.getElementById('storage-type').value = state.config.storage?.type || 'filesystem';
+            document.getElementById('filesystem-root-path').value = formatStorageValue(state.config.storage?.root_path);
+            document.getElementById('s3-bucket').value = formatStorageValue(state.config.storage?.bucket);
+            document.getElementById('s3-prefix').value = formatStorageValue(state.config.storage?.prefix);
+            document.getElementById('s3-region-name').value = formatStorageValue(state.config.storage?.region_name);
+            document.getElementById('s3-endpoint-url').value = formatStorageValue(state.config.storage?.endpoint_url);
+            document.getElementById('s3-access-key-id').value = formatStorageValue(state.config.storage?.aws_access_key_id);
+            document.getElementById('s3-secret-access-key').value = formatStorageValue(state.config.storage?.aws_secret_access_key);
+            document.getElementById('s3-session-token').value = formatStorageValue(state.config.storage?.aws_session_token);
+            renderDerived();
+        }
+
+        function syncStateFromInputs() {
+            if (!state.config) return;
+            const next = ensureDefaults({ ...state.config });
+            next.name = document.getElementById('pulser-name').value.trim() || next.name;
+            next.party = document.getElementById('pulser-party').value.trim() || 'System';
+            next.description = document.getElementById('pulser-description').value;
+            next.tags = splitTags(document.getElementById('pulser-tags').value);
+
+            const backendType = document.getElementById('storage-type').value || 'filesystem';
+            const storage = { type: backendType };
+            if (backendType === 's3') {
+                const s3Fields = {
+                    bucket: parseLooseValue(document.getElementById('s3-bucket').value),
+                    prefix: parseLooseValue(document.getElementById('s3-prefix').value),
+                    region_name: parseLooseValue(document.getElementById('s3-region-name').value),
+                    endpoint_url: parseLooseValue(document.getElementById('s3-endpoint-url').value),
+                    aws_access_key_id: parseLooseValue(document.getElementById('s3-access-key-id').value),
+                    aws_secret_access_key: parseLooseValue(document.getElementById('s3-secret-access-key').value),
+                    aws_session_token: parseLooseValue(document.getElementById('s3-session-token').value),
+                };
+                Object.entries(s3Fields).forEach(([key, value]) => {
+                    if (value !== '') storage[key] = value;
+                });
+            } else {
+                storage.root_path = parseLooseValue(document.getElementById('filesystem-root-path').value) || 'storage/file_storage_pulser';
+            }
+            next.storage = storage;
+            state.config = next;
+        }
+
+        function clampSelectedPulseIndex() {
+            const pulses = Array.isArray(state.config?.supported_pulses) ? state.config.supported_pulses : [];
+            if (!pulses.length) {
+                state.selectedPulseIndex = 0;
+                return;
+            }
+            if (state.selectedPulseIndex < 0 || state.selectedPulseIndex >= pulses.length) {
+                state.selectedPulseIndex = 0;
+            }
+        }
+
+        function getSelectedPulse() {
+            const pulses = Array.isArray(state.config?.supported_pulses) ? state.config.supported_pulses : [];
+            clampSelectedPulseIndex();
+            return pulses[state.selectedPulseIndex] || null;
+        }
+
+        function resolvePulseDefinition(pulse) {
+            if (pulse?.pulse_definition && typeof pulse.pulse_definition === 'object' && !Array.isArray(pulse.pulse_definition)) {
+                return pulse.pulse_definition;
+            }
+            const definition = {
+                resource_type: 'pulse_definition',
+                pds_version: '0.1.0',
+                name: pulse?.name || '',
+                title: titleizePulseName(pulse?.name),
+                description: pulse?.description || '',
+                aliases: Array.isArray(pulse?.aliases) ? pulse.aliases : [],
+                tags: Array.isArray(pulse?.tags) ? pulse.tags : [],
+                interface: {
+                    schema_language: 'json-schema-2020-12',
+                    request_schema: pulse?.input_schema || {},
+                    response_schema: pulse?.output_schema || {},
+                },
+            };
+            if (pulse?.pulse_address) {
+                definition.pulse_address = pulse.pulse_address;
+            }
+            if (pulse?.party) {
+                definition.party = pulse.party;
+            }
+            if (pulse?.test_data && typeof pulse.test_data === 'object' && !Array.isArray(pulse.test_data)) {
+                definition.test_data = pulse.test_data;
+            }
+            return definition;
+        }
+
+        function resolvePulseTestData(pulse) {
+            if (pulse?.test_data && typeof pulse.test_data === 'object' && !Array.isArray(pulse.test_data)) {
+                return pulse.test_data;
+            }
+            if (pulse?.resolved_test_data && typeof pulse.resolved_test_data === 'object' && !Array.isArray(pulse.resolved_test_data)) {
+                return pulse.resolved_test_data;
+            }
+            if (pulse?.pulse_definition?.test_data && typeof pulse.pulse_definition.test_data === 'object' && !Array.isArray(pulse.pulse_definition.test_data)) {
+                return pulse.pulse_definition.test_data;
+            }
+            return {};
+        }
+
+        function ensureTestDraft(index, pulse) {
+            if (state.testDrafts[index]) return state.testDrafts[index];
+
+            const schema = pulse?.input_schema || {};
+            const properties = schema.properties && typeof schema.properties === 'object' ? schema.properties : {};
+            const testData = resolvePulseTestData(pulse);
+            const fieldValues = {};
+            const extraParams = {};
+
+            Object.entries(testData).forEach(([key, value]) => {
+                if (Object.prototype.hasOwnProperty.call(properties, key)) {
+                    fieldValues[key] = formatSchemaFieldValue(value, properties[key]);
+                } else {
+                    extraParams[key] = value;
+                }
+            });
+
+            Object.keys(properties).forEach((key) => {
+                if (!Object.prototype.hasOwnProperty.call(fieldValues, key)) {
+                    fieldValues[key] = '';
+                }
+            });
+
+            state.testDrafts[index] = {
+                fieldValues,
+                extraParamsJson: prettyJson(extraParams),
+                resultJson: '{}',
+                debugJson: '{}',
+                showDebugger: false,
+                lastParamsJson: prettyJson(testData),
+                statusMessage: 'Ready to test.',
+                statusTone: '',
+                localFileName: '',
+            };
+            return state.testDrafts[index];
+        }
+
+        function formatSchemaFieldValue(value, schema) {
+            const type = schema?.type || 'string';
+            if (value === undefined || value === null) return '';
+            if (type === 'object' || type === 'array') return prettyJson(value);
+            if (type === 'boolean') return value ? 'true' : 'false';
+            return String(value);
+        }
+
+        function valuesMatchSchemaType(left, right, schema) {
+            const type = schema?.type || 'string';
+            if (type === 'integer' || type === 'number') {
+                return Number(left) === Number(right);
+            }
+            if (type === 'boolean') {
+                return Boolean(left) === Boolean(right);
+            }
+            return String(left) === String(right);
+        }
+
+        function renderTestField(name, schema, rawValue, required) {
+            const type = schema.type || 'string';
+            const label = escapeHtml(schema.title || name);
+            const description = schema.description ? `<div class="panel-copy">${escapeHtml(schema.description)}</div>` : '';
+            const requiredLabel = required ? ' <span class="panel-copy">(required)</span>' : '';
+            const enumValues = Array.isArray(schema.enum) ? schema.enum : [];
+            const supportsFileUpload = name === 'base64_data' || schema.contentEncoding === 'base64';
+
+            if (enumValues.length && type !== 'object' && type !== 'array') {
+                const placeholderLabel = required ? 'Choose…' : 'Unset';
+                const options = enumValues.map((option) => {
+                    const optionValue = formatSchemaFieldValue(option, schema);
+                    return `<option value="${escapeAttribute(optionValue)}" ${rawValue === optionValue ? 'selected' : ''}>${escapeHtml(optionValue)}</option>`;
+                }).join('');
+                return `
+                    <div class="field">
+                        <label>${label}${requiredLabel}</label>
+                        <select data-test-field="${escapeAttribute(name)}" data-test-type="${escapeAttribute(type)}">
+                            <option value="" ${rawValue === '' ? 'selected' : ''} ${required ? 'disabled' : ''}>${placeholderLabel}</option>
+                            ${options}
+                        </select>
+                        ${description}
+                    </div>
+                `;
+            }
+
+            if (type === 'boolean') {
+                return `
+                    <div class="field">
+                        <label>${label}${requiredLabel}</label>
+                        <select data-test-field="${escapeAttribute(name)}" data-test-type="boolean">
+                            <option value="" ${rawValue === '' ? 'selected' : ''}>Unset</option>
+                            <option value="true" ${rawValue === 'true' ? 'selected' : ''}>true</option>
+                            <option value="false" ${rawValue === 'false' ? 'selected' : ''}>false</option>
+                        </select>
+                        ${description}
+                    </div>
+                `;
+            }
+
+            if (type === 'object' || type === 'array') {
+                return `
+                    <div class="field full">
+                        <label>${label}${requiredLabel}</label>
+                        <textarea data-test-field="${escapeAttribute(name)}" data-test-type="${escapeAttribute(type)}" placeholder='${type === 'object' ? '{"key":"value"}' : '["item"]'}'>${escapeHtml(rawValue)}</textarea>
+                        ${description}
+                    </div>
+                `;
+            }
+
+            const inputType = type === 'number' || type === 'integer' ? 'number' : 'text';
+            if (supportsFileUpload) {
+                const draft = state.testDrafts[state.selectedPulseIndex] || {};
+                const localFileChip = draft.localFileName
+                    ? `<span class="file-chip">${escapeHtml(draft.localFileName)}</span>`
+                    : '';
+                return `
+                    <div class="field full">
+                        <label>${label}${requiredLabel}</label>
+                        <div class="field-tools">
+                            <input id="test-local-file" type="file" data-test-file-field="${escapeAttribute(name)}" style="padding:10px 12px;">
+                            ${localFileChip}
+                        </div>
+                        <div class="panel-copy">Choose a local PDF, video, image, audio file, or other blob to populate this base64 payload automatically.</div>
+                        <textarea data-test-field="${escapeAttribute(name)}" data-test-type="${escapeAttribute(type)}">${escapeHtml(rawValue)}</textarea>
+                        ${description}
+                    </div>
+                `;
+            }
+            return `
+                <div class="field">
+                    <label>${label}${requiredLabel}</label>
+                    <input type="${inputType}" data-test-field="${escapeAttribute(name)}" data-test-type="${escapeAttribute(type)}" value="${escapeAttribute(rawValue)}">
+                    ${description}
+                </div>
+            `;
+        }
+
+        function coerceSchemaFieldValue(name, rawValue, schema, required) {
+            const type = schema.type || 'string';
+            const trimmed = String(rawValue ?? '').trim();
+            if (!trimmed) {
+                if (required) {
+                    throw new Error(`${name} is required for this test.`);
+                }
+                return undefined;
+            }
+
+            if (type === 'number' || type === 'integer') {
+                const value = Number(trimmed);
+                if (!Number.isFinite(value)) {
+                    throw new Error(`${name} must be numeric.`);
+                }
+                const numericValue = type === 'integer' ? Math.trunc(value) : value;
+                if (Array.isArray(schema.enum) && schema.enum.length && !schema.enum.some((candidate) => valuesMatchSchemaType(candidate, numericValue, schema))) {
+                    throw new Error(`${name} must be one of: ${schema.enum.join(', ')}.`);
+                }
+                return numericValue;
+            }
+
+            if (type === 'boolean') {
+                let booleanValue;
+                if (trimmed === 'true') booleanValue = true;
+                if (trimmed === 'false') booleanValue = false;
+                if (booleanValue === undefined) {
+                    throw new Error(`${name} must be true or false.`);
+                }
+                if (Array.isArray(schema.enum) && schema.enum.length && !schema.enum.some((candidate) => valuesMatchSchemaType(candidate, booleanValue, schema))) {
+                    throw new Error(`${name} must be one of: ${schema.enum.join(', ')}.`);
+                }
+                return booleanValue;
+            }
+
+            if (type === 'object' || type === 'array') {
+                try {
+                    const parsed = JSON.parse(trimmed);
+                    if (type === 'object' && (Array.isArray(parsed) || typeof parsed !== 'object' || parsed === null)) {
+                        throw new Error(`${name} must be a JSON object.`);
+                    }
+                    if (type === 'array' && !Array.isArray(parsed)) {
+                        throw new Error(`${name} must be a JSON array.`);
+                    }
+                    return parsed;
+                } catch (error) {
+                    throw new Error(error.message.includes(name) ? error.message : `${name} must be valid JSON.`);
+                }
+            }
+
+            if (Array.isArray(schema.enum) && schema.enum.length && !schema.enum.some((candidate) => valuesMatchSchemaType(candidate, rawValue, schema))) {
+                throw new Error(`${name} must be one of: ${schema.enum.join(', ')}.`);
+            }
+            return rawValue;
+        }
+
+        function buildTestParams(index, pulse) {
+            const draft = ensureTestDraft(index, pulse);
+            const schema = pulse?.input_schema || {};
+            const properties = schema.properties && typeof schema.properties === 'object' ? schema.properties : {};
+            const required = new Set(Array.isArray(schema.required) ? schema.required : []);
+            const params = {};
+
+            Object.entries(properties).forEach(([name, fieldSchema]) => {
+                const rawValue = draft.fieldValues[name] ?? '';
+                const value = coerceSchemaFieldValue(name, rawValue, fieldSchema || {}, required.has(name));
+                if (value !== undefined) {
+                    params[name] = value;
+                }
+            });
+
+            return {
+                ...parseObjectField(draft.extraParamsJson, 'Extra Params JSON'),
+                ...params,
+            };
+        }
+
+        function replaceObjectKeyFilename(currentKey, filename) {
+            const trimmedKey = String(currentKey || '').trim();
+            const cleanName = String(filename || '').trim();
+            if (!cleanName) return trimmedKey;
+            if (!trimmedKey) return cleanName;
+            const parts = trimmedKey.split('/').filter(Boolean);
+            if (!parts.length) return cleanName;
+            parts[parts.length - 1] = cleanName;
+            return parts.join('/');
+        }
+
+        function readFileAsBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onerror = () => reject(new Error(`Failed to read ${file?.name || 'selected file'}.`));
+                reader.onload = () => {
+                    const result = String(reader.result || '');
+                    const commaIndex = result.indexOf(',');
+                    resolve(commaIndex >= 0 ? result.slice(commaIndex + 1) : result);
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        async function handleTestFileSelection(file, pulse) {
+            if (!file || !pulse) return;
+            const draft = ensureTestDraft(state.selectedPulseIndex, pulse);
+            const base64Value = await readFileAsBase64(file);
+            draft.fieldValues.base64_data = base64Value;
+            draft.localFileName = file.name || '';
+            if (Object.prototype.hasOwnProperty.call(draft.fieldValues, 'text')) {
+                draft.fieldValues.text = '';
+            }
+            if (Object.prototype.hasOwnProperty.call(draft.fieldValues, 'data')) {
+                draft.fieldValues.data = '';
+            }
+
+            if (Object.prototype.hasOwnProperty.call(draft.fieldValues, 'object_key')) {
+                draft.fieldValues.object_key = replaceObjectKeyFilename(draft.fieldValues.object_key, file.name || '');
+            }
+            if (Object.prototype.hasOwnProperty.call(draft.fieldValues, 'content_type') && !String(draft.fieldValues.content_type || '').trim()) {
+                draft.fieldValues.content_type = file.type || '';
+            }
+
+            try {
+                draft.lastParamsJson = prettyJson(buildTestParams(state.selectedPulseIndex, pulse));
+            } catch (error) {
+                draft.lastParamsJson = error.message;
+            }
+            renderTestPanel();
+        }
+
+        function renderPulseDetail() {
+            const pulse = getSelectedPulse();
+            const title = document.getElementById('pulse-detail-title');
+            const subtitle = document.getElementById('pulse-detail-subtitle');
+            const meta = document.getElementById('pulse-detail-meta');
+            const preview = document.getElementById('pulse-detail-json');
+            const activeView = state.selectedPulseView === 'test' ? 'test' : 'definition';
+
+            document.querySelectorAll('[data-pulse-view]').forEach((button) => {
+                button.classList.toggle('active', button.dataset.pulseView === activeView);
+                button.setAttribute('aria-pressed', button.dataset.pulseView === activeView ? 'true' : 'false');
+            });
+
+            if (!pulse) {
+                title.textContent = activeView === 'test' ? 'Pulse Test' : 'Pulse Definition';
+                subtitle.textContent = 'Click a supported pulse to inspect its definition and built-in test payload.';
+                meta.innerHTML = '';
+                preview.textContent = '{}';
+                return;
+            }
+
+            const definition = resolvePulseDefinition(pulse);
+            const testData = resolvePulseTestData(pulse);
+            const aliases = Array.isArray(pulse.aliases) ? pulse.aliases : [];
+            const tags = Array.isArray(pulse.tags) ? pulse.tags : [];
+
+            title.textContent = activeView === 'test'
+                ? `${pulse.name || 'Unnamed pulse'} Test`
+                : `${pulse.name || 'Unnamed pulse'} Definition`;
+            subtitle.textContent = pulse.description || pulse.pulse_address || 'Storage pulse metadata and schemas.';
+            meta.innerHTML = [
+                pulse.party ? `<span class="pulse-detail-chip">${escapeHtml(pulse.party)}</span>` : '',
+                pulse.pulse_address ? `<span class="pulse-detail-chip mono">${escapeHtml(pulse.pulse_address)}</span>` : '',
+                aliases.length ? `<span class="pulse-detail-chip">aliases: ${escapeHtml(aliases.join(', '))}</span>` : '',
+                tags.length ? `<span class="pulse-detail-chip">tags: ${escapeHtml(tags.join(', '))}</span>` : '',
+            ].filter(Boolean).join('');
+            preview.textContent = prettyJson(activeView === 'test' ? testData : definition);
+        }
+
+        function renderPulses() {
+            const root = document.getElementById('pulse-list');
+            const pulses = Array.isArray(state.config?.supported_pulses) ? state.config.supported_pulses : [];
+            clampSelectedPulseIndex();
+            if (!pulses.length) {
+                root.innerHTML = '<div class="legend-item"><strong>No pulses loaded</strong><span>The pulser will restore its defaults when the config is normalized.</span></div>';
+                renderPulseDetail();
+                return;
+            }
+            root.innerHTML = pulses.map((pulse, index) => {
+                const aliases = Array.isArray(pulse.aliases) && pulse.aliases.length
+                    ? `<span>aliases: ${escapeHtml(pulse.aliases.join(', '))}</span>`
+                    : '';
+                return `
+                    <button class="pulse-card ${index === state.selectedPulseIndex ? 'active' : ''}" type="button" data-pulse-index="${index}">
+                        <div class="pulse-card-head">
+                            <h3>${escapeHtml(pulse.name || 'Unnamed pulse')}</h3>
+                            <span class="pulse-pill">${escapeHtml(pulse.party || 'System')}</span>
+                        </div>
+                        <p>${escapeHtml(pulse.description || 'No description provided.')}</p>
+                        <div class="pulse-meta">
+                            <span>${escapeHtml(pulse.pulse_address || 'No pulse address')}</span>
+                            ${aliases}
+                        </div>
+                    </button>
+                `;
+            }).join('');
+
+            root.querySelectorAll('[data-pulse-index]').forEach((button) => {
+                button.addEventListener('click', () => {
+                    state.selectedPulseIndex = Number(button.dataset.pulseIndex || 0);
+                    renderPulses();
+                    renderPulseDetail();
+                    if (state.testPanelOpen) {
+                        renderTestPanel();
+                    }
+                });
+            });
+            renderPulseDetail();
+        }
+
+        function renderDerived() {
+            if (!state.config) return;
+            const backendType = state.config.storage?.type || 'filesystem';
+            document.getElementById('active-backend-chip').textContent = `Backend: ${backendType}`;
+            document.getElementById('hero-backend-value').textContent = backendType === 's3'
+                ? `s3 -> ${String(state.config.storage?.bucket || 'unset bucket')}`
+                : `filesystem -> ${String(state.config.storage?.root_path || 'unset path')}`;
+            document.getElementById('summary-backend-type').textContent = backendType;
+            document.getElementById('filesystem-fields').classList.toggle('hidden', backendType !== 'filesystem');
+            document.getElementById('s3-fields').classList.toggle('hidden', backendType !== 's3');
+            document.getElementById('config-preview').textContent = JSON.stringify(state.config, null, 2);
+            renderPulses();
+        }
+
+        function toggleTestPanel(forceOpen) {
+            state.testPanelOpen = typeof forceOpen === 'boolean' ? forceOpen : !state.testPanelOpen;
+            renderTestPanel();
+        }
+
+        function renderTestPanel() {
+            const root = document.getElementById('test-runner-modal-root');
+            document.body.classList.toggle('modal-open', state.testPanelOpen);
+            if (!state.testPanelOpen) {
+                root.innerHTML = '';
+                return;
+            }
+
+            syncStateFromInputs();
+            const pulse = getSelectedPulse();
+            const pulseName = pulse?.name || `pulse_${state.selectedPulseIndex + 1}`;
+            const pulserName = state.config?.name || 'FileStoragePulser';
+            const testTitle = pulse ? `${pulseName} | ${pulserName}` : `Test Runner | ${pulserName}`;
+
+            root.innerHTML = `
+                <div id="test-runner-modal" class="modal-backdrop">
+                    <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="test-runner-title">
+                        <div class="panel-head">
+                            <div>
+                                <h3 id="test-runner-title">${escapeHtml(testTitle)}</h3>
+                            </div>
+                            <button class="ghost-btn" type="button" data-modal-close="true">Close</button>
+                        </div>
+                        <div id="test-runner-status" class="status">Ready to test.</div>
+                        <div id="test-runner-form" class="editor-grid" style="margin-top:14px;"></div>
+                        <div class="panel-head" style="margin-top:18px;">
+                            <div>
+                                <h3>Test Result</h3>
+                                <div class="panel-copy">Rendered response from the current pulse definition.</div>
+                            </div>
+                        </div>
+                        <div id="test-runner-result" class="json-tree-shell result"></div>
+                    </section>
+                </div>
+            `;
+
+            const form = root.querySelector('#test-runner-form');
+            const result = root.querySelector('#test-runner-result');
+            const status = root.querySelector('#test-runner-status');
+            if (!pulse) {
+                form.innerHTML = '<div class="panel-copy">Select a pulse to test it.</div>';
+                renderJsonShellInto(result, {});
+                status.textContent = 'No pulse selected.';
+                status.className = 'status';
+                return;
+            }
+
+            const draft = ensureTestDraft(state.selectedPulseIndex, pulse);
+            const schema = pulse.input_schema || {};
+            const properties = schema.properties && typeof schema.properties === 'object' ? schema.properties : {};
+            const required = new Set(Array.isArray(schema.required) ? schema.required : []);
+            const propertyEntries = Object.entries(properties);
+
+            const fieldMarkup = propertyEntries.length
+                ? propertyEntries.map(([name, fieldSchema]) => renderTestField(name, fieldSchema || {}, draft.fieldValues[name] ?? '', required.has(name))).join('')
+                : '<div class="field full"><label>Test Parameters JSON</label><div class="panel-copy">This pulse does not define input schema properties. Use Extra Params JSON below to send test inputs.</div></div>';
+
+            form.innerHTML = `
+                ${fieldMarkup}
+                <div class="field full">
+                    <label>Extra Params JSON</label>
+                    <textarea id="test-extra-params">${escapeHtml(draft.extraParamsJson)}</textarea>
+                </div>
+                <div class="field full">
+                    <label>Resolved Test Params JSON</label>
+                    <div id="test-last-params" class="json-tree-shell compact"></div>
+                </div>
+                <div class="field full">
+                    <label style="text-transform:none;letter-spacing:0;font-size:0.95rem;color:var(--ink);font-weight:600;">
+                        <input id="show-debugger-checkbox" type="checkbox" ${draft.showDebugger ? 'checked' : ''} style="width:auto;margin-right:10px;">
+                        Show Debugger
+                    </label>
+                    <div class="panel-copy">Include pulse definition, storage config, and the raw result in the test output.</div>
+                </div>
+                <div class="field full">
+                    <button id="run-test-btn" class="primary-btn" type="button">Run Test</button>
+                </div>
+            `;
+
+            form.querySelectorAll('[data-test-field]').forEach((node) => {
+                node.addEventListener('input', (event) => {
+                    draft.fieldValues[event.target.dataset.testField] = event.target.value;
+                    try {
+                        draft.lastParamsJson = prettyJson(buildTestParams(state.selectedPulseIndex, pulse));
+                    } catch (error) {
+                        draft.lastParamsJson = error.message;
+                    }
+                    renderJsonShellInto(document.getElementById('test-last-params'), draft.lastParamsJson || '{}');
+                });
+            });
+
+            form.querySelectorAll('[data-test-file-field]').forEach((node) => {
+                node.addEventListener('change', async (event) => {
+                    const file = event.target.files && event.target.files[0] ? event.target.files[0] : null;
+                    if (!file) return;
+                    try {
+                        await handleTestFileSelection(file, pulse);
+                    } catch (error) {
+                        draft.statusMessage = error.message;
+                        draft.statusTone = 'error';
+                        draft.resultJson = prettyJson({ error: error.message });
+                        renderTestPanel();
+                    }
+                });
+            });
+
+            const extraNode = document.getElementById('test-extra-params');
+            extraNode.addEventListener('input', (event) => {
+                draft.extraParamsJson = event.target.value;
+                try {
+                    draft.lastParamsJson = prettyJson(buildTestParams(state.selectedPulseIndex, pulse));
+                } catch (error) {
+                    draft.lastParamsJson = error.message;
+                }
+                renderJsonShellInto(document.getElementById('test-last-params'), draft.lastParamsJson || '{}');
+            });
+
+            document.getElementById('show-debugger-checkbox').addEventListener('change', (event) => {
+                draft.showDebugger = Boolean(event.target.checked);
+                renderTestPanel();
+            });
+
+            document.getElementById('run-test-btn').addEventListener('click', runPulseTest);
+            renderJsonShellInto(result, draft.resultJson || '{}');
+            status.textContent = draft.statusMessage || 'Ready to test.';
+            status.className = `status${draft.statusTone ? ` ${draft.statusTone}` : ''}`;
+            renderJsonShellInto(document.getElementById('test-last-params'), draft.lastParamsJson || '{}');
+
+            const existingDebugNode = form.parentElement.querySelector('#test-debugger-block');
+            if (existingDebugNode) {
+                existingDebugNode.remove();
+            }
+            if (draft.showDebugger) {
+                form.insertAdjacentHTML(
+                    'afterend',
+                    `
+                        <div id="test-debugger-block">
+                            <div class="panel-head" style="margin-top:18px;">
+                                <div>
+                                    <h3>Debugger</h3>
+                                    <div class="panel-copy">Detailed execution trace for the current pulse test.</div>
+                                </div>
+                            </div>
+                            <div id="test-debugger-result" class="json-tree-shell result"></div>
+                        </div>
+                    `
+                );
+            }
+
+            const debuggerNode = document.getElementById('test-debugger-result');
+            if (debuggerNode) {
+                renderJsonShellInto(debuggerNode, draft.debugJson || '{}');
+            }
+
+            const firstField = form.querySelector('[data-test-field], #test-extra-params, #run-test-btn');
+            if (firstField && document.activeElement !== firstField) {
+                setTimeout(() => firstField.focus(), 0);
+            }
+        }
+
+        async function runPulseTest() {
+            if (!state.config) return;
+
+            let pulse;
+            let params;
+            try {
+                syncStateFromInputs();
+                pulse = getSelectedPulse();
+                if (!pulse) {
+                    throw new Error('Select a pulse before running a test.');
+                }
+                params = buildTestParams(state.selectedPulseIndex, pulse);
+            } catch (error) {
+                const draft = state.testDrafts[state.selectedPulseIndex] || {};
+                draft.statusMessage = error.message;
+                draft.statusTone = 'error';
+                draft.resultJson = prettyJson({ error: error.message });
+                draft.lastParamsJson = error.message;
+                state.testDrafts[state.selectedPulseIndex] = draft;
+                renderTestPanel();
+                return;
+            }
+
+            const draft = ensureTestDraft(state.selectedPulseIndex, pulse);
+            draft.statusMessage = `Running ${pulse.name}…`;
+            draft.statusTone = '';
+            draft.lastParamsJson = prettyJson(params);
+            renderTestPanel();
+
+            try {
+                const response = await fetch('/api/test-pulse', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        config: state.config,
+                        pulse_name: pulse.name,
+                        params,
+                        debug: Boolean(draft.showDebugger),
+                    }),
+                });
+                const rawBody = await response.text();
+                let data = null;
+                try {
+                    data = rawBody ? JSON.parse(rawBody) : {};
+                } catch (_parseError) {
+                    data = null;
+                }
+                if (!response.ok || !data || data.status !== 'success') {
+                    const detail = (data && (data.detail || data.message)) || rawBody || response.statusText || 'Failed to run pulse test';
+                    draft.resultJson = prettyJson({
+                        error: detail,
+                        http_status: response.status,
+                        http_status_text: response.statusText,
+                    });
+                    draft.debugJson = prettyJson({
+                        request: {
+                            endpoint: '/api/test-pulse',
+                            pulse_name: pulse.name,
+                            params,
+                            debug: Boolean(draft.showDebugger),
+                        },
+                        response: {
+                            status: response.status,
+                            status_text: response.statusText,
+                            body: data || rawBody,
+                        },
+                        hint: response.status === 404 ? 'The running FileStoragePulser may need to be restarted so /api/test-pulse is available.' : undefined,
+                    });
+                    draft.statusMessage = detail;
+                    draft.statusTone = 'error';
+                    renderTestPanel();
+                    scrollTestOutputIntoView();
+                    return;
+                }
+
+                draft.resultJson = prettyJson(data.result || {});
+                draft.debugJson = prettyJson(data.debug || {});
+                draft.statusMessage = `Test completed for ${pulse.name}.`;
+                draft.statusTone = data.result && data.result.error ? 'error' : 'success';
+            } catch (error) {
+                draft.resultJson = prettyJson({ error: error.message });
+                draft.debugJson = prettyJson({
+                    request: {
+                        endpoint: '/api/test-pulse',
+                        pulse_name: pulse.name,
+                        params,
+                        debug: Boolean(draft.showDebugger),
+                    },
+                    error: error.message,
+                });
+                draft.statusMessage = error.message;
+                draft.statusTone = 'error';
+            }
+
+            renderTestPanel();
+            scrollTestOutputIntoView();
+        }
+
+        function scrollTestOutputIntoView() {
+            const target = document.getElementById('test-debugger-result') || document.getElementById('test-runner-result');
+            if (target) {
+                setTimeout(() => target.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0);
+            }
+        }
+
+        function bindPulseDetailControls() {
+            document.querySelectorAll('[data-pulse-view]').forEach((button) => {
+                button.addEventListener('click', () => {
+                    state.selectedPulseView = button.dataset.pulseView === 'test' ? 'test' : 'definition';
+                    renderPulseDetail();
+                });
+            });
+        }
+
+        function setBlockCollapsed(block, collapsed) {
+            const content = block.querySelector('.collapsible-content');
+            const button = block.querySelector('.collapse-toggle');
+            block.classList.toggle('is-collapsed', collapsed);
+            if (content) {
+                content.hidden = collapsed;
+            }
+            if (button) {
+                button.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+                const label = button.querySelector('.collapse-toggle-label');
+                const icon = button.querySelector('.collapse-toggle-icon');
+                if (label) label.textContent = collapsed ? 'Expand' : 'Collapse';
+                if (icon) icon.textContent = collapsed ? '+' : '-';
+            }
+        }
+
+        function bindCollapseControls() {
+            document.querySelectorAll('[data-collapsible]').forEach((block, index) => {
+                const content = block.querySelector('.collapsible-content');
+                const button = block.querySelector('.collapse-toggle');
+                if (!content || !button) return;
+                if (!content.id) {
+                    content.id = `collapsible-content-${index + 1}`;
+                }
+                button.setAttribute('aria-controls', content.id);
+                button.addEventListener('click', () => {
+                    setBlockCollapsed(block, !block.classList.contains('is-collapsed'));
+                });
+                setBlockCollapsed(block, block.classList.contains('is-collapsed'));
+            });
+        }
+
+        async function loadConfig() {
+            setStatus('Loading config…');
+            try {
+                const response = await fetch('/api/config');
+                const payload = await response.json();
+                if (!response.ok || payload.status !== 'success') {
+                    throw new Error(payload.detail || payload.message || 'Failed to load config.');
+                }
+                state.config = ensureDefaults(payload.config || {});
+                populateInputs();
+                setStatus('Config loaded.', 'success');
+            } catch (error) {
+                setStatus(error.message, 'error');
+            }
+        }
+
+        async function saveConfig() {
+            if (!state.config) return;
+            syncStateFromInputs();
+            setStatus('Saving config…');
+            try {
+                const response = await fetch('/api/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ config: state.config }),
+                });
+                const payload = await response.json();
+                if (!response.ok || payload.status !== 'success') {
+                    throw new Error(payload.detail || payload.message || 'Failed to save config.');
+                }
+                state.config = ensureDefaults(payload.config || state.config);
+                populateInputs();
+                setStatus(`Saved config to ${payload.config_path || 'attached file'}.`, 'success');
+            } catch (error) {
+                setStatus(error.message, 'error');
+            }
+        }
+
+        function bindInputs() {
+            [
+                'pulser-name',
+                'pulser-party',
+                'pulser-description',
+                'pulser-tags',
+                'storage-type',
+                'filesystem-root-path',
+                's3-bucket',
+                's3-prefix',
+                's3-region-name',
+                's3-endpoint-url',
+                's3-access-key-id',
+                's3-secret-access-key',
+                's3-session-token',
+            ].forEach((id) => {
+                const node = document.getElementById(id);
+                node.addEventListener('input', () => {
+                    syncStateFromInputs();
+                    renderDerived();
+                });
+                node.addEventListener('change', () => {
+                    syncStateFromInputs();
+                    renderDerived();
+                });
+            });
+
+            document.getElementById('reload-btn').addEventListener('click', loadConfig);
+            document.getElementById('save-btn').addEventListener('click', saveConfig);
+            document.getElementById('test-pulse-btn').addEventListener('click', () => toggleTestPanel(true));
+            document.getElementById('test-runner-modal-root').addEventListener('click', (event) => {
+                if (event.target.id === 'test-runner-modal' || event.target.dataset.modalClose === 'true') {
+                    toggleTestPanel(false);
+                }
+            });
+            document.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape' && state.testPanelOpen) {
+                    toggleTestPanel(false);
+                }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            bindCollapseControls();
+            bindPulseDetailControls();
+            bindInputs();
+            loadConfig();
+        });
+    </script>
+</body>
+</html>

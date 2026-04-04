@@ -1,0 +1,60 @@
+{
+  "name": "DemoAnalystOllamaPulser",
+  "type": "attas.pulsers.openai_pulser.OpenAIPulser",
+  "host": "127.0.0.1",
+  "port": 8269,
+  "plaza_url": "http://127.0.0.1:8266",
+  "role": "pulser",
+  "description": "Local Ollama pulser used by the analyst insight prompt demo.",
+  "tags": [
+    "demo",
+    "analyst",
+    "llm",
+    "ollama",
+    "local"
+  ],
+  "pools": [
+    {
+      "type": "FileSystemPool",
+      "name": "demo_analyst_ollama_pool",
+      "description": "Local metadata pool for the analyst Ollama demo pulser.",
+      "root_path": "demos/pulsers/analyst-insights/storage/ollama"
+    }
+  ],
+  "model": "qwen3:8b",
+  "base_url": "http://localhost:11434/api/generate",
+  "supported_pulses": [
+    {
+      "name": "llm_chat",
+      "description": "Chat completion pulse via a local Ollama model.",
+      "tags": [
+        "llm",
+        "chat"
+      ],
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "prompt": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "prompt"
+        ]
+      },
+      "mapping": {
+        "response": "response",
+        "model": "model",
+        "provider": "provider"
+      },
+      "test_data": {
+        "prompt": "Say hello in one sentence.",
+        "model": "qwen3:8b"
+      },
+      "party": "Demo"
+    }
+  ]
+}

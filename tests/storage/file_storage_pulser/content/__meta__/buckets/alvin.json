@@ -1,0 +1,10 @@
+{
+  "bucket_name": "alvin",
+  "created_at": "2026-04-02T08:27:16Z",
+  "owner_agent_id": "plaza:http://127.0.0.1:8011",
+  "owner_agent_name": "Plaza",
+  "status": "created",
+  "storage_backend": "filesystem",
+  "updated_at": "2026-04-02T08:27:16Z",
+  "visibility": "private"
+}

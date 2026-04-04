@@ -1,0 +1,116 @@
+{
+  "name": "DemoAnalystNewsWirePulser",
+  "type": "phemacast.pulsers.path_pulser.PathPulser",
+  "host": "127.0.0.1",
+  "port": 8268,
+  "plaza_url": "http://127.0.0.1:8266",
+  "role": "pulser",
+  "description": "Seeded raw-news pulser used as the upstream source agent for the analyst insight demos.",
+  "tags": [
+    "demo",
+    "analyst",
+    "news",
+    "source-data",
+    "pulser"
+  ],
+  "pools": [
+    {
+      "type": "FileSystemPool",
+      "name": "demo_analyst_news_wire_pool",
+      "description": "Runtime storage for the seeded analyst news wire demo.",
+      "root_path": "demos/pulsers/analyst-insights/storage/news-wire"
+    }
+  ],
+  "supported_pulses": [
+    {
+      "name": "news_article",
+      "pulse_address": "plaza://pulse/demo_analyst_news_article",
+      "description": "Seeded company news packet published by a separate source agent.",
+      "tags": [
+        "news",
+        "source-data",
+        "company-news"
+      ],
+      "steps": [
+        {
+          "name": "load_news",
+          "type": "python",
+          "script_path": "./news_wire_step.py"
+        }
+      ],
+      "result_path": "steps.load_news",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "description": "Ticker symbol covered by the demo news wire, for example NVDA."
+          },
+          "number_of_articles": {
+            "type": "integer",
+            "description": "Maximum number of seeded articles to return."
+          }
+        },
+        "required": [
+          "symbol"
+        ]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string"
+          },
+          "number_of_articles": {
+            "type": "integer"
+          },
+          "source": {
+            "type": "string"
+          },
+          "articles": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "headline": {
+                  "type": "string"
+                },
+                "published_at": {
+                  "type": "string"
+                },
+                "publisher": {
+                  "type": "string"
+                },
+                "summary": {
+                  "type": "string"
+                },
+                "url": {
+                  "type": "string"
+                },
+                "sentiment_label": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "headline",
+                "published_at",
+                "publisher",
+                "summary"
+              ]
+            }
+          }
+        },
+        "required": [
+          "symbol",
+          "number_of_articles",
+          "source",
+          "articles"
+        ]
+      },
+      "test_data": {
+        "symbol": "NVDA",
+        "number_of_articles": 2
+      }
+    }
+  ]
+}

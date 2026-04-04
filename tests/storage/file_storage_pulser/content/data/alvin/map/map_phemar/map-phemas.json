@@ -1,0 +1,878 @@
+{
+  "phemas": [
+    {
+      "created_at": "2026-04-03T01:49:39.620Z",
+      "description": "Diagram-backed Phema managed by MapPhemar.",
+      "id": "ohlc-to-bollinger-bandwidth-diagram",
+      "input_schema": {
+        "properties": {
+          "end_date": {
+            "type": "string"
+          },
+          "interval": {
+            "type": "string"
+          },
+          "start_date": {
+            "type": "string"
+          },
+          "symbol": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol",
+          "interval",
+          "start_date",
+          "end_date"
+        ],
+        "type": "object"
+      },
+      "meta": {
+        "builder": "MapPhemar",
+        "kind": "diagram",
+        "map_phemar": {
+          "diagram": {
+            "edges": [
+              {
+                "from": "mind-boundary-input",
+                "fromAnchor": "right",
+                "id": "edge-input-to-ohlc",
+                "label": "",
+                "mappingText": "{}",
+                "route": "",
+                "to": "node-ohlc-bars",
+                "toAnchor": "left"
+              },
+              {
+                "from": "node-ohlc-bars",
+                "fromAnchor": "right",
+                "id": "edge-ohlc-to-bollinger",
+                "label": "",
+                "mappingText": "{\n  \"window\": {\n    \"const\": \"14\"\n  }\n}",
+                "route": "",
+                "to": "node-bollinger-bandwidth",
+                "toAnchor": "left"
+              },
+              {
+                "from": "node-bollinger-bandwidth",
+                "fromAnchor": "right",
+                "id": "edge-bollinger-to-output",
+                "label": "",
+                "mappingText": "{}",
+                "route": "",
+                "to": "mind-boundary-output",
+                "toAnchor": "left"
+              }
+            ],
+            "expandedSourcePaths": [],
+            "inspectorWidth": 496,
+            "nextEdgeIndex": 4,
+            "nextNodeIndex": 2,
+            "nodes": [
+              {
+                "body": "",
+                "branchInputMode": "any",
+                "branchInputSide": "left",
+                "branchNoMode": "all",
+                "branchNoSide": "right",
+                "branchYesMode": "all",
+                "branchYesSide": "right",
+                "conditionExpression": "",
+                "h": 10,
+                "id": "mind-boundary-input",
+                "inputSchema": {},
+                "inputSchemaError": "",
+                "inputSchemaText": "{}",
+                "outputSchema": {
+                  "properties": {
+                    "end_date": {
+                      "type": "string"
+                    },
+                    "interval": {
+                      "type": "string"
+                    },
+                    "start_date": {
+                      "type": "string"
+                    },
+                    "symbol": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "symbol",
+                    "interval",
+                    "start_date",
+                    "end_date"
+                  ],
+                  "type": "object"
+                },
+                "outputSchemaError": "",
+                "outputSchemaText": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"symbol\": {\n      \"type\": \"string\"\n    },\n    \"interval\": {\n      \"type\": \"string\"\n    },\n    \"start_date\": {\n      \"type\": \"string\"\n    },\n    \"end_date\": {\n      \"type\": \"string\"\n    }\n  },\n  \"required\": [\n    \"symbol\",\n    \"interval\",\n    \"start_date\",\n    \"end_date\"\n  ]\n}",
+                "paramsText": "{}",
+                "practiceId": "get_pulse_data",
+                "pulseAddress": "",
+                "pulseName": "",
+                "pulserAddress": "",
+                "pulserId": "",
+                "pulserMode": "specific",
+                "pulserName": "",
+                "role": "input",
+                "subtitle": "",
+                "title": "Input",
+                "type": "pill",
+                "w": 16,
+                "x": 10,
+                "y": 42
+              },
+              {
+                "body": "",
+                "branchInputMode": "any",
+                "branchInputSide": "left",
+                "branchNoMode": "all",
+                "branchNoSide": "right",
+                "branchYesMode": "all",
+                "branchYesSide": "right",
+                "conditionExpression": "",
+                "h": 14,
+                "id": "node-ohlc-bars",
+                "inputSchema": {
+                  "properties": {
+                    "end_date": {
+                      "type": "string"
+                    },
+                    "interval": {
+                      "type": "string"
+                    },
+                    "start_date": {
+                      "type": "string"
+                    },
+                    "symbol": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "symbol",
+                    "interval",
+                    "start_date",
+                    "end_date"
+                  ],
+                  "type": "object"
+                },
+                "inputSchemaError": "",
+                "inputSchemaText": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"symbol\": {\n      \"type\": \"string\"\n    },\n    \"interval\": {\n      \"type\": \"string\"\n    },\n    \"start_date\": {\n      \"type\": \"string\"\n    },\n    \"end_date\": {\n      \"type\": \"string\"\n    }\n  },\n  \"required\": [\n    \"symbol\",\n    \"interval\",\n    \"start_date\",\n    \"end_date\"\n  ]\n}",
+                "outputSchema": {
+                  "properties": {
+                    "end_date": {
+                      "type": "string"
+                    },
+                    "interval": {
+                      "type": "string"
+                    },
+                    "ohlc_series": {
+                      "type": "array"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "start_date": {
+                      "type": "string"
+                    },
+                    "symbol": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "symbol",
+                    "interval",
+                    "start_date",
+                    "end_date",
+                    "ohlc_series"
+                  ],
+                  "type": "object"
+                },
+                "outputSchemaError": "",
+                "outputSchemaText": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"symbol\": {\n      \"type\": \"string\"\n    },\n    \"interval\": {\n      \"type\": \"string\"\n    },\n    \"start_date\": {\n      \"type\": \"string\"\n    },\n    \"end_date\": {\n      \"type\": \"string\"\n    },\n    \"ohlc_series\": {\n      \"type\": \"array\"\n    },\n    \"source\": {\n      \"type\": \"string\"\n    }\n  },\n  \"required\": [\n    \"symbol\",\n    \"interval\",\n    \"start_date\",\n    \"end_date\",\n    \"ohlc_series\"\n  ]\n}",
+                "paramsText": "{}",
+                "practiceId": "get_pulse_data",
+                "pulseAddress": "ai.attas.finance.price.ohlc_bar_series",
+                "pulseName": "ohlc_bar_series",
+                "pulserAddress": "",
+                "pulserId": "",
+                "pulserMode": "specific",
+                "pulserName": "",
+                "role": "",
+                "subtitle": "YFinancePulser / ohlc_bar_series",
+                "title": "OHLC Bars",
+                "type": "rectangle",
+                "w": 22,
+                "x": 31,
+                "y": 28
+              },
+              {
+                "body": "",
+                "branchInputMode": "any",
+                "branchInputSide": "left",
+                "branchNoMode": "all",
+                "branchNoSide": "right",
+                "branchYesMode": "all",
+                "branchYesSide": "right",
+                "conditionExpression": "",
+                "h": 14,
+                "id": "node-bollinger-bandwidth",
+                "inputSchema": {
+                  "properties": {
+                    "end_date": {
+                      "type": "string"
+                    },
+                    "interval": {
+                      "type": "string"
+                    },
+                    "ohlc_series": {
+                      "type": "array"
+                    },
+                    "price_field": {
+                      "type": "string"
+                    },
+                    "start_date": {
+                      "type": "string"
+                    },
+                    "stddev_multiplier": {
+                      "type": "number"
+                    },
+                    "symbol": {
+                      "type": "string"
+                    },
+                    "window": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "symbol",
+                    "interval",
+                    "start_date",
+                    "end_date",
+                    "ohlc_series",
+                    "window"
+                  ],
+                  "type": "object"
+                },
+                "inputSchemaError": "",
+                "inputSchemaText": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"symbol\": {\n      \"type\": \"string\"\n    },\n    \"interval\": {\n      \"type\": \"string\"\n    },\n    \"start_date\": {\n      \"type\": \"string\"\n    },\n    \"end_date\": {\n      \"type\": \"string\"\n    },\n    \"ohlc_series\": {\n      \"type\": \"array\"\n    },\n    \"window\": {\n      \"type\": \"integer\"\n    },\n    \"price_field\": {\n      \"type\": \"string\"\n    },\n    \"stddev_multiplier\": {\n      \"type\": \"number\"\n    }\n  },\n  \"required\": [\n    \"symbol\",\n    \"interval\",\n    \"start_date\",\n    \"end_date\",\n    \"ohlc_series\",\n    \"window\"\n  ]\n}",
+                "outputSchema": {
+                  "properties": {
+                    "values": {
+                      "items": {
+                        "properties": {
+                          "timestamp": {
+                            "type": "string"
+                          },
+                          "value": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "timestamp",
+                          "value"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "values"
+                  ],
+                  "type": "object"
+                },
+                "outputSchemaError": "",
+                "outputSchemaText": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"values\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"timestamp\": {\n            \"type\": \"string\"\n          },\n          \"value\": {\n            \"type\": \"number\"\n          }\n        },\n        \"required\": [\n          \"timestamp\",\n          \"value\"\n        ]\n      }\n    }\n  },\n  \"required\": [\n    \"values\"\n  ]\n}",
+                "paramsText": "{\n  \"window\": 20,\n  \"price_field\": \"close\",\n  \"stddev_multiplier\": 2\n}",
+                "practiceId": "get_pulse_data",
+                "pulseAddress": "ai.attas.finance.technical.bollinger_bandwidth",
+                "pulseName": "bollinger_bandwidth",
+                "pulserAddress": "",
+                "pulserId": "",
+                "pulserMode": "specific",
+                "pulserName": "",
+                "role": "",
+                "subtitle": "TechnicalAnalysisPulser / bollinger_bandwidth",
+                "title": "Bollinger Bandwidth",
+                "type": "rectangle",
+                "w": 22,
+                "x": 56,
+                "y": 28
+              },
+              {
+                "body": "",
+                "branchInputMode": "any",
+                "branchInputSide": "left",
+                "branchNoMode": "all",
+                "branchNoSide": "right",
+                "branchYesMode": "all",
+                "branchYesSide": "right",
+                "conditionExpression": "",
+                "h": 10,
+                "id": "mind-boundary-output",
+                "inputSchema": {
+                  "properties": {
+                    "values": {
+                      "items": {
+                        "properties": {
+                          "timestamp": {
+                            "type": "string"
+                          },
+                          "value": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "timestamp",
+                          "value"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "values"
+                  ],
+                  "type": "object"
+                },
+                "inputSchemaError": "",
+                "inputSchemaText": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"values\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"timestamp\": {\n            \"type\": \"string\"\n          },\n          \"value\": {\n            \"type\": \"number\"\n          }\n        },\n        \"required\": [\n          \"timestamp\",\n          \"value\"\n        ]\n      }\n    }\n  },\n  \"required\": [\n    \"values\"\n  ]\n}",
+                "outputSchema": {},
+                "outputSchemaError": "",
+                "outputSchemaText": "{}",
+                "paramsText": "{}",
+                "practiceId": "get_pulse_data",
+                "pulseAddress": "",
+                "pulseName": "",
+                "pulserAddress": "",
+                "pulserId": "",
+                "pulserMode": "specific",
+                "pulserName": "",
+                "role": "output",
+                "subtitle": "",
+                "title": "Output",
+                "type": "pill",
+                "w": 16,
+                "x": 82,
+                "y": 42
+              }
+            ],
+            "plazaUrl": "http://127.0.0.1:8011",
+            "showGrid": true
+          },
+          "version": 1
+        },
+        "resolution_mode": "dynamic"
+      },
+      "name": "OHLC To Bollinger Bandwidth Diagram",
+      "output_schema": {
+        "properties": {
+          "values": {
+            "items": {
+              "properties": {
+                "timestamp": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "timestamp",
+                "value"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "values"
+        ],
+        "type": "object"
+      },
+      "phema_id": "ohlc-to-bollinger-bandwidth-diagram",
+      "resolution_mode": "dynamic",
+      "sections": [
+        {
+          "content": [
+            {
+              "text": "Pulse: ohlc_bar_series",
+              "type": "text"
+            }
+          ],
+          "description": "Runs pulse ohlc_bar_series. 1 inbound and 1 outbound connection.",
+          "modifier": "",
+          "name": "OHLC Bars"
+        },
+        {
+          "content": [
+            {
+              "text": "Pulse: bollinger_bandwidth",
+              "type": "text"
+            }
+          ],
+          "description": "Runs pulse bollinger_bandwidth. 1 inbound and 1 outbound connection.",
+          "modifier": "",
+          "name": "Bollinger Bandwidth"
+        }
+      ],
+      "tags": [
+        "diagram",
+        "map-phemar"
+      ],
+      "updated_at": "2026-04-03T01:49:39.620Z"
+    },
+    {
+      "created_at": "2026-04-02T08:59:58.019Z",
+      "description": "Diagram-backed Phema managed by MapPhemar.",
+      "id": "phema-mnh8up4z-qnv7op",
+      "input_schema": {},
+      "meta": {
+        "builder": "MapPhemar",
+        "kind": "diagram",
+        "map_phemar": {
+          "diagram": {
+            "edges": [
+              {
+                "from": "mind-boundary-input",
+                "fromAnchor": "right",
+                "id": "mind-edge-mnh6xn7l-qu7248",
+                "label": "",
+                "mappingText": "{}",
+                "route": "",
+                "to": "mind-node-mnh6xkue-hfcyt4",
+                "toAnchor": "left"
+              },
+              {
+                "from": "mind-node-mnh6xkue-hfcyt4",
+                "fromAnchor": "right",
+                "id": "mind-edge-mnh6xsan-wavhwm",
+                "label": "",
+                "mappingText": "{}",
+                "route": "",
+                "to": "mind-boundary-output",
+                "toAnchor": "left"
+              }
+            ],
+            "expandedSourcePaths": [],
+            "inspectorWidth": 320,
+            "nextEdgeIndex": 2,
+            "nextNodeIndex": 1,
+            "nodes": [
+              {
+                "body": "",
+                "branchInputMode": "any",
+                "branchInputSide": "left",
+                "branchNoMode": "all",
+                "branchNoSide": "right",
+                "branchYesMode": "all",
+                "branchYesSide": "right",
+                "conditionExpression": "",
+                "h": 10,
+                "id": "mind-boundary-input",
+                "inputSchema": {},
+                "inputSchemaError": "",
+                "inputSchemaText": "{}",
+                "outputSchema": {},
+                "outputSchemaError": "",
+                "outputSchemaText": "{}",
+                "paramsText": "{}",
+                "practiceId": "get_pulse_data",
+                "pulseAddress": "",
+                "pulseName": "",
+                "pulserAddress": "",
+                "pulserId": "",
+                "pulserMode": "specific",
+                "pulserName": "",
+                "role": "input",
+                "subtitle": "",
+                "title": "Input",
+                "type": "pill",
+                "w": 16,
+                "x": 8.685082872928177,
+                "y": 28.38888888888889
+              },
+              {
+                "body": "",
+                "branchInputMode": "any",
+                "branchInputSide": "left",
+                "branchNoMode": "all",
+                "branchNoSide": "right",
+                "branchYesMode": "all",
+                "branchYesSide": "right",
+                "conditionExpression": "",
+                "h": 10,
+                "id": "mind-boundary-output",
+                "inputSchema": {},
+                "inputSchemaError": "",
+                "inputSchemaText": "{}",
+                "outputSchema": {},
+                "outputSchemaError": "",
+                "outputSchemaText": "{}",
+                "paramsText": "{}",
+                "practiceId": "get_pulse_data",
+                "pulseAddress": "",
+                "pulseName": "",
+                "pulserAddress": "",
+                "pulserId": "",
+                "pulserMode": "specific",
+                "pulserName": "",
+                "role": "output",
+                "subtitle": "",
+                "title": "Output",
+                "type": "pill",
+                "w": 16,
+                "x": 62.552486187845304,
+                "y": 33.94444444444444
+              },
+              {
+                "body": "",
+                "branchInputMode": "any",
+                "branchInputSide": "left",
+                "branchNoMode": "all",
+                "branchNoSide": "right",
+                "branchYesMode": "all",
+                "branchYesSide": "right",
+                "conditionExpression": "",
+                "h": 14,
+                "id": "mind-node-mnh6xkue-hfcyt4",
+                "inputSchema": {},
+                "inputSchemaError": "",
+                "inputSchemaText": "{}",
+                "outputSchema": {},
+                "outputSchemaError": "",
+                "outputSchemaText": "{}",
+                "paramsText": "{}",
+                "practiceId": "get_pulse_data",
+                "pulseAddress": "",
+                "pulseName": "",
+                "pulserAddress": "",
+                "pulserId": "",
+                "pulserMode": "specific",
+                "pulserName": "",
+                "role": "",
+                "subtitle": "",
+                "title": "Rectangle 01",
+                "type": "rectangle",
+                "w": 22,
+                "x": 33.59116022099448,
+                "y": 18.541666666666668
+              }
+            ],
+            "plazaUrl": "http://127.0.0.1:8011",
+            "showGrid": true
+          },
+          "version": 1
+        },
+        "resolution_mode": "dynamic"
+      },
+      "name": "Diagram 1",
+      "output_schema": {},
+      "phema_id": "phema-mnh8up4z-qnv7op",
+      "resolution_mode": "dynamic",
+      "sections": [
+        {
+          "content": [
+            {
+              "text": "Shape: Rectangle",
+              "type": "text"
+            }
+          ],
+          "description": "Uses a rectangle shape configuration. 1 inbound and 1 outbound connection.",
+          "modifier": "",
+          "name": "Rectangle 01"
+        }
+      ],
+      "tags": [
+        "diagram",
+        "map-phemar"
+      ],
+      "updated_at": "2026-04-02T09:00:10.118Z"
+    },
+    {
+      "created_at": "2026-04-02T08:35:06.870Z",
+      "description": "Diagram-backed Phema managed by MapPhemar.",
+      "id": "phema-mnh70k67-2sy0ui",
+      "input_schema": {},
+      "meta": {
+        "builder": "MapPhemar",
+        "kind": "diagram",
+        "map_phemar": {
+          "diagram": {
+            "edges": [],
+            "expandedSourcePaths": [],
+            "inspectorWidth": 320,
+            "nextEdgeIndex": 0,
+            "nextNodeIndex": 0,
+            "nodes": [
+              {
+                "body": "",
+                "branchInputMode": "any",
+                "branchInputSide": "left",
+                "branchNoMode": "all",
+                "branchNoSide": "right",
+                "branchYesMode": "all",
+                "branchYesSide": "right",
+                "conditionExpression": "",
+                "h": 10,
+                "id": "mind-boundary-input",
+                "inputSchema": {},
+                "inputSchemaError": "",
+                "inputSchemaText": "{}",
+                "outputSchema": {},
+                "outputSchemaError": "",
+                "outputSchemaText": "{}",
+                "paramsText": "{}",
+                "practiceId": "get_pulse_data",
+                "pulseAddress": "",
+                "pulseName": "",
+                "pulserAddress": "",
+                "pulserId": "",
+                "pulserMode": "specific",
+                "pulserName": "",
+                "role": "input",
+                "subtitle": "",
+                "title": "Input",
+                "type": "pill",
+                "w": 16,
+                "x": 12,
+                "y": 42
+              },
+              {
+                "body": "",
+                "branchInputMode": "any",
+                "branchInputSide": "left",
+                "branchNoMode": "all",
+                "branchNoSide": "right",
+                "branchYesMode": "all",
+                "branchYesSide": "right",
+                "conditionExpression": "",
+                "h": 10,
+                "id": "mind-boundary-output",
+                "inputSchema": {},
+                "inputSchemaError": "",
+                "inputSchemaText": "{}",
+                "outputSchema": {},
+                "outputSchemaError": "",
+                "outputSchemaText": "{}",
+                "paramsText": "{}",
+                "practiceId": "get_pulse_data",
+                "pulseAddress": "",
+                "pulseName": "",
+                "pulserAddress": "",
+                "pulserId": "",
+                "pulserMode": "specific",
+                "pulserName": "",
+                "role": "output",
+                "subtitle": "",
+                "title": "Output",
+                "type": "pill",
+                "w": 16,
+                "x": 62,
+                "y": 42
+              }
+            ],
+            "plazaUrl": "http://127.0.0.1:8011",
+            "showGrid": true
+          },
+          "version": 1
+        },
+        "resolution_mode": "dynamic"
+      },
+      "name": "Diagram 3",
+      "output_schema": {},
+      "phema_id": "phema-mnh70k67-2sy0ui",
+      "resolution_mode": "dynamic",
+      "sections": [
+        {
+          "content": [
+            {
+              "text": "This Phema is diagram-backed. Load it in the diagram editor to inspect or modify the workflow.",
+              "type": "text"
+            }
+          ],
+          "description": "Auto-generated from MapPhemar.",
+          "modifier": "",
+          "name": "Diagram Flow"
+        }
+      ],
+      "tags": [
+        "diagram",
+        "map-phemar"
+      ],
+      "updated_at": "2026-04-02T08:59:51.896Z"
+    },
+    {
+      "created_at": "2026-04-02T08:35:16.479Z",
+      "description": "Diagram-backed Phema managed by MapPhemar.",
+      "id": "phema-mnh7yxz3-4rjr7n",
+      "input_schema": {},
+      "meta": {
+        "builder": "MapPhemar",
+        "kind": "diagram",
+        "map_phemar": {
+          "diagram": {
+            "edges": [
+              {
+                "from": "mind-boundary-input",
+                "fromAnchor": "right",
+                "id": "mind-edge-mnh6xn7l-qu7248",
+                "label": "",
+                "mappingText": "{}",
+                "route": "",
+                "to": "mind-node-mnh6xkue-hfcyt4",
+                "toAnchor": "left"
+              },
+              {
+                "from": "mind-node-mnh6xkue-hfcyt4",
+                "fromAnchor": "right",
+                "id": "mind-edge-mnh6xsan-wavhwm",
+                "label": "",
+                "mappingText": "{}",
+                "route": "",
+                "to": "mind-boundary-output",
+                "toAnchor": "left"
+              }
+            ],
+            "expandedSourcePaths": [],
+            "inspectorWidth": 320,
+            "nextEdgeIndex": 2,
+            "nextNodeIndex": 1,
+            "nodes": [
+              {
+                "body": "",
+                "branchInputMode": "any",
+                "branchInputSide": "left",
+                "branchNoMode": "all",
+                "branchNoSide": "right",
+                "branchYesMode": "all",
+                "branchYesSide": "right",
+                "conditionExpression": "",
+                "h": 10,
+                "id": "mind-boundary-input",
+                "inputSchema": {},
+                "inputSchemaError": "",
+                "inputSchemaText": "{}",
+                "outputSchema": {},
+                "outputSchemaError": "",
+                "outputSchemaText": "{}",
+                "paramsText": "{}",
+                "practiceId": "get_pulse_data",
+                "pulseAddress": "",
+                "pulseName": "",
+                "pulserAddress": "",
+                "pulserId": "",
+                "pulserMode": "specific",
+                "pulserName": "",
+                "role": "input",
+                "subtitle": "",
+                "title": "Input",
+                "type": "pill",
+                "w": 16,
+                "x": 8.685082872928177,
+                "y": 28.38888888888889
+              },
+              {
+                "body": "",
+                "branchInputMode": "any",
+                "branchInputSide": "left",
+                "branchNoMode": "all",
+                "branchNoSide": "right",
+                "branchYesMode": "all",
+                "branchYesSide": "right",
+                "conditionExpression": "",
+                "h": 10,
+                "id": "mind-boundary-output",
+                "inputSchema": {},
+                "inputSchemaError": "",
+                "inputSchemaText": "{}",
+                "outputSchema": {},
+                "outputSchemaError": "",
+                "outputSchemaText": "{}",
+                "paramsText": "{}",
+                "practiceId": "get_pulse_data",
+                "pulseAddress": "",
+                "pulseName": "",
+                "pulserAddress": "",
+                "pulserId": "",
+                "pulserMode": "specific",
+                "pulserName": "",
+                "role": "output",
+                "subtitle": "",
+                "title": "Output",
+                "type": "pill",
+                "w": 16,
+                "x": 62.552486187845304,
+                "y": 33.94444444444444
+              },
+              {
+                "body": "",
+                "branchInputMode": "any",
+                "branchInputSide": "left",
+                "branchNoMode": "all",
+                "branchNoSide": "right",
+                "branchYesMode": "all",
+                "branchYesSide": "right",
+                "conditionExpression": "",
+                "h": 14,
+                "id": "mind-node-mnh6xkue-hfcyt4",
+                "inputSchema": {},
+                "inputSchemaError": "",
+                "inputSchemaText": "{}",
+                "outputSchema": {},
+                "outputSchemaError": "",
+                "outputSchemaText": "{}",
+                "paramsText": "{}",
+                "practiceId": "get_pulse_data",
+                "pulseAddress": "",
+                "pulseName": "",
+                "pulserAddress": "",
+                "pulserId": "",
+                "pulserMode": "specific",
+                "pulserName": "",
+                "role": "",
+                "subtitle": "",
+                "title": "Rectangle 01",
+                "type": "rectangle",
+                "w": 22,
+                "x": 36.464088397790064,
+                "y": 52.84722222222223
+              }
+            ],
+            "plazaUrl": "http://127.0.0.1:8011",
+            "showGrid": true
+          },
+          "version": 1
+        },
+        "resolution_mode": "dynamic"
+      },
+      "name": "Diagram 2",
+      "output_schema": {},
+      "phema_id": "phema-mnh7yxz3-4rjr7n",
+      "resolution_mode": "dynamic",
+      "sections": [
+        {
+          "content": [
+            {
+              "text": "Shape: Rectangle",
+              "type": "text"
+            }
+          ],
+          "description": "Uses a rectangle shape configuration. 1 inbound and 1 outbound connection.",
+          "modifier": "",
+          "name": "Rectangle 01"
+        }
+      ],
+      "tags": [
+        "diagram",
+        "map-phemar"
+      ],
+      "updated_at": "2026-04-02T08:37:12.384Z"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "bucket_name": "personal",
+  "content_type": "application/json",
+  "created_at": "2026-04-02T08:31:36Z",
+  "etag": "77e18bfd66becf26b901a7f36db53993",
+  "last_writer_agent_id": "plaza:http://127.0.0.1:8011",
+  "last_writer_agent_name": "Plaza",
+  "metadata": {
+    "document_type": "map_phemas",
+    "saved_at": "2026-04-02T08:31:36.624Z"
+  },
+  "object_key": "peronal_agent/map_phemar/map-phemas.json",
+  "owner_agent_id": "plaza:http://127.0.0.1:8011",
+  "owner_agent_name": "Plaza",
+  "payload_format": "json",
+  "size_bytes": 3650,
+  "status": "saved",
+  "updated_at": "2026-04-02T08:31:36Z",
+  "visibility": "private"
+}

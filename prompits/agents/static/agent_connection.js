@@ -162,5 +162,5 @@
         return { refresh, destroy };
     }
 
-    window.attasAgentConnection = { mount, mountStickyHeader };
+    window.agentConnection = { mount, mountStickyHeader };
 })();

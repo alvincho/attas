@@ -1,0 +1,334 @@
+{
+  "id": "analyst-news-client-note-diagram",
+  "phema_id": "analyst-news-client-note-diagram",
+  "name": "Analyst News Client Note Diagram",
+  "description": "Run the prompted analyst news pulser to turn raw market news into a client-safe note with action items.",
+  "owner": "FinMAS demos",
+  "address": "plaza://phema/analyst-news-client-note-diagram",
+  "tags": [
+    "demo",
+    "diagram",
+    "map-phemar",
+    "llm",
+    "analyst",
+    "news",
+    "client"
+  ],
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "symbol": {
+        "type": "string"
+      },
+      "number_of_articles": {
+        "type": "integer"
+      },
+      "model": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "symbol"
+    ]
+  },
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "symbol": {
+        "type": "string"
+      },
+      "analyst": {
+        "type": "string"
+      },
+      "prompt_profile": {
+        "type": "string"
+      },
+      "provider": {
+        "type": "string"
+      },
+      "model": {
+        "type": "string"
+      },
+      "source": {
+        "type": "string"
+      },
+      "source_articles": {
+        "type": "integer"
+      },
+      "updated_at": {
+        "type": "string"
+      },
+      "subject_line": {
+        "type": "string"
+      },
+      "client_note": {
+        "type": "string"
+      },
+      "action_items": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "citations": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "required": [
+      "symbol",
+      "analyst",
+      "prompt_profile",
+      "provider",
+      "model",
+      "source",
+      "source_articles",
+      "updated_at",
+      "subject_line",
+      "client_note",
+      "action_items",
+      "citations"
+    ]
+  },
+  "sections": [
+    {
+      "name": "Flow",
+      "description": "Diagram-backed LLM use case for turning upstream market news into a client-safe note.",
+      "modifier": "",
+      "content": [
+        {
+          "type": "text",
+          "text": "Input -> Client Note -> Output"
+        }
+      ]
+    }
+  ],
+  "resolution_mode": "dynamic",
+  "meta": {
+    "builder": "MapPhemar",
+    "kind": "diagram",
+    "resolution_mode": "dynamic",
+    "map_phemar": {
+      "version": 1,
+      "diagram": {
+        "plazaUrl": "http://127.0.0.1:8266",
+        "showGrid": true,
+        "inspectorWidth": 320,
+        "expandedSourcePaths": [],
+        "nextNodeIndex": 1,
+        "nextEdgeIndex": 3,
+        "nodes": [
+          {
+            "id": "mind-boundary-input",
+            "role": "input",
+            "type": "pill",
+            "title": "Input",
+            "x": 14,
+            "y": 38,
+            "w": 18,
+            "h": 10,
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "symbol": {
+                  "type": "string"
+                },
+                "number_of_articles": {
+                  "type": "integer"
+                },
+                "model": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "symbol"
+              ]
+            },
+            "paramsText": "{}"
+          },
+          {
+            "id": "node-client-note",
+            "type": "rectangle",
+            "title": "Client Note",
+            "subtitle": "DemoAnalystPromptedNewsPulser / news_client_note",
+            "x": 40,
+            "y": 28,
+            "w": 26,
+            "h": 14,
+            "pulserMode": "specific",
+            "pulserName": "DemoAnalystPromptedNewsPulser",
+            "pulserAddress": "http://127.0.0.1:8270",
+            "practiceId": "get_pulse_data",
+            "pulseName": "news_client_note",
+            "pulseAddress": "plaza://pulse/demo_analyst_news_client_note",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "symbol": {
+                  "type": "string"
+                },
+                "number_of_articles": {
+                  "type": "integer"
+                },
+                "model": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "symbol"
+              ]
+            },
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "symbol": {
+                  "type": "string"
+                },
+                "analyst": {
+                  "type": "string"
+                },
+                "prompt_profile": {
+                  "type": "string"
+                },
+                "provider": {
+                  "type": "string"
+                },
+                "model": {
+                  "type": "string"
+                },
+                "source": {
+                  "type": "string"
+                },
+                "source_articles": {
+                  "type": "integer"
+                },
+                "updated_at": {
+                  "type": "string"
+                },
+                "subject_line": {
+                  "type": "string"
+                },
+                "client_note": {
+                  "type": "string"
+                },
+                "action_items": {
+                  "type": "array"
+                },
+                "citations": {
+                  "type": "array"
+                }
+              },
+              "required": [
+                "symbol",
+                "analyst",
+                "prompt_profile",
+                "provider",
+                "model",
+                "source",
+                "source_articles",
+                "updated_at",
+                "subject_line",
+                "client_note",
+                "action_items",
+                "citations"
+              ]
+            },
+            "paramsText": "{}"
+          },
+          {
+            "id": "mind-boundary-output",
+            "role": "output",
+            "type": "pill",
+            "title": "Output",
+            "x": 74,
+            "y": 38,
+            "w": 18,
+            "h": 10,
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "symbol": {
+                  "type": "string"
+                },
+                "analyst": {
+                  "type": "string"
+                },
+                "prompt_profile": {
+                  "type": "string"
+                },
+                "provider": {
+                  "type": "string"
+                },
+                "model": {
+                  "type": "string"
+                },
+                "source": {
+                  "type": "string"
+                },
+                "source_articles": {
+                  "type": "integer"
+                },
+                "updated_at": {
+                  "type": "string"
+                },
+                "subject_line": {
+                  "type": "string"
+                },
+                "client_note": {
+                  "type": "string"
+                },
+                "action_items": {
+                  "type": "array"
+                },
+                "citations": {
+                  "type": "array"
+                }
+              },
+              "required": [
+                "symbol",
+                "analyst",
+                "prompt_profile",
+                "provider",
+                "model",
+                "source",
+                "source_articles",
+                "updated_at",
+                "subject_line",
+                "client_note",
+                "action_items",
+                "citations"
+              ]
+            },
+            "paramsText": "{}"
+          }
+        ],
+        "edges": [
+          {
+            "id": "edge-input-to-client-note",
+            "from": "mind-boundary-input",
+            "to": "node-client-note",
+            "label": "",
+            "fromAnchor": "right",
+            "toAnchor": "left",
+            "mappingText": "{}",
+            "route": ""
+          },
+          {
+            "id": "edge-client-note-to-output",
+            "from": "node-client-note",
+            "to": "mind-boundary-output",
+            "label": "",
+            "fromAnchor": "right",
+            "toAnchor": "left",
+            "mappingText": "{}",
+            "route": ""
+          }
+        ]
+      }
+    }
+  },
+  "created_at": "2026-04-02T00:00:00Z",
+  "updated_at": "2026-04-02T00:00:00Z"
+}

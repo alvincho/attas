@@ -1,0 +1,29 @@
+{
+    "name": "FileStoragePulser",
+    "type": "phemacast.pulsers.file_storage_pulser.FileStoragePulser",
+    "host": "127.0.0.1",
+    "port": 8067,
+    "plaza_url": "http://127.0.0.1:8011",
+    "party": "System",
+    "role": "pulser",
+    "description": "System storage pulser that exposes S3-style bucket and object operations over a configurable backend.",
+    "tags": [
+        "storage",
+        "s3",
+        "bucket",
+        "object",
+        "system"
+    ],
+    "pools": [
+        {
+            "type": "FileSystemPool",
+            "name": "file_storage_agent_pool",
+            "description": "Credential and practice metadata pool for FileStoragePulser.",
+            "root_path": "tests/storage/file_storage_pulser/agent_pool"
+        }
+    ],
+    "storage": {
+        "type": "filesystem",
+        "root_path": "tests/storage/file_storage_pulser/content"
+    }
+}

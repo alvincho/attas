@@ -1,0 +1,29 @@
+{
+  "name": "DemoMapPhemar",
+  "type": "phemacast.agents.map_phemar.MapPhemarAgent",
+  "host": "127.0.0.1",
+  "port": 0,
+  "role": "phemar",
+  "tags": [
+    "demo",
+    "diagram",
+    "map-phemar"
+  ],
+  "pools": [
+    {
+      "type": "FileSystemPool",
+      "name": "map_phemar_pool",
+      "description": "Seeded diagram storage for the personal research workbench demo.",
+      "root_path": "demos/personal-research-workbench/map_phemar_pool"
+    }
+  ],
+  "phemar": {
+    "description": "Seeded MapPhemar storage for the personal research workbench demo.",
+    "tags": [
+      "demo",
+      "diagram",
+      "map-phemar"
+    ],
+    "supported_phemas": []
+  }
+}

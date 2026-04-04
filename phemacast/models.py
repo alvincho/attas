@@ -1,3 +1,13 @@
+"""
+Typed data models for `phemacast.models`.
+
+Phemacast assembles pulse inputs, phemas, and castrs into rendered research artifacts
+and interactive tooling.
+
+Core types exposed here include `Persona`, `Phema`, `PhemaBlock`, and `Pulse`, which
+carry the main behavior or state managed by this module.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field

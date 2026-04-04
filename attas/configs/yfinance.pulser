@@ -1017,6 +1017,71 @@
             "test_data": {"symbol": "AAPL"},
             "cost": 0,
             "party": "attas"
+        },
+        {
+            "name": "news_article",
+            "description": "Latest company news articles from Yahoo Finance.",
+            "tags": ["news", "source-data", "company-news"],
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string",
+                        "description": "Ticker symbol, for example AAPL."
+                    },
+                    "number_of_articles": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "description": "Number of recent articles to request from Yahoo Finance."
+                    }
+                },
+                "required": ["symbol", "number_of_articles"]
+            },
+            "output_schema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {"type": "string"},
+                    "number_of_articles": {"type": "integer"},
+                    "articles": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "headline": {"type": "string"},
+                                "published_at": {"type": "string", "format": "date-time"},
+                                "publisher": {"type": "string"},
+                                "summary": {"type": "string"},
+                                "url": {"type": "string"},
+                                "sentiment_label": {"type": "string"}
+                            },
+                            "required": ["headline", "published_at"],
+                            "additionalProperties": false
+                        }
+                    },
+                    "source": {"type": "string"}
+                },
+                "required": ["symbol", "articles"]
+            },
+            "mapping": {
+                "symbol": "symbol",
+                "number_of_articles": "number_of_articles",
+                "articles": {
+                    "source": "articles",
+                    "items": {
+                        "headline": "headline",
+                        "published_at": "published_at",
+                        "publisher": "publisher",
+                        "summary": "summary",
+                        "url": "url",
+                        "sentiment_label": "sentiment_label"
+                    }
+                },
+                "source": {"value": "yfinance"}
+            },
+            "test_data": {"symbol": "AAPL", "number_of_articles": 2},
+            "cost": 0,
+            "party": "attas",
+            "pulse_address": "5f82c4c9-ac00-587c-9e43-547557081ab6"
         }
     ],
     "pools": [

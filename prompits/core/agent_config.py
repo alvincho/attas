@@ -1,3 +1,14 @@
+"""
+Agent Config module for `prompits.core.agent_config`.
+
+Prompits provides the core HTTP-native agent runtime, Plaza coordination layer, and
+pool/practice infrastructure for FinMAS. Within Prompits, the core package defines the
+shared abstractions that the rest of the runtime builds on.
+
+Core types exposed here include `AgentConfigStore` and `AgentLaunchManager`, which carry
+the main behavior or state managed by this module.
+"""
+
 from __future__ import annotations
 
 import copy
@@ -26,14 +37,17 @@ class AgentConfigStore:
     PIT_TYPE = "AgentConfig"
 
     def __init__(self, pool: Optional[Pool] = None):
+        """Initialize the agent config store."""
         self.pool = pool
 
     @staticmethod
     def _as_text(value: Any) -> str:
+        """Internal helper for as text."""
         return str(value or "").strip()
 
     @staticmethod
     def _normalize_tags(value: Any) -> List[str]:
+        """Internal helper to normalize the tags."""
         if isinstance(value, list):
             return [str(item).strip() for item in value if str(item).strip()]
         if value in (None, ""):
@@ -58,20 +72,51 @@ class AgentConfigStore:
             "plaza_urls",
             "agent_id",
             "api_key",
+            "worker_id",
+            "session_id",
+            "session_started_at",
+            "last_seen_at",
+            "updated_at",
             "plaza_token",
             "token_expires_at",
+            "plaza_owner_key",
+            "owner_key",
+            "plaza_owner_key_secret",
+            "owner_key_secret",
         ):
             config.pop(key, None)
 
         agent_card = config.get("agent_card")
         if isinstance(agent_card, dict):
-            for key in ("id", "uuid", "ip", "ip_address", "host", "port", "address", "pit_address", "agent_id", "api_key"):
+            for key in (
+                "id",
+                "uuid",
+                "ip",
+                "ip_address",
+                "host",
+                "port",
+                "address",
+                "pit_address",
+                "agent_id",
+                "api_key",
+                "plaza_owner_key",
+                "owner_key",
+                "plaza_owner_key_secret",
+                "owner_key_secret",
+            ):
                 agent_card.pop(key, None)
             meta = agent_card.get("meta")
             if isinstance(meta, dict):
                 meta.pop("id", None)
                 meta.pop("uuid", None)
                 meta.pop("direct_auth_token", None)
+                meta.pop("worker_id", None)
+                meta.pop("environment", None)
+                meta.pop("heartbeat", None)
+                meta.pop("plaza_owner_key", None)
+                meta.pop("owner_key", None)
+                meta.pop("plaza_owner_key_secret", None)
+                meta.pop("owner_key_secret", None)
 
         user_agent = config.get("user_agent")
         if isinstance(user_agent, dict):
@@ -84,36 +129,79 @@ class AgentConfigStore:
 
     @staticmethod
     def _is_plaza_config(config: Dict[str, Any]) -> bool:
+        """Return whether the value is a Plaza config."""
         agent_type = str(config.get("type") or "").strip()
         return agent_type.endswith("PlazaAgent")
 
     @staticmethod
     def _is_user_agent_config(config: Dict[str, Any]) -> bool:
+        """Return whether the value is an user agent config."""
         agent_type = str(config.get("type") or "").strip()
         return agent_type.endswith("UserAgent") or isinstance(config.get("user_agent"), dict)
 
+    @staticmethod
+    def prefers_ephemeral_identity(config: Dict[str, Any]) -> bool:
+        """Return the prefers ephemeral identity."""
+        if not isinstance(config, dict):
+            return False
+        agent_type = str(config.get("type") or "").strip()
+        if agent_type.endswith("ADSWorkerAgent"):
+            return True
+        agent_card = config.get("agent_card") if isinstance(config.get("agent_card"), dict) else {}
+        meta = agent_card.get("meta") if isinstance(agent_card.get("meta"), dict) else {}
+        configured = agent_card.get("reuse_plaza_identity")
+        if configured is None:
+            configured = meta.get("reuse_plaza_identity")
+        if configured is None:
+            return False
+        if isinstance(configured, bool):
+            return not configured
+        lowered = str(configured).strip().lower()
+        if lowered in {"0", "false", "no", "n", "off"}:
+            return True
+        if lowered in {"1", "true", "yes", "y", "on"}:
+            return False
+        return False
+
     @classmethod
     def _derived_name(cls, config: Dict[str, Any]) -> str:
+        """Internal helper to return the derived name."""
         agent_card = config.get("agent_card") if isinstance(config.get("agent_card"), dict) else {}
         return cls._as_text(config.get("name") or agent_card.get("name"))
 
     @classmethod
     def _derived_description(cls, config: Dict[str, Any]) -> str:
+        """Internal helper for derived description."""
         agent_card = config.get("agent_card") if isinstance(config.get("agent_card"), dict) else {}
         return cls._as_text(config.get("description") or agent_card.get("description"))
 
     @classmethod
     def _derived_role(cls, config: Dict[str, Any]) -> str:
+        """Internal helper for derived role."""
         agent_card = config.get("agent_card") if isinstance(config.get("agent_card"), dict) else {}
         return cls._as_text(config.get("role") or agent_card.get("role"))
 
     @classmethod
     def _derived_tags(cls, config: Dict[str, Any]) -> List[str]:
+        """Internal helper for derived tags."""
         agent_card = config.get("agent_card") if isinstance(config.get("agent_card"), dict) else {}
         tags = config.get("tags")
         if not isinstance(tags, list):
             tags = agent_card.get("tags")
         return cls._normalize_tags(tags)
+
+    @classmethod
+    def _owner_key_id(cls, config: Dict[str, Any]) -> str:
+        """Internal helper for owner key ID."""
+        if not isinstance(config, dict):
+            return ""
+        agent_card = config.get("agent_card") if isinstance(config.get("agent_card"), dict) else {}
+        card_meta = agent_card.get("meta") if isinstance(agent_card.get("meta"), dict) else {}
+        return cls._as_text(
+            card_meta.get("plaza_owner_key_id")
+            or agent_card.get("plaza_owner_key_id")
+            or config.get("plaza_owner_key_id")
+        )
 
     @classmethod
     def _row_id(
@@ -122,6 +210,7 @@ class AgentConfigStore:
         config_id: str = "",
         name: str = "",
     ) -> str:
+        """Internal helper to return the row ID."""
         explicit = cls._as_text(config_id)
         if explicit:
             return explicit
@@ -132,6 +221,7 @@ class AgentConfigStore:
 
     @classmethod
     def looks_like_config_payload(cls, payload: Any) -> bool:
+        """Return the looks like config payload."""
         if not isinstance(payload, dict):
             return False
         if not isinstance(payload.get("pools"), list) or not payload.get("pools"):
@@ -139,14 +229,25 @@ class AgentConfigStore:
         return bool(cls._derived_name(payload) and cls._as_text(payload.get("type")))
 
     def ensure_table(self) -> bool:
+        """Ensure the table exists."""
+        if getattr(self, "_table_ready", False):
+            return True
         if not self.pool:
             return False
-        if self.pool._TableExists(self.TABLE_NAME):
+        batch_upsert_tables = getattr(self.pool, "BATCH_UPSERT_RPC_BY_TABLE", None)
+        if isinstance(batch_upsert_tables, dict) and self.TABLE_NAME in batch_upsert_tables:
+            self._table_ready = True
             return True
-        return bool(self.pool._CreateTable(self.TABLE_NAME, plaza_directory_table_schema()))
+        if self.pool._TableExists(self.TABLE_NAME):
+            self._table_ready = True
+            return True
+        created = bool(self.pool._CreateTable(self.TABLE_NAME, plaza_directory_table_schema()))
+        self._table_ready = created
+        return created
 
     @staticmethod
     def _load_jsonish(value: Any, *, default: Any) -> Any:
+        """Internal helper to load the jsonish."""
         if isinstance(value, (dict, list)):
             return value
         if isinstance(value, str):
@@ -159,12 +260,14 @@ class AgentConfigStore:
         return copy.deepcopy(default)
 
     def _coerce_row(self, row: Dict[str, Any]) -> Dict[str, Any]:
+        """Internal helper to coerce the row."""
         item = dict(row or {})
         item["card"] = self._load_jsonish(item.get("card"), default={})
         item["meta"] = self._load_jsonish(item.get("meta"), default={})
         return item
 
     def _public_row(self, row: Dict[str, Any], *, include_config: bool = False) -> Dict[str, Any]:
+        """Internal helper to return the public row."""
         row = self._coerce_row(row)
         card = row.get("card") if isinstance(row.get("card"), dict) else {}
         meta = row.get("meta") if isinstance(row.get("meta"), dict) else {}
@@ -180,6 +283,7 @@ class AgentConfigStore:
             "tags": self._normalize_tags(card.get("tags") or meta.get("tags")),
             "pit_type": self.PIT_TYPE,
             "address": self._as_text(row.get("address")),
+            "owner_key_id": self._owner_key_id(config),
             "created_at": self._as_text(meta.get("created_at")),
             "updated_at": self._as_text(row.get("updated_at")),
         }
@@ -188,6 +292,7 @@ class AgentConfigStore:
         return item
 
     def get(self, config_id: str, *, include_config: bool = True) -> Optional[Dict[str, Any]]:
+        """Return the value."""
         if not self.pool or not self.ensure_table():
             return None
         rows = self.pool._GetTableData(self.TABLE_NAME, {"id": self._as_text(config_id)}) or []
@@ -206,6 +311,7 @@ class AgentConfigStore:
         agent_type: str = "",
         include_config: bool = False,
     ) -> List[Dict[str, Any]]:
+        """Search the value."""
         if not self.pool or not self.ensure_table():
             return []
 
@@ -257,6 +363,7 @@ class AgentConfigStore:
         return deduped
 
     def resolve(self, *, config_id: str = "", name: str = "", include_config: bool = True) -> Optional[Dict[str, Any]]:
+        """Resolve the value."""
         normalized_id = self._as_text(config_id)
         if normalized_id:
             return self.get(normalized_id, include_config=include_config)
@@ -279,6 +386,7 @@ class AgentConfigStore:
         name: str = "",
         description: str = "",
     ) -> Dict[str, Any]:
+        """Handle upsert for the agent config store."""
         if not self.pool:
             raise ValueError("No pool is configured for agent config persistence.")
         if not isinstance(config, dict):
@@ -296,10 +404,13 @@ class AgentConfigStore:
         resolved_tags = self._derived_tags(sanitized)
         resolved_type = self._as_text(sanitized.get("type"))
         resolved_owner = self._as_text(owner or sanitized.get("owner") or (sanitized.get("agent_card") or {}).get("owner"))
-        existing = self.resolve(config_id=config_id, name=resolved_name, include_config=True)
         row_id = self._row_id(config_id=config_id, name=resolved_name)
         now = datetime.now(timezone.utc).isoformat()
-        created_at = self._as_text((existing or {}).get("created_at")) or now
+        raw_meta = sanitized.get("meta") if isinstance(sanitized.get("meta"), dict) else {}
+        created_at = self._as_text(
+            sanitized.get("created_at")
+            or raw_meta.get("created_at")
+        ) or now
         meta = {
             "resource_type": "agent_config",
             "agent_type": resolved_type,
@@ -349,6 +460,7 @@ class AgentLaunchManager:
         default_bind_host: str = "127.0.0.1",
         workspace_root: Optional[str] = None,
     ):
+        """Initialize the agent launch manager."""
         self.default_plaza_url = str(default_plaza_url or "").strip().rstrip("/")
         self.default_bind_host = str(default_bind_host or "").strip() or "127.0.0.1"
         self.workspace_root = Path(workspace_root or Path(__file__).resolve().parents[2]).resolve()
@@ -358,10 +470,12 @@ class AgentLaunchManager:
 
     @staticmethod
     def _normalize_url(value: Any) -> str:
+        """Internal helper to normalize the URL."""
         return str(value or "").strip().rstrip("/")
 
     @staticmethod
     def _find_free_port(bind_host: str = "127.0.0.1") -> int:
+        """Internal helper to find the free port."""
         candidates = [str(bind_host or "").strip(), "127.0.0.1", "0.0.0.0"]
         for host in candidates:
             if not host:
@@ -376,6 +490,7 @@ class AgentLaunchManager:
 
     @staticmethod
     def _tail_log(path: Path, *, lines: int = 20) -> str:
+        """Internal helper for tail log."""
         if not path.exists():
             return ""
         try:
@@ -387,10 +502,12 @@ class AgentLaunchManager:
 
     @staticmethod
     def _is_plaza_config(config: Dict[str, Any]) -> bool:
+        """Return whether the value is a Plaza config."""
         return AgentConfigStore._is_plaza_config(config)
 
     @staticmethod
     def _is_user_agent_config(config: Dict[str, Any]) -> bool:
+        """Return whether the value is an user agent config."""
         return AgentConfigStore._is_user_agent_config(config)
 
     def _compose_runtime_config(
@@ -401,6 +518,7 @@ class AgentLaunchManager:
         port: int,
         plaza_url: str = "",
     ) -> Dict[str, Any]:
+        """Internal helper to return the compose runtime config."""
         runtime_config = copy.deepcopy(dict(template or {}))
         runtime_config["host"] = host
         runtime_config["port"] = int(port)
@@ -421,6 +539,7 @@ class AgentLaunchManager:
 
     @staticmethod
     def _ensure_agent_card(runtime_config: Dict[str, Any]) -> Dict[str, Any]:
+        """Internal helper to ensure the agent card exists."""
         agent_card = runtime_config.get("agent_card")
         if not isinstance(agent_card, dict):
             agent_card = {}
@@ -429,6 +548,7 @@ class AgentLaunchManager:
 
     @staticmethod
     def _default_pool_name(agent_name: str = "") -> str:
+        """Internal helper to return the default pool name."""
         normalized_name = str(agent_name or "").strip() or "agent"
         return f"{normalized_name}_pool"
 
@@ -440,6 +560,7 @@ class AgentLaunchManager:
         pool_type: str = "",
         pool_location: str = "",
     ) -> Dict[str, Any]:
+        """Internal helper for apply pool override."""
         normalized_pool_type = str(pool_type or "").strip()
         normalized_pool_location = str(pool_location or "").strip()
         if not normalized_pool_type and not normalized_pool_location:
@@ -458,11 +579,21 @@ class AgentLaunchManager:
             if not updated_pool.get("root_path"):
                 raise ValueError("A pool location is required for FileSystemPool.")
             updated_pool.pop("db_path", None)
+            updated_pool.pop("dsn", None)
         elif effective_type == "SQLitePool":
             updated_pool["db_path"] = normalized_pool_location or str(updated_pool.get("db_path") or "").strip()
             if not updated_pool.get("db_path"):
                 raise ValueError("A pool location is required for SQLitePool.")
             updated_pool.pop("root_path", None)
+            updated_pool.pop("dsn", None)
+        elif effective_type == "PostgresPool":
+            if normalized_pool_location:
+                updated_pool["dsn"] = normalized_pool_location
+            updated_pool.setdefault("schema", str(updated_pool.get("schema") or "public").strip() or "public")
+            updated_pool.pop("root_path", None)
+            updated_pool.pop("db_path", None)
+            updated_pool.pop("url", None)
+            updated_pool.pop("key", None)
         elif effective_type == "SupabasePool":
             if normalized_pool_location:
                 updated_pool["url"] = normalized_pool_location
@@ -470,6 +601,7 @@ class AgentLaunchManager:
                 raise ValueError("SupabasePool requires an existing url and key configuration.")
             updated_pool.pop("root_path", None)
             updated_pool.pop("db_path", None)
+            updated_pool.pop("dsn", None)
         else:
             raise ValueError(f"Unsupported pool type '{effective_type}'.")
 
@@ -483,6 +615,7 @@ class AgentLaunchManager:
         agent_name: str = "",
         credentials: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
+        """Internal helper to return the apply launch identity."""
         normalized_name = str(agent_name or runtime_config.get("name") or "").strip()
         if normalized_name:
             runtime_config["name"] = normalized_name
@@ -508,6 +641,7 @@ class AgentLaunchManager:
         return runtime_config
 
     def _wait_for_health(self, url: str, *, timeout_sec: float) -> bool:
+        """Internal helper for wait for the health."""
         deadline = time.time() + max(float(timeout_sec), 0.1)
         while time.time() < deadline:
             try:
@@ -532,6 +666,7 @@ class AgentLaunchManager:
         pool_location: str = "",
         credentials: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
+        """Return the launch config."""
         if not isinstance(config_row, dict):
             raise ValueError("Agent config row is required.")
         template = config_row.get("config") if isinstance(config_row.get("config"), dict) else {}
@@ -613,6 +748,7 @@ class AgentLaunchManager:
         return result
 
     def list_launches(self) -> List[Dict[str, Any]]:
+        """List the launches."""
         launches = list(self._launches.values())
         launches.sort(key=lambda item: str(item.get("started_at") or ""), reverse=True)
         return launches

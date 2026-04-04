@@ -1,3 +1,16 @@
+"""
+Regression tests for PDS Validation.
+
+Attas layers finance-oriented pulse definitions, validation rules, and personal-agent
+workflows on top of the shared runtimes. These tests cover Attas-specific pulse
+definitions, validation flows, and personal-agent integration points.
+
+The pytest cases in this file document expected behavior through checks such as
+`test_example_pds_resources_validate` and
+`test_invalid_example_pds_resource_reports_readable_error`, helping guard against
+regressions as the packages evolve.
+"""
+
 import os
 import sys
 from pathlib import Path
@@ -26,6 +39,7 @@ EXAMPLES_DIR = Path(__file__).resolve().parents[1] / "examples" / "pulses"
     ],
 )
 def test_example_pds_resources_validate(file_name, expected_type):
+    """Exercise the test_example_pds_resources_validate regression scenario."""
     loaded = load_validated_pds_resource(EXAMPLES_DIR / file_name)
 
     assert isinstance(loaded.resource, expected_type)
@@ -34,6 +48,10 @@ def test_example_pds_resources_validate(file_name, expected_type):
 
 
 def test_invalid_example_pds_resource_reports_readable_error():
+    """
+    Exercise the test_invalid_example_pds_resource_reports_readable_error regression
+    scenario.
+    """
     with pytest.raises(PDSValidationError) as exc_info:
         load_validated_pds_resource(EXAMPLES_DIR / "invalid-last-trade.missing-interface.json")
 

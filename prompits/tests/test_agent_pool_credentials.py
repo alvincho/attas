@@ -1,3 +1,18 @@
+"""
+Regression tests for Agent Pool Credentials.
+
+Prompits provides the core HTTP-native agent runtime, Plaza coordination layer, and
+pool/practice infrastructure for FinMAS. These tests lock down Prompits runtime
+behavior, Plaza features, and storage integrations.
+
+The pytest cases in this file document expected behavior through checks such as
+`test_agent_can_delete_practice_at_runtime_and_persist_deletion`,
+`test_agent_register_does_not_burn_through_retries_while_plaza_is_starting`,
+`test_agent_register_retries_plaza_calls_with_long_timeout`, and
+`test_agent_registers_pool_operation_practices_and_can_use_them`, helping guard against
+regressions as the packages evolve.
+"""
+
 import os
 import sys
 import asyncio
@@ -20,7 +35,9 @@ from prompits.practices.plaza import PlazaCredentialStore
 
 
 class InMemoryPool(Pool):
+    """Represent an in memory pool."""
     def __init__(self):
+        """Initialize the in memory pool."""
         super().__init__(
             "mem",
             "memory pool",
@@ -30,27 +47,33 @@ class InMemoryPool(Pool):
         self.connect()
 
     def connect(self):
+        """Connect the value."""
         self.is_connected = True
         return True
 
     def disconnect(self):
+        """Disconnect the value."""
         self.is_connected = False
         return True
 
     def _TableExists(self, table_name):
+        """Return whether the table exists for value."""
         return table_name in self.tables
 
     def _CreateTable(self, table_name, schema):
+        """Internal helper to create the table."""
         self.tables.setdefault(table_name, {})
         return True
 
     def _Insert(self, table_name, data):
+        """Internal helper for insert."""
         self.tables.setdefault(table_name, {})
         row_id = data.get("id") or data.get("agent_id")
         self.tables[table_name][row_id] = dict(data)
         return True
 
     def _GetTableData(self, table_name, id_or_where=None, table_schema=None):
+        """Internal helper to return the table data."""
         table = self.tables.get(table_name, {})
         rows = list(table.values())
         if isinstance(id_or_where, dict):
@@ -62,9 +85,11 @@ class InMemoryPool(Pool):
         return [dict(r) for r in rows]
 
     def _Query(self, query, params=None):
+        """Internal helper to query the value."""
         return []
 
     def store_memory(self, content, memory_id=None, metadata=None, tags=None, memory_type="text", table_name=None):
+        """Handle store memory for the in memory pool."""
         memory_table = table_name or self.MEMORY_TABLE
         if not self._TableExists(memory_table):
             self._CreateTable(memory_table, self.memory_table_schema())
@@ -73,6 +98,7 @@ class InMemoryPool(Pool):
         return record
 
     def search_memory(self, query, limit=10, table_name=None):
+        """Search the memory."""
         if not query:
             return []
         memory_table = table_name or self.MEMORY_TABLE
@@ -81,6 +107,7 @@ class InMemoryPool(Pool):
         return [row for row in rows if lowered in self._memory_search_text(row)][: max(int(limit), 0)]
 
     def create_table_practice(self):
+        """Create the table practice."""
         return self._build_operation_practice(
             operation_id="pool-create-table",
             name="Pool Create Table",
@@ -90,6 +117,7 @@ class InMemoryPool(Pool):
         )
 
     def table_exists_practice(self):
+        """Return whether the table exists for practice."""
         return self._build_operation_practice(
             operation_id="pool-table-exists",
             name="Pool Table Exists",
@@ -99,6 +127,7 @@ class InMemoryPool(Pool):
         )
 
     def insert_practice(self):
+        """Handle insert practice for the in memory pool."""
         return self._build_operation_practice(
             operation_id="pool-insert",
             name="Pool Insert",
@@ -108,6 +137,7 @@ class InMemoryPool(Pool):
         )
 
     def query_practice(self):
+        """Query the practice."""
         return self._build_operation_practice(
             operation_id="pool-query",
             name="Pool Query",
@@ -117,6 +147,7 @@ class InMemoryPool(Pool):
         )
 
     def get_table_data_practice(self):
+        """Return the table data practice."""
         return self._build_operation_practice(
             operation_id="pool-get-table-data",
             name="Pool Get Table Data",
@@ -130,6 +161,7 @@ class InMemoryPool(Pool):
         )
 
     def connect_practice(self):
+        """Connect the practice."""
         return self._build_operation_practice(
             operation_id="pool-connect",
             name="Pool Connect",
@@ -139,6 +171,7 @@ class InMemoryPool(Pool):
         )
 
     def disconnect_practice(self):
+        """Disconnect the practice."""
         return self._build_operation_practice(
             operation_id="pool-disconnect",
             name="Pool Disconnect",
@@ -148,6 +181,7 @@ class InMemoryPool(Pool):
         )
 
     def store_memory_practice(self):
+        """Handle store memory practice for the in memory pool."""
         return self._build_operation_practice(
             operation_id="pool-store-memory",
             name="Pool Store Memory",
@@ -171,6 +205,7 @@ class InMemoryPool(Pool):
         )
 
     def search_memory_practice(self):
+        """Search the memory practice."""
         return self._build_operation_practice(
             operation_id="pool-search-memory",
             name="Pool Search Memory",
@@ -189,16 +224,20 @@ class InMemoryPool(Pool):
 
 
 class CountingBatchInMemoryPool(InMemoryPool):
+    """Represent a counting batch in memory pool."""
     def __init__(self):
+        """Initialize the counting batch in memory pool."""
         super().__init__()
         self.insert_calls = []
         self.insert_many_calls = []
 
     def _Insert(self, table_name, data):
+        """Internal helper for insert."""
         self.insert_calls.append((table_name, dict(data)))
         return super()._Insert(table_name, data)
 
     def _InsertMany(self, table_name, data_list):
+        """Internal helper for insert many."""
         copied_rows = [dict(row) for row in (data_list or [])]
         self.insert_many_calls.append((table_name, copied_rows))
         self.tables.setdefault(table_name, {})
@@ -209,17 +248,22 @@ class CountingBatchInMemoryPool(InMemoryPool):
 
 
 class FakeResponse:
+    """Response model for fake payloads."""
     def __init__(self, payload, status_code=200):
+        """Initialize the fake response."""
         self._payload = payload
         self.status_code = status_code
         self.text = str(payload)
 
     def json(self):
+        """Handle JSON for the fake response."""
         return self._payload
 
 
 class EchoPractice(Practice):
+    """Practice implementation for echo workflows."""
     def __init__(self):
+        """Initialize the echo practice."""
         super().__init__(
             name="Echo Practice",
             description="Echoes content back",
@@ -227,14 +271,18 @@ class EchoPractice(Practice):
         )
 
     def mount(self, app):
+        """Mount the value."""
         return None
 
     def execute(self, **kwargs):
+        """Handle execute for the echo practice."""
         return {"echo": kwargs}
 
 
 class AsyncEchoPractice(Practice):
+    """Practice implementation for async echo workflows."""
     def __init__(self):
+        """Initialize the async echo practice."""
         super().__init__(
             name="Async Echo Practice",
             description="Echoes content asynchronously",
@@ -242,15 +290,19 @@ class AsyncEchoPractice(Practice):
         )
 
     def mount(self, app):
+        """Mount the value."""
         return None
 
     async def execute(self, **kwargs):
+        """Handle execute for the async echo practice."""
         await asyncio.sleep(0)
         return {"async_echo": kwargs}
 
 
 class MultiEndpointPractice(Practice):
+    """Practice implementation for multi endpoint workflows."""
     def __init__(self):
+        """Initialize the multi endpoint practice."""
         super().__init__(
             name="Multi Endpoint Practice",
             description="Provides multiple callable endpoints",
@@ -258,9 +310,11 @@ class MultiEndpointPractice(Practice):
         )
 
     def mount(self, app):
+        """Mount the value."""
         return None
 
     def get_callable_endpoints(self):
+        """Return the callable endpoints."""
         return [
             {
                 "name": "Echo Endpoint",
@@ -289,10 +343,12 @@ class MultiEndpointPractice(Practice):
 
 
 def test_pit_can_register_itself_on_plaza():
+    """Exercise the test_pit_can_register_itself_on_plaza regression scenario."""
     pit = Pit(name="schema-x", description="schema pit")
     sent_payloads = []
 
     def fake_post(url, json=None, timeout=5, **kwargs):
+        """Handle fake post."""
         sent_payloads.append({"url": url, "payload": dict(json or {}), "timeout": timeout})
         return FakeResponse({"status": "registered", "agent_id": "pit-123", "api_key": "key-123"})
 
@@ -321,11 +377,16 @@ def test_pit_can_register_itself_on_plaza():
 
 
 def test_agent_persists_and_reuses_plaza_credentials_from_pool():
+    """
+    Exercise the test_agent_persists_and_reuses_plaza_credentials_from_pool
+    regression scenario.
+    """
     pool = InMemoryPool()
     plaza_url = "http://127.0.0.1:8011"
     sent_payloads = []
 
     def fake_post(url, json=None, timeout=5, **kwargs):
+        """Handle fake post."""
         sent_payloads.append(dict(json or {}))
         if json and json.get("agent_id") and json.get("api_key"):
             return FakeResponse({
@@ -374,6 +435,10 @@ def test_agent_persists_and_reuses_plaza_credentials_from_pool():
 
 
 def test_agent_loads_credentials_for_its_own_plaza_only():
+    """
+    Exercise the test_agent_loads_credentials_for_its_own_plaza_only regression
+    scenario.
+    """
     pool = InMemoryPool()
     PlazaCredentialStore(pool=pool).save("alice", "id-plaza-1", "key-plaza-1", "http://127.0.0.1:8011")
     PlazaCredentialStore(pool=pool).save("alice", "id-plaza-2", "key-plaza-2", "http://127.0.0.1:8012")
@@ -386,6 +451,10 @@ def test_agent_loads_credentials_for_its_own_plaza_only():
 
 
 def test_agent_loads_legacy_string_key_credentials_from_pool():
+    """
+    Exercise the test_agent_loads_legacy_string_key_credentials_from_pool regression
+    scenario.
+    """
     pool = InMemoryPool()
     plaza_url = "http://127.0.0.1:8011"
     pool._CreateTable("plaza_credentials", plaza_credentials_table_schema())
@@ -409,6 +478,11 @@ def test_agent_loads_legacy_string_key_credentials_from_pool():
 
 
 def test_agent_waits_and_retries_same_stored_credentials_when_plaza_rejects_them():
+    """
+    Exercise the
+    test_agent_waits_and_retries_same_stored_credentials_when_plaza_rejects_them
+    regression scenario.
+    """
     pool = InMemoryPool()
     plaza_url = "http://127.0.0.1:8011"
     sent_payloads = []
@@ -418,6 +492,7 @@ def test_agent_waits_and_retries_same_stored_credentials_when_plaza_rejects_them
     PlazaCredentialStore(pool=pool).save("alice", "stale-id", "stale-key", plaza_url)
 
     def fake_post(url, json=None, timeout=5, **kwargs):
+        """Handle fake post."""
         sent_payloads.append(dict(json or {}))
         if json and json.get("agent_id") == "stale-id" and len(sent_payloads) == 1:
             return FakeResponse({"detail": "Invalid agent_id or api_key"}, status_code=401)
@@ -432,6 +507,7 @@ def test_agent_waits_and_retries_same_stored_credentials_when_plaza_rejects_them
         return FakeResponse({"detail": "unexpected request"}, status_code=500)
 
     def fake_sleep(seconds):
+        """Handle fake sleep."""
         sleep_calls.append(seconds)
 
     with patch("prompits.agents.base.requests.post", side_effect=fake_post), patch(
@@ -456,9 +532,14 @@ def test_agent_waits_and_retries_same_stored_credentials_when_plaza_rejects_them
 
 
 def test_agent_register_retries_plaza_calls_with_long_timeout():
+    """
+    Exercise the test_agent_register_retries_plaza_calls_with_long_timeout
+    regression scenario.
+    """
     attempts = []
 
     def fake_post(url, json=None, timeout=5, **kwargs):
+        """Handle fake post."""
         attempts.append({"url": url, "payload": dict(json or {}), "timeout": timeout})
         if len(attempts) <= 5:
             raise requests.ReadTimeout("plaza timed out")
@@ -484,14 +565,21 @@ def test_agent_register_retries_plaza_calls_with_long_timeout():
 
 
 def test_agent_reconnect_loop_waits_60_seconds_between_attempts_until_success():
+    """
+    Exercise the
+    test_agent_reconnect_loop_waits_60_seconds_between_attempts_until_success
+    regression scenario.
+    """
     agent = StandbyAgent(name="alice", plaza_url="http://127.0.0.1:8011")
     sleep_calls = []
     register_calls = []
 
     def fake_sleep(seconds):
+        """Handle fake sleep."""
         sleep_calls.append(seconds)
 
     def fake_register(*, start_reconnect_on_failure=True, request_retries=None):
+        """Handle fake register."""
         register_calls.append(
             {
                 "start_reconnect_on_failure": start_reconnect_on_failure,
@@ -519,10 +607,16 @@ def test_agent_reconnect_loop_waits_60_seconds_between_attempts_until_success():
 
 
 def test_agent_heartbeat_schedules_reconnect_once_while_waiting_for_token(caplog):
+    """
+    Exercise the
+    test_agent_heartbeat_schedules_reconnect_once_while_waiting_for_token regression
+    scenario.
+    """
     agent = StandbyAgent(name="alice", plaza_url="http://127.0.0.1:8011")
     sleep_calls = []
 
     def fake_sleep(seconds):
+        """Handle fake sleep."""
         sleep_calls.append(seconds)
         if len(sleep_calls) >= 3:
             raise SystemExit()
@@ -547,6 +641,11 @@ def test_agent_heartbeat_schedules_reconnect_once_while_waiting_for_token(caplog
 
 
 def test_agent_heartbeat_switches_to_reconnect_mode_when_plaza_is_starting():
+    """
+    Exercise the
+    test_agent_heartbeat_switches_to_reconnect_mode_when_plaza_is_starting
+    regression scenario.
+    """
     agent = StandbyAgent(name="alice", plaza_url="http://127.0.0.1:8011")
     agent.agent_id = "alice-id"
     agent.plaza_token = "token-live"
@@ -554,6 +653,7 @@ def test_agent_heartbeat_switches_to_reconnect_mode_when_plaza_is_starting():
     sleep_calls = []
 
     def fake_sleep(seconds):
+        """Handle fake sleep."""
         sleep_calls.append(seconds)
         if len(sleep_calls) >= 2:
             raise SystemExit()
@@ -571,9 +671,15 @@ def test_agent_heartbeat_switches_to_reconnect_mode_when_plaza_is_starting():
 
 
 def test_agent_register_does_not_burn_through_retries_while_plaza_is_starting():
+    """
+    Exercise the
+    test_agent_register_does_not_burn_through_retries_while_plaza_is_starting
+    regression scenario.
+    """
     attempts = []
 
     def fake_post(url, json=None, timeout=5, **kwargs):
+        """Handle fake post."""
         attempts.append({"url": url, "payload": dict(json or {}), "timeout": timeout})
         return FakeResponse({"detail": "Starting"}, status_code=503)
 
@@ -590,6 +696,9 @@ def test_agent_register_does_not_burn_through_retries_while_plaza_is_starting():
 
 
 def test_agent_persists_practice_metadata_in_pool():
+    """
+    Exercise the test_agent_persists_practice_metadata_in_pool regression scenario.
+    """
     pool = InMemoryPool()
     agent = StandbyAgent(name="alice", pool=pool)
     agent.add_practice(EchoPractice())
@@ -597,7 +706,7 @@ def test_agent_persists_practice_metadata_in_pool():
     rows = pool._GetTableData("agent_practices", {"agent_name": "alice"})
     row_by_id = {row["practice_id"]: row for row in rows}
 
-    assert "chat-practice" in row_by_id
+    assert "mailbox" in row_by_id
     assert "echo-practice" in row_by_id
     assert row_by_id["echo-practice"]["is_deleted"] is False
     assert row_by_id["echo-practice"]["practice_data"]["name"] == "Echo Practice"
@@ -610,7 +719,36 @@ def test_agent_persists_practice_metadata_in_pool():
     assert echo_metadata["cost"] == 0
 
 
+def test_agent_batches_initial_practice_bootstrap_persistence():
+    """
+    Exercise the test_agent_batches_initial_practice_bootstrap_persistence
+    regression scenario.
+    """
+    pool = CountingBatchInMemoryPool()
+    StandbyAgent(name="alice", pool=pool)
+
+    batch_calls = [
+        call for call in pool.insert_many_calls
+        if call[0] == "agent_practices"
+    ]
+    assert len(batch_calls) == 1
+    persisted_ids = {row["practice_id"] for row in batch_calls[0][1]}
+    assert "mailbox" in persisted_ids
+    assert "pool-connect" in persisted_ids
+    assert "pool-search-memory" in persisted_ids
+
+    single_calls = [
+        call for call in pool.insert_calls
+        if call[0] == "agent_practices"
+    ]
+    assert single_calls == []
+
+
 def test_agent_can_delete_practice_at_runtime_and_persist_deletion():
+    """
+    Exercise the test_agent_can_delete_practice_at_runtime_and_persist_deletion
+    regression scenario.
+    """
     pool = InMemoryPool()
     agent = StandbyAgent(name="alice", pool=pool)
     agent.add_practice(EchoPractice())
@@ -629,6 +767,10 @@ def test_agent_can_delete_practice_at_runtime_and_persist_deletion():
 
 
 def test_practice_persistence_tracks_callable_endpoints_not_bundle():
+    """
+    Exercise the test_practice_persistence_tracks_callable_endpoints_not_bundle
+    regression scenario.
+    """
     pool = InMemoryPool()
     agent = StandbyAgent(name="alice", pool=pool)
     agent.add_practice(MultiEndpointPractice())
@@ -651,6 +793,10 @@ def test_practice_persistence_tracks_callable_endpoints_not_bundle():
 
 
 def test_agent_batches_callable_practice_metadata_persistence():
+    """
+    Exercise the test_agent_batches_callable_practice_metadata_persistence
+    regression scenario.
+    """
     pool = CountingBatchInMemoryPool()
     agent = StandbyAgent(name="alice", pool=pool)
     pool.insert_calls.clear()
@@ -673,6 +819,10 @@ def test_agent_batches_callable_practice_metadata_persistence():
 
 
 def test_agent_registers_pool_operation_practices_and_can_use_them():
+    """
+    Exercise the test_agent_registers_pool_operation_practices_and_can_use_them
+    regression scenario.
+    """
     pool = InMemoryPool()
     agent = StandbyAgent(name="alice", pool=pool)
 
@@ -724,6 +874,10 @@ def test_agent_registers_pool_operation_practices_and_can_use_them():
 
 
 def test_plaza_endpoint_details_persist_to_pool_and_agent_card():
+    """
+    Exercise the test_plaza_endpoint_details_persist_to_pool_and_agent_card
+    regression scenario.
+    """
     pool = InMemoryPool()
     agent = StandbyAgent(name="plaza", pool=pool, agent_card={"name": "Plaza", "role": "coordinator", "tags": []})
     agent.add_practice(PlazaPractice())
@@ -744,6 +898,7 @@ def test_plaza_endpoint_details_persist_to_pool_and_agent_card():
 
 
 def test_use_practice_local_sync():
+    """Exercise the test_use_practice_local_sync regression scenario."""
     agent = StandbyAgent(name="alice")
     agent.add_practice(EchoPractice())
 
@@ -754,6 +909,7 @@ def test_use_practice_local_sync():
 
 @pytest.mark.asyncio
 async def test_use_practice_local_async():
+    """Exercise the test_use_practice_local_async regression scenario."""
     agent = StandbyAgent(name="alice")
     agent.add_practice(AsyncEchoPractice())
 
@@ -763,6 +919,9 @@ async def test_use_practice_local_async():
 
 
 def test_use_practice_remote_sync_via_pit_address():
+    """
+    Exercise the test_use_practice_remote_sync_via_pit_address regression scenario.
+    """
     agent = StandbyAgent(name="alice", plaza_url="http://127.0.0.1:8011")
     agent.agent_id = "alice-id"
     agent.plaza_token = "alice-token"
@@ -772,6 +931,7 @@ def test_use_practice_remote_sync_via_pit_address():
     remote_address = PitAddress(pit_id="bob-id", plazas=["http://127.0.0.1:8011"])
 
     def fake_lookup(_name):
+        """Handle fake lookup."""
         return {
             "agent_id": "bob-id",
             "card": {
@@ -781,6 +941,7 @@ def test_use_practice_remote_sync_via_pit_address():
         }
 
     def fake_post(url, json=None, timeout=30, **kwargs):
+        """Handle fake post."""
         assert url == "http://127.0.0.1:8013/use_practice/echo-practice"
         assert json.get("msg_type") == "echo-practice"
         assert json.get("caller_agent_address", {}).get("pit_id") == "alice-id"
@@ -795,6 +956,10 @@ def test_use_practice_remote_sync_via_pit_address():
 
 
 def test_use_practice_remote_sync_via_direct_url_hint():
+    """
+    Exercise the test_use_practice_remote_sync_via_direct_url_hint regression
+    scenario.
+    """
     agent = StandbyAgent(
         name="alice",
         agent_card={"name": "alice", "meta": {"direct_auth_token": "shared-secret"}},
@@ -803,6 +968,7 @@ def test_use_practice_remote_sync_via_direct_url_hint():
     agent._refresh_pit_address()
 
     def fake_post(url, json=None, timeout=30, **kwargs):
+        """Handle fake post."""
         assert url == "http://10.0.0.8:8013/use_practice/echo-practice"
         assert json.get("msg_type") == "echo-practice"
         assert json.get("caller_agent_address", {}).get("pit_id") == "alice-id"
@@ -822,6 +988,9 @@ def test_use_practice_remote_sync_via_direct_url_hint():
 
 @pytest.mark.asyncio
 async def test_use_practice_remote_async_via_pit_address():
+    """
+    Exercise the test_use_practice_remote_async_via_pit_address regression scenario.
+    """
     agent = StandbyAgent(name="alice", plaza_url="http://127.0.0.1:8011")
     agent.agent_id = "alice-id"
     agent.plaza_token = "alice-token"
@@ -831,6 +1000,7 @@ async def test_use_practice_remote_async_via_pit_address():
     remote_address = PitAddress(pit_id="bob-id", plazas=["http://127.0.0.1:8011"])
 
     def fake_lookup(_name):
+        """Handle fake lookup."""
         return {
             "agent_id": "bob-id",
             "card": {
@@ -840,16 +1010,20 @@ async def test_use_practice_remote_async_via_pit_address():
         }
 
     class FakeAsyncResponse:
+        """Response model for fake async payloads."""
         status_code = 200
         content = b"{}"
 
         def raise_for_status(self):
+            """Return the raise for the status."""
             return None
 
         def json(self):
+            """Handle JSON for the fake async response."""
             return {"status": "ok"}
 
     async def fake_async_post(self, url, json=None, timeout=30, **kwargs):
+        """Handle fake async post."""
         assert url == "http://127.0.0.1:8013/use_practice/echo-practice"
         assert json.get("msg_type") == "echo-practice"
         assert json.get("caller_agent_address", {}).get("pit_id") == "alice-id"
@@ -865,6 +1039,10 @@ async def test_use_practice_remote_async_via_pit_address():
 
 @pytest.mark.asyncio
 async def test_use_practice_remote_async_via_direct_url_hint():
+    """
+    Exercise the test_use_practice_remote_async_via_direct_url_hint regression
+    scenario.
+    """
     agent = StandbyAgent(
         name="alice",
         agent_card={"name": "alice", "meta": {"direct_auth_token": "shared-secret"}},
@@ -873,16 +1051,20 @@ async def test_use_practice_remote_async_via_direct_url_hint():
     agent._refresh_pit_address()
 
     class FakeAsyncResponse:
+        """Response model for fake async payloads."""
         status_code = 200
         content = b"{}"
 
         def raise_for_status(self):
+            """Return the raise for the status."""
             return None
 
         def json(self):
+            """Handle JSON for the fake async response."""
             return {"status": "ok"}
 
     async def fake_async_post(self, url, json=None, timeout=30, **kwargs):
+        """Handle fake async post."""
         assert url == "http://10.0.0.8:8013/use_practice/echo-practice"
         assert json.get("msg_type") == "echo-practice"
         assert json.get("caller_agent_address", {}).get("pit_id") == "alice-id"
@@ -903,6 +1085,10 @@ async def test_use_practice_remote_async_via_direct_url_hint():
 
 @pytest.mark.asyncio
 async def test_verify_remote_caller_accepts_direct_shared_token():
+    """
+    Exercise the test_verify_remote_caller_accepts_direct_shared_token regression
+    scenario.
+    """
     agent = StandbyAgent(
         name="bob",
         agent_card={"name": "bob", "meta": {"direct_auth_token": "shared-secret"}},

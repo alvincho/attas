@@ -1,3 +1,17 @@
+"""
+Regression tests for Castr Discovery.
+
+Phemacast assembles pulse inputs, phemas, and castrs into rendered research artifacts
+and interactive tooling. These tests protect the Phemacast pipeline, demo flows, UI
+helpers, and pulser integrations.
+
+The pytest cases in this file document expected behavior through checks such as
+`test_castr_list_plaza_phemas_uses_search_and_formats_results`,
+`test_castr_list_plaza_phemas_without_plaza_url`, and
+`test_castr_ui_mounts_shared_plaza_connection_status`, helping guard against regressions
+as the packages evolve.
+"""
+
 import os
 import sys
 from unittest.mock import patch
@@ -9,6 +23,10 @@ from fastapi.testclient import TestClient
 
 def test_castr_list_plaza_phemas_uses_search_and_formats_results():
     # Setup Castr with a plaza_url
+    """
+    Exercise the test_castr_list_plaza_phemas_uses_search_and_formats_results
+    regression scenario.
+    """
     castr = Castr(
         name="TestCastr",
         plaza_url="http://127.0.0.1:8011",
@@ -67,6 +85,9 @@ def test_castr_list_plaza_phemas_uses_search_and_formats_results():
         mocked_search.assert_called_once_with(pit_type="Phema")
 
 def test_castr_list_plaza_phemas_without_plaza_url():
+    """
+    Exercise the test_castr_list_plaza_phemas_without_plaza_url regression scenario.
+    """
     castr = Castr(
         name="NoPlazaCastr",
         plaza_url=None,
@@ -79,6 +100,10 @@ def test_castr_list_plaza_phemas_without_plaza_url():
 
 
 def test_castr_ui_mounts_shared_plaza_connection_status():
+    """
+    Exercise the test_castr_ui_mounts_shared_plaza_connection_status regression
+    scenario.
+    """
     castr = Castr(
         name="UiCastr",
         plaza_url="http://127.0.0.1:8011",

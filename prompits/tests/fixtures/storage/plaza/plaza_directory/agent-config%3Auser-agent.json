@@ -1,0 +1,64 @@
+{
+  "id": "agent-config:user-agent",
+  "agent_id": "agent-config:user-agent",
+  "name": "user-agent",
+  "type": "AgentConfig",
+  "description": "Prompits user-agent UI for multi-plaza discovery and result generation.",
+  "owner": "Plaza",
+  "address": "",
+  "meta": {
+    "resource_type": "agent_config",
+    "agent_type": "prompits.agents.user.UserAgent",
+    "role": "frontend",
+    "tags": [
+      "ui",
+      "dashboard",
+      "orchestration"
+    ],
+    "config": {
+      "name": "user-agent",
+      "type": "prompits.agents.user.UserAgent",
+      "pools": [
+        {
+          "type": "FileSystemPool",
+          "name": "user_agent_pool",
+          "description": "Local pool for the Prompits user-agent UI.",
+          "root_path": "prompits/tests/fixtures/storage/user_agent"
+        }
+      ],
+      "agent_card": {
+        "name": "user-agent",
+        "description": "Prompits user-agent UI for multi-plaza discovery and result generation.",
+        "role": "frontend",
+        "tags": [
+          "ui",
+          "dashboard",
+          "orchestration"
+        ]
+      },
+      "user_agent": {
+        "applications": []
+      }
+    },
+    "created_at": "2026-04-03T03:49:37.573062+00:00",
+    "updated_at": "2026-04-03T03:49:37.573062+00:00"
+  },
+  "card": {
+    "name": "user-agent",
+    "description": "Prompits user-agent UI for multi-plaza discovery and result generation.",
+    "owner": "Plaza",
+    "role": "frontend",
+    "tags": [
+      "ui",
+      "dashboard",
+      "orchestration"
+    ],
+    "pit_type": "AgentConfig",
+    "meta": {
+      "resource_type": "agent_config",
+      "agent_type": "prompits.agents.user.UserAgent",
+      "config_id": "agent-config:user-agent"
+    }
+  },
+  "updated_at": "2026-04-03T03:49:37.573062+00:00"
+}

@@ -1,3 +1,14 @@
+"""
+Regression tests for Plaza Config.
+
+Prompits provides the core HTTP-native agent runtime, Plaza coordination layer, and
+pool/practice infrastructure for FinMAS. These tests lock down Prompits runtime
+behavior, Plaza features, and storage integrations.
+
+The pytest cases in this file document expected behavior through checks such as
+`test_plaza_flow_via_config`, helping guard against regressions as the packages evolve.
+"""
+
 import sys
 import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
@@ -15,7 +26,8 @@ def setup_config_agents():
     # For alice and bob, we can just intercept the received chat or mailbox via HTTP polling or similar.
     # We will just verify the response for /mailbox since the agents provide one by default!
 
-    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../attas/configs'))
+    """Set up the config agents."""
+    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), 'fixtures/configs'))
     plaza_cfg = os.path.join(base_dir, "plaza.agent")
     alice_cfg = os.path.join(base_dir, "alice.agent")
     bob_cfg = os.path.join(base_dir, "bob.agent")
@@ -37,6 +49,7 @@ def setup_config_agents():
 
 @pytest.mark.asyncio
 async def test_plaza_flow_via_config(setup_config_agents):
+    """Exercise the test_plaza_flow_via_config regression scenario."""
     async with httpx.AsyncClient() as client:
         alice_name = "alice_cfg_manual"
         bob_name = "bob_cfg_manual"
@@ -98,7 +111,7 @@ async def test_plaza_flow_via_config(setup_config_agents):
         payload = {
             "receiver": bob_name,
             "content": "Hello Bob from Alice!",
-            "msg_type": "chat-practice" 
+            "msg_type": "message" 
         }
         
         print(f"Alice sending relay message payload.")

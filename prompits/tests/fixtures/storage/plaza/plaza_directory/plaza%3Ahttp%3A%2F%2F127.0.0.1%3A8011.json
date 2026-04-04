@@ -1,0 +1,629 @@
+{
+  "id": "plaza:http://127.0.0.1:8011",
+  "agent_id": "plaza:http://127.0.0.1:8011",
+  "name": "Plaza",
+  "type": "Agent",
+  "description": "",
+  "owner": "Plaza",
+  "address": "http://127.0.0.1:8011",
+  "meta": {
+    "accepts_inbound_from_plaza": true,
+    "accepts_direct_call": true,
+    "connectivity_mode": "plaza-forward"
+  },
+  "card": {
+    "name": "Plaza",
+    "role": "coordinator",
+    "tags": [
+      "mediator"
+    ],
+    "host": "127.0.0.1",
+    "port": 8011,
+    "address": "http://127.0.0.1:8011",
+    "pit_type": "Agent",
+    "meta": {
+      "accepts_inbound_from_plaza": true,
+      "accepts_direct_call": true,
+      "connectivity_mode": "plaza-forward"
+    },
+    "accepts_inbound_from_plaza": true,
+    "accepts_direct_call": true,
+    "connectivity_mode": "plaza-forward",
+    "pit_address": {
+      "pit_id": "",
+      "plazas": []
+    },
+    "practices": [
+      {
+        "name": "Pool Query",
+        "description": "Execute a query against the filesystem pool adapter.",
+        "id": "pool-query",
+        "cost": 0,
+        "tags": [
+          "pool",
+          "filesystem",
+          "storage",
+          "query"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {
+          "query": {
+            "type": "string",
+            "description": "Query or operation name."
+          },
+          "params": {
+            "type": "object",
+            "description": "Optional query parameters."
+          }
+        },
+        "path": "/pool_query"
+      },
+      {
+        "name": "Plaza Search",
+        "description": "Search plaza directory and in-memory registry.",
+        "id": "search",
+        "cost": 0,
+        "tags": [
+          "core",
+          "plaza"
+        ],
+        "examples": [
+          "GET /search?name=alice&practice=mailbox"
+        ],
+        "inputModes": [
+          "http-get",
+          "query"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {
+          "name": {
+            "type": "string",
+            "description": "Filter by name substring."
+          },
+          "agent_id": {
+            "type": "string",
+            "description": "Filter by exact agent id."
+          },
+          "type": {
+            "type": "string",
+            "description": "Alias for pit_type filter."
+          },
+          "description": {
+            "type": "string",
+            "description": "Filter by description substring."
+          },
+          "owner": {
+            "type": "string",
+            "description": "Filter by owner substring."
+          },
+          "meta": {
+            "type": "string",
+            "description": "Filter by metadata substring."
+          },
+          "role": {
+            "type": "string",
+            "description": "Filter by agent card role."
+          },
+          "practice": {
+            "type": "string",
+            "description": "Filter by practice id in agent card."
+          },
+          "pit_type": {
+            "type": "string",
+            "description": "Agent type filter."
+          },
+          "pulse_id": {
+            "type": "string",
+            "description": "Filter pulsers by supported PDS pulse id."
+          },
+          "pulse_name": {
+            "type": "string",
+            "description": "Filter pulsers by supported pulse name."
+          },
+          "pulse_address": {
+            "type": "string",
+            "description": "Filter pulsers by supported pulse address."
+          },
+          "party": {
+            "type": "string",
+            "description": "Filter by party name."
+          }
+        },
+        "path": "/search"
+      },
+      {
+        "name": "Pool Connect",
+        "description": "Initialize the filesystem pool root.",
+        "id": "pool-connect",
+        "cost": 0,
+        "tags": [
+          "pool",
+          "filesystem",
+          "storage",
+          "connect"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {},
+        "path": "/pool_connect"
+      },
+      {
+        "name": "Pool Create Table",
+        "description": "Create a table directory in the filesystem pool.",
+        "id": "pool-create-table",
+        "cost": 0,
+        "tags": [
+          "pool",
+          "filesystem",
+          "storage",
+          "create-table"
+        ],
+        "examples": [
+          {
+            "table_name": "agent_practices",
+            "schema": {
+              "name": "agent_practices"
+            }
+          }
+        ],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {
+          "table_name": {
+            "type": "string",
+            "description": "Logical table name."
+          },
+          "schema": {
+            "type": "object",
+            "description": "Table schema definition."
+          }
+        },
+        "path": "/pool_create_table"
+      },
+      {
+        "name": "Plaza Renew",
+        "description": "Renew Plaza tokens.",
+        "id": "renew",
+        "cost": 0,
+        "tags": [
+          "core",
+          "plaza"
+        ],
+        "examples": [
+          "POST /renew {'agent_name':'alice','expires_in':3600}"
+        ],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {
+          "agent_name": {
+            "type": "string",
+            "description": "Agent name bound to the token."
+          },
+          "expires_in": {
+            "type": "integer",
+            "description": "New token TTL in seconds."
+          }
+        },
+        "path": "/renew"
+      },
+      {
+        "name": "Pool Insert",
+        "description": "Insert or replace one JSON row in the filesystem pool.",
+        "id": "pool-insert",
+        "cost": 0,
+        "tags": [
+          "pool",
+          "filesystem",
+          "storage",
+          "insert"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {
+          "table_name": {
+            "type": "string",
+            "description": "Logical table name."
+          },
+          "data": {
+            "type": "object",
+            "description": "Row payload to persist."
+          }
+        },
+        "path": "/pool_insert"
+      },
+      {
+        "name": "Pool Table Exists",
+        "description": "Check whether a filesystem-backed table exists.",
+        "id": "pool-table-exists",
+        "cost": 0,
+        "tags": [
+          "pool",
+          "filesystem",
+          "storage",
+          "table-exists"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {
+          "table_name": {
+            "type": "string",
+            "description": "Logical table name."
+          }
+        },
+        "path": "/pool_table_exists"
+      },
+      {
+        "name": "Mailbox",
+        "description": "Default inbound message endpoint for generic agent delivery.",
+        "id": "mailbox",
+        "cost": 0,
+        "tags": [
+          "message",
+          "mailbox"
+        ],
+        "examples": [
+          "POST /mailbox {'sender':'alice','content':'hello','msg_type':'message'}"
+        ],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {
+          "sender": {
+            "type": "string",
+            "description": "Sending agent name or id."
+          },
+          "receiver": {
+            "type": "string",
+            "description": "Target agent name or id."
+          },
+          "content": {
+            "type": "object",
+            "description": "Message payload."
+          },
+          "msg_type": {
+            "type": "string",
+            "description": "Message routing key."
+          }
+        },
+        "path": "/mailbox"
+      },
+      {
+        "name": "Plaza Relay",
+        "description": "Relay messages between agents.",
+        "id": "relay",
+        "cost": 0,
+        "tags": [
+          "core",
+          "plaza"
+        ],
+        "examples": [
+          "POST /relay {'receiver':'bob','content':'hi','msg_type':'message'}"
+        ],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {
+          "receiver": {
+            "type": "string",
+            "description": "Target agent id or name."
+          },
+          "content": {
+            "type": "object",
+            "description": "Relay payload for destination practice."
+          },
+          "msg_type": {
+            "type": "string",
+            "description": "Message type used for routing."
+          }
+        },
+        "path": "/relay"
+      },
+      {
+        "name": "Plaza Register",
+        "description": "Register agents with Plaza.",
+        "id": "register",
+        "cost": 0,
+        "tags": [
+          "core",
+          "plaza"
+        ],
+        "examples": [
+          "POST /register {'agent_name':'alice','address':'http://127.0.0.1:8012','accepts_inbound_from_plaza':true}"
+        ],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {
+          "agent_name": {
+            "type": "string",
+            "description": "Agent display name."
+          },
+          "address": {
+            "type": "string",
+            "description": "HTTP base URL for this agent."
+          },
+          "expires_in": {
+            "type": "integer",
+            "description": "Token TTL in seconds."
+          },
+          "pit_type": {
+            "type": "string",
+            "description": "Agent type: Agent | Pulser | Schema | Pulse | Phema."
+          },
+          "card": {
+            "type": "object",
+            "description": "Optional agent card payload."
+          },
+          "pulse_pulser_pairs": {
+            "type": "array",
+            "description": "Optional batch of pulse-pulser pair rows to index in the same request."
+          },
+          "agent_id": {
+            "type": "string",
+            "description": "Optional existing identity for relogin."
+          },
+          "api_key": {
+            "type": "string",
+            "description": "Optional existing secret for relogin."
+          },
+          "owner_key": {
+            "type": "string",
+            "description": "Optional Plaza UI owner key used to claim agent ownership for a signed-in user."
+          },
+          "accepts_inbound_from_plaza": {
+            "type": "boolean",
+            "description": "Whether Plaza can directly open inbound HTTP connections to this agent."
+          }
+        },
+        "path": "/register"
+      },
+      {
+        "name": "Plaza Authenticate",
+        "description": "Authenticate Plaza bearer tokens.",
+        "id": "authenticate",
+        "cost": 0,
+        "tags": [
+          "core",
+          "plaza"
+        ],
+        "examples": [
+          "POST /authenticate (Bearer token)"
+        ],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {},
+        "path": "/authenticate"
+      },
+      {
+        "name": "Pool Store Memory",
+        "description": "Store one memory record in the filesystem pool.",
+        "id": "pool-store-memory",
+        "cost": 0,
+        "tags": [
+          "pool",
+          "filesystem",
+          "memory",
+          "store"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {
+          "content": {
+            "type": "string",
+            "description": "Memory content."
+          },
+          "memory_id": {
+            "type": "string",
+            "description": "Optional stable memory id."
+          },
+          "metadata": {
+            "type": "object",
+            "description": "Optional metadata payload."
+          },
+          "tags": {
+            "type": "array",
+            "description": "Optional string tags."
+          },
+          "memory_type": {
+            "type": "string",
+            "description": "Memory category."
+          },
+          "table_name": {
+            "type": "string",
+            "description": "Optional override table name."
+          }
+        },
+        "path": "/pool_store_memory"
+      },
+      {
+        "name": "Pool Disconnect",
+        "description": "Mark the filesystem pool as disconnected.",
+        "id": "pool-disconnect",
+        "cost": 0,
+        "tags": [
+          "pool",
+          "filesystem",
+          "storage",
+          "disconnect"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {},
+        "path": "/pool_disconnect"
+      },
+      {
+        "name": "Pool Get Table Data",
+        "description": "Read rows from a filesystem-backed table.",
+        "id": "pool-get-table-data",
+        "cost": 0,
+        "tags": [
+          "pool",
+          "filesystem",
+          "storage",
+          "read"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {
+          "table_name": {
+            "type": "string",
+            "description": "Logical table name."
+          },
+          "id_or_where": {
+            "type": "object",
+            "description": "Optional id or equality filter."
+          },
+          "table_schema": {
+            "type": "object",
+            "description": "Optional table schema for decoding."
+          }
+        },
+        "path": "/pool_get_table_data"
+      },
+      {
+        "name": "Plaza Heartbeat",
+        "description": "Accept heartbeat updates from agents.",
+        "id": "heartbeat",
+        "cost": 0,
+        "tags": [
+          "core",
+          "plaza"
+        ],
+        "examples": [
+          "POST /heartbeat {'agent_id':'...'}"
+        ],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {
+          "agent_id": {
+            "type": "string",
+            "description": "Agent id sending heartbeat."
+          },
+          "agent_name": {
+            "type": "string",
+            "description": "Fallback name to resolve agent id."
+          },
+          "content": {
+            "type": "object",
+            "description": "Optional payload that may include agent_id."
+          }
+        },
+        "path": "/heartbeat"
+      },
+      {
+        "name": "Pool Search Memory",
+        "description": "Search stored memory records in the filesystem pool.",
+        "id": "pool-search-memory",
+        "cost": 0,
+        "tags": [
+          "pool",
+          "filesystem",
+          "memory",
+          "search"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {
+          "query": {
+            "type": "string",
+            "description": "Case-insensitive search text."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum number of matches."
+          },
+          "table_name": {
+            "type": "string",
+            "description": "Optional override table name."
+          }
+        },
+        "path": "/pool_search_memory"
+      }
+    ],
+    "agent_id": "plaza:http://127.0.0.1:8011"
+  },
+  "updated_at": "2026-04-03T03:49:37.571161+00:00"
+}

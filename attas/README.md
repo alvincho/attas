@@ -137,6 +137,15 @@ attas is being developed as an AI-native ecosystem for the financial industry, w
 - personalized reporting
 - scalable agent-based orchestration
 
+## Planned Attas Capabilities
+
+- more workflows for investment and treasury operations that support collaboration
+  inside an organization and across organizations
+- fine-tuned agent models intended to better represent financial professionals and
+  their working styles
+- automatic mapping from API endpoints to `Pulse` definitions for data vendors and
+  service providers
+
 ## Beta and contact
 
 attas is opening for beta testing and collaboration.
@@ -144,4 +153,3 @@ attas is opening for beta testing and collaboration.
 If you are a financial data vendor, analytics provider, service provider, analyst, trader, investor, or institution interested in participating, visit:
 
 **https://retis.ai/products/attas**
-

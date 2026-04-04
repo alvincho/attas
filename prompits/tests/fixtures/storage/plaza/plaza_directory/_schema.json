@@ -1,0 +1,39 @@
+{
+  "name": "plaza_directory",
+  "description": "Plaza directory entries",
+  "primary_key": [
+    "id"
+  ],
+  "rowSchema": {
+    "id": {
+      "type": "string"
+    },
+    "agent_id": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "type": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "owner": {
+      "type": "string"
+    },
+    "address": {
+      "type": "string"
+    },
+    "meta": {
+      "type": "json"
+    },
+    "card": {
+      "type": "json"
+    },
+    "updated_at": {
+      "type": "datetime"
+    }
+  }
+}

@@ -1,10 +1,13 @@
+boto3
 fastapi
 fpdf2
 gunicorn
 httpx
 jinja2
 jsonschema
+mcp
 pydantic
+psycopg
 python-dotenv
 requests
 supabase

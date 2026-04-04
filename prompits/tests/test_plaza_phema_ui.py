@@ -1,3 +1,18 @@
+"""
+Regression tests for Plaza Phema UI.
+
+Prompits provides the core HTTP-native agent runtime, Plaza coordination layer, and
+pool/practice infrastructure for FinMAS. These tests lock down Prompits runtime
+behavior, Plaza features, and storage integrations.
+
+The pytest cases in this file document expected behavior through checks such as
+`test_plaza_keeps_phema_searchable_when_pool_persist_fails`,
+`test_plaza_monitor_can_infer_legacy_phema_mode_from_metadata`,
+`test_plaza_supports_info_only_and_hosted_phema_registration_modes`, and
+`test_plaza_ui_can_crud_phema_in_directory`, helping guard against regressions as the
+packages evolve.
+"""
+
 import os
 import sys
 
@@ -11,7 +26,9 @@ from prompits.practices.plaza import PlazaPractice
 
 
 class InMemoryPool(Pool):
+    """Represent an in memory pool."""
     def __init__(self):
+        """Initialize the in memory pool."""
         super().__init__(
             "mem",
             "memory pool",
@@ -21,30 +38,37 @@ class InMemoryPool(Pool):
         self.connect()
 
     def connect(self):
+        """Connect the value."""
         self.is_connected = True
         return True
 
     def disconnect(self):
+        """Disconnect the value."""
         self.is_connected = False
         return True
 
     def _CreateTable(self, table_name, schema):
+        """Internal helper to create the table."""
         self.tables.setdefault(table_name, {})
         return True
 
     def _TableExists(self, table_name):
+        """Return whether the table exists for value."""
         return table_name in self.tables
 
     def _Insert(self, table_name, data):
+        """Internal helper for insert."""
         self.tables.setdefault(table_name, {})
         row_id = data.get("id") or data.get("agent_id")
         self.tables[table_name][row_id] = dict(data)
         return True
 
     def _Query(self, query, params=None):
+        """Internal helper to query the value."""
         return []
 
     def _GetTableData(self, table_name, id_or_where=None, table_schema=None):
+        """Internal helper to return the table data."""
         table = self.tables.get(table_name, {})
         rows = list(table.values())
         if isinstance(id_or_where, dict):
@@ -52,6 +76,7 @@ class InMemoryPool(Pool):
         return [dict(row) for row in rows]
 
     def store_memory(self, content, memory_id=None, metadata=None, tags=None, memory_type="text", table_name=None):
+        """Handle store memory for the in memory pool."""
         memory_table = table_name or self.MEMORY_TABLE
         if not self._TableExists(memory_table):
             self._CreateTable(memory_table, self.memory_table_schema())
@@ -60,6 +85,7 @@ class InMemoryPool(Pool):
         return record
 
     def search_memory(self, query, limit=10, table_name=None):
+        """Search the memory."""
         if not query:
             return []
         memory_table = table_name or self.MEMORY_TABLE
@@ -68,6 +94,7 @@ class InMemoryPool(Pool):
         return [row for row in rows if lowered in self._memory_search_text(row)][: max(int(limit), 0)]
 
     def create_table_practice(self):
+        """Create the table practice."""
         return self._build_operation_practice(
             operation_id="pool-create-table",
             name="Pool Create Table",
@@ -78,6 +105,7 @@ class InMemoryPool(Pool):
         )
 
     def table_exists_practice(self):
+        """Return whether the table exists for practice."""
         return self._build_operation_practice(
             operation_id="pool-table-exists",
             name="Pool Table Exists",
@@ -88,6 +116,7 @@ class InMemoryPool(Pool):
         )
 
     def insert_practice(self):
+        """Handle insert practice for the in memory pool."""
         return self._build_operation_practice(
             operation_id="pool-insert",
             name="Pool Insert",
@@ -98,6 +127,7 @@ class InMemoryPool(Pool):
         )
 
     def query_practice(self):
+        """Query the practice."""
         return self._build_operation_practice(
             operation_id="pool-query",
             name="Pool Query",
@@ -108,6 +138,7 @@ class InMemoryPool(Pool):
         )
 
     def get_table_data_practice(self):
+        """Return the table data practice."""
         return self._build_operation_practice(
             operation_id="pool-get-table-data",
             name="Pool Get Table Data",
@@ -122,6 +153,7 @@ class InMemoryPool(Pool):
         )
 
     def connect_practice(self):
+        """Connect the practice."""
         return self._build_operation_practice(
             operation_id="pool-connect",
             name="Pool Connect",
@@ -132,6 +164,7 @@ class InMemoryPool(Pool):
         )
 
     def disconnect_practice(self):
+        """Disconnect the practice."""
         return self._build_operation_practice(
             operation_id="pool-disconnect",
             name="Pool Disconnect",
@@ -142,6 +175,7 @@ class InMemoryPool(Pool):
         )
 
     def store_memory_practice(self):
+        """Handle store memory practice for the in memory pool."""
         return self._build_operation_practice(
             operation_id="pool-store-memory",
             name="Pool Store Memory",
@@ -159,6 +193,7 @@ class InMemoryPool(Pool):
         )
 
     def search_memory_practice(self):
+        """Search the memory practice."""
         return self._build_operation_practice(
             operation_id="pool-search-memory",
             name="Pool Search Memory",
@@ -170,13 +205,16 @@ class InMemoryPool(Pool):
 
 
 class FailingInsertPool(InMemoryPool):
+    """Represent a failing insert pool."""
     def _Insert(self, table_name, data):
+        """Internal helper for insert."""
         if table_name == PlazaAgent.PHEMA_TABLE:
             return False
         return super()._Insert(table_name, data)
 
 
 def test_plaza_ui_can_crud_phema_in_directory():
+    """Exercise the test_plaza_ui_can_crud_phema_in_directory regression scenario."""
     pool = InMemoryPool()
     agent = PlazaAgent(host="127.0.0.1", port=8011, pool=pool)
     agent.add_practice(PlazaPractice())
@@ -280,6 +318,10 @@ def test_plaza_ui_can_crud_phema_in_directory():
 
 
 def test_plaza_keeps_phema_searchable_when_pool_persist_fails():
+    """
+    Exercise the test_plaza_keeps_phema_searchable_when_pool_persist_fails
+    regression scenario.
+    """
     pool = FailingInsertPool()
     agent = PlazaAgent(host="127.0.0.1", port=8011, pool=pool)
     agent.add_practice(PlazaPractice())
@@ -319,6 +361,10 @@ def test_plaza_keeps_phema_searchable_when_pool_persist_fails():
 
 
 def test_plaza_supports_info_only_and_hosted_phema_registration_modes():
+    """
+    Exercise the test_plaza_supports_info_only_and_hosted_phema_registration_modes
+    regression scenario.
+    """
     pool = InMemoryPool()
     agent = PlazaAgent(host="127.0.0.1", port=8011, pool=pool)
     agent.add_practice(PlazaPractice())
@@ -423,6 +469,10 @@ def test_plaza_supports_info_only_and_hosted_phema_registration_modes():
 
 
 def test_plaza_monitor_can_infer_legacy_phema_mode_from_metadata():
+    """
+    Exercise the test_plaza_monitor_can_infer_legacy_phema_mode_from_metadata
+    regression scenario.
+    """
     pool = InMemoryPool()
     agent = PlazaAgent(host="127.0.0.1", port=8011, pool=pool)
     agent.add_practice(PlazaPractice())

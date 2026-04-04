@@ -1,3 +1,14 @@
+"""
+Standby module for `prompits.agents.standby`.
+
+Prompits provides the core HTTP-native agent runtime, Plaza coordination layer, and
+pool/practice infrastructure for FinMAS. Within Prompits, these modules provide reusable
+agent hosts and user-facing agent variants.
+
+Core types exposed here include `StandbyAgent`, which carry the main behavior or state
+managed by this module.
+"""
+
 import logging
 import time
 from typing import Dict, Any
@@ -15,6 +26,7 @@ class StandbyAgent(BaseAgent):
     """
 
     def __init__(self, name: str, host: str = "127.0.0.1", port: int = 8000, plaza_url: str = None, agent_card: Dict[str, Any] = None, pool: Any = None):
+        """Initialize the standby agent."""
         super().__init__(name, host, port, plaza_url, agent_card, pool=pool)
         self.logger.info(f"Standing by for tasks at {self.host}:{self.port}...")
 
@@ -47,6 +59,7 @@ class StandbyAgent(BaseAgent):
         return None
 
     def handle_command(self, content: str):
+        """Handle the command."""
         if "find" in content.lower() and "send" in content.lower():
             # Example: "find analyst and send 'hello'"
             parts = content.split(" ")
@@ -67,4 +80,5 @@ class StandbyAgent(BaseAgent):
 
     def run(self):
         # BaseAgent uses uvicorn now
+        """Run the value."""
         pass

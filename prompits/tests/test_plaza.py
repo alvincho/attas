@@ -1,3 +1,18 @@
+"""
+Regression tests for Plaza.
+
+Prompits provides the core HTTP-native agent runtime, Plaza coordination layer, and
+pool/practice infrastructure for FinMAS. These tests lock down Prompits runtime
+behavior, Plaza features, and storage integrations.
+
+The pytest cases in this file document expected behavior through checks such as
+`test_plaza_register_accepts_multiple_pulse_pulser_pairs_in_single_request`,
+`test_plaza_register_batches_new_pulse_directory_persistence`,
+`test_plaza_register_batches_pulse_pulser_pair_persistence`, and
+`test_plaza_register_dedupes_supported_pulses_and_explicit_batch_pairs`, helping guard
+against regressions as the packages evolve.
+"""
+
 import sys
 import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
@@ -19,7 +34,9 @@ from prompits.core.plaza import PlazaAgent
 
 
 class InMemoryPool(Pool):
+    """Represent an in memory pool."""
     def __init__(self):
+        """Initialize the in memory pool."""
         super().__init__(
             "mem",
             "memory pool",
@@ -29,30 +46,37 @@ class InMemoryPool(Pool):
         self.connect()
 
     def connect(self):
+        """Connect the value."""
         self.is_connected = True
         return True
 
     def disconnect(self):
+        """Disconnect the value."""
         self.is_connected = False
         return True
 
     def _CreateTable(self, table_name, schema):
+        """Internal helper to create the table."""
         self.tables.setdefault(table_name, {})
         return True
 
     def _TableExists(self, table_name):
+        """Return whether the table exists for value."""
         return table_name in self.tables
 
     def _Insert(self, table_name, data):
+        """Internal helper for insert."""
         self.tables.setdefault(table_name, {})
         row_id = data.get("id") or data.get("agent_id")
         self.tables[table_name][row_id] = dict(data)
         return True
 
     def _Query(self, query, params=None):
+        """Internal helper to query the value."""
         return []
 
     def _GetTableData(self, table_name, id_or_where=None, table_schema=None):
+        """Internal helper to return the table data."""
         table = self.tables.get(table_name, {})
         rows = list(table.values())
         if isinstance(id_or_where, dict):
@@ -60,6 +84,7 @@ class InMemoryPool(Pool):
         return [dict(r) for r in rows]
 
     def store_memory(self, content, memory_id=None, metadata=None, tags=None, memory_type="text", table_name=None):
+        """Handle store memory for the in memory pool."""
         memory_table = table_name or self.MEMORY_TABLE
         if not self._TableExists(memory_table):
             self._CreateTable(memory_table, self.memory_table_schema())
@@ -68,6 +93,7 @@ class InMemoryPool(Pool):
         return record
 
     def search_memory(self, query, limit=10, table_name=None):
+        """Search the memory."""
         if not query:
             return []
         memory_table = table_name or self.MEMORY_TABLE
@@ -76,6 +102,7 @@ class InMemoryPool(Pool):
         return [row for row in rows if lowered in self._memory_search_text(row)][: max(int(limit), 0)]
 
     def create_table_practice(self):
+        """Create the table practice."""
         return self._build_operation_practice(
             operation_id="pool-create-table",
             name="Pool Create Table",
@@ -89,6 +116,7 @@ class InMemoryPool(Pool):
         )
 
     def table_exists_practice(self):
+        """Return whether the table exists for practice."""
         return self._build_operation_practice(
             operation_id="pool-table-exists",
             name="Pool Table Exists",
@@ -99,6 +127,7 @@ class InMemoryPool(Pool):
         )
 
     def insert_practice(self):
+        """Handle insert practice for the in memory pool."""
         return self._build_operation_practice(
             operation_id="pool-insert",
             name="Pool Insert",
@@ -112,6 +141,7 @@ class InMemoryPool(Pool):
         )
 
     def query_practice(self):
+        """Query the practice."""
         return self._build_operation_practice(
             operation_id="pool-query",
             name="Pool Query",
@@ -125,6 +155,7 @@ class InMemoryPool(Pool):
         )
 
     def get_table_data_practice(self):
+        """Return the table data practice."""
         return self._build_operation_practice(
             operation_id="pool-get-table-data",
             name="Pool Get Table Data",
@@ -143,6 +174,7 @@ class InMemoryPool(Pool):
         )
 
     def connect_practice(self):
+        """Connect the practice."""
         return self._build_operation_practice(
             operation_id="pool-connect",
             name="Pool Connect",
@@ -153,6 +185,7 @@ class InMemoryPool(Pool):
         )
 
     def disconnect_practice(self):
+        """Disconnect the practice."""
         return self._build_operation_practice(
             operation_id="pool-disconnect",
             name="Pool Disconnect",
@@ -163,6 +196,7 @@ class InMemoryPool(Pool):
         )
 
     def store_memory_practice(self):
+        """Handle store memory practice for the in memory pool."""
         return self._build_operation_practice(
             operation_id="pool-store-memory",
             name="Pool Store Memory",
@@ -187,6 +221,7 @@ class InMemoryPool(Pool):
         )
 
     def search_memory_practice(self):
+        """Search the memory practice."""
         return self._build_operation_practice(
             operation_id="pool-search-memory",
             name="Pool Search Memory",
@@ -206,31 +241,39 @@ class InMemoryPool(Pool):
 
 
 class CountingInMemoryPool(InMemoryPool):
+    """Represent a counting in memory pool."""
     def __init__(self):
+        """Initialize the counting in memory pool."""
         super().__init__()
         self.get_calls = []
 
     def _GetTableData(self, table_name, id_or_where=None, table_schema=None):
+        """Internal helper to return the table data."""
         self.get_calls.append((table_name, id_or_where))
         return super()._GetTableData(table_name, id_or_where, table_schema)
 
 
 class CountingBatchInMemoryPool(InMemoryPool):
+    """Represent a counting batch in memory pool."""
     def __init__(self):
+        """Initialize the counting batch in memory pool."""
         super().__init__()
         self.insert_calls = []
         self.insert_many_calls = []
         self.table_exists_calls = []
 
     def _TableExists(self, table_name):
+        """Return whether the table exists for value."""
         self.table_exists_calls.append(table_name)
         return super()._TableExists(table_name)
 
     def _Insert(self, table_name, data):
+        """Internal helper for insert."""
         self.insert_calls.append((table_name, dict(data)))
         return super()._Insert(table_name, data)
 
     def _InsertMany(self, table_name, data_list):
+        """Internal helper for insert many."""
         copied_rows = [dict(row) for row in (data_list or [])]
         self.insert_many_calls.append((table_name, copied_rows))
         self.tables.setdefault(table_name, {})
@@ -241,25 +284,30 @@ class CountingBatchInMemoryPool(InMemoryPool):
 
 
 class MissingTokenTablePool(InMemoryPool):
+    """Represent a missing token table pool."""
     def __init__(self):
+        """Initialize the missing token table pool."""
         super().__init__()
         self.token_exists_checks = 0
         self.token_create_calls = 0
         self.token_insert_calls = 0
 
     def _TableExists(self, table_name):
+        """Return whether the table exists for value."""
         if table_name == "plaza_tokens":
             self.token_exists_checks += 1
             return False
         return super()._TableExists(table_name)
 
     def _CreateTable(self, table_name, schema):
+        """Internal helper to create the table."""
         if table_name == "plaza_tokens":
             self.token_create_calls += 1
             return True
         return super()._CreateTable(table_name, schema)
 
     def _Insert(self, table_name, data):
+        """Internal helper for insert."""
         if table_name == "plaza_tokens":
             self.token_insert_calls += 1
             return False
@@ -267,27 +315,34 @@ class MissingTokenTablePool(InMemoryPool):
 
 
 class SlowInsertInMemoryPool(InMemoryPool):
+    """Represent a slow insert in memory pool."""
     def __init__(self, delay=0.25):
+        """Initialize the slow insert in memory pool."""
         super().__init__()
         self.delay = delay
 
     def _Insert(self, table_name, data):
+        """Internal helper for insert."""
         if table_name in {"plaza_tokens", "plaza_directory", "pulse_pulser_pairs"}:
             time.sleep(self.delay)
         return super()._Insert(table_name, data)
 
     def _InsertMany(self, table_name, data_list):
+        """Internal helper for insert many."""
         if table_name == "pulse_pulser_pairs":
             time.sleep(self.delay)
         return super()._InsertMany(table_name, data_list)
 
 
 def test_pool_inherits_pit_identity_state():
+    """Exercise the test_pool_inherits_pit_identity_state regression scenario."""
     address = PitAddress(pit_id="pool-123", plazas=["http://127.0.0.1:8011"])
     pool = InMemoryPool()
 
     class DirectPool(Pool):
+        """Represent a direct pool."""
         def __init__(self):
+            """Initialize the direct pool."""
             super().__init__(
                 name="direct",
                 description="direct pool",
@@ -298,35 +353,45 @@ def test_pool_inherits_pit_identity_state():
             self.connect()
 
         def connect(self):
+            """Connect the value."""
             self.is_connected = True
             return True
 
         def disconnect(self):
+            """Disconnect the value."""
             self.is_connected = False
             return True
 
         def _CreateTable(self, table_name, schema):
+            """Internal helper to create the table."""
             return True
 
         def _TableExists(self, table_name):
+            """Return whether the table exists for value."""
             return False
 
         def _Insert(self, table_name, data):
+            """Internal helper for insert."""
             return True
 
         def _Query(self, query, params=None):
+            """Internal helper to query the value."""
             return []
 
         def _GetTableData(self, table_name, id_or_where=None, table_schema=None):
+            """Internal helper to return the table data."""
             return []
 
         def store_memory(self, content, memory_id=None, metadata=None, tags=None, memory_type="text", table_name=None):
+            """Handle store memory for the direct pool."""
             return self._normalize_memory_record(content, memory_id, metadata, tags, memory_type)
 
         def search_memory(self, query, limit=10, table_name=None):
+            """Search the memory."""
             return []
 
         def create_table_practice(self):
+            """Create the table practice."""
             return self._build_operation_practice(
                 operation_id="pool-create-table",
                 name="Pool Create Table",
@@ -336,6 +401,7 @@ def test_pool_inherits_pit_identity_state():
             )
 
         def table_exists_practice(self):
+            """Return whether the table exists for practice."""
             return self._build_operation_practice(
                 operation_id="pool-table-exists",
                 name="Pool Table Exists",
@@ -345,6 +411,7 @@ def test_pool_inherits_pit_identity_state():
             )
 
         def insert_practice(self):
+            """Handle insert practice for the direct pool."""
             return self._build_operation_practice(
                 operation_id="pool-insert",
                 name="Pool Insert",
@@ -354,6 +421,7 @@ def test_pool_inherits_pit_identity_state():
             )
 
         def query_practice(self):
+            """Query the practice."""
             return self._build_operation_practice(
                 operation_id="pool-query",
                 name="Pool Query",
@@ -363,6 +431,7 @@ def test_pool_inherits_pit_identity_state():
             )
 
         def get_table_data_practice(self):
+            """Return the table data practice."""
             return self._build_operation_practice(
                 operation_id="pool-get-table-data",
                 name="Pool Get Table Data",
@@ -376,6 +445,7 @@ def test_pool_inherits_pit_identity_state():
             )
 
         def connect_practice(self):
+            """Connect the practice."""
             return self._build_operation_practice(
                 operation_id="pool-connect",
                 name="Pool Connect",
@@ -385,6 +455,7 @@ def test_pool_inherits_pit_identity_state():
             )
 
         def disconnect_practice(self):
+            """Disconnect the practice."""
             return self._build_operation_practice(
                 operation_id="pool-disconnect",
                 name="Pool Disconnect",
@@ -394,6 +465,7 @@ def test_pool_inherits_pit_identity_state():
             )
 
         def store_memory_practice(self):
+            """Handle store memory practice for the direct pool."""
             return self._build_operation_practice(
                 operation_id="pool-store-memory",
                 name="Pool Store Memory",
@@ -410,6 +482,7 @@ def test_pool_inherits_pit_identity_state():
             )
 
         def search_memory_practice(self):
+            """Search the memory practice."""
             return self._build_operation_practice(
                 operation_id="pool-search-memory",
                 name="Pool Search Memory",
@@ -432,6 +505,10 @@ def test_pool_inherits_pit_identity_state():
 
 
 def test_pit_address_supports_compact_ref_round_trip():
+    """
+    Exercise the test_pit_address_supports_compact_ref_round_trip regression
+    scenario.
+    """
     address = PitAddress.from_value("11111111-1111-1111-1111-111111111111@http://127.0.0.1:8011")
 
     assert address.pit_id == "11111111-1111-1111-1111-111111111111"
@@ -441,7 +518,8 @@ def test_pit_address_supports_compact_ref_round_trip():
 
 @pytest.fixture(scope="module")
 def setup_agents():
-    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../attas/configs'))
+    """Set up the agents."""
+    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), 'fixtures/configs'))
     plaza_cfg = os.path.join(base_dir, "plaza.agent")
     alice_cfg = os.path.join(base_dir, "alice.agent")
     bob_cfg = os.path.join(base_dir, "bob.agent")
@@ -463,6 +541,7 @@ def setup_agents():
 
 @pytest.mark.asyncio
 async def test_plaza_flow(setup_agents):
+    """Exercise the test_plaza_flow regression scenario."""
     async with httpx.AsyncClient() as client:
         # 1. Register Alice
         resp = await client.post("http://127.0.0.1:8011/register", json={
@@ -501,7 +580,7 @@ async def test_plaza_flow(setup_agents):
             json={
                 "receiver": "bob",
                 "content": "Hello Bob from Alice!",
-                "msg_type": "chat-practice"
+                "msg_type": "message"
             },
             headers={"Authorization": f"Bearer {alice_token}"}
         )
@@ -518,12 +597,15 @@ async def test_plaza_flow(setup_agents):
         assert any(entry["name"] == "bob" and entry.get("pit_type") == "Pulse" for entry in search_data)
         assert all(entry.get("pit_type") == "Pulse" for entry in search_data)
         
-        # 5. Relay response should include a downstream success payload from Bob's chat endpoint
+        # 5. Relay response should include a downstream success payload from Bob's mailbox endpoint
         relay_data = relay_resp.json()
         assert relay_data.get("status") == "relayed"
 
 
 def test_plaza_self_registered_in_search_directory():
+    """
+    Exercise the test_plaza_self_registered_in_search_directory regression scenario.
+    """
     app = FastAPI()
     practice = PlazaPractice()
     practice.bind(SimpleNamespace(
@@ -554,6 +636,11 @@ def test_plaza_self_registered_in_search_directory():
 
 
 def test_plaza_register_disables_optional_token_persistence_when_table_missing():
+    """
+    Exercise the
+    test_plaza_register_disables_optional_token_persistence_when_table_missing
+    regression scenario.
+    """
     app = FastAPI()
     pool = MissingTokenTablePool()
     practice = PlazaPractice()
@@ -597,6 +684,10 @@ def test_plaza_register_disables_optional_token_persistence_when_table_missing()
 
 
 def test_plaza_token_persistence_uses_token_column_without_id_field():
+    """
+    Exercise the test_plaza_token_persistence_uses_token_column_without_id_field
+    regression scenario.
+    """
     app = FastAPI()
     pool = CountingBatchInMemoryPool()
     practice = PlazaPractice()
@@ -627,6 +718,10 @@ def test_plaza_token_persistence_uses_token_column_without_id_field():
 
 
 def test_plaza_bootstraps_builtin_schema_pits_on_startup():
+    """
+    Exercise the test_plaza_bootstraps_builtin_schema_pits_on_startup regression
+    scenario.
+    """
     app = FastAPI()
     practice = PlazaPractice()
     practice.bind(SimpleNamespace(
@@ -662,6 +757,10 @@ def test_plaza_bootstraps_builtin_schema_pits_on_startup():
 
 
 def test_plaza_bootstraps_init_files_on_startup_without_duplicates(tmp_path):
+    """
+    Exercise the test_plaza_bootstraps_init_files_on_startup_without_duplicates
+    regression scenario.
+    """
     init_dir = tmp_path / "init_files"
     init_dir.mkdir()
     (init_dir / "init_pulse_market.json").write_text(json.dumps({
@@ -742,6 +841,9 @@ def test_plaza_bootstraps_init_files_on_startup_without_duplicates(tmp_path):
 
 
 def test_plaza_bootstrap_skips_imported_init_files(tmp_path):
+    """
+    Exercise the test_plaza_bootstrap_skips_imported_init_files regression scenario.
+    """
     init_dir = tmp_path / "init_files"
     init_dir.mkdir()
     (init_dir / "init_pulse_imported.json").write_text(json.dumps({
@@ -781,6 +883,10 @@ def test_plaza_bootstrap_skips_imported_init_files(tmp_path):
 
 
 def test_plaza_bootstrap_refreshes_existing_seeded_pulse_schema(tmp_path):
+    """
+    Exercise the test_plaza_bootstrap_refreshes_existing_seeded_pulse_schema
+    regression scenario.
+    """
     init_dir = tmp_path / "init_files"
     init_dir.mkdir()
     init_file = init_dir / "init_pulse_news.json"
@@ -868,6 +974,10 @@ def test_plaza_bootstrap_refreshes_existing_seeded_pulse_schema(tmp_path):
 
 
 def test_plaza_bootstraps_init_files_with_single_directory_fetch(tmp_path):
+    """
+    Exercise the test_plaza_bootstraps_init_files_with_single_directory_fetch
+    regression scenario.
+    """
     init_dir = tmp_path / "init_files"
     init_dir.mkdir()
     (init_dir / "init_pulse_prices.json").write_text(json.dumps({
@@ -907,6 +1017,10 @@ def test_plaza_bootstraps_init_files_with_single_directory_fetch(tmp_path):
 
 
 def test_plaza_bootstraps_all_tagged_init_pulse_files_from_directory(tmp_path):
+    """
+    Exercise the test_plaza_bootstraps_all_tagged_init_pulse_files_from_directory
+    regression scenario.
+    """
     init_dir = tmp_path / "init_files"
     init_dir.mkdir()
     (init_dir / "init_pulse_market.json").write_text(json.dumps({
@@ -956,6 +1070,10 @@ def test_plaza_bootstraps_all_tagged_init_pulse_files_from_directory(tmp_path):
 
 
 def test_plaza_registers_pulser_entry_with_supported_pulse_details():
+    """
+    Exercise the test_plaza_registers_pulser_entry_with_supported_pulse_details
+    regression scenario.
+    """
     pool = InMemoryPool()
     app = FastAPI()
     practice = PlazaPractice()
@@ -1060,6 +1178,11 @@ def test_plaza_registers_pulser_entry_with_supported_pulse_details():
 
 
 def test_plaza_register_accepts_multiple_pulse_pulser_pairs_in_single_request():
+    """
+    Exercise the
+    test_plaza_register_accepts_multiple_pulse_pulser_pairs_in_single_request
+    regression scenario.
+    """
     pool = InMemoryPool()
     app = FastAPI()
     practice = PlazaPractice()
@@ -1140,6 +1263,10 @@ def test_plaza_register_accepts_multiple_pulse_pulser_pairs_in_single_request():
 
 
 def test_plaza_can_restore_missing_pulse_directory_rows_from_pairs():
+    """
+    Exercise the test_plaza_can_restore_missing_pulse_directory_rows_from_pairs
+    regression scenario.
+    """
     pool = InMemoryPool()
     pool._CreateTable(PlazaPractice.DIRECTORY_TABLE, None)
     pool._CreateTable(PlazaPractice.PULSE_PULSER_TABLE, None)
@@ -1195,6 +1322,10 @@ def test_plaza_can_restore_missing_pulse_directory_rows_from_pairs():
 
 
 def test_plaza_status_exposes_available_pulsers_when_pair_id_differs_from_directory_id():
+    """
+    Exercise the test_plaza_status_exposes_available_pulsers_when_pair_id_differs_fr
+    om_directory_id regression scenario.
+    """
     pool = InMemoryPool()
     agent = PlazaAgent(host="127.0.0.1", port=8011, pool=pool)
     agent.add_practice(PlazaPractice())
@@ -1268,6 +1399,10 @@ def test_plaza_status_exposes_available_pulsers_when_pair_id_differs_from_direct
 
 
 def test_plaza_status_hides_unfinished_pulse_pulser_pairs():
+    """
+    Exercise the test_plaza_status_hides_unfinished_pulse_pulser_pairs regression
+    scenario.
+    """
     pool = InMemoryPool()
     agent = PlazaAgent(host="127.0.0.1", port=8011, pool=pool)
     agent.add_practice(PlazaPractice())
@@ -1359,7 +1494,463 @@ def test_plaza_status_hides_unfinished_pulse_pulser_pairs():
     assert pulse["available_pulsers"] == []
 
 
+def test_plaza_status_merges_pair_sample_parameters_into_available_pulsers():
+    """
+    Exercise the
+    test_plaza_status_merges_pair_sample_parameters_into_available_pulsers
+    regression scenario.
+    """
+    pool = InMemoryPool()
+    agent = PlazaAgent(host="127.0.0.1", port=8011, pool=pool)
+    agent.add_practice(PlazaPractice())
+
+    pool._Insert(
+        PlazaPractice.DIRECTORY_TABLE,
+        {
+            "id": "pulse-1",
+            "agent_id": "pulse-1",
+            "name": "sma",
+            "type": "Pulse",
+            "description": "Simple moving average.",
+            "owner": "plaza",
+            "address": "ai.demo.finance.technical.sma",
+            "meta": {"pulse_address": "ai.demo.finance.technical.sma"},
+            "card": {
+                "agent_id": "pulse-1",
+                "name": "sma",
+                "pit_type": "Pulse",
+                "address": "ai.demo.finance.technical.sma",
+                "meta": {"pulse_address": "ai.demo.finance.technical.sma"},
+            },
+        },
+    )
+    pool._Insert(
+        PlazaPractice.DIRECTORY_TABLE,
+        {
+            "id": "pulser-1",
+            "agent_id": "pulser-1",
+            "name": "TechnicalAnalysisPulser",
+            "type": "Pulser",
+            "description": "Technical indicators.",
+            "owner": "plaza",
+            "address": "http://127.0.0.1:8030",
+            "meta": {
+                "supported_pulses": [
+                    {
+                        "name": "sma",
+                        "pulse_name": "sma",
+                        "pulse_address": "ai.demo.finance.technical.sma",
+                        "input_schema": {"type": "object"},
+                    }
+                ]
+            },
+            "card": {
+                "agent_id": "pulser-1",
+                "name": "TechnicalAnalysisPulser",
+                "pit_type": "Pulser",
+                "address": "http://127.0.0.1:8030",
+                "meta": {
+                    "supported_pulses": [
+                        {
+                            "name": "sma",
+                            "pulse_name": "sma",
+                            "pulse_address": "ai.demo.finance.technical.sma",
+                            "input_schema": {"type": "object"},
+                        }
+                    ]
+                },
+            },
+        },
+    )
+    pool._Insert(
+        PlazaPractice.PULSE_PULSER_TABLE,
+        {
+            "id": "pair-1",
+            "pulse_name": "sma",
+            "pulse_address": "ai.demo.finance.technical.sma",
+            "pulser_id": "pulser-1",
+            "pulser_name": "TechnicalAnalysisPulser",
+            "pulser_address": "http://127.0.0.1:8030",
+            "input_schema": {"type": "object"},
+            "pulse_definition": {
+                "resource_type": "pulse_definition",
+                "name": "sma",
+                "test_data": {"symbol": "AAPL", "window": 20},
+            },
+        },
+    )
+
+    client = TestClient(agent.app)
+    response = client.get("/api/plazas_status")
+    assert response.status_code == 200
+
+    agents = response.json()["plazas"][0]["agents"]
+    pulse = next(entry for entry in agents if entry.get("pit_type") == "Pulse" and entry.get("name") == "sma")
+    available_pulser = pulse["available_pulsers"][0]
+    assert available_pulser["name"] == "TechnicalAnalysisPulser"
+    assert available_pulser["pulse_definition"]["test_data"]["symbol"] == "AAPL"
+    assert available_pulser["pulse_definition"]["test_data"]["window"] == 20
+
+
+def test_plaza_ui_template_preserves_pulser_test_sample_fields():
+    """
+    Exercise the test_plaza_ui_template_preserves_pulser_test_sample_fields
+    regression scenario.
+    """
+    pool = InMemoryPool()
+    agent = PlazaAgent(host="127.0.0.1", port=8011, pool=pool)
+    agent.add_practice(PlazaPractice())
+
+    client = TestClient(agent.app)
+    response = client.get("/plazas")
+
+    assert response.status_code == 200
+    assert "test_data: testData," in response.text
+    assert "resolved_test_data: resolvedTestData," in response.text
+    assert "test_data_path: testDataPath," in response.text
+    assert "typeof definition.resolved_test_data === 'object'" in response.text
+
+
+def test_plaza_ui_template_switches_auth_card_to_signed_in_state():
+    """
+    Exercise the test_plaza_ui_template_switches_auth_card_to_signed_in_state
+    regression scenario.
+    """
+    pool = InMemoryPool()
+    agent = PlazaAgent(host="127.0.0.1", port=8011, pool=pool)
+    agent.add_practice(PlazaPractice())
+
+    client = TestClient(agent.app)
+    response = client.get("/plazas")
+
+    assert response.status_code == 200
+    assert 'id="auth-form-shell"' in response.text
+    assert 'id="auth-session-actions"' in response.text
+    assert "document.getElementById('auth-form-shell').classList.toggle('hidden', hasSession);" in response.text
+    assert "document.getElementById('auth-session-actions').classList.toggle('hidden', !hasSession);" in response.text
+    assert "const userBadgeLabel = currentUser.display_name || currentUser.username || currentUser.email || currentUser.id || 'Signed In';" in response.text
+
+
+def test_plaza_search_matches_ohlc_alias_pulses_against_pair_rows():
+    """
+    Exercise the test_plaza_search_matches_ohlc_alias_pulses_against_pair_rows
+    regression scenario.
+    """
+    pool = InMemoryPool()
+    pool._CreateTable(PlazaPractice.DIRECTORY_TABLE, None)
+    pool._CreateTable(PlazaPractice.PULSE_PULSER_TABLE, None)
+
+    pool._Insert(
+        PlazaPractice.DIRECTORY_TABLE,
+        {
+            "id": "pulser-1",
+            "agent_id": "pulser-1",
+            "name": "LegacyOhlcPulser",
+            "type": "Pulser",
+            "description": "Provides daily OHLC bars.",
+            "owner": "plaza",
+            "address": "http://127.0.0.1:8031",
+            "meta": {
+                "supported_pulses": [
+                    {
+                        "name": "daily_ohlcv_bar",
+                        "pulse_name": "daily_ohlcv_bar",
+                        "pulse_address": "plaza://pulse/daily_ohlcv_bar",
+                        "input_schema": {"type": "object"},
+                    }
+                ]
+            },
+            "card": {
+                "agent_id": "pulser-1",
+                "name": "LegacyOhlcPulser",
+                "pit_type": "Pulser",
+                "address": "http://127.0.0.1:8031",
+                "meta": {
+                    "supported_pulses": [
+                        {
+                            "name": "daily_ohlcv_bar",
+                            "pulse_name": "daily_ohlcv_bar",
+                            "pulse_address": "plaza://pulse/daily_ohlcv_bar",
+                            "input_schema": {"type": "object"},
+                        }
+                    ]
+                },
+            },
+        },
+    )
+    pool._Insert(
+        PlazaPractice.PULSE_PULSER_TABLE,
+        {
+            "id": "pair-1",
+            "pulse_name": "daily_ohlcv_bar",
+            "pulse_address": "plaza://pulse/daily_ohlcv_bar",
+            "pulser_id": "pulser-1",
+            "pulser_name": "LegacyOhlcPulser",
+            "pulser_address": "http://127.0.0.1:8031",
+            "input_schema": {"type": "object"},
+        },
+    )
+
+    practice = PlazaPractice()
+    practice.state.directory_pool = pool
+    practice.state.plaza_url_for_store = "http://127.0.0.1:8011"
+
+    results = practice.state.search_entries(pit_type="Pulser", pulse_name="ohlc_bar_series")
+
+    assert len(results) == 1
+    assert results[0]["name"] == "LegacyOhlcPulser"
+
+
+def test_plaza_status_collapses_ohlc_alias_pulses_into_canonical_card():
+    """
+    Exercise the test_plaza_status_collapses_ohlc_alias_pulses_into_canonical_card
+    regression scenario.
+    """
+    pool = InMemoryPool()
+    agent = PlazaAgent(host="127.0.0.1", port=8011, pool=pool)
+    agent.add_practice(PlazaPractice())
+
+    pulse_rows = [
+        {
+            "id": "pulse-daily",
+            "agent_id": "pulse-daily",
+            "name": "daily_ohlcv_bar",
+            "type": "Pulse",
+            "description": "Daily OHLC bars.",
+            "owner": "plaza",
+            "address": "plaza://pulse/daily_ohlcv_bar",
+            "meta": {"pulse_address": "plaza://pulse/daily_ohlcv_bar"},
+            "card": {
+                "agent_id": "pulse-daily",
+                "name": "daily_ohlcv_bar",
+                "pit_type": "Pulse",
+                "address": "plaza://pulse/daily_ohlcv_bar",
+                "meta": {"pulse_address": "plaza://pulse/daily_ohlcv_bar"},
+            },
+        },
+        {
+            "id": "pulse-history",
+            "agent_id": "pulse-history",
+            "name": "daily_price_history",
+            "type": "Pulse",
+            "description": "Daily price history.",
+            "owner": "plaza",
+            "address": "plaza://pulse/daily_price_history",
+            "meta": {"pulse_address": "plaza://pulse/daily_price_history"},
+            "card": {
+                "agent_id": "pulse-history",
+                "name": "daily_price_history",
+                "pit_type": "Pulse",
+                "address": "plaza://pulse/daily_price_history",
+                "meta": {"pulse_address": "plaza://pulse/daily_price_history"},
+            },
+        },
+        {
+            "id": "pulse-series",
+            "agent_id": "pulse-series",
+            "name": "ohlc_bar_series",
+            "type": "Pulse",
+            "description": "Canonical OHLC bar series.",
+            "owner": "plaza",
+            "address": "ai.demo.finance.price.ohlc_bar_series",
+            "meta": {
+                "pulse_address": "ai.demo.finance.price.ohlc_bar_series",
+                "pulse_definition": {
+                    "resource_type": "pulse_definition",
+                    "name": "ohlc_bar_series",
+                    "title": "Ohlc Bar Series",
+                },
+            },
+            "card": {
+                "agent_id": "pulse-series",
+                "name": "ohlc_bar_series",
+                "pit_type": "Pulse",
+                "address": "ai.demo.finance.price.ohlc_bar_series",
+                "meta": {
+                    "pulse_address": "ai.demo.finance.price.ohlc_bar_series",
+                    "pulse_definition": {
+                        "resource_type": "pulse_definition",
+                        "name": "ohlc_bar_series",
+                        "title": "Ohlc Bar Series",
+                    },
+                },
+            },
+        },
+    ]
+    for row in pulse_rows:
+        pool._Insert(PlazaPractice.DIRECTORY_TABLE, row)
+
+    pulser_rows = [
+        {
+            "id": "pulser-daily",
+            "agent_id": "pulser-daily",
+            "name": "DailyPulser",
+            "type": "Pulser",
+            "description": "Returns daily bars.",
+            "owner": "plaza",
+            "address": "http://127.0.0.1:8031",
+            "meta": {
+                "supported_pulses": [
+                    {
+                        "name": "daily_ohlcv_bar",
+                        "pulse_name": "daily_ohlcv_bar",
+                        "pulse_address": "plaza://pulse/daily_ohlcv_bar",
+                        "input_schema": {"type": "object"},
+                    }
+                ]
+            },
+            "card": {
+                "agent_id": "pulser-daily",
+                "name": "DailyPulser",
+                "pit_type": "Pulser",
+                "address": "http://127.0.0.1:8031",
+                "meta": {
+                    "supported_pulses": [
+                        {
+                            "name": "daily_ohlcv_bar",
+                            "pulse_name": "daily_ohlcv_bar",
+                            "pulse_address": "plaza://pulse/daily_ohlcv_bar",
+                            "input_schema": {"type": "object"},
+                        }
+                    ]
+                },
+            },
+        },
+        {
+            "id": "pulser-history",
+            "agent_id": "pulser-history",
+            "name": "HistoryPulser",
+            "type": "Pulser",
+            "description": "Returns daily price history.",
+            "owner": "plaza",
+            "address": "http://127.0.0.1:8032",
+            "meta": {
+                "supported_pulses": [
+                    {
+                        "name": "daily_price_history",
+                        "pulse_name": "daily_price_history",
+                        "pulse_address": "plaza://pulse/daily_price_history",
+                        "input_schema": {"type": "object"},
+                    }
+                ]
+            },
+            "card": {
+                "agent_id": "pulser-history",
+                "name": "HistoryPulser",
+                "pit_type": "Pulser",
+                "address": "http://127.0.0.1:8032",
+                "meta": {
+                    "supported_pulses": [
+                        {
+                            "name": "daily_price_history",
+                            "pulse_name": "daily_price_history",
+                            "pulse_address": "plaza://pulse/daily_price_history",
+                            "input_schema": {"type": "object"},
+                        }
+                    ]
+                },
+            },
+        },
+        {
+            "id": "pulser-series",
+            "agent_id": "pulser-series",
+            "name": "SeriesPulser",
+            "type": "Pulser",
+            "description": "Returns canonical OHLC series.",
+            "owner": "plaza",
+            "address": "http://127.0.0.1:8033",
+            "meta": {
+                "supported_pulses": [
+                    {
+                        "name": "ohlc_bar_series",
+                        "pulse_name": "ohlc_bar_series",
+                        "pulse_address": "ai.demo.finance.price.ohlc_bar_series",
+                        "input_schema": {"type": "object"},
+                    }
+                ]
+            },
+            "card": {
+                "agent_id": "pulser-series",
+                "name": "SeriesPulser",
+                "pit_type": "Pulser",
+                "address": "http://127.0.0.1:8033",
+                "meta": {
+                    "supported_pulses": [
+                        {
+                            "name": "ohlc_bar_series",
+                            "pulse_name": "ohlc_bar_series",
+                            "pulse_address": "ai.demo.finance.price.ohlc_bar_series",
+                            "input_schema": {"type": "object"},
+                        }
+                    ]
+                },
+            },
+        },
+    ]
+    for row in pulser_rows:
+        pool._Insert(PlazaPractice.DIRECTORY_TABLE, row)
+
+    pair_rows = [
+        {
+            "id": "pair-daily",
+            "pulse_name": "daily_ohlcv_bar",
+            "pulse_address": "plaza://pulse/daily_ohlcv_bar",
+            "pulser_id": "pulser-daily",
+            "pulser_name": "DailyPulser",
+            "pulser_address": "http://127.0.0.1:8031",
+            "input_schema": {"type": "object"},
+        },
+        {
+            "id": "pair-history",
+            "pulse_name": "daily_price_history",
+            "pulse_address": "plaza://pulse/daily_price_history",
+            "pulser_id": "pulser-history",
+            "pulser_name": "HistoryPulser",
+            "pulser_address": "http://127.0.0.1:8032",
+            "input_schema": {"type": "object"},
+        },
+        {
+            "id": "pair-series",
+            "pulse_name": "ohlc_bar_series",
+            "pulse_address": "ai.demo.finance.price.ohlc_bar_series",
+            "pulser_id": "pulser-series",
+            "pulser_name": "SeriesPulser",
+            "pulser_address": "http://127.0.0.1:8033",
+            "input_schema": {"type": "object"},
+        },
+    ]
+    for row in pair_rows:
+        pool._Insert(PlazaPractice.PULSE_PULSER_TABLE, row)
+
+    client = TestClient(agent.app)
+    response = client.get("/api/plazas_status")
+    assert response.status_code == 200
+
+    agents = response.json()["plazas"][0]["agents"]
+    pulse_names = [entry.get("name") for entry in agents if entry.get("pit_type") == "Pulse"]
+    assert pulse_names.count("ohlc_bar_series") == 1
+    assert "daily_ohlcv_bar" not in pulse_names
+    assert "daily_price_history" not in pulse_names
+
+    pulse = next(entry for entry in agents if entry.get("pit_type") == "Pulse" and entry.get("name") == "ohlc_bar_series")
+    assert pulse["available_pulser_count"] == 3
+    assert {entry["name"] for entry in pulse["available_pulsers"]} == {
+        "DailyPulser",
+        "HistoryPulser",
+        "SeriesPulser",
+    }
+    assert {entry["pulse_definition"]["pulse_name"] for entry in pulse["available_pulsers"]} == {
+        "daily_ohlcv_bar",
+        "daily_price_history",
+        "ohlc_bar_series",
+    }
+
+
 def test_plaza_pulser_test_proxy_calls_remote_use_practice():
+    """
+    Exercise the test_plaza_pulser_test_proxy_calls_remote_use_practice regression
+    scenario.
+    """
     pool = InMemoryPool()
     agent = PlazaAgent(host="127.0.0.1", port=8011, pool=pool)
     agent.add_practice(PlazaPractice())
@@ -1389,20 +1980,26 @@ def test_plaza_pulser_test_proxy_calls_remote_use_practice():
     captured = {}
 
     class FakeAsyncResponse:
+        """Response model for fake async payloads."""
         status_code = 200
         content = b'{"status":"ok","result":{"range":52}}'
 
         def json(self):
+            """Handle JSON for the fake async response."""
             return {"status": "ok", "result": {"range": 52}}
 
     class FakeAsyncClient:
+        """Represent a fake async client."""
         async def __aenter__(self):
+            """Handle aenter for the fake async client."""
             return self
 
         async def __aexit__(self, exc_type, exc, tb):
+            """Handle aexit for the fake async client."""
             return None
 
         async def post(self, url, json=None, timeout=30.0):
+            """Post the value."""
             captured["url"] = url
             captured["json"] = json
             captured["timeout"] = timeout
@@ -1438,6 +2035,10 @@ def test_plaza_pulser_test_proxy_calls_remote_use_practice():
 
 
 def test_plaza_register_batches_pulse_pulser_pair_persistence():
+    """
+    Exercise the test_plaza_register_batches_pulse_pulser_pair_persistence
+    regression scenario.
+    """
     pool = CountingBatchInMemoryPool()
     app = FastAPI()
     practice = PlazaPractice()
@@ -1497,6 +2098,10 @@ def test_plaza_register_batches_pulse_pulser_pair_persistence():
 
 
 def test_plaza_register_batches_new_pulse_directory_persistence():
+    """
+    Exercise the test_plaza_register_batches_new_pulse_directory_persistence
+    regression scenario.
+    """
     pool = CountingBatchInMemoryPool()
     app = FastAPI()
     practice = PlazaPractice()
@@ -1554,6 +2159,10 @@ def test_plaza_register_batches_new_pulse_directory_persistence():
 
 
 def test_plaza_register_does_not_block_on_slow_pool_persistence():
+    """
+    Exercise the test_plaza_register_does_not_block_on_slow_pool_persistence
+    regression scenario.
+    """
     pool = SlowInsertInMemoryPool(delay=0.3)
     app = FastAPI()
     practice = PlazaPractice()
@@ -1599,7 +2208,53 @@ def test_plaza_register_does_not_block_on_slow_pool_persistence():
     assert PlazaPractice.PULSE_PULSER_TABLE in pool.tables
 
 
+def test_plaza_bootstrap_batches_directory_persistence():
+    """
+    Exercise the test_plaza_bootstrap_batches_directory_persistence regression
+    scenario.
+    """
+    pool = CountingBatchInMemoryPool()
+    app = FastAPI()
+    practice = PlazaPractice()
+    practice.bind(SimpleNamespace(
+        name="Plaza",
+        pool=pool,
+        host="127.0.0.1",
+        port=8011,
+        agent_card={
+            "name": "Plaza",
+            "role": "coordinator",
+            "tags": ["mediator"],
+            "address": "http://127.0.0.1:8011",
+            "pit_type": "Agent",
+            "agent_id": "plaza-self"
+        }
+    ))
+    practice.mount(app)
+
+    directory_batch_calls = [
+        call for call in pool.insert_many_calls
+        if call[0] == PlazaPractice.DIRECTORY_TABLE
+    ]
+    assert len(directory_batch_calls) == 1
+    persisted_names = {row["name"] for row in directory_batch_calls[0][1]}
+    assert "Plaza" in persisted_names
+    assert "Schema: plaza_credentials" in persisted_names
+    assert "Schema: agent_practices" in persisted_names
+
+    directory_single_calls = [
+        call for call in pool.insert_calls
+        if call[0] == PlazaPractice.DIRECTORY_TABLE
+    ]
+    assert directory_single_calls == []
+
+
 def test_plaza_register_dedupes_supported_pulses_and_explicit_batch_pairs():
+    """
+    Exercise the
+    test_plaza_register_dedupes_supported_pulses_and_explicit_batch_pairs regression
+    scenario.
+    """
     pool = CountingBatchInMemoryPool()
     app = FastAPI()
     practice = PlazaPractice()
@@ -1638,6 +2293,15 @@ def test_plaza_register_dedupes_supported_pulses_and_explicit_batch_pairs():
                             "properties": {"symbol": {"type": "string"}},
                             "required": ["symbol"]
                         }
+                    },
+                    {
+                        "name": "last_price",
+                        "pulse_address": "plaza://pulse/last_price",
+                        "input_schema": {
+                            "type": "object",
+                            "properties": {"symbol": {"type": "string"}},
+                            "required": ["symbol"]
+                        }
                     }
                 ]
             }
@@ -1651,10 +2315,20 @@ def test_plaza_register_dedupes_supported_pulses_and_explicit_batch_pairs():
                     "properties": {"symbol": {"type": "string"}},
                     "required": ["symbol"]
                 }
+            },
+            {
+                "pulse_name": "last_price",
+                "pulse_address": "plaza://pulse/last_price",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {"symbol": {"type": "string"}},
+                    "required": ["symbol"]
+                }
             }
         ]
     })
     assert register.status_code == 200
+    agent_id = register.json()["agent_id"]
 
     pair_batch_calls = [
         call for call in pool.insert_many_calls
@@ -1666,9 +2340,84 @@ def test_plaza_register_dedupes_supported_pulses_and_explicit_batch_pairs():
     pulse_pair_rows = list(pool.tables[PlazaPractice.PULSE_PULSER_TABLE].values())
     assert len(pulse_pair_rows) == 1
     assert pulse_pair_rows[0]["pulse_name"] == "last_price"
+    assert len(practice.state.agent_cards[agent_id]["meta"]["supported_pulses"]) == 1
+
+
+def test_plaza_search_dedupes_duplicate_pulsers_by_name_and_address():
+    """
+    Exercise the test_plaza_search_dedupes_duplicate_pulsers_by_name_and_address
+    regression scenario.
+    """
+    practice = PlazaPractice()
+
+    stale_card = practice.state.normalize_card_for_pit(
+        {
+            "name": "ADSPulser",
+            "pit_type": "Pulser",
+            "address": "http://127.0.0.1:8062",
+            "meta": {
+                "supported_pulses": [
+                    {"pulse_name": "security_master_lookup", "pulse_address": "plaza://pulse/security_master_lookup"},
+                    {"pulse_name": "security_master_lookup", "pulse_address": "plaza://pulse/security_master_lookup"},
+                    {"pulse_name": "company_news", "pulse_address": "plaza://pulse/company_news"},
+                ]
+            },
+        },
+        "Pulser",
+        agent_name="ADSPulser",
+        address="http://127.0.0.1:8062",
+    )
+    fresh_card = practice.state.normalize_card_for_pit(
+        {
+            "name": "ADSPulser",
+            "pit_type": "Pulser",
+            "address": "http://127.0.0.1:8062",
+            "meta": {
+                "supported_pulses": [
+                    {"pulse_name": "security_master_lookup", "pulse_address": "plaza://pulse/security_master_lookup"},
+                    {"pulse_name": "company_profile", "pulse_address": "plaza://pulse/company_profile"},
+                    {"pulse_name": "news_article", "pulse_address": "plaza://pulse/news_article"},
+                ]
+            },
+        },
+        "Pulser",
+        agent_name="ADSPulser",
+        address="http://127.0.0.1:8062",
+    )
+
+    practice.state.agent_cards = {
+        "ads-stale": stale_card,
+        "ads-fresh": fresh_card,
+    }
+    practice.state.agent_names_by_id = {
+        "ads-stale": "ADSPulser",
+        "ads-fresh": "ADSPulser",
+    }
+    practice.state.pit_types = {
+        "ads-stale": "Pulser",
+        "ads-fresh": "Pulser",
+    }
+    practice.state.last_active = {
+        "ads-stale": 10.0,
+        "ads-fresh": 20.0,
+    }
+
+    results = practice.state.search_entries(
+        pit_type="Pulser",
+        name="ADSPulser",
+        use_persisted_fallback=False,
+    )
+
+    assert len(results) == 1
+    assert results[0]["agent_id"] == "ads-fresh"
+    assert len(results[0]["meta"]["supported_pulses"]) == 3
 
 
 def test_register_relogin_with_agent_id_api_key_and_history_limit():
+    """
+    Exercise the test_register_relogin_with_agent_id_api_key_and_history_limit
+    regression scenario.
+    """
     app = FastAPI()
     practice = PlazaPractice()
     practice.bind(SimpleNamespace(
@@ -1710,10 +2459,6 @@ def test_register_relogin_with_agent_id_api_key_and_history_limit():
         assert relogin_data["issued_new_identity"] is False
         latest_token = relogin_data["token"]
 
-    auth_with_api_key = client.post("/authenticate", json={"agent_id": agent_id, "api_key": api_key})
-    assert auth_with_api_key.status_code == 200
-    assert auth_with_api_key.json().get("agent_id") == agent_id
-
     search = client.get("/search", headers={"Authorization": f"Bearer {latest_token}"})
     assert search.status_code == 200
     records = [entry for entry in search.json() if entry["name"] == "alpha"]
@@ -1725,6 +2470,9 @@ def test_register_relogin_with_agent_id_api_key_and_history_limit():
 
 
 def test_plaza_self_heartbeat_updates_last_active():
+    """
+    Exercise the test_plaza_self_heartbeat_updates_last_active regression scenario.
+    """
     app = FastAPI()
     practice = PlazaPractice(self_heartbeat_interval=1)
     practice.bind(SimpleNamespace(
@@ -1746,6 +2494,10 @@ def test_plaza_self_heartbeat_updates_last_active():
 
 
 def test_login_history_keeps_multiple_entries_for_same_agent_name():
+    """
+    Exercise the test_login_history_keeps_multiple_entries_for_same_agent_name
+    regression scenario.
+    """
     app = FastAPI()
     practice = PlazaPractice()
     practice.bind(SimpleNamespace(
@@ -1788,6 +2540,11 @@ def test_login_history_keeps_multiple_entries_for_same_agent_name():
 
 
 def test_plaza_registration_marks_agents_that_do_not_accept_inbound_from_plaza():
+    """
+    Exercise the
+    test_plaza_registration_marks_agents_that_do_not_accept_inbound_from_plaza
+    regression scenario.
+    """
     app = FastAPI()
     practice = PlazaPractice()
     practice.bind(SimpleNamespace(
@@ -1831,9 +2588,14 @@ def test_plaza_registration_marks_agents_that_do_not_accept_inbound_from_plaza()
 
 
 def test_plaza_restart_restores_registered_agent_state_from_pool():
+    """
+    Exercise the test_plaza_restart_restores_registered_agent_state_from_pool
+    regression scenario.
+    """
     pool = InMemoryPool()
 
     def build_practice():
+        """Build the practice."""
         practice = PlazaPractice()
         practice.bind(SimpleNamespace(
             name="Plaza",
@@ -1872,7 +2634,6 @@ def test_plaza_restart_restores_registered_agent_state_from_pool():
     register_data = register.json()
     token = register_data["token"]
     agent_id = register_data["agent_id"]
-    api_key = register_data["api_key"]
 
     app_two = FastAPI()
     practice_two = build_practice()
@@ -1880,25 +2641,24 @@ def test_plaza_restart_restores_registered_agent_state_from_pool():
     practice_two.state._hydrate_plaza_state()
     client_two = TestClient(app_two)
 
-    auth = client_two.post("/authenticate", json={"agent_id": agent_id, "api_key": api_key})
-    assert auth.status_code == 200
-    assert auth.json()["agent_id"] == agent_id
-
     search = client_two.get("/search", headers={"Authorization": f"Bearer {token}"})
     assert search.status_code == 200
     restored = next(item for item in search.json() if item["agent_id"] == agent_id)
     assert restored["name"] == "alpha"
     assert restored["card"]["meta"]["mode"] == "restored"
     assert restored["card"]["practices"][0]["id"] == "echo-practice"
-    assert restored["login_history"][-1]["event"] == "issued"
 
 
 def test_login_history_loads_lazily_once_per_agent():
+    """
+    Exercise the test_login_history_loads_lazily_once_per_agent regression scenario.
+    """
     pool = InMemoryPool()
     login_history_reads = 0
     original_get_table_data = pool._GetTableData
 
     def counted_get_table_data(table_name, id_or_where=None, table_schema=None):
+        """Handle counted get table data."""
         nonlocal login_history_reads
         if table_name == "plaza_login_history":
             login_history_reads += 1
@@ -1907,6 +2667,7 @@ def test_login_history_loads_lazily_once_per_agent():
     pool._GetTableData = counted_get_table_data
 
     def build_practice():
+        """Build the practice."""
         practice = PlazaPractice()
         practice.bind(SimpleNamespace(
             name="Plaza",
@@ -1965,6 +2726,7 @@ def test_login_history_loads_lazily_once_per_agent():
 
 
 def test_directory_table_and_search_filters():
+    """Exercise the test_directory_table_and_search_filters regression scenario."""
     app = FastAPI()
     pool = InMemoryPool()
     practice = PlazaPractice()

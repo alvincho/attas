@@ -1,3 +1,14 @@
+"""
+User 2 module for `prompits.agents.user 2`.
+
+Prompits provides the core HTTP-native agent runtime, Plaza coordination layer, and
+pool/practice infrastructure for FinMAS. Within Prompits, these modules provide reusable
+agent hosts and user-facing agent variants.
+
+Core types exposed here include `UserAgent`, which carry the main behavior or state
+managed by this module.
+"""
+
 import logging
 import os
 from typing import Any, Dict, Optional
@@ -21,6 +32,7 @@ class UserAgent(BaseAgent):
     """
 
     def __init__(self, name: str, host: str = "127.0.0.1", port: int = 8000, plaza_url: Optional[str] = None, agent_card: Dict[str, Any] = None, pool: Optional[Pool] = None):
+        """Initialize the user agent."""
         super().__init__(name, host, port, plaza_url, agent_card, pool)
         
         # Determine the directory of the current file to set up templates and static files correctly
@@ -43,6 +55,7 @@ class UserAgent(BaseAgent):
 
         @self.app.get("/")
         async def index(request: Request):
+            """Route handler for GET /."""
             return self.templates.TemplateResponse(
                 "plazas.html",
                 {"request": request, "agent_name": self.name, "supported_pit_types": supported_pit_types},
@@ -50,6 +63,7 @@ class UserAgent(BaseAgent):
 
         @self.app.get("/plazas")
         async def plazas(request: Request):
+            """Route handler for GET /plazas."""
             return self.templates.TemplateResponse(
                 "plazas.html",
                 {"request": request, "agent_name": self.name, "supported_pit_types": supported_pit_types},
@@ -57,7 +71,9 @@ class UserAgent(BaseAgent):
 
         @self.app.get("/api/plazas_status")
         async def plazas_status(request: Request):
+            """Route handler for GET /api/plazas_status."""
             def _plazas_status_sync() -> Dict[str, Any]:
+                """Internal helper for plazas status sync."""
                 if not self.plaza_url:
                     return {"status": "success", "plazas": []}
 
@@ -153,6 +169,7 @@ class UserAgent(BaseAgent):
 
         @self.app.post("/api/send_message")
         async def api_send_message(request: Request):
+            """Route handler for POST /api/send_message."""
             try:
                 data = await request.json()
                 receiver = data.get("receiver")

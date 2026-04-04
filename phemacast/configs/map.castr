@@ -1,0 +1,32 @@
+{
+    "name": "MapCastr",
+    "type": "phemacast.castrs.map_castr.MapCastr",
+    "host": "127.0.0.1",
+    "port": 8043,
+    "role": "castr",
+    "tags": [
+        "castr",
+        "map",
+        "diagram",
+        "json",
+        "map-phemar"
+    ],
+    "pools": [
+        {
+            "type": "FileSystemPool",
+            "name": "map_castr_pool",
+            "description": "Local pool for MapCastr execution artifacts.",
+            "root_path": "phemacast/storage/map_castr_pool"
+        }
+    ],
+    "castr": {
+        "description": "Execute a diagram-backed Phema saved by MapPhemar and persist the output as JSON.",
+        "tags": [
+            "map",
+            "diagram",
+            "map-phemar"
+        ],
+        "media_type": "JSON",
+        "timeout_sec": 30
+    }
+}

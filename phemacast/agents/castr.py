@@ -1,3 +1,14 @@
+"""
+Castr module for `phemacast.agents.castr`.
+
+Phemacast assembles pulse inputs, phemas, and castrs into rendered research artifacts
+and interactive tooling. Within Phemacast, the agents package contains the actor roles
+that build, bind, and render phemas.
+
+Core types exposed here include `CastPractice` and `Castr`, which carry the main
+behavior or state managed by this module.
+"""
+
 import logging
 import json
 import os
@@ -25,6 +36,7 @@ logger = logging.getLogger(__name__)
 ConfigInput = Union[str, Path, Mapping[str, Any]]
 
 def _read_config(config: ConfigInput) -> Dict[str, Any]:
+    """Internal helper to read the config."""
     if isinstance(config, Mapping):
         return dict(config)
     config_path = Path(config)
@@ -32,6 +44,7 @@ def _read_config(config: ConfigInput) -> Dict[str, Any]:
         return json.load(fh)
 
 def _merge_tags(*tag_groups: Any) -> List[str]:
+    """Internal helper to merge the tags."""
     merged: List[str] = []
     for group in tag_groups:
         if not group:
@@ -47,6 +60,7 @@ class CastPractice(Practice):
     """Expose `agent.cast()` as a mounted callable practice."""
 
     def __init__(self):
+        """Initialize the cast practice."""
         super().__init__(
             name="Cast Phema",
             description="Transforms a Phema into a specific media format.",
@@ -59,6 +73,7 @@ class CastPractice(Practice):
         )
 
     def bind(self, agent):
+        """Bind the value."""
         super().bind(agent)
         self.parameters = {
             "phema": {
@@ -76,10 +91,12 @@ class CastPractice(Practice):
         }
 
     def mount(self, app):
+        """Mount the value."""
         router = APIRouter()
 
         @router.post(self.path)
         async def cast_phema(message: Message):
+            """Route handler for POST requests."""
             content = message.content or {}
             if not isinstance(content, dict):
                 raise HTTPException(status_code=400, detail="Cast content must be a JSON object.")
@@ -88,6 +105,7 @@ class CastPractice(Practice):
         app.include_router(router)
 
     def execute(self, **kwargs) -> Any:
+        """Handle execute for the cast practice."""
         if not self.agent:
             raise RuntimeError("CastPractice is not bound to an agent.")
 
@@ -115,6 +133,7 @@ class Castr(StandbyAgent):
         pool: Any = None,
         auto_register: bool = True,
     ):
+        """Initialize the castr."""
         config_data = _read_config(config) if config is not None else {}
         resolved_config_path = config_path
         if resolved_config_path is None and isinstance(config, (str, Path)):
@@ -176,9 +195,11 @@ class Castr(StandbyAgent):
 
     @classmethod
     def from_config(cls, config: ConfigInput, **kwargs: Any) -> "Castr":
+        """Build an instance from config."""
         return cls(config=config, **kwargs)
 
     def register(self, *, start_reconnect_on_failure: bool = True, request_retries: Optional[int] = None):
+        """Register the value."""
         if self.plaza_token and time.time() < (self.token_expires_at - 60):
             return
         return super().register(
@@ -187,8 +208,10 @@ class Castr(StandbyAgent):
         )
         
     def _setup_castr_routes(self) -> None:
+        """Internal helper to set up the castr routes."""
         @self.app.get("/")
         async def castr_ui(request: Request):
+            """Route handler for GET /."""
             return self.templates.TemplateResponse(
                 request=request,
                 name="castr_ui.html",
@@ -202,6 +225,7 @@ class Castr(StandbyAgent):
 
         @self.app.get("/api/plazas/phemas")
         async def list_plaza_phemas():
+            """Route handler for GET /api/plazas/phemas."""
             if not self.plaza_url:
                 return {"status": "success", "phemas": []}
             try:
@@ -231,6 +255,7 @@ class Castr(StandbyAgent):
 
         @self.app.get("/api/media/{filename}")
         async def get_media_file(filename: str):
+            """Route handler for GET /api/media/{filename}."""
             if not self.pool or not hasattr(self.pool, "root_path"):
                 raise HTTPException(status_code=404, detail="Pool not configured")
             
@@ -242,6 +267,7 @@ class Castr(StandbyAgent):
 
         @self.app.post("/api/cast_phema")
         async def cast_phema_api(request: Request):
+            """Route handler for POST /api/cast_phema."""
             payload = await request.json()
             if not isinstance(payload, dict):
                 raise HTTPException(status_code=400, detail="Cast payload must be a JSON object.")

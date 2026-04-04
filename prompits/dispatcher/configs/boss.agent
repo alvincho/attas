@@ -1,0 +1,28 @@
+{
+  "name": "DispatcherBoss",
+  "host": "127.0.0.1",
+  "port": 8065,
+  "plaza_url": "http://127.0.0.1:8011",
+  "party": "Prompits",
+  "type": "prompits.dispatcher.boss.DispatcherBossAgent",
+  "description": "Dispatcher operator UI for issuing and monitoring jobs.",
+  "pools": [
+    {
+      "type": "SQLitePool",
+      "name": "dispatcher_boss_pool",
+      "description": "Local dispatcher boss state",
+      "db_path": "prompits/dispatcher/storage/dispatcher_boss.sqlite"
+    }
+  ],
+  "dispatcher": {
+    "dispatcher_address": "http://127.0.0.1:8060",
+    "job_capabilities": [
+      {
+        "name": "echo job",
+        "description": "Echo back a minimal result payload."
+      }
+    ],
+    "monitor_refresh_sec": 10,
+    "auto_register": true
+  }
+}

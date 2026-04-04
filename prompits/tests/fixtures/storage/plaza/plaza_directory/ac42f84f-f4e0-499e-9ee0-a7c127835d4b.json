@@ -1,0 +1,89 @@
+{
+  "id": "ac42f84f-f4e0-499e-9ee0-a7c127835d4b",
+  "agent_id": "ac42f84f-f4e0-499e-9ee0-a7c127835d4b",
+  "name": "Schema: plaza_login_history",
+  "type": "Schema",
+  "description": "Built-in table schema for Plaza login/relogin history.",
+  "owner": "Plaza",
+  "address": "",
+  "meta": {
+    "schema_name": "plaza_login_history",
+    "schema_kind": "table",
+    "schema": {
+      "name": "plaza_login_history",
+      "description": "Login/relogin events by agent_id",
+      "primary_key": [
+        "id"
+      ],
+      "rowSchema": {
+        "id": {
+          "type": "string"
+        },
+        "agent_id": {
+          "type": "string"
+        },
+        "agent_name": {
+          "type": "string"
+        },
+        "address": {
+          "type": "string"
+        },
+        "event": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "float"
+        }
+      }
+    }
+  },
+  "card": {
+    "name": "Schema: plaza_login_history",
+    "description": "Built-in table schema for Plaza login/relogin history.",
+    "pit_type": "Schema",
+    "owner": "Plaza",
+    "tags": [
+      "schema",
+      "system",
+      "table"
+    ],
+    "pit_address": {
+      "pit_id": "ac42f84f-f4e0-499e-9ee0-a7c127835d4b",
+      "plazas": [
+        "http://127.0.0.1:8011"
+      ]
+    },
+    "meta": {
+      "schema_name": "plaza_login_history",
+      "schema_kind": "table",
+      "schema": {
+        "name": "plaza_login_history",
+        "description": "Login/relogin events by agent_id",
+        "primary_key": [
+          "id"
+        ],
+        "rowSchema": {
+          "id": {
+            "type": "string"
+          },
+          "agent_id": {
+            "type": "string"
+          },
+          "agent_name": {
+            "type": "string"
+          },
+          "address": {
+            "type": "string"
+          },
+          "event": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "float"
+          }
+        }
+      }
+    }
+  },
+  "updated_at": "2026-04-03T03:49:37.571656+00:00"
+}

@@ -19,7 +19,7 @@ At a high level, a Prompits deployment works like this:
 
 1. A config file is loaded by `prompits/create_agent.py`.
 2. The configured agent class is instantiated with its primary pool.
-3. `BaseAgent` creates the FastAPI app, mounts the default `ChatPractice`, and exposes core routes.
+3. `BaseAgent` creates the FastAPI app, registers the default `mailbox` endpoint, and exposes core routes.
 4. Additional practices from config are imported and mounted.
 5. If the agent has a `plaza_url` and is not Plaza itself, it registers on startup.
 6. Plaza returns a stable `agent_id`, a persistent `api_key`, and a short-lived bearer token.
@@ -126,12 +126,9 @@ Agents use `POST /renew` to rotate a Plaza bearer token before expiry.
 
 ### Authentication
 
-`POST /authenticate` can validate:
+`POST /authenticate` validates a bearer token.
 
-- a bearer token
-- or an `agent_id` plus `api_key` pair
-
-This is used both by agents and by remote practice verification logic.
+Agent relogin continues to go through `POST /register` with an existing `agent_id` and `api_key` pair. Remote practice verification uses bearer-token validation through `/authenticate`.
 
 ### Heartbeat
 
@@ -152,8 +149,8 @@ Agents periodically send `POST /heartbeat` so Plaza can maintain activity state.
 
 `POST /relay` forwards messages through Plaza. The routing behavior is:
 
-- `/chat` for `chat-practice`
-- `/mailbox` as the default for other message flows when available
+- a practice-specific path when the receiver advertises that practice
+- `/mailbox` as the default for generic message flows
 
 ## Remote Practice Invocation
 
@@ -170,7 +167,7 @@ Verification path:
 3. Receiver verifies the caller with Plaza `POST /authenticate`.
 4. If verification succeeds, the receiver executes the requested practice and returns the result.
 
-This flow is demonstrated in `prompits/tests/test_use_practice_remote_llm.py`.
+This flow is demonstrated throughout the pool and pulser tests, especially the remote `get_pulse_data` coverage in `phemacast/tests/`.
 
 ## Pool Backends
 
@@ -336,25 +333,6 @@ If you are releasing Prompits as open source, it helps to present `phemacast` as
     - exposes `/.well-known/agent-card`
     - serves Plaza UI and related editor pages
 
-### `prompits/practices/chat.py`
-
-- `ChatPractice`
-  - Purpose: unified chat-style LLM interaction practice.
-  - Providers: `ollama`, `openai`.
-  - Features:
-    - `/chat` endpoint
-    - `/list_models`
-    - agent-conditioned system prompt injection
-    - Ollama missing-model fallback
-
-### `prompits/practices/llm.py`
-
-- `LLMPractice`
-  - Purpose: a dedicated LLM practice with a stable `/llm` endpoint and practice id `llm`.
-  - Why it exists:
-    - separates explicit LLM capability from the default `chat-practice`
-    - makes it easier to advertise a distinct capability in Plaza search
-
 ### `prompits/practices/embeddings.py`
 
 - `EmbeddingsPractice`
@@ -372,7 +350,6 @@ If you are releasing Prompits as open source, it helps to present `phemacast` as
 - `RenewRequest`: token renewal payload.
 - `RelayMessage`: relay envelope.
 - `HeartbeatRequest`: heartbeat payload.
-- `AuthenticateRequest`: credential-based login payload.
 
 #### Persistence and State
 

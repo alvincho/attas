@@ -1,0 +1,18 @@
+{
+  "name": "BossPulser",
+  "role": "boss",
+  "host": "127.0.0.1",
+  "port": 8220,
+  "plaza_url": "http://127.0.0.1:8011",
+  "party": "Phemacast",
+  "type": "phemacast.pulsers.boss_pulser.BossPulser",
+  "description": "Independent Phemacast boss pulser for team provisioning, capability discovery, live status, and job control.",
+  "pools": [
+    {
+      "type": "SQLitePool",
+      "name": "boss_pulser_pool",
+      "description": "Local cache for BossPulser",
+      "db_path": "phemacast/storage/boss_pulser.sqlite"
+    }
+  ]
+}

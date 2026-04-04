@@ -1,3 +1,17 @@
+"""
+Regression tests for Concurrency.
+
+Prompits provides the core HTTP-native agent runtime, Plaza coordination layer, and
+pool/practice infrastructure for FinMAS. These tests lock down Prompits runtime
+behavior, Plaza features, and storage integrations.
+
+The pytest cases in this file document expected behavior through checks such as
+`test_plaza_register_requests_run_concurrently`,
+`test_plaza_status_api_requests_run_concurrently`, and
+`test_remote_use_practice_requests_run_concurrently`, helping guard against regressions
+as the packages evolve.
+"""
+
 import socket
 import threading
 import time
@@ -14,12 +28,14 @@ from prompits.tests.test_support import stop_servers
 
 
 def _find_free_port() -> int:
+    """Internal helper to find the free port."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         sock.bind(("127.0.0.1", 0))
         return int(sock.getsockname()[1])
 
 
 def _start_agent_instance(agent, log_level: str = "error", timeout_sec: int = 10):
+    """Internal helper to start the agent instance."""
     config = uvicorn.Config(agent.app, host=agent.host, port=agent.port, log_level=log_level)
     server = uvicorn.Server(config)
     thread = threading.Thread(target=server.run, daemon=True)
@@ -40,6 +56,7 @@ def _start_agent_instance(agent, log_level: str = "error", timeout_sec: int = 10
 
 
 def _wait_until(predicate, timeout_sec: int = 10, interval_sec: float = 0.2):
+    """Internal helper for wait until."""
     deadline = time.time() + timeout_sec
     while time.time() < deadline:
         if predicate():
@@ -49,7 +66,9 @@ def _wait_until(predicate, timeout_sec: int = 10, interval_sec: float = 0.2):
 
 
 class SlowPractice(Practice):
+    """Practice implementation for slow workflows."""
     def __init__(self):
+        """Initialize the slow practice."""
         super().__init__(
             name="SlowPractice",
             description="Sleep for a short interval and report timing metadata.",
@@ -57,9 +76,11 @@ class SlowPractice(Practice):
         )
 
     def mount(self, app):
+        """Mount the value."""
         return None
 
     def execute(self, delay: float = 1.0, value=None, **kwargs):
+        """Handle execute for the slow practice."""
         started_at = time.monotonic()
         time.sleep(delay)
         ended_at = time.monotonic()
@@ -72,6 +93,10 @@ class SlowPractice(Practice):
 
 
 def test_remote_use_practice_requests_run_concurrently():
+    """
+    Exercise the test_remote_use_practice_requests_run_concurrently regression
+    scenario.
+    """
     plaza_port = _find_free_port()
     worker_port = _find_free_port()
     caller_port = _find_free_port()
@@ -114,6 +139,7 @@ def test_remote_use_practice_requests_run_concurrently():
         assert _wait_until(lambda: caller_agent.lookup_agent_info(worker_agent.agent_id) is not None)
 
         def invoke(value: int):
+            """Invoke the value."""
             return caller_agent.UsePractice(
                 "slow-practice",
                 {"delay": 1.0, "value": value},
@@ -137,6 +163,9 @@ def test_remote_use_practice_requests_run_concurrently():
 
 
 def test_plaza_register_requests_run_concurrently():
+    """
+    Exercise the test_plaza_register_requests_run_concurrently regression scenario.
+    """
     plaza_port = _find_free_port()
     plaza_url = f"http://127.0.0.1:{plaza_port}"
 
@@ -152,6 +181,7 @@ def test_plaza_register_requests_run_concurrently():
     original_upsert = plaza_practice.state.upsert_directory_entry
 
     def slow_upsert(*args, **kwargs):
+        """Handle slow upsert."""
         agent_name = kwargs.get("agent_name")
         if agent_name is None and len(args) > 1:
             agent_name = args[1]
@@ -173,6 +203,7 @@ def test_plaza_register_requests_run_concurrently():
         servers.append(_start_agent_instance(plaza_agent))
 
         def register_agent(name: str, port: int):
+            """Register the agent."""
             response = requests.post(
                 f"{plaza_url}/register",
                 json={
@@ -204,6 +235,10 @@ def test_plaza_register_requests_run_concurrently():
 
 
 def test_plaza_status_api_requests_run_concurrently():
+    """
+    Exercise the test_plaza_status_api_requests_run_concurrently regression
+    scenario.
+    """
     plaza_port = _find_free_port()
     plaza_agent = PlazaAgent(host="127.0.0.1", port=plaza_port)
     plaza_practice = PlazaPractice()
@@ -212,6 +247,7 @@ def test_plaza_status_api_requests_run_concurrently():
     original_search_entries = plaza_practice.state.search_entries
 
     def slow_search_entries(*args, **kwargs):
+        """Handle slow search entries."""
         started_at = time.monotonic()
         try:
             time.sleep(1.0)
@@ -229,6 +265,7 @@ def test_plaza_status_api_requests_run_concurrently():
         servers.append(_start_agent_instance(plaza_agent))
 
         def fetch_status():
+            """Fetch the status."""
             response = requests.get(
                 f"http://127.0.0.1:{plaza_port}/api/plazas_status",
                 timeout=10,

@@ -1,3 +1,18 @@
+"""
+Regression tests for Phemar.
+
+Phemacast assembles pulse inputs, phemas, and castrs into rendered research artifacts
+and interactive tooling. These tests protect the Phemacast pipeline, demo flows, UI
+helpers, and pulser integrations.
+
+The pytest cases in this file document expected behavior through checks such as
+`test_phemar_start_from_config_runs_health_server_in_thread`,
+`test_phemar_loads_config_registers_and_advertises_generate_practice`,
+`test_phemar_register_auto_registers_supported_phema_objects_with_configured_mode`, and
+`test_phemar_register_skips_auto_register_when_plaza_registration_fails`, helping guard
+against regressions as the packages evolve.
+"""
+
 import json
 import os
 import sys
@@ -11,17 +26,24 @@ from prompits.pools.filesystem import FileSystemPool
 
 
 class FakeResponse:
+    """Response model for fake payloads."""
     def __init__(self, payload, status_code=200):
+        """Initialize the fake response."""
         self._payload = payload
         self.status_code = status_code
         self.text = json.dumps(payload)
         self.content = self.text.encode("utf-8")
 
     def json(self):
+        """Handle JSON for the fake response."""
         return self._payload
 
 
 def test_phemar_loads_config_registers_and_advertises_generate_practice(tmp_path):
+    """
+    Exercise the test_phemar_loads_config_registers_and_advertises_generate_practice
+    regression scenario.
+    """
     config_path = tmp_path / "phemar.json"
     config_path.write_text(
         json.dumps(
@@ -59,6 +81,7 @@ def test_phemar_loads_config_registers_and_advertises_generate_practice(tmp_path
     sent_payloads = []
 
     def fake_post(url, json=None, timeout=5, **kwargs):
+        """Handle fake post."""
         sent_payloads.append({"url": url, "payload": dict(json or {}), "timeout": timeout})
         return FakeResponse(
             {
@@ -90,6 +113,11 @@ def test_phemar_loads_config_registers_and_advertises_generate_practice(tmp_path
 
 
 def test_phemar_register_auto_registers_supported_phema_objects_with_configured_mode():
+    """
+    Exercise the
+    test_phemar_register_auto_registers_supported_phema_objects_with_configured_mode
+    regression scenario.
+    """
     phemar = Phemar(
         plaza_url="http://127.0.0.1:8011",
         supported_phemas=[
@@ -104,9 +132,11 @@ def test_phemar_register_auto_registers_supported_phema_objects_with_configured_
     )
 
     class SuccessResponse:
+        """Response model for success payloads."""
         status_code = 200
 
     def fake_register(*args, **kwargs):
+        """Handle fake register."""
         phemar.plaza_token = "registered-token"
         return SuccessResponse()
 
@@ -127,6 +157,11 @@ def test_phemar_register_auto_registers_supported_phema_objects_with_configured_
 
 
 def test_phemar_register_skips_auto_register_when_plaza_registration_fails():
+    """
+    Exercise the
+    test_phemar_register_skips_auto_register_when_plaza_registration_fails
+    regression scenario.
+    """
     phemar = Phemar(
         plaza_url="http://127.0.0.1:8011",
         supported_phemas=[
@@ -140,6 +175,7 @@ def test_phemar_register_skips_auto_register_when_plaza_registration_fails():
     )
 
     class FailedResponse:
+        """Response model for failed payloads."""
         status_code = 503
 
     with patch("prompits.agents.standby.StandbyAgent.register", return_value=FailedResponse()), patch.object(
@@ -153,6 +189,10 @@ def test_phemar_register_skips_auto_register_when_plaza_registration_fails():
 
 
 def test_phema_snapshot_cache_time_is_preserved_in_agent_metadata():
+    """
+    Exercise the test_phema_snapshot_cache_time_is_preserved_in_agent_metadata
+    regression scenario.
+    """
     phemar = Phemar(
         supported_phemas=[
             {
@@ -172,7 +212,40 @@ def test_phema_snapshot_cache_time_is_preserved_in_agent_metadata():
     assert "input" in practice_by_id["snapshot_phema"]["parameters"]
 
 
+def test_phema_preserves_output_schema_in_round_trip_and_agent_metadata():
+    """
+    Exercise the test_phema_preserves_output_schema_in_round_trip_and_agent_metadata
+    regression scenario.
+    """
+    phema = Phema.from_dict(
+        {
+            "phema_id": "diagram-brief",
+            "name": "Diagram Brief",
+            "input_schema": {"type": "object", "properties": {"symbol": {"type": "string"}}},
+            "output_schema": {"type": "object", "properties": {"price": {"type": "number"}}},
+            "sections": [{"name": "Flow", "content": []}],
+            "meta": {"map_phemar": {"version": 1}},
+        }
+    )
+
+    payload = phema.to_dict()
+    assert payload["output_schema"]["properties"]["price"]["type"] == "number"
+
+    phemar = Phemar(
+        supported_phemas=[payload],
+        auto_register=False,
+    )
+
+    supported = phemar.agent_card["meta"]["supported_phemas"]
+    assert supported[0]["output_schema"]["properties"]["price"]["type"] == "number"
+
+
 def test_generate_phema_fetches_matching_pulser_and_replaces_section_content():
+    """
+    Exercise the
+    test_generate_phema_fetches_matching_pulser_and_replaces_section_content
+    regression scenario.
+    """
     phemar = Phemar(
         supported_phemas=[
             {
@@ -211,6 +284,7 @@ def test_generate_phema_fetches_matching_pulser_and_replaces_section_content():
         ],
     ), patch.object(phemar, "UsePractice") as mocked_use_practice:
         def fake_use_practice(practice_id, content=None, pit_address=None, **kwargs):
+            """Handle fake use practice."""
             assert practice_id == "get_pulse_data"
             if pit_address.pit_id == "pulser-price-id":
                 return {"value": 214.37, "symbol": content["params"]["symbol"]}
@@ -238,6 +312,10 @@ def test_generate_phema_fetches_matching_pulser_and_replaces_section_content():
 
 
 def test_generate_phema_projects_selected_fields_for_section_display():
+    """
+    Exercise the test_generate_phema_projects_selected_fields_for_section_display
+    regression scenario.
+    """
     phemar = Phemar(
         supported_phemas=[
             {
@@ -274,6 +352,10 @@ def test_generate_phema_projects_selected_fields_for_section_display():
 
 
 def test_generate_phema_records_fetch_timing_and_cost_metadata():
+    """
+    Exercise the test_generate_phema_records_fetch_timing_and_cost_metadata
+    regression scenario.
+    """
     phemar = Phemar(
         supported_phemas=[
             {
@@ -321,6 +403,11 @@ def test_generate_phema_records_fetch_timing_and_cost_metadata():
 
 
 def test_generate_phema_supports_inline_text_and_field_items_with_cached_fetch():
+    """
+    Exercise the
+    test_generate_phema_supports_inline_text_and_field_items_with_cached_fetch
+    regression scenario.
+    """
     phemar = Phemar(
         supported_phemas=[
             {
@@ -376,6 +463,10 @@ def test_generate_phema_supports_inline_text_and_field_items_with_cached_fetch()
 
 
 def test_save_static_phema_marks_snapshot_as_static():
+    """
+    Exercise the test_save_static_phema_marks_snapshot_as_static regression
+    scenario.
+    """
     phemar = Phemar(
         supported_phemas=[
             {
@@ -429,6 +520,11 @@ def test_save_static_phema_marks_snapshot_as_static():
 
 
 def test_save_static_phema_extracts_fetches_and_removes_redundant_result_payload():
+    """
+    Exercise the
+    test_save_static_phema_extracts_fetches_and_removes_redundant_result_payload
+    regression scenario.
+    """
     phemar = Phemar(
         plaza_url="http://127.0.0.1:8011",
         supported_phemas=[
@@ -513,6 +609,11 @@ def test_save_static_phema_extracts_fetches_and_removes_redundant_result_payload
 
 
 def test_save_static_phema_consolidates_identical_fetches_for_multiple_fields():
+    """
+    Exercise the
+    test_save_static_phema_consolidates_identical_fetches_for_multiple_fields
+    regression scenario.
+    """
     phemar = Phemar(
         plaza_url="http://127.0.0.1:8011",
         supported_phemas=[
@@ -609,6 +710,10 @@ def test_save_static_phema_consolidates_identical_fetches_for_multiple_fields():
 
 
 def test_snapshot_phema_reuses_cached_snapshot_and_history(tmp_path):
+    """
+    Exercise the test_snapshot_phema_reuses_cached_snapshot_and_history regression
+    scenario.
+    """
     pool = FileSystemPool("snapshot_pool", "Snapshot pool", str(tmp_path / "pool"))
     phemar = Phemar(
         pool=pool,
@@ -695,6 +800,10 @@ def test_snapshot_phema_reuses_cached_snapshot_and_history(tmp_path):
 
 
 def test_snapshot_phema_regenerates_after_cache_expiry(tmp_path):
+    """
+    Exercise the test_snapshot_phema_regenerates_after_cache_expiry regression
+    scenario.
+    """
     pool = FileSystemPool("snapshot_expiry_pool", "Snapshot expiry pool", str(tmp_path / "pool"))
     phemar = Phemar(
         pool=pool,
@@ -779,6 +888,10 @@ def test_snapshot_phema_regenerates_after_cache_expiry(tmp_path):
 
 
 def test_snapshot_phema_uses_phema_snapshot_cache_time_property(tmp_path):
+    """
+    Exercise the test_snapshot_phema_uses_phema_snapshot_cache_time_property
+    regression scenario.
+    """
     pool = FileSystemPool("snapshot_property_pool", "Snapshot property pool", str(tmp_path / "pool"))
     phemar = Phemar(
         pool=pool,
@@ -836,6 +949,10 @@ def test_snapshot_phema_uses_phema_snapshot_cache_time_property(tmp_path):
 
 
 def test_snapshot_phema_practice_accepts_input_alias():
+    """
+    Exercise the test_snapshot_phema_practice_accepts_input_alias regression
+    scenario.
+    """
     phemar = Phemar(
         supported_phemas=[
             {
@@ -863,6 +980,10 @@ def test_snapshot_phema_practice_accepts_input_alias():
 
 
 def test_phemar_start_from_config_runs_health_server_in_thread(tmp_path):
+    """
+    Exercise the test_phemar_start_from_config_runs_health_server_in_thread
+    regression scenario.
+    """
     config_path = tmp_path / "threaded_phemar.json"
     config_path.write_text(
         json.dumps(

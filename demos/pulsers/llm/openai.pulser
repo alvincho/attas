@@ -1,0 +1,49 @@
+{
+  "name": "DemoOpenAIPulser",
+  "type": "attas.pulsers.openai_pulser.OpenAIPulser",
+  "host": "127.0.0.1",
+  "port": 8262,
+  "plaza_url": "http://127.0.0.1:8261",
+  "role": "pulser",
+  "description": "OpenAI-backed chat pulser for the standalone pulser demo set.",
+  "tags": ["demo", "llm", "openai", "chat", "cloud"],
+  "pools": [
+    {
+      "type": "FileSystemPool",
+      "name": "demo_openai_pool",
+      "description": "Local metadata pool for the OpenAI pulser demo.",
+      "root_path": "demos/pulsers/llm/storage/openai"
+    }
+  ],
+  "model": "gpt-4o-mini",
+  "base_url": "https://api.openai.com/v1/chat/completions",
+  "supported_pulses": [
+    {
+      "name": "llm_chat",
+      "description": "Chat completion pulse via OpenAI.",
+      "tags": ["llm", "chat"],
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "prompt": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          }
+        },
+        "required": ["prompt"]
+      },
+      "mapping": {
+        "response": "response",
+        "model": "model",
+        "provider": "provider"
+      },
+      "test_data": {
+        "prompt": "Say hello in one sentence.",
+        "model": "gpt-4o-mini"
+      },
+      "party": "Demo"
+    }
+  ]
+}

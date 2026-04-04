@@ -1,3 +1,14 @@
+"""
+Pulser logic for `phemacast.agents.pulser`.
+
+Phemacast assembles pulse inputs, phemas, and castrs into rendered research artifacts
+and interactive tooling. Within Phemacast, the agents package contains the actor roles
+that build, bind, and render phemas.
+
+Key definitions include `Pulser` and `validate_pulser_config_test_parameters`, which
+provide the main entry points used by neighboring modules and tests.
+"""
+
 from __future__ import annotations
 
 import json
@@ -19,6 +30,7 @@ ConfigInput = Union[str, Path, Mapping[str, Any]]
 
 
 def _read_config(config: ConfigInput) -> Dict[str, Any]:
+    """Internal helper to read the config."""
     if isinstance(config, Mapping):
         return dict(config)
 
@@ -28,6 +40,7 @@ def _read_config(config: ConfigInput) -> Dict[str, Any]:
 
 
 def _resolve_path(data: Any, path: str) -> Any:
+    """Internal helper to resolve the path."""
     current = data
     remaining = str(path or "").strip()
     if not remaining:
@@ -70,6 +83,7 @@ def _resolve_path(data: Any, path: str) -> Any:
 
 
 def _assign_path(data: Dict[str, Any], path: str, value: Any) -> None:
+    """Internal helper to return the assign path."""
     current = data
     parts = path.split(".")
     for part in parts[:-1]:
@@ -82,6 +96,7 @@ def _assign_path(data: Dict[str, Any], path: str, value: Any) -> None:
 
 
 def _transform_item_mapping(item: Any, field_rules: Mapping[str, Any]) -> Dict[str, Any]:
+    """Internal helper to transform the item mapping."""
     if not isinstance(item, Mapping):
         return {}
 
@@ -112,6 +127,7 @@ def _transform_item_mapping(item: Any, field_rules: Mapping[str, Any]) -> Dict[s
 
 
 def _coerce_positive_limit(value: Any) -> Optional[int]:
+    """Internal helper to coerce the positive limit."""
     try:
         limit = int(value)
     except (TypeError, ValueError):
@@ -120,6 +136,7 @@ def _coerce_positive_limit(value: Any) -> Optional[int]:
 
 
 def _coerce_number(value: Any) -> Optional[float]:
+    """Internal helper to coerce the number."""
     if value is None or isinstance(value, bool):
         return None
     if isinstance(value, (int, float)):
@@ -133,6 +150,35 @@ def _coerce_number(value: Any) -> Optional[float]:
         except ValueError:
             return None
     return None
+
+
+def _config_supported_pulses(config: Mapping[str, Any]) -> List[Mapping[str, Any]]:
+    """Internal helper to return the config supported pulses."""
+    pulser_config = config.get("pulser") if isinstance(config.get("pulser"), Mapping) else config
+    raw_pulses = pulser_config.get("supported_pulses") or config.get("supported_pulses") or []
+    return [pulse for pulse in raw_pulses if isinstance(pulse, Mapping)]
+
+
+def _pulse_has_explicit_test_parameters(pulse: Mapping[str, Any]) -> bool:
+    """Return whether the pulse has explicit test parameters."""
+    for key in ("test_data", "test_payload", "sample_input"):
+        value = pulse.get(key)
+        if isinstance(value, Mapping) and value:
+            return True
+    if str(pulse.get("test_data_path") or "").strip():
+        return True
+    return False
+
+
+def validate_pulser_config_test_parameters(config: Mapping[str, Any]) -> None:
+    """Validate the pulser config test parameters."""
+    supported_pulses = _config_supported_pulses(config)
+    if any(_pulse_has_explicit_test_parameters(pulse) for pulse in supported_pulses):
+        return
+    raise ValueError(
+        "Pulser config must provide at least one set of test parameters in supported_pulses "
+        "via test_data or test_data_path."
+    )
 
 
 class Pulser(StandbyAgent):
@@ -163,6 +209,7 @@ class Pulser(StandbyAgent):
         supported_pulses: Optional[List[Dict[str, Any]]] = None,
         auto_register: bool = True,
     ):
+        """Initialize the pulser."""
         config_data = _read_config(config) if config is not None else {}
         resolved_config_path = config_path
         if resolved_config_path is None and isinstance(config, (str, Path)):
@@ -226,10 +273,12 @@ class Pulser(StandbyAgent):
 
     @classmethod
     def from_config(cls, config: ConfigInput, **kwargs: Any) -> "Pulser":
+        """Build an instance from config."""
         return cls(config=config, **kwargs)
 
     @staticmethod
     def _merge_tags(*tag_groups: Any) -> List[str]:
+        """Internal helper to merge the tags."""
         merged: List[str] = []
         for group in tag_groups:
             if not group:
@@ -239,6 +288,77 @@ class Pulser(StandbyAgent):
                 if value not in merged:
                     merged.append(value)
         return merged
+
+    @staticmethod
+    def _sample_value_from_schema_field(field_definition: Any) -> Any:
+        """Internal helper for sample value from schema field."""
+        if not isinstance(field_definition, Mapping):
+            return ""
+        if "default" in field_definition:
+            return field_definition.get("default")
+        examples = field_definition.get("examples")
+        if isinstance(examples, list) and examples:
+            return examples[0]
+        enum_values = field_definition.get("enum")
+        if isinstance(enum_values, list) and enum_values:
+            return enum_values[0]
+        field_type = str(field_definition.get("type") or "").strip().lower()
+        if field_type in {"number", "integer"}:
+            return 0
+        if field_type == "boolean":
+            return False
+        return ""
+
+    @classmethod
+    def _sample_payload_from_schema(cls, schema: Any) -> Optional[Dict[str, Any]]:
+        """Internal helper to return the sample payload from schema."""
+        if not isinstance(schema, Mapping):
+            return None
+        properties = schema.get("properties")
+        if not isinstance(properties, Mapping):
+            return None
+        payload: Dict[str, Any] = {}
+        for field_name, field_definition in properties.items():
+            payload[str(field_name)] = cls._sample_value_from_schema_field(field_definition)
+        return payload if payload else None
+
+    def _resolve_sample_parameters(self, pulse_definition: Mapping[str, Any]) -> Optional[Dict[str, Any]]:
+        """Internal helper to resolve the sample parameters."""
+        candidates: List[Mapping[str, Any]] = []
+        if isinstance(pulse_definition, Mapping):
+            candidates.append(pulse_definition)
+            nested_definition = pulse_definition.get("pulse_definition")
+            if isinstance(nested_definition, Mapping):
+                candidates.append(nested_definition)
+
+        for candidate in candidates:
+            for key in ("test_data", "test_payload", "sample_input", "resolved_test_data"):
+                value = candidate.get(key)
+                if isinstance(value, Mapping) and value:
+                    return dict(value)
+
+        input_schema = pulse_definition.get("input_schema")
+        if not isinstance(input_schema, Mapping):
+            nested_definition = pulse_definition.get("pulse_definition")
+            interface = nested_definition.get("interface") if isinstance(nested_definition, Mapping) else {}
+            input_schema = interface.get("request_schema") if isinstance(interface, Mapping) else {}
+        return self._sample_payload_from_schema(input_schema)
+
+    def _attach_sample_parameters(self, pulse_definition: Dict[str, Any]) -> Dict[str, Any]:
+        """Internal helper for attach sample parameters."""
+        normalized = dict(pulse_definition)
+        sample_parameters = self._resolve_sample_parameters(normalized)
+        if isinstance(sample_parameters, Mapping) and sample_parameters:
+            normalized["test_data"] = dict(sample_parameters)
+
+        pulse_definition_payload = dict(normalized.get("pulse_definition") or {})
+        if isinstance(normalized.get("test_data"), Mapping) and normalized.get("test_data"):
+            pulse_definition_payload["test_data"] = dict(normalized["test_data"])
+        test_data_path = normalized.get("test_data_path") or pulse_definition_payload.get("test_data_path")
+        if str(test_data_path or "").strip():
+            pulse_definition_payload["test_data_path"] = str(test_data_path)
+        normalized["pulse_definition"] = pulse_definition_payload
+        return normalized
 
     def _build_supported_pulses(
         self,
@@ -251,6 +371,7 @@ class Pulser(StandbyAgent):
         output_schema: Optional[Dict[str, Any]],
         supported_pulses: Optional[List[Dict[str, Any]]],
     ) -> List[Dict[str, Any]]:
+        """Internal helper to build the supported pulses."""
         raw_pulses = supported_pulses or config.get("supported_pulses")
         if raw_pulses:
             return [self._normalize_pulse_definition(pulse) for pulse in raw_pulses if isinstance(pulse, Mapping)]
@@ -281,6 +402,7 @@ class Pulser(StandbyAgent):
         api_key: Optional[str] = None,
         accepts_inbound_from_plaza: Optional[bool] = None,
     ) -> Dict[str, Any]:
+        """Build the register payload."""
         payload = super().build_register_payload(
             plaza_url=plaza_url,
             card=card,
@@ -304,6 +426,10 @@ class Pulser(StandbyAgent):
                     "pulse_definition": pulse.get("pulse_definition"),
                     "input_schema": pulse.get("input_schema"),
                 }
+                if isinstance(pulse.get("test_data"), Mapping) and pulse.get("test_data"):
+                    pair["test_data"] = dict(pulse["test_data"])
+                if str(pulse.get("test_data_path") or "").strip():
+                    pair["test_data_path"] = str(pulse.get("test_data_path"))
                 for key in ("is_complete", "completion_status", "completion_errors"):
                     if key in pulse:
                         pair[key] = pulse.get(key)
@@ -313,6 +439,7 @@ class Pulser(StandbyAgent):
         return payload
 
     def _normalize_pulse_definition(self, pulse: Mapping[str, Any]) -> Dict[str, Any]:
+        """Internal helper to normalize the pulse definition."""
         normalized = dict(pulse)
         normalized.setdefault("name", "default_pulse")
         default_pulse_address = self.config.get("pulse_address") if hasattr(self, "config") else None
@@ -331,9 +458,10 @@ class Pulser(StandbyAgent):
         normalized["output_schema"] = dict(normalized.get("output_schema") or {})
         normalized["tags"] = list(normalized.get("tags") or [])
         normalized["cost"] = normalized.get("cost", 0)
-        return normalized
+        return self._attach_sample_parameters(normalized)
 
     def _compact_pit_ref(self, value: Any) -> str:
+        """Internal helper for compact pit ref."""
         pit_address = PitAddress.from_value(value)
         if pit_address.pit_id:
             return pit_address.to_ref(reference_plaza=self.plaza_url)
@@ -341,6 +469,7 @@ class Pulser(StandbyAgent):
 
     @staticmethod
     def _same_pit_ref(left: Any, right: Any) -> bool:
+        """Internal helper for same pit ref."""
         left_address = PitAddress.from_value(left)
         right_address = PitAddress.from_value(right)
         if left_address.pit_id and right_address.pit_id:
@@ -348,6 +477,7 @@ class Pulser(StandbyAgent):
         return str(left or "").strip() == str(right or "").strip()
 
     def _search_plaza_directory(self, **params: Any) -> Optional[List[Dict[str, Any]]]:
+        """Internal helper to search the Plaza directory."""
         if not self.plaza_url:
             return None
         try:
@@ -367,6 +497,7 @@ class Pulser(StandbyAgent):
             return None
 
     def _cache_shared_pulse_card(self, card: Mapping[str, Any]) -> None:
+        """Internal helper to return the cache shared pulse card."""
         if not isinstance(card, Mapping):
             return
         normalized = dict(card)
@@ -382,6 +513,7 @@ class Pulser(StandbyAgent):
             self._shared_pulse_cards_by_name[card_name] = normalized
 
     def _prime_shared_pulse_cache(self) -> None:
+        """Internal helper for prime shared pulse cache."""
         matches = self._search_plaza_directory(pit_type="Pulse")
         if matches is None:
             return
@@ -394,6 +526,7 @@ class Pulser(StandbyAgent):
             self._cache_shared_pulse_card(card)
 
     def _resolve_shared_pulse_card(self, pulse_definition: Mapping[str, Any]) -> Optional[Dict[str, Any]]:
+        """Internal helper to resolve the shared pulse card."""
         pulse_address = pulse_definition.get("pulse_address")
         pit_address = PitAddress.from_value(pulse_address)
         if pit_address.pit_id:
@@ -409,6 +542,7 @@ class Pulser(StandbyAgent):
         return None
 
     def _enrich_pulse_definition(self, pulse_definition: Dict[str, Any]) -> Dict[str, Any]:
+        """Internal helper for enrich pulse definition."""
         normalized = dict(pulse_definition)
         shared_card = self._resolve_shared_pulse_card(normalized)
         if not isinstance(shared_card, dict):
@@ -445,6 +579,7 @@ class Pulser(StandbyAgent):
         output_schema: Optional[Dict[str, Any]] = None,
         agent_card_overrides: Optional[Dict[str, Any]] = None,
     ) -> None:
+        """Return the apply pulser config."""
         raw_config = dict(config_data or {})
         pulser_config = raw_config.get("pulser", raw_config)
         self.raw_config = raw_config
@@ -503,6 +638,7 @@ class Pulser(StandbyAgent):
         self._refresh_get_pulse_practice_metadata()
 
     def _refresh_get_pulse_practice_metadata(self) -> None:
+        """Internal helper for refresh get pulse practice metadata."""
         practice = next((entry for entry in self.practices if entry.id == "get_pulse_data"), None)
         if practice is None:
             return
@@ -515,9 +651,20 @@ class Pulser(StandbyAgent):
         pulse_name: Optional[str] = None,
         pulse_address: Optional[str] = None,
     ) -> Dict[str, Any]:
+        """Resolve the pulse definition."""
         if pulse_name:
+            requested_name = str(pulse_name).strip()
             for pulse in self.supported_pulses:
-                if pulse.get("name") == pulse_name or pulse.get("pulse_name") == pulse_name:
+                aliases = [
+                    str(alias).strip()
+                    for alias in list(pulse.get("aliases") or [])
+                    if str(alias).strip()
+                ]
+                if (
+                    pulse.get("name") == requested_name
+                    or pulse.get("pulse_name") == requested_name
+                    or requested_name in aliases
+                ):
                     return pulse
 
         if pulse_address:
@@ -528,6 +675,7 @@ class Pulser(StandbyAgent):
         return self.supported_pulses[0]
 
     def register(self, *, start_reconnect_on_failure: bool = True, request_retries: Optional[int] = None):
+        """Register the value."""
         if self.plaza_token and time.time() < (self.token_expires_at - 60):
             return
         response = super().register(
@@ -541,6 +689,7 @@ class Pulser(StandbyAgent):
         return response
 
     def fetch_pulse_payload(self, pulse_name: str, input_data: Dict[str, Any], pulse_definition: Dict[str, Any]) -> Dict[str, Any]:
+        """Fetch the pulse payload."""
         return input_data
 
     def transform(
@@ -551,6 +700,7 @@ class Pulser(StandbyAgent):
         output_schema: Optional[Dict[str, Any]] = None,
         mapping: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
+        """Transform the value."""
         pulse_definition = self.resolve_pulse_definition(pulse_name=pulse_name, pulse_address=pulse_address)
         schema = output_schema or pulse_definition.get("output_schema") or self.output_schema or {}
         mapping_rules = mapping or pulse_definition.get("mapping") or self.mapping
@@ -579,6 +729,7 @@ class Pulser(StandbyAgent):
         pulse_address: Optional[str] = None,
         output_schema: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
+        """Return the pulse data."""
         pulse_definition = self.resolve_pulse_definition(pulse_name=pulse_name, pulse_address=pulse_address)
         active_name = pulse_name or pulse_definition.get("name")
         raw_payload = self.fetch_pulse_payload(active_name, input_data, pulse_definition) or {}
@@ -599,6 +750,7 @@ class Pulser(StandbyAgent):
         return raw_payload
 
     def _resolve_mapping_value(self, rule: Any, input_data: Dict[str, Any]) -> tuple[Any, bool]:
+        """Internal helper to resolve the mapping value."""
         if isinstance(rule, str):
             value = _resolve_path(input_data, rule)
             return value, value is not None
@@ -643,6 +795,7 @@ class Pulser(StandbyAgent):
         return rule, rule is not None
 
     def _resolve_mapping_operation(self, rule: Mapping[str, Any], input_data: Dict[str, Any]) -> tuple[Any, bool]:
+        """Internal helper to resolve the mapping operation."""
         operation = str(rule.get("op") or rule.get("operation") or "").strip().lower()
         if not operation:
             if "default" in rule:
@@ -730,11 +883,13 @@ class Pulser(StandbyAgent):
         return result, True
 
     def _resolve_mapping_operand(self, operand: Any, input_data: Dict[str, Any]) -> tuple[Any, bool]:
+        """Internal helper to resolve the mapping operand."""
         if isinstance(operand, Mapping) and (operand.get("op") or operand.get("operation")):
             return self._resolve_mapping_operation(operand, input_data)
         return self._resolve_mapping_value(operand, input_data)
 
     def receive(self, message: Message):
+        """Handle receive for the pulser."""
         if message.msg_type == "get_pulse":
             content = message.content or {}
             if not isinstance(content, dict):

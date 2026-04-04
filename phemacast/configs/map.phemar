@@ -1,0 +1,32 @@
+{
+    "name": "MapPhemar",
+    "type": "phemacast.agents.map_phemar.MapPhemarAgent",
+    "host": "127.0.0.1",
+    "port": 8042,
+    "role": "phemar",
+    "tags": [
+        "phema",
+        "phemar",
+        "diagram",
+        "workflow",
+        "map-phemar"
+    ],
+    "pools": [
+        {
+            "type": "FileSystemPool",
+            "name": "map_phemar_pool",
+            "description": "Local pool for diagram-backed Phemas managed through the MapPhemar editor.",
+            "root_path": "phemacast/storage/map_phemar_pool"
+        }
+    ],
+    "phemar": {
+        "description": "MapPhemar is a diagram-first Phemar agent that edits, saves, and serves diagram-backed Phemas on Plaza.",
+        "tags": [
+            "diagram",
+            "workflow",
+            "map-phemar"
+        ],
+        "supported_phemas": []
+    },
+    "description": "Standalone MapPhemar config for running the diagram-editor Phemar through create_agent.py."
+}

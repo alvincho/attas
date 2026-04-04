@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Phemacast Boss Pulse Deck</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,700&family=IBM+Plex+Mono:wght@400;500;600&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('boss_pulser_static', path='boss.css') }}?v={{ asset_version or 'dev' }}">
+</head>
+<body>
+    <div class="page-aura" aria-hidden="true"></div>
+    <main class="shell">
+        <section class="hero panel">
+            <div class="hero-copy">
+                <div class="eyebrow">Independent Phemacast Command</div>
+                <h1>Phemacast Boss Pulse Deck</h1>
+                <p>{{ initial_payload.description or "Provision managers and workers, discover live teams, and issue jobs from one independent boss console." }}</p>
+            </div>
+            <div class="hero-meta">
+                <div class="hero-meta-card">
+                    <span class="meta-label">Boss</span>
+                    <strong>{{ initial_payload.name or "BossPulser" }}</strong>
+                </div>
+                <div class="hero-meta-card">
+                    <span class="meta-label">Default Party</span>
+                    <strong>{{ initial_payload.party or "Phemacast" }}</strong>
+                </div>
+                <div class="hero-meta-card">
+                    <span class="meta-label">Plaza</span>
+                    <strong>{{ initial_payload.plaza_url or "Not configured" }}</strong>
+                </div>
+            </div>
+            <div class="hero-toolbar">
+                <label class="field compact">
+                    <span>Party Filter</span>
+                    <input id="party-input" type="text" value="{{ initial_payload.party or 'Phemacast' }}" placeholder="Phemacast">
+                </label>
+                <button type="button" class="ghost-btn" id="refresh-teams-btn">Refresh Teams</button>
+            </div>
+            <div class="hero-metrics" id="hero-metrics">
+                <article class="metric-card">
+                    <span class="metric-label">Teams</span>
+                    <strong class="metric-value" data-metric="teams">0</strong>
+                </article>
+                <article class="metric-card">
+                    <span class="metric-label">Workers</span>
+                    <strong class="metric-value" data-metric="workers">0</strong>
+                </article>
+                <article class="metric-card">
+                    <span class="metric-label">Jobcaps</span>
+                    <strong class="metric-value" data-metric="jobcaps">0</strong>
+                </article>
+                <article class="metric-card">
+                    <span class="metric-label">Selected Manager</span>
+                    <strong class="metric-value metric-value-small" data-metric="manager">None</strong>
+                </article>
+            </div>
+        </section>
+
+        <section class="workspace">
+            <aside class="rail">
+                <section class="panel">
+                    <div class="panel-head">
+                        <div>
+                            <h2>Live Teams</h2>
+                            <p>Managers discovered from Plaza for the active party filter.</p>
+                        </div>
+                        <span class="status-chip" id="teams-status">Idle</span>
+                    </div>
+                    <div class="inline-tools">
+                        <input id="team-search-input" type="search" placeholder="Search team or manager">
+                        <button type="button" class="ghost-btn" id="clear-team-search-btn">Clear</button>
+                    </div>
+                    <div class="team-list" id="teams-list">
+                        <div class="empty-state">No teams loaded yet.</div>
+                    </div>
+                </section>
+
+                <section class="panel">
+                    <div class="panel-head">
+                        <div>
+                            <h2>Capability Map</h2>
+                            <p>Capabilities aggregated from the selected manager and its workers.</p>
+                        </div>
+                    </div>
+                    <div class="capability-map" id="capability-map">
+                        <div class="empty-state">Select a team to inspect its capability map.</div>
+                    </div>
+                </section>
+            </aside>
+
+            <div class="main-stack">
+                <section class="panel">
+                    <div class="panel-head">
+                        <div>
+                            <h2>Selected Team Snapshot</h2>
+                            <p>Queue health, live workers, and recent movement for the current manager.</p>
+                        </div>
+                        <span class="status-chip" id="snapshot-status">Waiting</span>
+                    </div>
+                    <div class="snapshot-grid">
+                        <article class="snapshot-card wide" id="selected-team-summary">
+                            <div class="empty-state">Choose a live team to load status, history, and worker health.</div>
+                        </article>
+                        <article class="snapshot-card">
+                            <h3>Worker Health</h3>
+                            <div id="worker-health">
+                                <div class="empty-state">No worker health loaded yet.</div>
+                            </div>
+                        </article>
+                        <article class="snapshot-card">
+                            <h3>Queue Status</h3>
+                            <div id="queue-status">
+                                <div class="empty-state">No queue snapshot loaded yet.</div>
+                            </div>
+                        </article>
+                        <article class="snapshot-card wide">
+                            <h3>Recent Jobs</h3>
+                            <div id="recent-jobs">
+                                <div class="empty-state">Recent jobs will appear here.</div>
+                            </div>
+                        </article>
+                        <article class="snapshot-card wide">
+                            <h3>Worker History</h3>
+                            <div id="worker-history">
+                                <div class="empty-state">Worker history will appear here.</div>
+                            </div>
+                        </article>
+                    </div>
+                </section>
+
+                <section class="panel">
+                    <div class="panel-head">
+                        <div>
+                            <h2>Mission Console</h2>
+                            <p>Issue a job directly to the selected manager for immediate teamwork execution.</p>
+                        </div>
+                        <span class="status-chip" id="job-submit-status">Ready</span>
+                    </div>
+                    <form id="job-submit-form" class="form-grid">
+                        <label class="field full">
+                            <span>Manager Address</span>
+                            <input id="job-manager-address" name="manager_address" type="url" placeholder="http://127.0.0.1:8170">
+                        </label>
+                        <label class="field">
+                            <span>Required Capability</span>
+                            <input id="required-capability-input" name="required_capability" list="capability-datalist" placeholder="run map">
+                            <datalist id="capability-datalist"></datalist>
+                        </label>
+                        <label class="field">
+                            <span>Priority</span>
+                            <input id="job-priority-input" name="priority" type="number" min="0" step="10" value="100">
+                        </label>
+                        <label class="field full">
+                            <span>Payload JSON</span>
+                            <textarea id="job-payload-input" name="payload" spellcheck="false"></textarea>
+                        </label>
+                        <div class="form-actions full">
+                            <button type="submit" class="primary-btn">Submit Team Job</button>
+                            <button type="button" class="ghost-btn" id="load-job-example-btn">Load Example</button>
+                        </div>
+                    </form>
+                    <div class="result-shell" id="job-submit-result">
+                        <div class="empty-state">No team job submitted yet.</div>
+                    </div>
+                </section>
+
+                <section class="panel">
+                    <div class="panel-head">
+                        <div>
+                            <h2>Provisioning Studio</h2>
+                            <p>Generate blueprints for a full team, a standalone manager, or a standalone worker.</p>
+                        </div>
+                        <span class="status-chip" id="provision-status">Ready</span>
+                    </div>
+
+                    <div class="tab-strip" id="provision-tab-strip">
+                        <button type="button" class="tab-btn is-active" data-provision-tab="team">Full Team</button>
+                        <button type="button" class="tab-btn" data-provision-tab="manager">Manager</button>
+                        <button type="button" class="tab-btn" data-provision-tab="worker">Worker</button>
+                    </div>
+
+                    <div class="tab-panels">
+                        <form id="provision-team-form" class="form-grid provision-form" data-provision-panel="team">
+                            <label class="field">
+                                <span>Team Name</span>
+                                <input name="team_name" type="text" value="Map Runner">
+                            </label>
+                            <label class="field">
+                                <span>Worker Count</span>
+                                <input name="worker_count" type="number" min="1" value="2">
+                            </label>
+                            <label class="field">
+                                <span>Party</span>
+                                <input name="party" type="text" value="{{ initial_payload.party or 'Phemacast' }}">
+                            </label>
+                            <label class="field">
+                                <span>Plaza URL</span>
+                                <input name="plaza_url" type="url" value="{{ initial_payload.plaza_url or '' }}" placeholder="http://127.0.0.1:8011">
+                            </label>
+                            <label class="field full">
+                                <span>Job Capabilities JSON</span>
+                                <textarea id="team-jobcaps-input" name="job_capabilities" spellcheck="false"></textarea>
+                            </label>
+                            <div class="form-actions full">
+                                <button type="submit" class="primary-btn">Generate Team Blueprint</button>
+                                <button type="button" class="ghost-btn" id="load-team-example-btn">Load Example</button>
+                            </div>
+                        </form>
+
+                        <form id="provision-manager-form" class="form-grid provision-form" data-provision-panel="manager" hidden>
+                            <label class="field">
+                                <span>Team Name</span>
+                                <input name="team_name" type="text" value="Map Runner">
+                            </label>
+                            <label class="field">
+                                <span>Manager Name</span>
+                                <input name="manager_name" type="text" value="MapRunnerManager">
+                            </label>
+                            <label class="field">
+                                <span>Party</span>
+                                <input name="party" type="text" value="{{ initial_payload.party or 'Phemacast' }}">
+                            </label>
+                            <label class="field">
+                                <span>Manager Port</span>
+                                <input name="manager_port" type="number" min="1" value="8170">
+                            </label>
+                            <label class="field full">
+                                <span>Plaza URL</span>
+                                <input name="plaza_url" type="url" value="{{ initial_payload.plaza_url or '' }}" placeholder="http://127.0.0.1:8011">
+                            </label>
+                            <label class="field full">
+                                <span>Job Capabilities JSON</span>
+                                <textarea id="manager-jobcaps-input" name="job_capabilities" spellcheck="false"></textarea>
+                            </label>
+                            <div class="form-actions full">
+                                <button type="submit" class="primary-btn">Generate Manager Blueprint</button>
+                                <button type="button" class="ghost-btn" id="load-manager-example-btn">Load Example</button>
+                            </div>
+                        </form>
+
+                        <form id="provision-worker-form" class="form-grid provision-form" data-provision-panel="worker" hidden>
+                            <label class="field">
+                                <span>Team Name</span>
+                                <input name="team_name" type="text" value="Map Runner">
+                            </label>
+                            <label class="field">
+                                <span>Worker Name</span>
+                                <input name="worker_name" type="text" value="MapRunnerWorker1">
+                            </label>
+                            <label class="field">
+                                <span>Party</span>
+                                <input name="party" type="text" value="{{ initial_payload.party or 'Phemacast' }}">
+                            </label>
+                            <label class="field">
+                                <span>Worker Port</span>
+                                <input name="worker_port" type="number" min="1" value="8171">
+                            </label>
+                            <label class="field full">
+                                <span>Manager Address</span>
+                                <input id="worker-manager-address-input" name="manager_address" type="url" placeholder="http://127.0.0.1:8170">
+                            </label>
+                            <label class="field full">
+                                <span>Capabilities CSV</span>
+                                <input id="worker-capabilities-input" name="capabilities" type="text" value="run map" placeholder="run map, parse page">
+                            </label>
+                            <label class="field full">
+                                <span>Job Capabilities JSON</span>
+                                <textarea id="worker-jobcaps-input" name="job_capabilities" spellcheck="false"></textarea>
+                            </label>
+                            <div class="form-actions full">
+                                <button type="submit" class="primary-btn">Generate Worker Blueprint</button>
+                                <button type="button" class="ghost-btn" id="load-worker-example-btn">Load Example</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="result-shell" id="provision-result">
+                        <div class="empty-state">Generate a blueprint to preview config paths, launch plans, and JSON output.</div>
+                    </div>
+                </section>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        window.__BOSS_PULSER_INITIAL__ = {{ initial_payload | tojson }};
+    </script>
+    <script defer src="{{ url_for('boss_pulser_static', path='boss.js') }}?v={{ asset_version or 'dev' }}"></script>
+</body>
+</html>

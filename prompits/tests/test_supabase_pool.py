@@ -1,3 +1,18 @@
+"""
+Regression tests for Supabase Pool.
+
+Prompits provides the core HTTP-native agent runtime, Plaza coordination layer, and
+pool/practice infrastructure for FinMAS. These tests lock down Prompits runtime
+behavior, Plaza features, and storage integrations.
+
+The pytest cases in this file document expected behavior through checks such as
+`test_supabase_pool_connectivity_failure_enables_backoff_and_dedupes_create_notice`,
+`test_pulse_pulser_pairs_schema_dict_includes_runtime_columns`,
+`test_supabase_pool_infers_missing_columns_from_existing_rows`, and
+`test_supabase_pool_insert_many_falls_back_when_batch_rpc_errors`, helping guard against
+regressions as the packages evolve.
+"""
+
 import os
 import socket
 import sys
@@ -9,12 +24,15 @@ from prompits.pools.supabase import SupabasePool
 
 
 class FakeUpsertExecutor:
+    """Represent a fake upsert executor."""
     def __init__(self, rows=None):
+        """Initialize the fake upsert executor."""
         self.calls = []
         self.rows = list(rows or [])
         self._selected = False
 
     def upsert(self, payload):
+        """Handle upsert for the fake upsert executor."""
         self.calls.append(payload)
         payload_has_is_complete = any(
             isinstance(row, dict) and "is_complete" in row
@@ -28,13 +46,16 @@ class FakeUpsertExecutor:
         return self
 
     def select(self, _fields):
+        """Handle select for the fake upsert executor."""
         self._selected = True
         return self
 
     def limit(self, _size):
+        """Handle limit for the fake upsert executor."""
         return self
 
     def execute(self):
+        """Handle execute for the fake upsert executor."""
         if self._selected:
             self._selected = False
             return type("Response", (), {"data": self.rows})()
@@ -42,21 +63,51 @@ class FakeUpsertExecutor:
 
 
 class FakeSupabaseClient:
+    """Represent a fake Supabase client."""
     def __init__(self, executor):
+        """Initialize the fake Supabase client."""
         self.executor = executor
 
     def table(self, table_name):
+        """Return the table."""
         assert table_name == "pulse_pulser_pairs"
         return self.executor
 
 
+class NoProbeUpsertExecutor:
+    """Represent a no probe upsert executor."""
+    def __init__(self):
+        """Initialize the no probe upsert executor."""
+        self.calls = []
+
+    def select(self, _fields):
+        """Handle select for the no probe upsert executor."""
+        raise AssertionError("Fallback upsert should not probe plaza_directory columns with select()")
+
+    def limit(self, _size):
+        """Handle limit for the no probe upsert executor."""
+        return self
+
+    def upsert(self, payload):
+        """Handle upsert for the no probe upsert executor."""
+        self.calls.append(payload)
+        return self
+
+    def execute(self):
+        """Handle execute for the no probe upsert executor."""
+        return type("Response", (), {"data": []})()
+
+
 class FakeRpcRequest:
+    """Request model for fake rpc payloads."""
     def __init__(self, client, function_name, params=None):
+        """Initialize the fake rpc request."""
         self.client = client
         self.function_name = function_name
         self.params = params
 
     def execute(self):
+        """Handle execute for the fake rpc request."""
         self.client.rpc_calls.append((self.function_name, self.params))
         if self.client.rpc_error is not None:
             raise self.client.rpc_error
@@ -64,7 +115,9 @@ class FakeRpcRequest:
 
 
 class FakeRpcSupabaseClient:
+    """Represent a fake rpc Supabase client."""
     def __init__(self, table_executor=None, rpc_error=None, rpc_result=1):
+        """Initialize the fake rpc Supabase client."""
         self.table_executor = table_executor or FakeUpsertExecutor()
         self.rpc_error = rpc_error
         self.rpc_result = rpc_result
@@ -72,45 +125,57 @@ class FakeRpcSupabaseClient:
         self.table_calls = []
 
     def rpc(self, function_name, params=None):
+        """Handle rpc for the fake rpc Supabase client."""
         return FakeRpcRequest(self, function_name, params)
 
     def table(self, table_name):
+        """Return the table."""
         self.table_calls.append(table_name)
         return self.table_executor
 
 
 class FailingTableExecutor:
+    """Represent a failing table executor."""
     def __init__(self, error):
+        """Initialize the failing table executor."""
         self.error = error
         self.calls = 0
 
     def select(self, _fields):
+        """Handle select for the failing table executor."""
         return self
 
     def limit(self, _size):
+        """Handle limit for the failing table executor."""
         return self
 
     def upsert(self, _payload):
+        """Handle upsert for the failing table executor."""
         self.calls += 1
         raise self.error
 
     def execute(self):
+        """Handle execute for the failing table executor."""
         self.calls += 1
         raise self.error
 
 
 class FailingSupabaseClient:
+    """Represent a failing Supabase client."""
     def __init__(self, error):
+        """Initialize the failing Supabase client."""
         self.error = error
         self.table_calls = []
         self.executor = FailingTableExecutor(error)
 
     def table(self, table_name):
+        """Return the table."""
         self.table_calls.append(table_name)
         return self.executor
 
 
 def make_pool_with_supabase_client(client):
+    """Make the pool with Supabase client."""
     pool = SupabasePool.__new__(SupabasePool)
     pool.name = "plaza_pool"
     pool.description = "test"
@@ -126,10 +191,13 @@ def make_pool_with_supabase_client(client):
     pool._last_connectivity_warning_at = 0.0
 
     class DummyLock:
+        """Represent a dummy lock."""
         def __enter__(self):
+            """Enter the context manager."""
             return self
 
         def __exit__(self, exc_type, exc, tb):
+            """Exit the context manager."""
             return False
 
     pool.lock = DummyLock()
@@ -138,10 +206,15 @@ def make_pool_with_supabase_client(client):
 
 
 def make_test_pool(executor):
+    """Make the test pool."""
     return make_pool_with_supabase_client(FakeSupabaseClient(executor))
 
 
 def test_supabase_pool_insert_many_uses_batch_rpc_for_supported_tables():
+    """
+    Exercise the test_supabase_pool_insert_many_uses_batch_rpc_for_supported_tables
+    regression scenario.
+    """
     client = FakeRpcSupabaseClient()
     pool = make_pool_with_supabase_client(client)
     payload = [
@@ -176,6 +249,10 @@ def test_supabase_pool_insert_many_uses_batch_rpc_for_supported_tables():
 
 
 def test_supabase_pool_insert_many_uses_batch_rpc_for_plaza_directory():
+    """
+    Exercise the test_supabase_pool_insert_many_uses_batch_rpc_for_plaza_directory
+    regression scenario.
+    """
     client = FakeRpcSupabaseClient()
     pool = make_pool_with_supabase_client(client)
     payload = [
@@ -232,7 +309,112 @@ def test_supabase_pool_insert_many_uses_batch_rpc_for_plaza_directory():
     assert client.table_executor.calls == []
 
 
+def test_supabase_pool_insert_uses_batch_rpc_for_plaza_directory():
+    """
+    Exercise the test_supabase_pool_insert_uses_batch_rpc_for_plaza_directory
+    regression scenario.
+    """
+    client = FakeRpcSupabaseClient()
+    pool = make_pool_with_supabase_client(client)
+    payload = {
+        "id": "agent-config:worker-a",
+        "agent_id": "agent-config:worker-a",
+        "name": "Worker Config",
+        "type": "AgentConfig",
+        "description": "Standalone worker template",
+        "owner": "tests",
+        "address": "",
+        "card": {
+            "name": "Worker Config",
+            "description": "Standalone worker template",
+            "owner": "tests",
+            "role": "worker",
+            "tags": ["worker", "demo"],
+            "pit_type": "AgentConfig",
+            "meta": {
+                "resource_type": "agent_config",
+                "agent_type": "prompits.agents.standby.StandbyAgent",
+                "config_id": "agent-config:worker-a",
+            },
+        },
+        "meta": {
+            "resource_type": "agent_config",
+            "agent_type": "prompits.agents.standby.StandbyAgent",
+            "role": "worker",
+            "tags": ["worker", "demo"],
+            "config": {
+                "name": "worker-a",
+                "type": "prompits.agents.standby.StandbyAgent",
+                "pools": [
+                    {
+                        "type": "FileSystemPool",
+                        "name": "worker_pool",
+                        "description": "test pool",
+                        "root_path": "tests/storage",
+                    }
+                ],
+            },
+            "created_at": "2026-03-27T12:00:00+00:00",
+            "updated_at": "2026-03-27T12:00:01+00:00",
+        },
+        "updated_at": "2026-03-27T12:00:01+00:00",
+    }
+
+    ok = pool._Insert("plaza_directory", payload)
+
+    assert ok is True
+    assert client.rpc_calls == [("batch_upsert_plaza_directory", {"entries": [payload]})]
+    assert client.table_calls == []
+    assert client.table_executor.calls == []
+
+
+def test_supabase_pool_missing_plaza_directory_batch_rpc_disables_rpc_and_skips_probe(capsys):
+    """
+    Exercise the test_supabase_pool_missing_plaza_directory_batch_rpc_disables_rpc_a
+    nd_skips_probe regression scenario.
+    """
+    executor = NoProbeUpsertExecutor()
+    client = FakeRpcSupabaseClient(
+        table_executor=executor,
+        rpc_error=Exception({
+            "message": "Could not find the function public.batch_upsert_plaza_directory(entries) in the schema cache",
+            "code": "PGRST202",
+        }),
+    )
+    pool = make_pool_with_supabase_client(client)
+    payload = {
+        "id": "agent-config:worker-a",
+        "agent_id": "agent-config:worker-a",
+        "name": "Worker Config",
+        "type": "AgentConfig",
+        "description": "Standalone worker template",
+        "owner": "tests",
+        "address": "",
+        "card": {"name": "Worker Config", "pit_type": "AgentConfig", "meta": {"config_id": "agent-config:worker-a"}},
+        "meta": {"resource_type": "agent_config", "config": {"name": "worker-a", "type": "prompits.agents.standby.StandbyAgent", "pools": [{"type": "FileSystemPool", "root_path": "tests/storage"}]}},
+        "updated_at": "2026-03-27T12:00:01+00:00",
+    }
+
+    ok_first = pool._Insert("plaza_directory", payload)
+    ok_second = pool._Insert("plaza_directory", payload)
+
+    assert ok_first is True
+    assert ok_second is True
+    assert client.rpc_calls == [("batch_upsert_plaza_directory", {"entries": [payload]})]
+    assert client.table_calls == ["plaza_directory", "plaza_directory"]
+    assert executor.calls == [payload, payload]
+    assert "plaza_directory" in pool._disabled_batch_upsert_tables
+
+    output = capsys.readouterr().out
+    assert "batch RPC 'batch_upsert_plaza_directory' is unavailable for 'plaza_directory'; using direct table upsert." in output
+    assert "falling back to table upsert" not in output
+
+
 def test_supabase_pool_insert_many_falls_back_when_batch_rpc_errors():
+    """
+    Exercise the test_supabase_pool_insert_many_falls_back_when_batch_rpc_errors
+    regression scenario.
+    """
     executor = FakeUpsertExecutor()
     client = FakeRpcSupabaseClient(table_executor=executor, rpc_error=RuntimeError("rpc missing"))
     pool = make_pool_with_supabase_client(client)
@@ -258,6 +440,10 @@ def test_supabase_pool_insert_many_falls_back_when_batch_rpc_errors():
 
 
 def test_supabase_pool_insert_many_retries_without_unknown_columns():
+    """
+    Exercise the test_supabase_pool_insert_many_retries_without_unknown_columns
+    regression scenario.
+    """
     executor = FakeUpsertExecutor()
     pool = make_test_pool(executor)
 
@@ -298,6 +484,10 @@ def test_supabase_pool_insert_many_retries_without_unknown_columns():
 
 
 def test_supabase_pool_connectivity_failure_enables_backoff_and_dedupes_create_notice(capsys):
+    """
+    Exercise the test_supabase_pool_connectivity_failure_enables_backoff_and_dedupes
+    _create_notice regression scenario.
+    """
     error = socket.gaierror(8, "nodename nor servname provided, or not known")
     client = FailingSupabaseClient(error)
     pool = make_pool_with_supabase_client(client)
@@ -321,6 +511,10 @@ def test_supabase_pool_connectivity_failure_enables_backoff_and_dedupes_create_n
 
 
 def test_supabase_pool_reuses_cached_unsupported_columns():
+    """
+    Exercise the test_supabase_pool_reuses_cached_unsupported_columns regression
+    scenario.
+    """
     executor = FakeUpsertExecutor()
     pool = make_test_pool(executor)
     pool._unsupported_table_columns = {"pulse_pulser_pairs": {"is_complete"}}
@@ -351,6 +545,10 @@ def test_supabase_pool_reuses_cached_unsupported_columns():
 
 
 def test_supabase_pool_infers_missing_columns_from_existing_rows():
+    """
+    Exercise the test_supabase_pool_infers_missing_columns_from_existing_rows
+    regression scenario.
+    """
     executor = FakeUpsertExecutor(
         rows=[
             {
@@ -394,6 +592,10 @@ def test_supabase_pool_infers_missing_columns_from_existing_rows():
 
 
 def test_pulse_pulser_pairs_schema_dict_includes_runtime_columns():
+    """
+    Exercise the test_pulse_pulser_pairs_schema_dict_includes_runtime_columns
+    regression scenario.
+    """
     row_schema = pulse_pulser_pairs_schema_dict()["rowSchema"]
 
     assert row_schema["pulse_id"]["type"] == "string"

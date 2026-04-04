@@ -1,3 +1,15 @@
+"""
+Regression tests for Support.
+
+Prompits provides the core HTTP-native agent runtime, Plaza coordination layer, and
+pool/practice infrastructure for FinMAS. These tests lock down Prompits runtime
+behavior, Plaza features, and storage integrations.
+
+Important callables in this file include `build_agent_from_config`,
+`start_agent_thread`, and `stop_servers`, which capture the primary workflow implemented
+by the module.
+"""
+
 import importlib
 import os
 import sys
@@ -13,6 +25,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../.
 
 
 def build_agent_from_config(config_path: str):
+    """Build the agent from config."""
     from prompits.create_agent import load_agent_config, create_agent_from_config, instantiate_practice_from_config
 
     config = load_agent_config(config_path)
@@ -29,6 +42,7 @@ def build_agent_from_config(config_path: str):
 
 
 def start_agent_thread(config_path: str, log_level: str = "error", timeout_sec: int = 10):
+    """Start the agent thread."""
     agent = build_agent_from_config(config_path)
     config = uvicorn.Config(agent.app, host=agent.host, port=agent.port, log_level=log_level)
     server = uvicorn.Server(config)
@@ -50,6 +64,7 @@ def start_agent_thread(config_path: str, log_level: str = "error", timeout_sec: 
 
 
 def stop_servers(servers: List[Tuple[uvicorn.Server, threading.Thread]], join_timeout: float = 5):
+    """Stop the servers."""
     for server, _ in servers:
         server.should_exit = True
     for _, thread in servers:

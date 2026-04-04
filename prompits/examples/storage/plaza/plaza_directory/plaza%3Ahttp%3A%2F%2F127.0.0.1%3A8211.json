@@ -323,17 +323,16 @@
         "path": "/pool_search_memory"
       },
       {
-        "name": "ChatPractice",
-        "description": "Enables LLM interaction via ollama.",
-        "id": "chat-practice",
+        "name": "Mailbox",
+        "description": "Default inbound message endpoint for generic agent delivery.",
+        "id": "mailbox",
         "cost": 0,
         "tags": [
-          "llm",
-          "chat",
-          "ollama"
+          "message",
+          "mailbox"
         ],
         "examples": [
-          "POST /chat {'prompt': 'Tell me a joke'}"
+          "POST /mailbox {'sender':'alice','content':'hello','msg_type':'message'}"
         ],
         "inputModes": [
           "http-post",
@@ -343,13 +342,24 @@
           "json"
         ],
         "parameters": {
-          "prompt": {
-            "type": "text",
-            "description": "Enter your prompt or paragraph for the LLM",
-            "placeholder": "Write a short summary about AI..."
+          "sender": {
+            "type": "string",
+            "description": "Sending agent name or id."
+          },
+          "receiver": {
+            "type": "string",
+            "description": "Target agent name or id."
+          },
+          "content": {
+            "type": "object",
+            "description": "Message payload."
+          },
+          "msg_type": {
+            "type": "string",
+            "description": "Message routing key."
           }
         },
-        "path": "/chat_practice"
+        "path": "/mailbox"
       }
     ],
     "agent_id": "plaza:http://127.0.0.1:8211"

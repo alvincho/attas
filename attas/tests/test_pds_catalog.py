@@ -1,3 +1,18 @@
+"""
+Regression tests for PDS Catalog.
+
+Attas layers finance-oriented pulse definitions, validation rules, and personal-agent
+workflows on top of the shared runtimes. These tests cover Attas-specific pulse
+definitions, validation flows, and personal-agent integration points.
+
+The pytest cases in this file document expected behavior through checks such as
+`test_build_pds_resource_index_tracks_invalid_resources`,
+`test_catalog_bundle_reports_unresolved_item_refs`,
+`test_finance_core_catalog_bundle_resolves_example_resources`, and
+`test_catalog_bundle_deduplicates_duplicate_refs`, helping guard against regressions as
+the packages evolve.
+"""
+
 import json
 import os
 import shutil
@@ -16,6 +31,10 @@ EXAMPLES_DIR = Path(__file__).resolve().parents[1] / "examples" / "pulses"
 
 
 def test_finance_core_catalog_bundle_resolves_example_resources():
+    """
+    Exercise the test_finance_core_catalog_bundle_resolves_example_resources
+    regression scenario.
+    """
     bundle = load_catalog_bundle(EXAMPLES_DIR / "finance-core.catalog.json")
 
     assert bundle.catalog.resource.id == "ai.attas.catalog.finance_core"
@@ -33,6 +52,10 @@ def test_finance_core_catalog_bundle_resolves_example_resources():
 
 
 def test_build_pds_resource_index_tracks_invalid_resources():
+    """
+    Exercise the test_build_pds_resource_index_tracks_invalid_resources regression
+    scenario.
+    """
     index = build_pds_resource_index([EXAMPLES_DIR])
 
     assert "ai.attas.finance.price.last_trade" in index.resources_by_id
@@ -41,6 +64,10 @@ def test_build_pds_resource_index_tracks_invalid_resources():
 
 
 def test_catalog_bundle_reports_unresolved_item_refs(tmp_path):
+    """
+    Exercise the test_catalog_bundle_reports_unresolved_item_refs regression
+    scenario.
+    """
     shutil.copy(EXAMPLES_DIR / "last_trade.json", tmp_path / "last_trade.json")
     (tmp_path / "catalog.json").write_text(
         json.dumps(
@@ -66,6 +93,10 @@ def test_catalog_bundle_reports_unresolved_item_refs(tmp_path):
 
 
 def test_catalog_bundle_reports_invalid_referenced_resources(tmp_path):
+    """
+    Exercise the test_catalog_bundle_reports_invalid_referenced_resources regression
+    scenario.
+    """
     (tmp_path / "invalid-last-trade.json").write_text(
         json.dumps(
             {
@@ -109,6 +140,10 @@ def test_catalog_bundle_reports_invalid_referenced_resources(tmp_path):
 
 
 def test_catalog_bundle_deduplicates_duplicate_refs(tmp_path):
+    """
+    Exercise the test_catalog_bundle_deduplicates_duplicate_refs regression
+    scenario.
+    """
     shutil.copy(EXAMPLES_DIR / "last_trade.json", tmp_path / "last_trade.json")
     (tmp_path / "catalog.json").write_text(
         json.dumps(

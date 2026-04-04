@@ -1,0 +1,21 @@
+{
+  "name": "demo-user-ui",
+  "type": "prompits.agents.user.UserAgent",
+  "host": "127.0.0.1",
+  "port": 8214,
+  "plaza_url": "http://127.0.0.1:8211",
+  "pools": [
+    {
+      "type": "FileSystemPool",
+      "name": "demo_user_pool",
+      "description": "Local storage for the Hello Plaza user UI.",
+      "root_path": "demos/hello-plaza/storage/user"
+    }
+  ],
+  "agent_card": {
+    "name": "demo-user-ui",
+    "description": "Browser-facing dashboard for the Hello Plaza demo.",
+    "role": "frontend",
+    "tags": ["demo", "ui", "dashboard"]
+  }
+}

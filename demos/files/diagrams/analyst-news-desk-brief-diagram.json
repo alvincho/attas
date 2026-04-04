@@ -1,0 +1,346 @@
+{
+  "id": "analyst-news-desk-brief-diagram",
+  "phema_id": "analyst-news-desk-brief-diagram",
+  "name": "Analyst News Desk Brief Diagram",
+  "description": "Run the prompted analyst news pulser to turn raw market news into a PM-facing desk brief.",
+  "owner": "FinMAS demos",
+  "address": "plaza://phema/analyst-news-desk-brief-diagram",
+  "tags": [
+    "demo",
+    "diagram",
+    "map-phemar",
+    "llm",
+    "analyst",
+    "news",
+    "brief"
+  ],
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "symbol": {
+        "type": "string"
+      },
+      "number_of_articles": {
+        "type": "integer"
+      },
+      "model": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "symbol"
+    ]
+  },
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "symbol": {
+        "type": "string"
+      },
+      "analyst": {
+        "type": "string"
+      },
+      "prompt_profile": {
+        "type": "string"
+      },
+      "provider": {
+        "type": "string"
+      },
+      "model": {
+        "type": "string"
+      },
+      "source": {
+        "type": "string"
+      },
+      "source_articles": {
+        "type": "integer"
+      },
+      "updated_at": {
+        "type": "string"
+      },
+      "stance": {
+        "type": "string"
+      },
+      "confidence_label": {
+        "type": "string"
+      },
+      "desk_note": {
+        "type": "string"
+      },
+      "key_points": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "citations": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "required": [
+      "symbol",
+      "analyst",
+      "prompt_profile",
+      "provider",
+      "model",
+      "source",
+      "source_articles",
+      "updated_at",
+      "stance",
+      "confidence_label",
+      "desk_note",
+      "key_points",
+      "citations"
+    ]
+  },
+  "sections": [
+    {
+      "name": "Flow",
+      "description": "Diagram-backed LLM use case for turning upstream market news into an internal desk brief.",
+      "modifier": "",
+      "content": [
+        {
+          "type": "text",
+          "text": "Input -> News Desk Brief -> Output"
+        }
+      ]
+    }
+  ],
+  "resolution_mode": "dynamic",
+  "meta": {
+    "builder": "MapPhemar",
+    "kind": "diagram",
+    "resolution_mode": "dynamic",
+    "map_phemar": {
+      "version": 1,
+      "diagram": {
+        "plazaUrl": "http://127.0.0.1:8266",
+        "showGrid": true,
+        "inspectorWidth": 320,
+        "expandedSourcePaths": [],
+        "nextNodeIndex": 1,
+        "nextEdgeIndex": 3,
+        "nodes": [
+          {
+            "id": "mind-boundary-input",
+            "role": "input",
+            "type": "pill",
+            "title": "Input",
+            "x": 14,
+            "y": 38,
+            "w": 18,
+            "h": 10,
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "symbol": {
+                  "type": "string"
+                },
+                "number_of_articles": {
+                  "type": "integer"
+                },
+                "model": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "symbol"
+              ]
+            },
+            "paramsText": "{}"
+          },
+          {
+            "id": "node-news-desk-brief",
+            "type": "rectangle",
+            "title": "News Desk Brief",
+            "subtitle": "DemoAnalystPromptedNewsPulser / news_desk_brief",
+            "x": 40,
+            "y": 28,
+            "w": 26,
+            "h": 14,
+            "pulserMode": "specific",
+            "pulserName": "DemoAnalystPromptedNewsPulser",
+            "pulserAddress": "http://127.0.0.1:8270",
+            "practiceId": "get_pulse_data",
+            "pulseName": "news_desk_brief",
+            "pulseAddress": "plaza://pulse/demo_analyst_news_desk_brief",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "symbol": {
+                  "type": "string"
+                },
+                "number_of_articles": {
+                  "type": "integer"
+                },
+                "model": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "symbol"
+              ]
+            },
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "symbol": {
+                  "type": "string"
+                },
+                "analyst": {
+                  "type": "string"
+                },
+                "prompt_profile": {
+                  "type": "string"
+                },
+                "provider": {
+                  "type": "string"
+                },
+                "model": {
+                  "type": "string"
+                },
+                "source": {
+                  "type": "string"
+                },
+                "source_articles": {
+                  "type": "integer"
+                },
+                "updated_at": {
+                  "type": "string"
+                },
+                "stance": {
+                  "type": "string"
+                },
+                "confidence_label": {
+                  "type": "string"
+                },
+                "desk_note": {
+                  "type": "string"
+                },
+                "key_points": {
+                  "type": "array"
+                },
+                "citations": {
+                  "type": "array"
+                }
+              },
+              "required": [
+                "symbol",
+                "analyst",
+                "prompt_profile",
+                "provider",
+                "model",
+                "source",
+                "source_articles",
+                "updated_at",
+                "stance",
+                "confidence_label",
+                "desk_note",
+                "key_points",
+                "citations"
+              ]
+            },
+            "paramsText": "{}"
+          },
+          {
+            "id": "mind-boundary-output",
+            "role": "output",
+            "type": "pill",
+            "title": "Output",
+            "x": 74,
+            "y": 38,
+            "w": 18,
+            "h": 10,
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "symbol": {
+                  "type": "string"
+                },
+                "analyst": {
+                  "type": "string"
+                },
+                "prompt_profile": {
+                  "type": "string"
+                },
+                "provider": {
+                  "type": "string"
+                },
+                "model": {
+                  "type": "string"
+                },
+                "source": {
+                  "type": "string"
+                },
+                "source_articles": {
+                  "type": "integer"
+                },
+                "updated_at": {
+                  "type": "string"
+                },
+                "stance": {
+                  "type": "string"
+                },
+                "confidence_label": {
+                  "type": "string"
+                },
+                "desk_note": {
+                  "type": "string"
+                },
+                "key_points": {
+                  "type": "array"
+                },
+                "citations": {
+                  "type": "array"
+                }
+              },
+              "required": [
+                "symbol",
+                "analyst",
+                "prompt_profile",
+                "provider",
+                "model",
+                "source",
+                "source_articles",
+                "updated_at",
+                "stance",
+                "confidence_label",
+                "desk_note",
+                "key_points",
+                "citations"
+              ]
+            },
+            "paramsText": "{}"
+          }
+        ],
+        "edges": [
+          {
+            "id": "edge-input-to-desk-brief",
+            "from": "mind-boundary-input",
+            "to": "node-news-desk-brief",
+            "label": "",
+            "fromAnchor": "right",
+            "toAnchor": "left",
+            "mappingText": "{}",
+            "route": ""
+          },
+          {
+            "id": "edge-desk-brief-to-output",
+            "from": "node-news-desk-brief",
+            "to": "mind-boundary-output",
+            "label": "",
+            "fromAnchor": "right",
+            "toAnchor": "left",
+            "mappingText": "{}",
+            "route": ""
+          }
+        ]
+      }
+    }
+  },
+  "created_at": "2026-04-02T00:00:00Z",
+  "updated_at": "2026-04-02T00:00:00Z"
+}

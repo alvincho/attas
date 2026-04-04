@@ -1,3 +1,14 @@
+"""
+System orchestration helpers for `phemacast.system`.
+
+Phemacast assembles pulse inputs, phemas, and castrs into rendered research artifacts
+and interactive tooling.
+
+Core types exposed here include `CastrAgent`, `CreatorAgent`, `PhemacastSystem`,
+`PhemarAgent`, and `PulserAgent`, which carry the main behavior or state managed by this
+module.
+"""
+
 from __future__ import annotations
 
 import re
@@ -25,6 +36,7 @@ def _resolve_path(data: Dict[str, Any], path: str) -> Any:
 def _render_template(template: str, bindings: Dict[str, Dict[str, Any]]) -> str:
     """Render `{{binding.path}}` expressions from pulser-provided scoped values."""
     def repl(match: re.Match) -> str:
+        """Handle repl."""
         expression = match.group(1)
         root = expression.split(".", 1)[0]
         scoped = bindings.get(root, {})
@@ -46,6 +58,7 @@ class CreatorAgent:
         bindings: List[str],
         default_persona: Optional[Persona] = None,
     ) -> Phema:
+        """Create the phema."""
         persona = default_persona or Persona(name="default")
         blocks = [
             PhemaBlock(
@@ -80,12 +93,15 @@ class PulserAgent:
     name = "pulser"
 
     def __init__(self, practice: Optional[PulsePractice] = None):
+        """Initialize the pulser agent."""
         self.practice = practice or PulsePractice()
 
     def register_source(self, key: str, provider):
+        """Register the source."""
         self.practice.register_provider(key, provider)
 
     def produce(self, keys: List[str], context: Optional[Dict[str, Any]] = None) -> Dict[str, Dict[str, Any]]:
+        """Produce the value."""
         return self.practice.fetch(keys, context)
 
 
@@ -94,6 +110,7 @@ class PhemarAgent:
     name = "phemar"
 
     def bind(self, phema: Phema, pulse_data: Dict[str, Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Bind the value."""
         bound_blocks: List[Dict[str, Any]] = []
         for block in phema.blocks:
             rendered = _render_template(block.template, pulse_data)
@@ -113,6 +130,7 @@ class CastrAgent:
         persona: Persona,
         pulse_data: Dict[str, Dict[str, Any]],
     ) -> Any:
+        """Cast the value."""
         fmt = output_format.lower().strip()
 
         if fmt == "json":
@@ -144,6 +162,7 @@ class PhemacastSystem:
     """Collaborative multi-agent pipeline built on prompits primitives."""
 
     def __init__(self):
+        """Initialize the Phemacast system."""
         self.creator = CreatorAgent()
         self.pulser = PulserAgent()
         self.phemar = PhemarAgent()
@@ -159,6 +178,7 @@ class PhemacastSystem:
         bindings: List[str],
         default_persona: Optional[Persona] = None,
     ) -> Phema:
+        """Create the phema."""
         phema = self.creator.create_phema(title, prompt, bindings, default_persona)
         self._phemas[phema.phema_id] = phema
         self.trace.append(
@@ -172,6 +192,7 @@ class PhemacastSystem:
         return phema
 
     def register_pulse_source(self, key: str, provider) -> None:
+        """Register the pulse source."""
         self.pulser.register_source(key, provider)
 
     def cast(

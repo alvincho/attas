@@ -1,6 +1,6 @@
 {
     "name": "FinnhubApiPulser",
-    "type": "phemacast.pulsers.api_pulser.ApiPulser",
+    "type": "phemacast.pulsers.api_pulser.APIsPulser",
     "host": "127.0.0.1",
     "port": 8023,
     "plaza_url": "http://127.0.0.1:8011",

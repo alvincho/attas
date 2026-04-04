@@ -4,13 +4,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>attas | {{ agent_name }}</title>
+    <title>Prompits | {{ agent_name }}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600&family=Manrope:wght@400;500;600;700;800&display=swap"
         rel="stylesheet">
-    <link rel="stylesheet" href="/static/attas_ui_shared.css?v=20260327a">
-    <script defer src="/static/attas_theme.js?v=20260327a"></script>
+    <link rel="stylesheet" href="/static/agent_ui_shared.css?v=20260327a">
+    <script defer src="/static/agent_theme.js?v=20260327a"></script>
     <script defer src="/static/agent_connection.js?v=20260327a"></script>
     <style>
         :root {
@@ -542,8 +542,8 @@
         };
 
         window.addEventListener('load', () => {
-            window.attasAgentConnection?.mount({ pollMs: 15000 });
-            window.attasAgentConnection?.mountStickyHeader({ selector: '.header.agent-sticky-header', topOffset: 12 });
+            window.agentConnection?.mount({ pollMs: 15000 });
+            window.agentConnection?.mountStickyHeader({ selector: '.header.agent-sticky-header', topOffset: 12 });
             loadPhemas();
         });
     </script>

@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page_title }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='personal_agent.css') }}?v={{ asset_version or 'dev' }}">
+</head>
+<body class="doc-body" data-theme="paper">
+    <div class="doc-shell">
+        <header class="doc-header shell-panel">
+            <div class="doc-header-copy">
+                <p class="eyebrow">{{ doc_eyebrow }}</p>
+                <h1>{{ doc_title }}</h1>
+                <p>{{ doc_summary }}</p>
+            </div>
+            <div class="doc-header-actions">
+                <a class="ghost-button" href="{{ related_docs.current_features }}">Current Features</a>
+                <a class="ghost-button" href="{{ related_docs.readme }}">README</a>
+                <a class="accent-button" href="{{ back_href }}">Open Personal Agent</a>
+            </div>
+        </header>
+        <main class="doc-main">
+            <article class="doc-article shell-panel">
+                <div class="doc-prose">{{ doc_content_html | safe }}</div>
+            </article>
+        </main>
+    </div>
+</body>
+</html>

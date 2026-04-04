@@ -1,0 +1,29 @@
+{
+  "name": "TeamBoss",
+  "host": "127.0.0.1",
+  "port": 8075,
+  "plaza_url": "http://127.0.0.1:8011",
+  "party": "Prompits",
+  "type": "prompits.teamwork.boss.TeamBossAgent",
+  "description": "Generic teamwork boss UI for managing a Plaza-discovered manager.",
+  "pools": [
+    {
+      "type": "SQLitePool",
+      "name": "team_boss_pool",
+      "description": "Local teamwork boss state",
+      "db_path": "prompits/teamwork/storage/team_boss.sqlite"
+    }
+  ],
+  "boss": {
+    "manager_party": "Prompits",
+    "monitor_refresh_sec": 10,
+    "auto_register": true,
+    "job_capabilities": [
+      {
+        "name": "echo job",
+        "description": "Echo back a minimal result payload.",
+        "default_priority": 100
+      }
+    ]
+  }
+}

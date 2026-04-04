@@ -1,0 +1,349 @@
+{
+  "id": "ohlc-to-sma-20-diagram",
+  "phema_id": "ohlc-to-sma-20-diagram",
+  "name": "OHLC To SMA 20 Diagram",
+  "description": "Fetch OHLC bars with YFinancePulser, then compute a 20-period simple moving average series.",
+  "owner": "FinMAS demos",
+  "address": "plaza://phema/ohlc-to-sma-20-diagram",
+  "tags": [
+    "demo",
+    "diagram",
+    "map-phemar",
+    "technical-analysis",
+    "moving-average",
+    "sma"
+  ],
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "symbol": {
+        "type": "string"
+      },
+      "interval": {
+        "type": "string"
+      },
+      "start_date": {
+        "type": "string"
+      },
+      "end_date": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "symbol",
+      "interval",
+      "start_date",
+      "end_date"
+    ]
+  },
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "values": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "timestamp": {
+              "type": "string"
+            },
+            "value": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "timestamp",
+            "value"
+          ]
+        }
+      }
+    },
+    "required": [
+      "values"
+    ]
+  },
+  "sections": [
+    {
+      "name": "Flow",
+      "description": "Diagram-backed technical-analysis flow for a 20-period simple moving average.",
+      "modifier": "",
+      "content": [
+        {
+          "type": "text",
+          "text": "Input -> OHLC Bars -> SMA 20 -> Output"
+        }
+      ]
+    }
+  ],
+  "resolution_mode": "dynamic",
+  "meta": {
+    "builder": "MapPhemar",
+    "kind": "diagram",
+    "resolution_mode": "dynamic",
+    "map_phemar": {
+      "version": 1,
+      "diagram": {
+        "plazaUrl": "http://127.0.0.1:8011",
+        "showGrid": true,
+        "inspectorWidth": 320,
+        "expandedSourcePaths": [],
+        "nextNodeIndex": 2,
+        "nextEdgeIndex": 4,
+        "nodes": [
+          {
+            "id": "mind-boundary-input",
+            "role": "input",
+            "type": "pill",
+            "title": "Input",
+            "x": 10,
+            "y": 42,
+            "w": 16,
+            "h": 10,
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "symbol": {
+                  "type": "string"
+                },
+                "interval": {
+                  "type": "string"
+                },
+                "start_date": {
+                  "type": "string"
+                },
+                "end_date": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "symbol",
+                "interval",
+                "start_date",
+                "end_date"
+              ]
+            },
+            "paramsText": "{}"
+          },
+          {
+            "id": "node-ohlc-bars",
+            "type": "rectangle",
+            "title": "OHLC Bars",
+            "subtitle": "YFinancePulser / ohlc_bar_series",
+            "x": 31,
+            "y": 28,
+            "w": 22,
+            "h": 14,
+            "pulserMode": "specific",
+            "pulserName": "YFinancePulser",
+            "pulserAddress": "http://127.0.0.1:8020",
+            "practiceId": "get_pulse_data",
+            "pulseName": "ohlc_bar_series",
+            "pulseAddress": "ai.attas.finance.price.ohlc_bar_series",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "symbol": {
+                  "type": "string"
+                },
+                "interval": {
+                  "type": "string"
+                },
+                "start_date": {
+                  "type": "string"
+                },
+                "end_date": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "symbol",
+                "interval",
+                "start_date",
+                "end_date"
+              ]
+            },
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "symbol": {
+                  "type": "string"
+                },
+                "interval": {
+                  "type": "string"
+                },
+                "start_date": {
+                  "type": "string"
+                },
+                "end_date": {
+                  "type": "string"
+                },
+                "ohlc_series": {
+                  "type": "array"
+                },
+                "source": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "symbol",
+                "interval",
+                "start_date",
+                "end_date",
+                "ohlc_series"
+              ]
+            },
+            "paramsText": "{}"
+          },
+          {
+            "id": "node-sma-20",
+            "type": "rectangle",
+            "title": "SMA 20",
+            "subtitle": "TechnicalAnalysisPulser / sma",
+            "x": 56,
+            "y": 28,
+            "w": 22,
+            "h": 14,
+            "pulserMode": "specific",
+            "pulserName": "TechnicalAnalysisPulser",
+            "pulserAddress": "http://127.0.0.1:8033",
+            "practiceId": "get_pulse_data",
+            "pulseName": "sma",
+            "pulseAddress": "ai.attas.finance.technical.sma",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "symbol": {
+                  "type": "string"
+                },
+                "interval": {
+                  "type": "string"
+                },
+                "start_date": {
+                  "type": "string"
+                },
+                "end_date": {
+                  "type": "string"
+                },
+                "ohlc_series": {
+                  "type": "array"
+                },
+                "window": {
+                  "type": "integer"
+                },
+                "price_field": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "symbol",
+                "interval",
+                "start_date",
+                "end_date",
+                "ohlc_series",
+                "window"
+              ]
+            },
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "values": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "timestamp": {
+                        "type": "string"
+                      },
+                      "value": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "timestamp",
+                      "value"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "values"
+              ]
+            },
+            "paramsText": "{\n  \"window\": 20,\n  \"price_field\": \"close\"\n}"
+          },
+          {
+            "id": "mind-boundary-output",
+            "role": "output",
+            "type": "pill",
+            "title": "Output",
+            "x": 82,
+            "y": 42,
+            "w": 16,
+            "h": 10,
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "values": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "timestamp": {
+                        "type": "string"
+                      },
+                      "value": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "timestamp",
+                      "value"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "values"
+              ]
+            },
+            "paramsText": "{}"
+          }
+        ],
+        "edges": [
+          {
+            "id": "edge-input-to-ohlc",
+            "from": "mind-boundary-input",
+            "to": "node-ohlc-bars",
+            "label": "",
+            "fromAnchor": "right",
+            "toAnchor": "left",
+            "mappingText": "{}",
+            "route": ""
+          },
+          {
+            "id": "edge-ohlc-to-sma",
+            "from": "node-ohlc-bars",
+            "to": "node-sma-20",
+            "label": "",
+            "fromAnchor": "right",
+            "toAnchor": "left",
+            "mappingText": "{}",
+            "route": ""
+          },
+          {
+            "id": "edge-sma-to-output",
+            "from": "node-sma-20",
+            "to": "mind-boundary-output",
+            "label": "",
+            "fromAnchor": "right",
+            "toAnchor": "left",
+            "mappingText": "{}",
+            "route": ""
+          }
+        ]
+      }
+    }
+  },
+  "created_at": "2026-04-02T00:00:00Z",
+  "updated_at": "2026-04-02T00:00:00Z"
+}

@@ -1,0 +1,26 @@
+{
+  "name": "TeamManager",
+  "host": "127.0.0.1",
+  "port": 8070,
+  "plaza_url": "http://127.0.0.1:8011",
+  "party": "Prompits",
+  "type": "prompits.teamwork.agents.TeamManagerAgent",
+  "description": "Generic teamwork manager with manager and legacy dispatcher practices.",
+  "pools": [
+    {
+      "type": "SQLitePool",
+      "name": "team_manager_pool",
+      "description": "Local teamwork manager queue state",
+      "db_path": "prompits/teamwork/storage/team_manager.sqlite"
+    }
+  ],
+  "manager": {
+    "auto_register": true,
+    "job_capabilities": [
+      {
+        "name": "echo job",
+        "description": "Echo back a minimal result payload."
+      }
+    ]
+  }
+}

@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+resolve_script_path() {
+  local source="${BASH_SOURCE[0]}"
+  while [[ -L "${source}" ]]; do
+    local source_dir
+    source_dir="$(cd -P "$(dirname "${source}")" && pwd)"
+    source="$(readlink "${source}")"
+    if [[ "${source}" != /* ]]; then
+      source="${source_dir}/${source}"
+    fi
+  done
+
+  local final_dir
+  final_dir="$(cd -P "$(dirname "${source}")" && pwd)"
+  printf '%s\n' "${final_dir}/$(basename "${source}")"
+}
+
+find_repo_root() {
+  local script_path
+  local script_dir
+
+  script_path="$(resolve_script_path)"
+  script_dir="$(cd -P "$(dirname "${script_path}")" && pwd)"
+  if [[ -f "${script_dir}/scripts/public_clone_smoke.sh" ]]; then
+    printf '%s\n' "${script_dir}"
+    return 0
+  fi
+
+  if git_root="$(git rev-parse --show-toplevel 2>/dev/null)"; then
+    if [[ -f "${git_root}/scripts/public_clone_smoke.sh" ]]; then
+      printf '%s\n' "${git_root}"
+      return 0
+    fi
+  fi
+
+  local current_dir="${PWD}"
+  while [[ "${current_dir}" != "/" ]]; do
+    if [[ -f "${current_dir}/scripts/public_clone_smoke.sh" ]]; then
+      printf '%s\n' "${current_dir}"
+      return 0
+    fi
+    current_dir="$(dirname "${current_dir}")"
+  done
+
+  return 1
+}
+
+REPO_ROOT="${FINMAS_REPO_ROOT:-}"
+if [[ -n "${REPO_ROOT}" ]]; then
+  REPO_ROOT="$(cd "${REPO_ROOT}" && pwd)"
+else
+  REPO_ROOT="$(find_repo_root)" || {
+    echo "Could not locate the FinMAS repo root from: ${PWD}" >&2
+    echo "Run this from inside the repo or set FINMAS_REPO_ROOT=/path/to/FinMAS." >&2
+    exit 1
+  }
+fi
+
+exec "${REPO_ROOT}/scripts/public_clone_smoke.sh" --source "${REPO_ROOT}" "$@"

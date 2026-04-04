@@ -1,0 +1,402 @@
+{
+  "name": "DemoAnalystPromptedNewsPulser",
+  "type": "phemacast.pulsers.path_pulser.PathPulser",
+  "host": "127.0.0.1",
+  "port": 8270,
+  "plaza_url": "http://127.0.0.1:8266",
+  "role": "pulser",
+  "description": "Analyst-owned pulser that turns raw news from another agent into multiple audience-specific insight pulses through Ollama.",
+  "tags": [
+    "demo",
+    "analyst",
+    "prompt",
+    "ollama",
+    "news",
+    "pulser"
+  ],
+  "pools": [
+    {
+      "type": "FileSystemPool",
+      "name": "demo_analyst_prompted_news_pool",
+      "description": "Runtime storage for the prompted analyst news pulser demo.",
+      "root_path": "demos/pulsers/analyst-insights/storage/prompted-news"
+    }
+  ],
+  "supported_pulses": [
+    {
+      "name": "news_desk_brief",
+      "pulse_address": "plaza://pulse/demo_analyst_news_desk_brief",
+      "description": "Internal PM-facing desk brief generated from another agent's raw news feed.",
+      "tags": [
+        "analyst",
+        "news",
+        "brief"
+      ],
+      "prompt_profile": "desk_brief",
+      "default_model": "qwen3:8b",
+      "steps": [
+        {
+          "name": "fetch_news",
+          "type": "source",
+          "pulser_url": "http://127.0.0.1:8268",
+          "pulse_name": "news_article",
+          "params": {
+            "symbol": "{{_input.symbol}}",
+            "number_of_articles": "{{_input.number_of_articles}}"
+          }
+        },
+        {
+          "name": "build_prompt",
+          "type": "python",
+          "script_path": "./analyst_news_ollama_step.py"
+        },
+        {
+          "name": "llm_analysis",
+          "type": "source",
+          "pulser_url": "http://127.0.0.1:8269",
+          "pulse_name": "llm_chat",
+          "params": {
+            "prompt": "{{_previous.prompt}}",
+            "model": "{{_previous.model}}"
+          }
+        },
+        {
+          "name": "normalize_output",
+          "type": "python",
+          "script_path": "./analyst_news_ollama_step.py"
+        }
+      ],
+      "result_path": "steps.normalize_output",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string"
+          },
+          "number_of_articles": {
+            "type": "integer"
+          },
+          "model": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol"
+        ]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string"
+          },
+          "analyst": {
+            "type": "string"
+          },
+          "prompt_profile": {
+            "type": "string"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "source_articles": {
+            "type": "integer"
+          },
+          "updated_at": {
+            "type": "string"
+          },
+          "stance": {
+            "type": "string"
+          },
+          "confidence_label": {
+            "type": "string"
+          },
+          "desk_note": {
+            "type": "string"
+          },
+          "key_points": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "citations": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "symbol",
+          "analyst",
+          "prompt_profile",
+          "desk_note",
+          "key_points",
+          "citations"
+        ]
+      },
+      "test_data": {
+        "symbol": "NVDA",
+        "number_of_articles": 2,
+        "model": "qwen3:8b"
+      }
+    },
+    {
+      "name": "news_monitoring_points",
+      "pulse_address": "plaza://pulse/demo_analyst_news_monitoring_points",
+      "description": "Risk-desk monitoring list generated from another agent's raw news feed.",
+      "tags": [
+        "analyst",
+        "news",
+        "risk",
+        "monitoring"
+      ],
+      "prompt_profile": "monitoring_points",
+      "default_model": "qwen3:8b",
+      "steps": [
+        {
+          "name": "fetch_news",
+          "type": "source",
+          "pulser_url": "http://127.0.0.1:8268",
+          "pulse_name": "news_article",
+          "params": {
+            "symbol": "{{_input.symbol}}",
+            "number_of_articles": "{{_input.number_of_articles}}"
+          }
+        },
+        {
+          "name": "build_prompt",
+          "type": "python",
+          "script_path": "./analyst_news_ollama_step.py"
+        },
+        {
+          "name": "llm_analysis",
+          "type": "source",
+          "pulser_url": "http://127.0.0.1:8269",
+          "pulse_name": "llm_chat",
+          "params": {
+            "prompt": "{{_previous.prompt}}",
+            "model": "{{_previous.model}}"
+          }
+        },
+        {
+          "name": "normalize_output",
+          "type": "python",
+          "script_path": "./analyst_news_ollama_step.py"
+        }
+      ],
+      "result_path": "steps.normalize_output",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string"
+          },
+          "number_of_articles": {
+            "type": "integer"
+          },
+          "model": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol"
+        ]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string"
+          },
+          "analyst": {
+            "type": "string"
+          },
+          "prompt_profile": {
+            "type": "string"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "source_articles": {
+            "type": "integer"
+          },
+          "updated_at": {
+            "type": "string"
+          },
+          "changed_view": {
+            "type": "string"
+          },
+          "monitor_now": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "risk_flags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "citations": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "symbol",
+          "analyst",
+          "prompt_profile",
+          "changed_view",
+          "monitor_now",
+          "risk_flags",
+          "citations"
+        ]
+      },
+      "test_data": {
+        "symbol": "NVDA",
+        "number_of_articles": 2,
+        "model": "qwen3:8b"
+      }
+    },
+    {
+      "name": "news_client_note",
+      "pulse_address": "plaza://pulse/demo_analyst_news_client_note",
+      "description": "Client-safe note generated from another agent's raw news feed.",
+      "tags": [
+        "analyst",
+        "news",
+        "client"
+      ],
+      "prompt_profile": "client_note",
+      "default_model": "qwen3:8b",
+      "steps": [
+        {
+          "name": "fetch_news",
+          "type": "source",
+          "pulser_url": "http://127.0.0.1:8268",
+          "pulse_name": "news_article",
+          "params": {
+            "symbol": "{{_input.symbol}}",
+            "number_of_articles": "{{_input.number_of_articles}}"
+          }
+        },
+        {
+          "name": "build_prompt",
+          "type": "python",
+          "script_path": "./analyst_news_ollama_step.py"
+        },
+        {
+          "name": "llm_analysis",
+          "type": "source",
+          "pulser_url": "http://127.0.0.1:8269",
+          "pulse_name": "llm_chat",
+          "params": {
+            "prompt": "{{_previous.prompt}}",
+            "model": "{{_previous.model}}"
+          }
+        },
+        {
+          "name": "normalize_output",
+          "type": "python",
+          "script_path": "./analyst_news_ollama_step.py"
+        }
+      ],
+      "result_path": "steps.normalize_output",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string"
+          },
+          "number_of_articles": {
+            "type": "integer"
+          },
+          "model": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol"
+        ]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string"
+          },
+          "analyst": {
+            "type": "string"
+          },
+          "prompt_profile": {
+            "type": "string"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "source_articles": {
+            "type": "integer"
+          },
+          "updated_at": {
+            "type": "string"
+          },
+          "subject_line": {
+            "type": "string"
+          },
+          "client_note": {
+            "type": "string"
+          },
+          "action_items": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "citations": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "symbol",
+          "analyst",
+          "prompt_profile",
+          "subject_line",
+          "client_note",
+          "action_items",
+          "citations"
+        ]
+      },
+      "test_data": {
+        "symbol": "NVDA",
+        "number_of_articles": 2,
+        "model": "qwen3:8b"
+      }
+    }
+  ]
+}

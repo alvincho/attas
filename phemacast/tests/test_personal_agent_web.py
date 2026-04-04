@@ -1,0 +1,515 @@
+"""
+Regression tests for Personal Agent Web.
+
+Phemacast assembles pulse inputs, phemas, and castrs into rendered research artifacts
+and interactive tooling. These tests protect the Phemacast pipeline, demo flows, UI
+helpers, and pulser integrations.
+
+The pytest cases in this file document expected behavior through checks such as
+`test_personal_agent_plaza_run_proxy_returns_result`,
+`test_personal_agent_doc_renderer_supports_relative_markdown_images`,
+`test_personal_agent_root_renders_react_shell`, and
+`test_personal_agent_user_guide_page_renders_html_doc`, helping guard against
+regressions as the packages evolve.
+"""
+
+import json
+import os
+import sys
+from pathlib import Path
+from unittest.mock import AsyncMock, patch
+
+from fastapi.testclient import TestClient
+
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+
+from phemacast.agents.map_phemar import MapPhemarAgent
+from phemacast.personal_agent.app import app
+from phemacast.personal_agent.doc_pages import render_markdown
+from phemacast.personal_agent.map_phemar import get_map_phemar
+from phemacast.personal_agent.plaza import _normalize_catalog, normalize_plaza_url
+
+
+client = TestClient(app)
+
+
+def test_personal_agent_root_renders_react_shell():
+    """Exercise the test_personal_agent_root_renders_react_shell regression scenario."""
+    response = client.get("/")
+
+    assert response.status_code == 200
+    assert "Phemacast Personal Agent" in response.text
+    assert 'id="root"' in response.text
+    assert "personal_agent.css?v=" in response.text
+    assert "personal_agent.jsx?v=" in response.text
+    assert "react.development.js" in response.text
+    assert "__PHEMACAST_PERSONAL_AGENT_BOOTSTRAP__" in response.text
+
+
+def test_personal_agent_source_keeps_map_phemar_return_handling_localized():
+    """
+    Exercise the
+    test_personal_agent_source_keeps_map_phemar_return_handling_localized regression
+    scenario.
+    """
+    source = (Path(__file__).resolve().parents[1] / "personal_agent" / "static" / "personal_agent.jsx").read_text(encoding="utf-8")
+
+    assert source.index("function preferredCompatiblePulser(") < source.index("function resolveMindMapNodeExecution(")
+    assert "Reset All Local State" not in source
+    assert "Reload App" in source
+
+
+def test_personal_agent_user_guide_page_renders_html_doc():
+    """
+    Exercise the test_personal_agent_user_guide_page_renders_html_doc regression
+    scenario.
+    """
+    response = client.get("/docs/personal-agent/user-guide")
+
+    assert response.status_code == 200
+    assert "Phemacast Personal Agent User Guide" in response.text
+    assert "Open Personal Agent" in response.text
+    assert "Common Workflows" in response.text
+    assert "Main Workspace Shell" in response.text
+    assert "Use The Full MapPhemar Editor" in response.text
+
+
+def test_personal_agent_doc_renderer_supports_relative_markdown_images():
+    """
+    Exercise the test_personal_agent_doc_renderer_supports_relative_markdown_images
+    regression scenario.
+    """
+    source_path = Path(__file__).resolve().parents[1] / "personal_agent" / "docs" / "user_guide.md"
+
+    html = render_markdown(
+        '![Storage Settings](./images/sample-guide-image.svg "Storage settings example")',
+        source_path=source_path,
+    )
+
+    assert '<figure class="doc-image">' in html
+    assert 'src="/docs-static/personal-agent/images/sample-guide-image.svg"' in html
+    assert 'alt="Storage Settings"' in html
+    assert "Storage settings example" in html
+
+
+def test_personal_agent_doc_static_image_assets_are_served():
+    """
+    Exercise the test_personal_agent_doc_static_image_assets_are_served regression
+    scenario.
+    """
+    response = client.get("/docs-static/personal-agent/images/sample-guide-image.svg")
+
+    assert response.status_code == 200
+    assert "<svg" in response.text
+
+
+def test_personal_agent_dashboard_api_returns_expected_sections():
+    """
+    Exercise the test_personal_agent_dashboard_api_returns_expected_sections
+    regression scenario.
+    """
+    response = client.get("/api/dashboard")
+
+    assert response.status_code == 200
+    payload = response.json()
+
+    assert payload["meta"]["application"] == "Phemacast Personal Agent"
+    assert payload["settings"]["billing_plan"] == "Phemacast Personal Pro Annual"
+    assert len(payload["workspaces"]) >= 2
+    assert len(payload["activity"]) >= 2
+    assert len(payload["browser"]["bookmarks"]) >= 3
+
+
+def test_personal_agent_workspace_detail_returns_404_for_unknown_workspace():
+    """
+    Exercise the
+    test_personal_agent_workspace_detail_returns_404_for_unknown_workspace
+    regression scenario.
+    """
+    response = client.get("/api/workspaces/unknown")
+
+    assert response.status_code == 404
+
+
+def test_personal_agent_normalize_plaza_url_strips_known_endpoint_suffixes():
+    """
+    Exercise the
+    test_personal_agent_normalize_plaza_url_strips_known_endpoint_suffixes
+    regression scenario.
+    """
+    assert normalize_plaza_url("127.0.0.1:8011") == "http://127.0.0.1:8011"
+    assert normalize_plaza_url("http://127.0.0.1:8011/api/plazas_status") == "http://127.0.0.1:8011"
+    assert normalize_plaza_url("http://127.0.0.1:8011/health") == "http://127.0.0.1:8011"
+
+
+def test_personal_agent_plaza_catalog_proxy_returns_normalized_payload():
+    """
+    Exercise the test_personal_agent_plaza_catalog_proxy_returns_normalized_payload
+    regression scenario.
+    """
+    with patch("phemacast.personal_agent.app.fetch_plaza_catalog", new=AsyncMock(return_value={
+        "status": "success",
+        "connected": True,
+        "plaza_url": "http://127.0.0.1:8011",
+        "pulsers": [{"agent_id": "pulser-1", "name": "RangePulser"}],
+        "pulser_count": 1,
+        "pulse_count": 4,
+        "plazas": [{"name": "Plaza", "url": "http://127.0.0.1:8011", "online": True}],
+    })):
+        response = client.get("/api/plaza/catalog", params={"plaza_url": "http://127.0.0.1:8011"})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["connected"] is True
+    assert payload["pulser_count"] == 1
+
+
+def test_personal_agent_catalog_preserves_supported_pulse_sample_parameters():
+    """
+    Exercise the
+    test_personal_agent_catalog_preserves_supported_pulse_sample_parameters
+    regression scenario.
+    """
+    payload = _normalize_catalog(
+        {
+            "plazas": [
+                {
+                    "url": "http://127.0.0.1:8011",
+                    "online": True,
+                    "card": {"name": "Plaza"},
+                    "agents": [
+                        {
+                            "agent_id": "pulser-1",
+                            "name": "TechnicalAnalysisPulser",
+                            "pit_type": "Pulser",
+                            "card": {
+                                "name": "TechnicalAnalysisPulser",
+                                "pit_type": "Pulser",
+                                "practices": [{"id": "get_pulse_data", "name": "Get Pulse Data"}],
+                            },
+                            "meta": {
+                                "supported_pulses": [
+                                    {
+                                        "name": "sma",
+                                        "pulse_name": "sma",
+                                        "pulse_address": "ai.demo.finance.technical.sma",
+                                        "input_schema": {"type": "object", "properties": {"symbol": {"type": "string"}}},
+                                        "pulse_definition": {"test_data": {"symbol": "AAPL", "window": 20}},
+                                    }
+                                ]
+                            },
+                        }
+                    ],
+                }
+            ]
+        },
+        "http://127.0.0.1:8011",
+    )
+
+    supported_pulse = payload["pulsers"][0]["supported_pulses"][0]
+    catalog_pulse = payload["pulses"][0]
+    assert supported_pulse["pulse_name"] == "sma"
+    assert supported_pulse["test_data"]["symbol"] == "AAPL"
+    assert supported_pulse["test_data"]["window"] == 20
+    assert catalog_pulse["pulse_name"] == "sma"
+    assert catalog_pulse["test_data"]["window"] == 20
+
+
+def test_personal_agent_catalog_consolidates_duplicate_pulse_names_into_one_shared_entry():
+    """
+    Exercise the test_personal_agent_catalog_consolidates_duplicate_pulse_names_into
+    _one_shared_entry regression scenario.
+    """
+    payload = _normalize_catalog(
+        {
+            "plazas": [
+                {
+                    "url": "http://127.0.0.1:8011",
+                    "online": True,
+                    "card": {"name": "Plaza"},
+                    "agents": [
+                        {
+                            "agent_id": "pulser-1",
+                            "name": "FundamentalsPulser",
+                            "pit_type": "Pulser",
+                            "card": {
+                                "name": "FundamentalsPulser",
+                                "pit_type": "Pulser",
+                                "practices": [{"id": "get_pulse_data", "name": "Get Pulse Data"}],
+                            },
+                            "meta": {
+                                "supported_pulses": [
+                                    {
+                                        "pulse_name": "company_profile",
+                                        "pulse_address": "ai.demo.finance.fundamentals.company_profile",
+                                        "description": "Rich shared company profile description from Plaza.",
+                                    }
+                                ]
+                            },
+                        },
+                        {
+                            "agent_id": "pulser-2",
+                            "name": "ScreeningPulser",
+                            "pit_type": "Pulser",
+                            "card": {
+                                "name": "ScreeningPulser",
+                                "pit_type": "Pulser",
+                                "practices": [{"id": "get_pulse_data", "name": "Get Pulse Data"}],
+                            },
+                            "meta": {
+                                "supported_pulses": [
+                                    {
+                                        "pulse_name": "company_profile",
+                                        "pulse_address": "ai.demo.finance.screening.company_profile",
+                                        "description": "Short description.",
+                                    }
+                                ]
+                            },
+                        },
+                    ],
+                }
+            ]
+        },
+        "http://127.0.0.1:8011",
+    )
+
+    shared_company_profile = [pulse for pulse in payload["pulses"] if pulse["pulse_name"] == "company_profile"]
+    assert len(shared_company_profile) == 1
+    assert shared_company_profile[0]["description"] == "Rich shared company profile description from Plaza."
+
+
+def test_personal_agent_plaza_run_proxy_returns_result():
+    """
+    Exercise the test_personal_agent_plaza_run_proxy_returns_result regression
+    scenario.
+    """
+    with patch("phemacast.personal_agent.app.run_plaza_pulser_test", new=AsyncMock(return_value={
+        "status": "success",
+        "result": {"range": 52},
+    })):
+        response = client.post(
+            "/api/plaza/panes/run",
+            json={
+                "plaza_url": "http://127.0.0.1:8011",
+                "pulser_id": "pulser-1",
+                "practice_id": "get_pulse_data",
+                "pulse_name": "fifty_two_week_range",
+                "input": {"symbol": "NVDA"},
+            },
+        )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "success"
+    assert payload["result"]["range"] == 52
+
+
+def test_personal_agent_local_file_save_route_writes_json(tmp_path):
+    """
+    Exercise the test_personal_agent_local_file_save_route_writes_json regression
+    scenario.
+    """
+    response = client.post(
+        "/api/files/save/local",
+        json={
+            "directory": str(tmp_path / "exports"),
+            "title": "Range Snapshot",
+            "content": {"range": 52},
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    saved_file = payload["file"]
+    target_path = Path(saved_file["path"])
+    assert target_path.exists()
+    assert target_path.parent == (tmp_path / "exports").resolve()
+    assert target_path.suffix == ".json"
+    assert json.loads(target_path.read_text(encoding="utf-8")) == {"range": 52}
+
+
+def test_personal_agent_local_file_load_route_reads_json(tmp_path):
+    """
+    Exercise the test_personal_agent_local_file_load_route_reads_json regression
+    scenario.
+    """
+    target_dir = tmp_path / "exports"
+    target_dir.mkdir(parents=True, exist_ok=True)
+    target_path = target_dir / "workspace-layouts.json"
+    target_path.write_text('{"snapshots":[{"id":"ws-1","name":"Crypto Overnight"}]}\n', encoding="utf-8")
+
+    response = client.post(
+        "/api/files/load/local",
+        json={
+            "directory": str(target_dir),
+            "file_name": "workspace-layouts.json",
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["file"]["file_name"] == "workspace-layouts.json"
+    assert payload["file"]["content"]["snapshots"][0]["name"] == "Crypto Overnight"
+
+
+def test_personal_agent_map_phemar_routes_persist_diagram_phema(tmp_path):
+    """
+    Exercise the test_personal_agent_map_phemar_routes_persist_diagram_phema
+    regression scenario.
+    """
+    env = {
+        "PHEMACAST_MAP_PHEMAR_CONFIG_PATH": str(tmp_path / "map_phemar.phemar"),
+        "PHEMACAST_MAP_PHEMAR_POOL_PATH": str(tmp_path / "pool"),
+    }
+    with patch.dict(os.environ, env, clear=False):
+        create_response = client.post(
+            "/api/map-phemar/phemas",
+            json={
+                "phema": {
+                    "name": "Daily OHLC Diagram",
+                    "description": "Diagram-backed Phema managed by MapPhemar.",
+                    "input_schema": {"type": "object", "properties": {"symbol": {"type": "string"}}},
+                    "output_schema": {"type": "object", "properties": {"bars": {"type": "array"}}},
+                    "sections": [{"name": "Flow", "content": [{"type": "text", "text": "Diagram-backed"}]}],
+                    "resolution_mode": "dynamic",
+                    "meta": {
+                        "map_phemar": {
+                            "version": 1,
+                            "diagram": {
+                                "nodes": [
+                                    {"id": "mind-boundary-input", "role": "input", "type": "pill", "title": "Input"},
+                                    {"id": "node-1", "type": "rounded", "title": "Fetch OHLC", "pulseName": "ohlc_bar_series"},
+                                    {"id": "mind-boundary-output", "role": "output", "type": "pill", "title": "Output"},
+                                ],
+                                "edges": [
+                                    {"id": "edge-1", "from": "mind-boundary-input", "to": "node-1", "mappingText": "{}"},
+                                    {"id": "edge-2", "from": "node-1", "to": "mind-boundary-output", "mappingText": "{}"},
+                                ],
+                            },
+                        }
+                    },
+                }
+            },
+        )
+
+        assert create_response.status_code == 200
+        saved = create_response.json()["phema"]
+        assert saved["phema_id"]
+        assert saved["output_schema"]["properties"]["bars"]["type"] == "array"
+        assert saved["meta"]["map_phemar"]["diagram"]["nodes"][1]["title"] == "Fetch OHLC"
+
+        listing = client.get("/api/map-phemar/phemas")
+        assert listing.status_code == 200
+        phemas = listing.json()["phemas"]
+        assert len(phemas) == 1
+        assert phemas[0]["name"] == "Daily OHLC Diagram"
+        assert phemas[0]["output_schema"]["properties"]["bars"]["type"] == "array"
+
+        detail = client.get(f"/api/map-phemar/phemas/{saved['phema_id']}")
+        assert detail.status_code == 200
+        loaded = detail.json()["phema"]
+        assert loaded["meta"]["map_phemar"]["diagram"]["edges"][1]["to"] == "mind-boundary-output"
+
+
+def test_personal_agent_map_phemar_routes_respect_requested_storage_directory(tmp_path):
+    """
+    Exercise the
+    test_personal_agent_map_phemar_routes_respect_requested_storage_directory
+    regression scenario.
+    """
+    env = {
+        "PHEMACAST_MAP_PHEMAR_CONFIG_PATH": str(tmp_path / "default-map_phemar.phemar"),
+        "PHEMACAST_MAP_PHEMAR_POOL_PATH": str(tmp_path / "default-pool"),
+    }
+    custom_directory = tmp_path / "personal-agent-location"
+    with patch.dict(os.environ, env, clear=False):
+        create_response = client.post(
+            "/api/map-phemar/phemas",
+            params={"map_phemar_storage_directory": str(custom_directory)},
+            json={
+                "phema": {
+                    "name": "Scoped Diagram",
+                    "input_schema": {"type": "object"},
+                    "output_schema": {"type": "object"},
+                    "sections": [{"name": "Flow", "content": [{"type": "text", "text": "Scoped"}]}],
+                    "meta": {"map_phemar": {"version": 1, "diagram": {"nodes": [], "edges": []}}},
+                }
+            },
+        )
+
+        assert create_response.status_code == 200
+
+        scoped_listing = client.get(
+            "/api/map-phemar/phemas",
+            params={"map_phemar_storage_directory": str(custom_directory)},
+        )
+        assert scoped_listing.status_code == 200
+        assert len(scoped_listing.json()["phemas"]) == 1
+
+        default_listing = client.get("/api/map-phemar/phemas")
+        assert default_listing.status_code == 200
+        assert default_listing.json()["phemas"] == []
+
+
+def test_personal_agent_embeds_map_phemar_owner_ui_under_shared_routes(tmp_path):
+    """
+    Exercise the test_personal_agent_embeds_map_phemar_owner_ui_under_shared_routes
+    regression scenario.
+    """
+    env = {
+        "PHEMACAST_MAP_PHEMAR_CONFIG_PATH": str(tmp_path / "map_phemar.phemar"),
+        "PHEMACAST_MAP_PHEMAR_POOL_PATH": str(tmp_path / "pool"),
+    }
+    with patch.dict(os.environ, env, clear=False):
+        create_response = client.post(
+            "/api/phemas",
+            json={
+                "phema": {
+                    "name": "Owner Diagram",
+                    "input_schema": {"type": "object", "properties": {"symbol": {"type": "string"}}},
+                    "output_schema": {"type": "object", "properties": {"bars": {"type": "array"}}},
+                    "sections": [{"name": "Flow", "content": [{"type": "text", "text": "Diagram-backed"}]}],
+                    "meta": {"map_phemar": {"version": 1, "diagram": {"nodes": [], "edges": []}}},
+                }
+            },
+        )
+
+        assert create_response.status_code == 200
+        saved = create_response.json()["phema"]
+
+        owner_root = client.get("/map-phemar")
+        assert owner_root.status_code == 200
+        assert '"app_mode": "map_phemar"' in owner_root.text
+        assert '"phema_api_prefix": "/api/map-phemar/phemas"' in owner_root.text
+        assert '"map_phemar_settings_scope": "personal_agent"' in owner_root.text
+        assert '"map_phemar_storage_settings_mode": "inherited"' in owner_root.text
+        assert "Back to Personal Agent" in owner_root.text
+
+        owner_root_inherited_plaza = client.get(
+            "/map-phemar",
+            params={"map_phemar_plaza_url": "http://127.0.0.1:9555"},
+        )
+        assert owner_root_inherited_plaza.status_code == 200
+        assert '"plaza_url": "http://127.0.0.1:9555"' in owner_root_inherited_plaza.text
+
+        owner_editor = client.get(f"/map-phemar/phemas/editor/{saved['phema_id']}")
+        assert owner_editor.status_code == 200
+        assert saved["phema_id"] in owner_editor.text
+        assert '"phema_api_prefix": "/api/map-phemar/phemas"' in owner_editor.text
+
+
+def test_personal_agent_embedded_map_phemar_uses_shared_map_phemar_agent(tmp_path):
+    """
+    Exercise the
+    test_personal_agent_embedded_map_phemar_uses_shared_map_phemar_agent regression
+    scenario.
+    """
+    env = {
+        "PHEMACAST_MAP_PHEMAR_CONFIG_PATH": str(tmp_path / "map_phemar.phemar"),
+        "PHEMACAST_MAP_PHEMAR_POOL_PATH": str(tmp_path / "pool"),
+    }
+    with patch.dict(os.environ, env, clear=False):
+        service = get_map_phemar()
+
+    assert isinstance(service, MapPhemarAgent)

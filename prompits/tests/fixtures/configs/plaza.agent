@@ -1,0 +1,22 @@
+{
+    "name": "plaza",
+    "role": "coordinator",
+    "tags": ["mediator"],
+    "host": "127.0.0.1",
+    "port": 8011,
+    "pools": [
+        {
+            "type": "FileSystemPool",
+            "name": "plaza_pool",
+            "description": "Local Plaza pool",
+            "root_path": "prompits/tests/fixtures/storage/plaza"
+        }
+    ],
+    "type": "prompits.core.plaza.PlazaAgent",
+    "practices": [
+        {
+            "type": "prompits.practices.plaza.PlazaPractice",
+            "params": {}
+        }
+    ]
+}

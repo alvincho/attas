@@ -1,3 +1,15 @@
+"""
+Runtime helpers for `attas.pds.runtime`.
+
+Attas layers finance-oriented pulse definitions, validation rules, and personal-agent
+workflows on top of the shared runtimes. Within Attas, this area focuses on pulse-
+directory schemas, catalog loading, runtime normalization, and validation.
+
+Important callables in this file include `build_pds_pulse_definition`,
+`normalize_runtime_pulse_entry`, `normalize_pulse_pair_entry`, and `derive_pulse_id`,
+which capture the primary workflow implemented by the module.
+"""
+
 from __future__ import annotations
 
 import re
@@ -10,6 +22,7 @@ JsonObject = Dict[str, Any]
 
 
 def _slugify(value: Any) -> str:
+    """Internal helper for slugify."""
     text = str(value or "").strip().lower()
     text = re.sub(r"[^a-z0-9]+", ".", text)
     text = re.sub(r"\.+", ".", text).strip(".")
@@ -17,6 +30,7 @@ def _slugify(value: Any) -> str:
 
 
 def _titleize(name: str) -> str:
+    """Internal helper for titleize."""
     return str(name or "Pulse").replace("_", " ").replace(".", " ").strip().title() or "Pulse"
 
 
@@ -26,6 +40,7 @@ def derive_pulse_id(
     default_name: Optional[str] = None,
     default_pulse_address: Optional[str] = None,
 ) -> str:
+    """Handle derive pulse ID."""
     payload = payload or {}
     nested = payload.get("pulse_definition")
     if isinstance(nested, Mapping) and nested.get("id"):
@@ -54,6 +69,7 @@ def build_pds_pulse_definition(
     default_description: Optional[str] = None,
     default_pulse_address: Optional[str] = None,
 ) -> JsonObject:
+    """Build the PDS pulse definition."""
     payload = payload or {}
     if payload.get("pulse_definition") and isinstance(payload.get("pulse_definition"), Mapping):
         payload = dict(payload["pulse_definition"])
@@ -103,6 +119,7 @@ def normalize_runtime_pulse_entry(
     default_description: Optional[str] = None,
     default_pulse_address: Optional[str] = None,
 ) -> JsonObject:
+    """Normalize the runtime pulse entry."""
     runtime = dict(payload or {})
     definition = build_pds_pulse_definition(
         runtime,
@@ -143,17 +160,29 @@ def normalize_pulse_pair_entry(
     default_description: Optional[str] = None,
     default_pulse_address: Optional[str] = None,
 ) -> JsonObject:
+    """Normalize the pulse pair entry."""
     runtime = normalize_runtime_pulse_entry(
         payload,
         default_name=default_name,
         default_description=default_description,
         default_pulse_address=default_pulse_address,
     )
+    pulse_definition = dict(runtime.get("pulse_definition") or {})
+    sample_parameters = runtime.get("test_data")
+    if not isinstance(sample_parameters, Mapping) or not sample_parameters:
+        nested_sample_parameters = pulse_definition.get("test_data")
+        if isinstance(nested_sample_parameters, Mapping) and nested_sample_parameters:
+            sample_parameters = nested_sample_parameters
+    if isinstance(sample_parameters, Mapping) and sample_parameters:
+        pulse_definition["test_data"] = dict(sample_parameters)
+    test_data_path = runtime.get("test_data_path") or pulse_definition.get("test_data_path")
+    if str(test_data_path or "").strip():
+        pulse_definition["test_data_path"] = str(test_data_path)
     row: JsonObject = {
         "pulse_id": runtime["pulse_id"],
         "pulse_name": runtime.get("pulse_name") or runtime.get("name"),
         "pulse_address": runtime.get("pulse_address") or default_pulse_address or "",
-        "pulse_definition": dict(runtime.get("pulse_definition") or {}),
+        "pulse_definition": pulse_definition,
         "input_schema": dict(runtime.get("input_schema") or {}),
         "pulser_id": pulser_id,
         "pulser_name": pulser_name,

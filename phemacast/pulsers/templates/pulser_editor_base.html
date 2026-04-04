@@ -713,7 +713,7 @@
                 <section class="panel">
                     <div class="panel-head compact">
                         <div class="panel-head-main">
-                            <button id="pulser-details-toggle" class="collapse-toggle" type="button" aria-expanded="false" aria-controls="pulser-details-content">APIPulser Details</button>
+                            <button id="pulser-details-toggle" class="collapse-toggle" type="button" aria-expanded="false" aria-controls="pulser-details-content">APIsPulser Details</button>
                             <div>
                                 <div class="muted">Top-level config fields are preserved and saved back to disk.</div>
                             </div>
@@ -1001,7 +1001,7 @@
                     key: 'pulserDetails',
                     toggleId: 'pulser-details-toggle',
                     contentId: 'pulser-details-content',
-                    label: 'APIPulser Details',
+                    label: 'APIsPulser Details',
                 },
                 {
                     key: 'pulseDetails',
@@ -1024,7 +1024,7 @@
 
         function renderTopLevel() {
             document.getElementById('pulser-name').value = state.config?.name || '';
-            document.getElementById('pulser-type').value = state.config?.type || 'phemacast.pulsers.api_pulser.ApiPulser';
+            document.getElementById('pulser-type').value = state.config?.type || 'phemacast.pulsers.api_pulser.APIsPulser';
             document.getElementById('pulser-role').value = state.config?.role || 'pulser';
             document.getElementById('pulser-tags').value = (state.config?.tags || []).join(', ');
             document.getElementById('pulser-api-key').value = formatJsonValue(state.config?.api_key);
@@ -1704,7 +1704,7 @@
                             status_text: response.statusText,
                             body: data || rawBody,
                         },
-                        hint: response.status === 404 ? 'The running APIPulser may need to be restarted so /api/test-pulse is available.' : undefined,
+                        hint: response.status === 404 ? 'The running APIsPulser may need to be restarted so /api/test-pulse is available.' : undefined,
                     });
                     draft.statusMessage = detail;
                     draft.statusTone = 'error';

@@ -49,6 +49,10 @@
                 "model": "model",
                 "provider": "provider"
             },
+            "test_data": {
+                "prompt": "Say hello in one sentence.",
+                "model": "gpt-4o"
+            },
             "party": "System"
         }
     ]

@@ -1,0 +1,357 @@
+{
+  "id": "ohlc-to-macd-histogram-diagram",
+  "phema_id": "ohlc-to-macd-histogram-diagram",
+  "name": "OHLC To MACD Histogram Diagram",
+  "description": "Fetch OHLC bars with YFinancePulser, then compute a MACD histogram series with standard 12, 26, and 9 windows.",
+  "owner": "FinMAS demos",
+  "address": "plaza://phema/ohlc-to-macd-histogram-diagram",
+  "tags": [
+    "demo",
+    "diagram",
+    "map-phemar",
+    "technical-analysis",
+    "momentum",
+    "macd"
+  ],
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "symbol": {
+        "type": "string"
+      },
+      "interval": {
+        "type": "string"
+      },
+      "start_date": {
+        "type": "string"
+      },
+      "end_date": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "symbol",
+      "interval",
+      "start_date",
+      "end_date"
+    ]
+  },
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "values": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "timestamp": {
+              "type": "string"
+            },
+            "value": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "timestamp",
+            "value"
+          ]
+        }
+      }
+    },
+    "required": [
+      "values"
+    ]
+  },
+  "sections": [
+    {
+      "name": "Flow",
+      "description": "Diagram-backed technical-analysis flow for a MACD histogram series.",
+      "modifier": "",
+      "content": [
+        {
+          "type": "text",
+          "text": "Input -> OHLC Bars -> MACD Histogram -> Output"
+        }
+      ]
+    }
+  ],
+  "resolution_mode": "dynamic",
+  "meta": {
+    "builder": "MapPhemar",
+    "kind": "diagram",
+    "resolution_mode": "dynamic",
+    "map_phemar": {
+      "version": 1,
+      "diagram": {
+        "plazaUrl": "http://127.0.0.1:8011",
+        "showGrid": true,
+        "inspectorWidth": 320,
+        "expandedSourcePaths": [],
+        "nextNodeIndex": 2,
+        "nextEdgeIndex": 4,
+        "nodes": [
+          {
+            "id": "mind-boundary-input",
+            "role": "input",
+            "type": "pill",
+            "title": "Input",
+            "x": 10,
+            "y": 42,
+            "w": 16,
+            "h": 10,
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "symbol": {
+                  "type": "string"
+                },
+                "interval": {
+                  "type": "string"
+                },
+                "start_date": {
+                  "type": "string"
+                },
+                "end_date": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "symbol",
+                "interval",
+                "start_date",
+                "end_date"
+              ]
+            },
+            "paramsText": "{}"
+          },
+          {
+            "id": "node-ohlc-bars",
+            "type": "rectangle",
+            "title": "OHLC Bars",
+            "subtitle": "YFinancePulser / ohlc_bar_series",
+            "x": 31,
+            "y": 28,
+            "w": 22,
+            "h": 14,
+            "pulserMode": "specific",
+            "pulserName": "YFinancePulser",
+            "pulserAddress": "http://127.0.0.1:8020",
+            "practiceId": "get_pulse_data",
+            "pulseName": "ohlc_bar_series",
+            "pulseAddress": "ai.attas.finance.price.ohlc_bar_series",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "symbol": {
+                  "type": "string"
+                },
+                "interval": {
+                  "type": "string"
+                },
+                "start_date": {
+                  "type": "string"
+                },
+                "end_date": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "symbol",
+                "interval",
+                "start_date",
+                "end_date"
+              ]
+            },
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "symbol": {
+                  "type": "string"
+                },
+                "interval": {
+                  "type": "string"
+                },
+                "start_date": {
+                  "type": "string"
+                },
+                "end_date": {
+                  "type": "string"
+                },
+                "ohlc_series": {
+                  "type": "array"
+                },
+                "source": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "symbol",
+                "interval",
+                "start_date",
+                "end_date",
+                "ohlc_series"
+              ]
+            },
+            "paramsText": "{}"
+          },
+          {
+            "id": "node-macd-histogram",
+            "type": "rectangle",
+            "title": "MACD Histogram",
+            "subtitle": "TechnicalAnalysisPulser / macd_histogram",
+            "x": 56,
+            "y": 28,
+            "w": 22,
+            "h": 14,
+            "pulserMode": "specific",
+            "pulserName": "TechnicalAnalysisPulser",
+            "pulserAddress": "http://127.0.0.1:8033",
+            "practiceId": "get_pulse_data",
+            "pulseName": "macd_histogram",
+            "pulseAddress": "ai.attas.finance.technical.macd_histogram",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "symbol": {
+                  "type": "string"
+                },
+                "interval": {
+                  "type": "string"
+                },
+                "start_date": {
+                  "type": "string"
+                },
+                "end_date": {
+                  "type": "string"
+                },
+                "ohlc_series": {
+                  "type": "array"
+                },
+                "fast_window": {
+                  "type": "integer"
+                },
+                "slow_window": {
+                  "type": "integer"
+                },
+                "signal_window": {
+                  "type": "integer"
+                },
+                "price_field": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "symbol",
+                "interval",
+                "start_date",
+                "end_date",
+                "ohlc_series",
+                "fast_window",
+                "slow_window",
+                "signal_window"
+              ]
+            },
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "values": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "timestamp": {
+                        "type": "string"
+                      },
+                      "value": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "timestamp",
+                      "value"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "values"
+              ]
+            },
+            "paramsText": "{\n  \"fast_window\": 12,\n  \"slow_window\": 26,\n  \"signal_window\": 9,\n  \"price_field\": \"close\"\n}"
+          },
+          {
+            "id": "mind-boundary-output",
+            "role": "output",
+            "type": "pill",
+            "title": "Output",
+            "x": 82,
+            "y": 42,
+            "w": 16,
+            "h": 10,
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "values": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "timestamp": {
+                        "type": "string"
+                      },
+                      "value": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "timestamp",
+                      "value"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "values"
+              ]
+            },
+            "paramsText": "{}"
+          }
+        ],
+        "edges": [
+          {
+            "id": "edge-input-to-ohlc",
+            "from": "mind-boundary-input",
+            "to": "node-ohlc-bars",
+            "label": "",
+            "fromAnchor": "right",
+            "toAnchor": "left",
+            "mappingText": "{}",
+            "route": ""
+          },
+          {
+            "id": "edge-ohlc-to-macd",
+            "from": "node-ohlc-bars",
+            "to": "node-macd-histogram",
+            "label": "",
+            "fromAnchor": "right",
+            "toAnchor": "left",
+            "mappingText": "{}",
+            "route": ""
+          },
+          {
+            "id": "edge-macd-to-output",
+            "from": "node-macd-histogram",
+            "to": "mind-boundary-output",
+            "label": "",
+            "fromAnchor": "right",
+            "toAnchor": "left",
+            "mappingText": "{}",
+            "route": ""
+          }
+        ]
+      }
+    }
+  },
+  "created_at": "2026-04-02T00:00:00Z",
+  "updated_at": "2026-04-02T00:00:00Z"
+}

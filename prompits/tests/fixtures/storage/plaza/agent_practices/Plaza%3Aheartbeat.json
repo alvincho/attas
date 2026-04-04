@@ -1,0 +1,44 @@
+{
+  "id": "Plaza:heartbeat",
+  "agent_name": "Plaza",
+  "practice_id": "heartbeat",
+  "practice_name": "Plaza Heartbeat",
+  "practice_description": "Accept heartbeat updates from agents.",
+  "practice_data": {
+    "name": "Plaza Heartbeat",
+    "description": "Accept heartbeat updates from agents.",
+    "id": "heartbeat",
+    "cost": 0,
+    "tags": [
+      "core",
+      "plaza"
+    ],
+    "examples": [
+      "POST /heartbeat {'agent_id':'...'}"
+    ],
+    "inputModes": [
+      "http-post",
+      "json"
+    ],
+    "outputModes": [
+      "json"
+    ],
+    "parameters": {
+      "agent_id": {
+        "type": "string",
+        "description": "Agent id sending heartbeat."
+      },
+      "agent_name": {
+        "type": "string",
+        "description": "Fallback name to resolve agent id."
+      },
+      "content": {
+        "type": "object",
+        "description": "Optional payload that may include agent_id."
+      }
+    },
+    "path": "/heartbeat"
+  },
+  "is_deleted": false,
+  "updated_at": "2026-04-03T03:49:37.610708+00:00"
+}

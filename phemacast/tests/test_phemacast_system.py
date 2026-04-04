@@ -1,3 +1,16 @@
+"""
+Regression tests for Phemacast System.
+
+Phemacast assembles pulse inputs, phemas, and castrs into rendered research artifacts
+and interactive tooling. These tests protect the Phemacast pipeline, demo flows, UI
+helpers, and pulser integrations.
+
+The pytest cases in this file document expected behavior through checks such as
+`test_multi_agent_collaboration_and_markdown_cast` and
+`test_viewer_selects_json_format_and_persona_override`, helping guard against
+regressions as the packages evolve.
+"""
+
 import os
 import sys
 
@@ -7,6 +20,10 @@ from phemacast import Persona, PhemacastSystem
 
 
 def test_multi_agent_collaboration_and_markdown_cast():
+    """
+    Exercise the test_multi_agent_collaboration_and_markdown_cast regression
+    scenario.
+    """
     system = PhemacastSystem()
 
     system.register_pulse_source("summary", lambda ctx: {"value": f"Brief for {ctx['symbol']}"})
@@ -33,6 +50,10 @@ def test_multi_agent_collaboration_and_markdown_cast():
 
 
 def test_viewer_selects_json_format_and_persona_override():
+    """
+    Exercise the test_viewer_selects_json_format_and_persona_override regression
+    scenario.
+    """
     system = PhemacastSystem()
 
     system.register_pulse_source("summary", lambda ctx: {"value": "Daily outlook"})

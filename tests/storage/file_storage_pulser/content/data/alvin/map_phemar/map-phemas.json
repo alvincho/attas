@@ -1,0 +1,309 @@
+{
+  "phemas": [
+    {
+      "created_at": "2026-04-02T08:27:24.083Z",
+      "description": "Diagram-backed Phema managed by MapPhemar.",
+      "id": "phema-mnh4vlcq-xz6iik",
+      "input_schema": {},
+      "meta": {
+        "builder": "MapPhemar",
+        "kind": "diagram",
+        "map_phemar": {
+          "diagram": {
+            "edges": [
+              {
+                "from": "mind-node-mnfkc2f8-tp7hyj",
+                "fromAnchor": "branch-no",
+                "id": "mind-edge-mnfkj9pl-jnwn3a",
+                "label": "No",
+                "mappingText": "{}",
+                "route": "no",
+                "to": "mind-boundary-output",
+                "toAnchor": ""
+              },
+              {
+                "from": "mind-node-mnd1k5is-v8z6km",
+                "fromAnchor": "branch-no",
+                "id": "mind-edge-mnfkqonn-323eu6",
+                "label": "No",
+                "mappingText": "{}",
+                "route": "no",
+                "to": "mind-node-mnfjp3p4-s5cpki",
+                "toAnchor": "branch-in"
+              },
+              {
+                "from": "mind-node-mnfjp3p4-s5cpki",
+                "fromAnchor": "branch-no",
+                "id": "mind-edge-mnfkulnw-nzmomp",
+                "label": "No",
+                "mappingText": "{}",
+                "route": "no",
+                "to": "mind-boundary-output",
+                "toAnchor": ""
+              },
+              {
+                "from": "mind-boundary-input",
+                "fromAnchor": "right",
+                "id": "mind-edge-mnfl9389-8d2adk",
+                "label": "",
+                "mappingText": "{}",
+                "route": "",
+                "to": "mind-node-mnd1k5is-v8z6km",
+                "toAnchor": "branch-in"
+              },
+              {
+                "from": "mind-boundary-input",
+                "fromAnchor": "right",
+                "id": "mind-edge-mnfl9c1e-cvbj5n",
+                "label": "",
+                "mappingText": "{}",
+                "route": "",
+                "to": "mind-node-mnfkc2f8-tp7hyj",
+                "toAnchor": "branch-in"
+              },
+              {
+                "from": "mind-node-mnd1k5is-v8z6km",
+                "fromAnchor": "branch-yes",
+                "id": "mind-edge-mnfm0jvu-pgcfo9",
+                "label": "Yes",
+                "mappingText": "{}",
+                "route": "yes",
+                "to": "mind-node-mnfkc2f8-tp7hyj",
+                "toAnchor": "branch-in"
+              },
+              {
+                "from": "mind-node-mnfjp3p4-s5cpki",
+                "fromAnchor": "branch-yes",
+                "id": "mind-edge-mnh55002-kn1ts2",
+                "label": "Yes",
+                "mappingText": "{}",
+                "route": "yes",
+                "to": "mind-node-mnfkc2f8-tp7hyj",
+                "toAnchor": "branch-in"
+              }
+            ],
+            "expandedSourcePaths": [],
+            "inspectorWidth": 320,
+            "nextEdgeIndex": 8,
+            "nextNodeIndex": 3,
+            "nodes": [
+              {
+                "body": "",
+                "branchInputMode": "any",
+                "branchInputSide": "left",
+                "branchNoMode": "all",
+                "branchNoSide": "right",
+                "branchYesMode": "all",
+                "branchYesSide": "right",
+                "conditionExpression": "",
+                "h": 10,
+                "id": "mind-boundary-input",
+                "inputSchema": {},
+                "inputSchemaError": "",
+                "inputSchemaText": "{}",
+                "outputSchema": {},
+                "outputSchemaError": "",
+                "outputSchemaText": "{}",
+                "paramsText": "{}",
+                "practiceId": "get_pulse_data",
+                "pulseAddress": "",
+                "pulseName": "",
+                "pulserAddress": "",
+                "pulserId": "",
+                "pulserMode": "specific",
+                "pulserName": "",
+                "role": "input",
+                "subtitle": "",
+                "title": "Input",
+                "type": "pill",
+                "w": 16,
+                "x": 12,
+                "y": 42
+              },
+              {
+                "body": "",
+                "branchInputMode": "any",
+                "branchInputSide": "left",
+                "branchNoMode": "all",
+                "branchNoSide": "right",
+                "branchYesMode": "all",
+                "branchYesSide": "right",
+                "conditionExpression": "",
+                "h": 10,
+                "id": "mind-boundary-output",
+                "inputSchema": {},
+                "inputSchemaError": "",
+                "inputSchemaText": "{}",
+                "outputSchema": {},
+                "outputSchemaError": "",
+                "outputSchemaText": "{}",
+                "paramsText": "{}",
+                "practiceId": "get_pulse_data",
+                "pulseAddress": "",
+                "pulseName": "",
+                "pulserAddress": "",
+                "pulserId": "",
+                "pulserMode": "specific",
+                "pulserName": "",
+                "role": "output",
+                "subtitle": "",
+                "title": "Output",
+                "type": "pill",
+                "w": 16,
+                "x": 64.59668508287292,
+                "y": 61.02777777777778
+              },
+              {
+                "body": "",
+                "branchInputMode": "any",
+                "branchInputSide": "left",
+                "branchNoMode": "all",
+                "branchNoSide": "bottom",
+                "branchYesMode": "all",
+                "branchYesSide": "right",
+                "conditionExpression": "",
+                "h": 18,
+                "id": "mind-node-mnd1k5is-v8z6km",
+                "inputSchema": {},
+                "inputSchemaError": "",
+                "inputSchemaText": "{}",
+                "outputSchema": {},
+                "outputSchemaError": "",
+                "outputSchemaText": "{}",
+                "paramsText": "{}",
+                "practiceId": "get_pulse_data",
+                "pulseAddress": "",
+                "pulseName": "",
+                "pulserAddress": "",
+                "pulserId": "",
+                "pulserMode": "specific",
+                "pulserName": "",
+                "role": "",
+                "subtitle": "",
+                "title": "Branch",
+                "type": "branch",
+                "w": 18,
+                "x": 23.204419889502763,
+                "y": 8.541666666666664
+              },
+              {
+                "body": "",
+                "branchInputMode": "any",
+                "branchInputSide": "left",
+                "branchNoMode": "all",
+                "branchNoSide": "right",
+                "branchYesMode": "all",
+                "branchYesSide": "bottom",
+                "conditionExpression": "",
+                "h": 13.555555555555555,
+                "id": "mind-node-mnfjp3p4-s5cpki",
+                "inputSchema": {},
+                "inputSchemaError": "",
+                "inputSchemaText": "{}",
+                "outputSchema": {},
+                "outputSchemaError": "",
+                "outputSchemaText": "{}",
+                "paramsText": "{}",
+                "practiceId": "get_pulse_data",
+                "pulseAddress": "",
+                "pulseName": "",
+                "pulserAddress": "",
+                "pulserId": "",
+                "pulserMode": "specific",
+                "pulserName": "",
+                "role": "",
+                "subtitle": "",
+                "title": "Branch 02",
+                "type": "branch",
+                "w": 13.555555555555555,
+                "x": 59.50276243093922,
+                "y": 21.041666666666668
+              },
+              {
+                "body": "",
+                "branchInputMode": "any",
+                "branchInputSide": "top",
+                "branchNoMode": "all",
+                "branchNoSide": "right",
+                "branchYesMode": "all",
+                "branchYesSide": "bottom",
+                "conditionExpression": "",
+                "h": 18,
+                "id": "mind-node-mnfkc2f8-tp7hyj",
+                "inputSchema": {},
+                "inputSchemaError": "",
+                "inputSchemaText": "{}",
+                "outputSchema": {},
+                "outputSchemaError": "",
+                "outputSchemaText": "{}",
+                "paramsText": "{}",
+                "practiceId": "get_pulse_data",
+                "pulseAddress": "",
+                "pulseName": "",
+                "pulserAddress": "",
+                "pulserId": "",
+                "pulserMode": "specific",
+                "pulserName": "",
+                "role": "",
+                "subtitle": "",
+                "title": "Branch",
+                "type": "branch",
+                "w": 18,
+                "x": 38.06629834254143,
+                "y": 22.291666666666664
+              }
+            ],
+            "plazaUrl": "http://127.0.0.1:8011",
+            "showGrid": false
+          },
+          "version": 1
+        },
+        "resolution_mode": "dynamic"
+      },
+      "name": "Diagram 3",
+      "output_schema": {},
+      "phema_id": "phema-mnh4vlcq-xz6iik",
+      "resolution_mode": "dynamic",
+      "sections": [
+        {
+          "content": [
+            {
+              "text": "Branch condition: (unset)",
+              "type": "text"
+            }
+          ],
+          "description": "Branch node evaluates a Python boolean expression and routes the payload to 2 downstream shapes.",
+          "modifier": "",
+          "name": "Branch"
+        },
+        {
+          "content": [
+            {
+              "text": "Branch condition: (unset)",
+              "type": "text"
+            }
+          ],
+          "description": "Branch node evaluates a Python boolean expression and routes the payload to 2 downstream shapes.",
+          "modifier": "",
+          "name": "Branch 02"
+        },
+        {
+          "content": [
+            {
+              "text": "Branch condition: (unset)",
+              "type": "text"
+            }
+          ],
+          "description": "Branch node evaluates a Python boolean expression and routes the payload to 1 downstream shape.",
+          "modifier": "",
+          "name": "Branch"
+        }
+      ],
+      "tags": [
+        "diagram",
+        "map-phemar"
+      ],
+      "updated_at": "2026-04-03T02:50:38.231Z"
+    }
+  ]
+}

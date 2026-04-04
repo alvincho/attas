@@ -1,3 +1,18 @@
+"""
+Regression tests for Phemar UI.
+
+Phemacast assembles pulse inputs, phemas, and castrs into rendered research artifacts
+and interactive tooling. These tests protect the Phemacast pipeline, demo flows, UI
+helpers, and pulser integrations.
+
+The pytest cases in this file document expected behavior through checks such as
+`test_phemar_runs_pulser_test_via_use_practice`,
+`test_phemar_enforces_owner_checks_for_plaza_edit_and_deregister`,
+`test_phemar_manager_survives_plaza_timeout`, and
+`test_phemar_mounts_editor_ui_and_persists_local_phemas`, helping guard against
+regressions as the packages evolve.
+"""
+
 import json
 import os
 import sys
@@ -12,16 +27,23 @@ from phemacast.agents.phemar import Phemar
 
 
 class FakeResponse:
+    """Response model for fake payloads."""
     def __init__(self, payload, status_code=200):
+        """Initialize the fake response."""
         self._payload = payload
         self.status_code = status_code
         self.content = json.dumps(payload).encode("utf-8")
 
     def json(self):
+        """Handle JSON for the fake response."""
         return self._payload
 
 
 def test_phemar_mounts_editor_ui_and_persists_local_phemas(tmp_path):
+    """
+    Exercise the test_phemar_mounts_editor_ui_and_persists_local_phemas regression
+    scenario.
+    """
     config_path = tmp_path / "stock_report.phemar"
     config_path.write_text(
         json.dumps(
@@ -223,6 +245,10 @@ def test_phemar_mounts_editor_ui_and_persists_local_phemas(tmp_path):
 
 
 def test_phemar_enforces_owner_checks_for_plaza_edit_and_deregister(tmp_path):
+    """
+    Exercise the test_phemar_enforces_owner_checks_for_plaza_edit_and_deregister
+    regression scenario.
+    """
     config_path = tmp_path / "owner_guard.phemar"
     config_path.write_text(
         json.dumps(
@@ -293,6 +319,7 @@ def test_phemar_enforces_owner_checks_for_plaza_edit_and_deregister(tmp_path):
     }
 
     def fake_search_directory(**params):
+        """Handle fake search directory."""
         if params.get("agent_id") == "owned-remote":
             return [owned_remote]
         if params.get("agent_id") == "foreign-remote":
@@ -359,6 +386,9 @@ def test_phemar_enforces_owner_checks_for_plaza_edit_and_deregister(tmp_path):
 
 
 def test_phemar_runs_pulser_test_via_use_practice(tmp_path):
+    """
+    Exercise the test_phemar_runs_pulser_test_via_use_practice regression scenario.
+    """
     config_path = tmp_path / "pulser_proxy.phemar"
     config_path.write_text(
         json.dumps(
@@ -433,6 +463,7 @@ def test_phemar_runs_pulser_test_via_use_practice(tmp_path):
 
 
 def test_phemar_manager_survives_plaza_timeout(tmp_path):
+    """Exercise the test_phemar_manager_survives_plaza_timeout regression scenario."""
     config_path = tmp_path / "timeout_guard.phemar"
     config_path.write_text(
         json.dumps(

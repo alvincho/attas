@@ -1,0 +1,17 @@
+{
+  "name": "demo-worker",
+  "role": "worker",
+  "tags": ["demo", "chat"],
+  "host": "127.0.0.1",
+  "port": 8212,
+  "plaza_url": "http://127.0.0.1:8211",
+  "pools": [
+    {
+      "type": "FileSystemPool",
+      "name": "demo_worker_pool",
+      "description": "Local storage for the Hello Plaza worker.",
+      "root_path": "demos/hello-plaza/storage/worker"
+    }
+  ],
+  "type": "prompits.agents.standby.StandbyAgent"
+}
