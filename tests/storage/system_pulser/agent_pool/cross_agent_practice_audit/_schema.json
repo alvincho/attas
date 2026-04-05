@@ -1,0 +1,66 @@
+{
+  "name": "cross_agent_practice_audit",
+  "description": "Audit rows for cross-agent remote UsePractice attempts and outcomes.",
+  "primary_key": [
+    "id"
+  ],
+  "rowSchema": {
+    "id": {
+      "type": "string"
+    },
+    "request_id": {
+      "type": "string"
+    },
+    "timestamp": {
+      "type": "datetime"
+    },
+    "direction": {
+      "type": "string"
+    },
+    "event": {
+      "type": "string"
+    },
+    "local_agent_name": {
+      "type": "string"
+    },
+    "local_agent_id": {
+      "type": "string"
+    },
+    "peer_agent_id": {
+      "type": "string"
+    },
+    "peer_name": {
+      "type": "string"
+    },
+    "peer_address": {
+      "type": "string"
+    },
+    "practice_id": {
+      "type": "string"
+    },
+    "plaza_url": {
+      "type": "string"
+    },
+    "auth_mode": {
+      "type": "string"
+    },
+    "policy_allowed": {
+      "type": "boolean"
+    },
+    "policy_reason": {
+      "type": "string"
+    },
+    "outcome": {
+      "type": "string"
+    },
+    "status_code": {
+      "type": "integer"
+    },
+    "error": {
+      "type": "string"
+    },
+    "metadata": {
+      "type": "json"
+    }
+  }
+}

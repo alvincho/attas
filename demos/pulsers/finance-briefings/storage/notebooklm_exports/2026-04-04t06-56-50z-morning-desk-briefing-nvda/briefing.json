@@ -1,0 +1,39 @@
+{
+  "payload_type": "attas.finance_briefing",
+  "payload_version": 1,
+  "workflow": "morning_desk_briefing",
+  "workflow_label": "Morning Desk Briefing",
+  "title": "Morning Desk Briefing | NVDA",
+  "owner": "attas.workflows.briefings",
+  "as_of": "2026-04-04T06:56:50Z",
+  "subject": {
+    "label": "NVDA",
+    "symbols": []
+  },
+  "watchlist": [],
+  "summary": {
+    "stance": "balanced",
+    "headline": "NVDA morning desk briefing: balanced setup",
+    "channel_text": "NVDA morning desk briefing: balanced setup"
+  },
+  "facts": [],
+  "inferred_takeaways": [],
+  "risks": [],
+  "catalysts": [],
+  "conflicting_evidence": [],
+  "open_questions": [],
+  "citations": [],
+  "sources": [],
+  "meta": {
+    "generated_at": "2026-04-04T06:56:50Z",
+    "source_count": 0,
+    "citation_count": 0,
+    "watchlist_count": 0,
+    "notebooklm_import_mode": "beta_export_only"
+  },
+  "publication": {
+    "notion_title": "Morning Desk Briefing | NVDA",
+    "notion_markdown": "# Morning Desk Briefing | NVDA\n\n_Morning Desk Briefing_\n\nAs of 2026-04-04T06:56:50Z\n\n## Desk Read\n\nNVDA morning desk briefing: balanced setup\n\nNVDA morning desk briefing: balanced setup\n\n## Facts\n\n- None identified.\n\n## Inferred Takeaways\n\n- None identified.\n\n## Risks\n\n- None identified.\n\n## Catalysts\n\n- None identified.\n\n## Conflicting Evidence\n\n- None identified.\n\n## Open Questions\n\n- None identified.\n\n## Citations\n\n- None identified.\n",
+    "channel_text": "NVDA morning desk briefing: balanced setup"
+  }
+}

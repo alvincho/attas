@@ -1,0 +1,56 @@
+{
+  "pulse_id": "urn:plaza:pulse:supported.jobcaps",
+  "pulse_name": "supported_jobcaps",
+  "pulse_address": "f43a84ae-1bab-52b3-a4d9-587d42ec99ba",
+  "pulse_definition": {
+    "pds_version": "0.1.0",
+    "resource_type": "pulse_definition",
+    "id": "urn:plaza:pulse:supported.jobcaps",
+    "version": "1.0.0",
+    "name": "supported_jobcaps",
+    "title": "Supported Jobcaps",
+    "description": "Aggregate supported job capabilities from teamwork managers and workers.",
+    "pulse_class": "fact",
+    "status": "stable",
+    "concept": {
+      "definition": "Aggregate supported job capabilities from teamwork managers and workers."
+    },
+    "interface": {
+      "schema_language": "json-schema-2020-12",
+      "request_schema": {
+        "type": "object",
+        "properties": {
+          "party": {
+            "type": "string"
+          },
+          "manager_address": {
+            "type": "string"
+          }
+        }
+      },
+      "response_schema": {}
+    },
+    "test_data": {
+      "party": "Phemacast"
+    }
+  },
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "party": {
+        "type": "string"
+      },
+      "manager_address": {
+        "type": "string"
+      }
+    }
+  },
+  "pulser_id": "5444b86e-e2d4-4e5b-b4c9-139b10b6871b",
+  "pulser_name": "BossPulser",
+  "pulser_address": "5444b86e-e2d4-4e5b-b4c9-139b10b6871b",
+  "status": "stable",
+  "pulse_directory_id": "f43a84ae-1bab-52b3-a4d9-587d42ec99ba",
+  "pulser_directory_id": "5444b86e-e2d4-4e5b-b4c9-139b10b6871b",
+  "id": "82357481-e5f0-5208-8213-9774a372b6ee",
+  "updated_at": "2026-04-04T10:28:13.060966+00:00"
+}

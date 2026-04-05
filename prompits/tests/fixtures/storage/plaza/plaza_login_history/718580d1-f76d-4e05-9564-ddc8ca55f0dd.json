@@ -1,0 +1,8 @@
+{
+  "id": "718580d1-f76d-4e05-9564-ddc8ca55f0dd",
+  "agent_id": "14fd5858-9042-4202-9d44-2179204280c4",
+  "agent_name": "ADSDispatcher",
+  "address": "http://127.0.0.1:8060",
+  "event": "relogin",
+  "timestamp": "2026-04-04T10:28:07.843627+00:00"
+}

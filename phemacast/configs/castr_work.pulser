@@ -1,0 +1,39 @@
+{
+  "name": "MapCastrWorkPulser",
+  "role": "worker",
+  "host": "127.0.0.1",
+  "plaza_url": "http://127.0.0.1:8011",
+  "party": "Phemacast",
+  "type": "phemacast.pulsers.castr_work_pulser.CastrWorkPulser",
+  "description": "Phemacast teamwork worker that advertises the MapCastr job capability on Plaza and waits for a manager hire.",
+  "worker": {
+    "capabilities": [
+      "run map"
+    ],
+    "hire_required": true,
+    "job_capabilities": [
+      {
+        "name": "run map",
+        "type": "phemacast.jobcaps.map_jobcap:RunMapJobCap",
+        "description": "Execute a Map Phema through MapCastr and persist the artifact output.",
+        "castr_config_path": "phemacast/configs/map.castr",
+        "target_table": "dispatcher_map_runs"
+      }
+    ],
+    "poll_interval_sec": 10,
+    "auto_register": true
+  },
+  "castr_work": {
+    "profile": "map",
+    "castr_config_path": "phemacast/configs/map.castr",
+    "target_table": "dispatcher_map_runs"
+  },
+  "pools": [
+    {
+      "type": "FileSystemPool",
+      "name": "castr_work_pool",
+      "description": "Local artifact storage for CastrWorkPulser outputs.",
+      "root_path": "phemacast/storage/castr_work_pulser"
+    }
+  ]
+}

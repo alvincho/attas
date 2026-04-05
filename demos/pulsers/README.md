@@ -1,5 +1,17 @@
 # Pulser Demo Set
 
+## Translations
+
+- [English](README.md)
+- [繁體中文](README.zh-Hant.md)
+- [简体中文](README.zh-Hans.md)
+- [Español](README.es.md)
+- [Français](README.fr.md)
+- [Italiano](README.it.md)
+- [Deutsch](README.de.md)
+- [日本語](README.ja.md)
+- [한국어](README.ko.md)
+
 `demos/pulsers` is a focused demo catalog for people who want to understand the repo's pulser patterns without starting the full workbench first.
 
 ## Start Here
@@ -8,9 +20,47 @@ Use these in this order if you are learning the pulser model for the first time:
 
 1. [`file-storage`](./file-storage/README.md): the safest local-only pulser demo
 2. [`analyst-insights`](./analyst-insights/README.md): a pulser owned by an analyst and exposed as reusable insight views
-3. [`yfinance`](./yfinance/README.md): a live market-data pulser with time-series output
-4. [`llm`](./llm/README.md): local Ollama and cloud OpenAI chat pulsers
-5. [`ads`](./ads/README.md): the ADS pulser as part of the SQLite pipeline demo
+3. [`finance-briefings`](./finance-briefings/README.md): finance workflow pulses published in a form MapPhemar and Personal Agent can execute
+4. [`yfinance`](./yfinance/README.md): a live market-data pulser with time-series output
+5. [`llm`](./llm/README.md): local Ollama and cloud OpenAI chat pulsers
+6. [`ads`](./ads/README.md): the ADS pulser as part of the SQLite pipeline demo
+
+## Single-Command Launchers
+
+Each runnable pulser demo folder now includes a `run-demo.sh` wrapper that starts the required local services from one terminal, opens a browser guide page with language selection, and opens the primary demo UI pages automatically.
+
+Set `DEMO_OPEN_BROWSER=0` if you want the wrapper to stay in the terminal without opening browser tabs.
+
+## Platform Quick Start
+
+### macOS And Linux
+
+From the repository root, create the virtual environment once, install requirements, then run any pulser wrapper such as `./demos/pulsers/file-storage/run-demo.sh`:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt
+./demos/pulsers/file-storage/run-demo.sh
+```
+
+### Windows
+
+Use WSL2 with Ubuntu or another Linux distro. From the repository root inside WSL, run the same commands:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt
+./demos/pulsers/file-storage/run-demo.sh
+```
+
+If browser tabs do not auto-open from WSL, keep the launcher running and open the printed `guide=` URL in a Windows browser.
+
+Native PowerShell / Command Prompt wrappers are not checked in yet, so WSL2 is the supported Windows path today.
+
 
 ## What This Demo Set Covers
 
@@ -36,7 +86,7 @@ Each demo folder writes local runtime state under `demos/pulsers/.../storage/`.
 
 ### [`file-storage`](./file-storage/README.md)
 
-- Runtime: Plaza + `FileStoragePulser`
+- Runtime: Plaza + `SystemPulser`
 - External services: none
 - What it proves: bucket creation, object save/load, and local-only pulser state
 
@@ -45,6 +95,12 @@ Each demo folder writes local runtime state under `demos/pulsers/.../storage/`.
 - Runtime: Plaza + `PathPulser`
 - External services: none for the structured view, local Ollama for the prompted news flow
 - What it proves: how one analyst can publish both fixed research views and prompt-owned Ollama outputs through multiple reusable pulses, then expose them to another user through personal agent
+
+### [`finance-briefings`](./finance-briefings/README.md)
+
+- Runtime: Plaza + `FinancialBriefingPulser`
+- External services: none in the local demo path
+- What it proves: how an Attas-owned pulser can publish finance workflow steps as pulse-addressable building blocks so MapPhemar diagrams and Personal Agent can store, edit, and execute the same workflow graph
 
 ### [`yfinance`](./yfinance/README.md)
 

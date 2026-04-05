@@ -1,6 +1,6 @@
 {
-  "name": "DemoFileStoragePulser",
-  "type": "phemacast.pulsers.file_storage_pulser.FileStoragePulser",
+  "name": "DemoSystemPulser",
+  "type": "phemacast.pulsers.system_pulser.SystemPulser",
   "host": "127.0.0.1",
   "port": 8257,
   "plaza_url": "http://127.0.0.1:8256",
@@ -12,7 +12,7 @@
     {
       "type": "FileSystemPool",
       "name": "demo_file_storage_agent_pool",
-      "description": "Metadata and credential storage for the file storage pulser demo.",
+      "description": "Metadata and credential storage for the system pulser demo.",
       "root_path": "demos/pulsers/file-storage/storage/agent-pool"
     }
   ],

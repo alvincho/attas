@@ -1,0 +1,8 @@
+{
+  "id": "b7e8f37b-d8c8-4526-8d36-12fd8892157d",
+  "agent_id": "f3d360fb-7e8e-4e6c-a9fa-ede41d8d6228",
+  "agent_name": "ManagerPulser",
+  "address": "http://127.0.0.1:8230",
+  "event": "relogin",
+  "timestamp": "2026-04-04T10:28:12.859539+00:00"
+}

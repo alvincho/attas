@@ -1,0 +1,8 @@
+{
+  "id": "8c9cdb06-04e9-4673-a74e-4fa8e2de7a64",
+  "agent_id": "afba9880-315a-466c-a5db-51134af7ec23",
+  "agent_name": "CollectiblesBoss",
+  "address": "http://127.0.0.1:8064",
+  "event": "relogin",
+  "timestamp": "2026-04-04T10:28:09.135619+00:00"
+}

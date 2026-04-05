@@ -1,6 +1,6 @@
 {
-  "id": "FileStoragePulser:get_pulse_data",
-  "agent_name": "FileStoragePulser",
+  "id": "SystemPulser:get_pulse_data",
+  "agent_name": "SystemPulser",
   "practice_id": "get_pulse_data",
   "practice_name": "Get Pulse Data",
   "practice_description": "Fetch or transform pulse payloads for the agent's supported pulses.",
@@ -63,5 +63,5 @@
     "path": "/get_pulse_data"
   },
   "is_deleted": false,
-  "updated_at": "2026-04-03T03:54:34.593692+00:00"
+  "updated_at": "2026-04-04T06:56:56.307123+00:00"
 }

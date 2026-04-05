@@ -242,7 +242,7 @@ def _default_supported_pulses() -> List[Dict[str, Any]]:
         },
         {
             "name": "news_article",
-            "description": "Return normalized company news articles collected by ADS.",
+            "description": "Return normalized ADS news articles, optionally filtered by symbol.",
             "pulse_address": _default_pulse_address("news_article"),
             "tags": ["ads", "news"],
             "input_schema": {
@@ -251,7 +251,6 @@ def _default_supported_pulses() -> List[Dict[str, Any]]:
                     "symbol": {"type": "string"},
                     "number_of_articles": {"type": "integer", "minimum": 1},
                 },
-                "required": ["symbol"],
             },
             "output_schema": {
                 "type": "object",
@@ -274,11 +273,11 @@ def _default_supported_pulses() -> List[Dict[str, Any]]:
                     },
                     "source": {"type": "string"},
                 },
-                "required": ["symbol", "articles"],
+                "required": ["articles"],
             },
             "ads_table": TABLE_NEWS,
             "aliases": ["company_news"],
-            "test_data": {"symbol": "AAPL", "number_of_articles": 2},
+            "test_data": {"number_of_articles": 2},
         },
         {
             "name": "raw_collection_payload",
@@ -783,9 +782,6 @@ class ADSPulser(Pulser):
             return {"symbol": symbol, "items": limited_rows, "count": len(limited_rows)}
 
         if resolved_name == "news_article":
-            if not symbol:
-                self.last_fetch_debug["error"] = "symbol is required"
-                return {"error": "symbol is required"}
             requested_number_of_articles = input_data.get("number_of_articles")
             if requested_number_of_articles in (None, ""):
                 requested_number_of_articles = limit
@@ -796,10 +792,16 @@ class ADSPulser(Pulser):
                     number_of_articles = int(requested_number_of_articles)
                 except (TypeError, ValueError):
                     self.last_fetch_debug["error"] = "number_of_articles must be a positive integer"
-                    return {"error": "number_of_articles must be a positive integer", "symbol": symbol}
+                    response = {"error": "number_of_articles must be a positive integer"}
+                    if symbol:
+                        response["symbol"] = symbol
+                    return response
                 if number_of_articles <= 0:
                     self.last_fetch_debug["error"] = "number_of_articles must be a positive integer"
-                    return {"error": "number_of_articles must be a positive integer", "symbol": symbol}
+                    response = {"error": "number_of_articles must be a positive integer"}
+                    if symbol:
+                        response["symbol"] = symbol
+                    return response
             self.last_fetch_debug["number_of_articles"] = number_of_articles
             rows = self._rows_for_table(TABLE_NEWS, symbol=symbol)
             rows.sort(key=lambda row: parse_datetime_value(row.get("published_at")), reverse=True)
@@ -822,12 +824,14 @@ class ADSPulser(Pulser):
                 if sentiment_label:
                     article["sentiment_label"] = sentiment_label
                 articles.append({key: value for key, value in article.items() if value not in (None, "")})
-            return {
-                "symbol": symbol,
+            response = {
                 "number_of_articles": number_of_articles,
                 "articles": articles,
                 "source": "ads",
             }
+            if symbol:
+                response["symbol"] = symbol
+            return response
 
         if resolved_name == "sec_companyfact":
             cik = _normalize_cik(input_data.get("cik"))

@@ -28,7 +28,7 @@ from phemacast.agents.map_phemar import MapPhemarAgent
 from phemacast.personal_agent.app import app
 from phemacast.personal_agent.doc_pages import render_markdown
 from phemacast.personal_agent.map_phemar import get_map_phemar
-from phemacast.personal_agent.plaza import _normalize_catalog, normalize_plaza_url
+from phemacast.personal_agent.plaza import BossProxyError, _normalize_catalog, normalize_plaza_url
 
 
 client = TestClient(app)
@@ -121,6 +121,130 @@ def test_personal_agent_dashboard_api_returns_expected_sections():
     assert len(payload["browser"]["bookmarks"]) >= 3
 
 
+def test_personal_agent_channels_catalog_exposes_first_b2b_lanes():
+    """
+    Exercise the
+    test_personal_agent_channels_catalog_exposes_first_b2b_lanes regression
+    scenario.
+    """
+    response = client.get("/api/channels/catalog")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert [entry["kind"] for entry in payload["channels"]] == ["slack", "teams", "email"]
+
+
+def test_personal_agent_managed_work_monitor_proxy_enriches_destinations():
+    """
+    Exercise the
+    test_personal_agent_managed_work_monitor_proxy_enriches_destinations regression
+    scenario.
+    """
+    with patch("phemacast.personal_agent.app.fetch_managed_work_monitor", new=AsyncMock(return_value={
+        "status": "success",
+        "manager_assignment": {"manager_address": "http://127.0.0.1:8170", "manager_name": "Desk Boss"},
+        "summary": {"jobs": {"queued": 1, "completed": 1}},
+        "workers": [{"worker_id": "worker-1", "status": "online"}],
+        "tickets": [
+            {
+                "ticket": {"id": "ticket-1", "title": "Morning Desk Briefing"},
+                "work_item": {
+                    "required_capability": "publish briefing",
+                    "metadata": {"publication": {"notion_markdown": "# Morning Desk Briefing"}},
+                },
+                "manager_assignment": {"manager_address": "http://127.0.0.1:8170"},
+                "worker_assignment": {"worker_id": "worker-1", "status": "completed"},
+                "execution_state": {"status": "completed"},
+                "result_summary": {
+                    "status": "completed",
+                    "summary": {
+                        "publication": {
+                            "notion_title": "Morning Desk Briefing",
+                            "channel_text": "Desk note: growth tone remains constructive.",
+                        },
+                        "notebooklm": {
+                            "directory": "/tmp/notebooklm-pack",
+                        },
+                        "channel_deliveries": [
+                            {"kind": "slack", "status": "delivered", "recipient": "#desk-briefings"},
+                        ],
+                    },
+                },
+            }
+        ],
+        "schedules": [],
+    })):
+        response = client.get(
+            "/api/managed-work/monitor",
+            params={"boss_url": "http://127.0.0.1:8170"},
+        )
+
+    assert response.status_code == 200
+    payload = response.json()
+    ticket = payload["tickets"][0]
+    assert [entry["kind"] for entry in payload["channel_catalog"]] == ["slack", "teams", "email"]
+    assert ticket["destination_status"]["notion"]["title"] == "Morning Desk Briefing"
+    assert ticket["destination_status"]["notebooklm"]["status"] == "exported"
+    assert ticket["destination_status"]["channels"][0]["status"] == "delivered"
+    assert ticket["destination_status"]["channels"][0]["recipient"] == "#desk-briefings"
+
+
+def test_personal_agent_managed_job_detail_falls_back_to_ticket_detail():
+    """
+    Exercise the
+    test_personal_agent_managed_job_detail_falls_back_to_ticket_detail regression
+    scenario.
+    """
+    with patch(
+        "phemacast.personal_agent.app.fetch_boss_job_detail",
+        new=AsyncMock(side_effect=BossProxyError("Job detail unavailable.", status_code=404)),
+    ), patch(
+        "phemacast.personal_agent.app.fetch_managed_work_ticket_detail",
+        new=AsyncMock(return_value={
+            "status": "success",
+            "ticket": {
+                "ticket": {"id": "ticket-1", "title": "Morning Desk Briefing"},
+                "work_item": {"required_capability": "publish briefing", "metadata": {}},
+                "manager_assignment": {"manager_address": "http://127.0.0.1:8170"},
+                "worker_assignment": {"worker_id": "worker-1", "status": "completed"},
+                "execution_state": {"status": "completed"},
+                "result_summary": {"status": "completed", "summary": {"rows": 1}},
+            },
+            "raw_records": [{"status": "stored"}],
+        }),
+    ):
+        response = client.get(
+            "/api/jobs/ticket-1",
+            params={"boss_url": "http://127.0.0.1:8170", "manager_address": "http://127.0.0.1:8170"},
+        )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["detail_source"] == "managed_ticket_detail"
+    assert payload["managed_ticket"]["ticket"]["id"] == "ticket-1"
+    assert payload["raw_records"][0]["status"] == "stored"
+
+
+def test_personal_agent_managed_schedule_control_proxies_issue_action():
+    """
+    Exercise the
+    test_personal_agent_managed_schedule_control_proxies_issue_action regression
+    scenario.
+    """
+    with patch(
+        "phemacast.personal_agent.app.run_managed_work_schedule_control",
+        new=AsyncMock(return_value={"status": "success", "control": {"action": "issue"}}),
+    ):
+        response = client.post(
+            "/api/managed-work/schedules/schedule-1/control",
+            params={"boss_url": "http://127.0.0.1:8170"},
+            json={"action": "issue"},
+        )
+
+    assert response.status_code == 200
+    assert response.json()["control"]["action"] == "issue"
+
+
 def test_personal_agent_workspace_detail_returns_404_for_unknown_workspace():
     """
     Exercise the
@@ -130,6 +254,20 @@ def test_personal_agent_workspace_detail_returns_404_for_unknown_workspace():
     response = client.get("/api/workspaces/unknown")
 
     assert response.status_code == 404
+
+
+def test_personal_agent_source_exposes_managed_work_pane_sections():
+    """
+    Exercise the
+    test_personal_agent_source_exposes_managed_work_pane_sections regression
+    scenario.
+    """
+    source = (Path(__file__).resolve().parents[1] / "personal_agent" / "static" / "personal_agent.jsx").read_text(encoding="utf-8")
+
+    assert 'id: "managed_work"' in source
+    assert "Managed Work" in source
+    assert "operator-summary-strip" in source
+    assert "renderOperatorConsole()" not in source
 
 
 def test_personal_agent_normalize_plaza_url_strips_known_endpoint_suffixes():
@@ -214,6 +352,94 @@ def test_personal_agent_catalog_preserves_supported_pulse_sample_parameters():
     assert supported_pulse["test_data"]["window"] == 20
     assert catalog_pulse["pulse_name"] == "sma"
     assert catalog_pulse["test_data"]["window"] == 20
+
+
+def test_personal_agent_catalog_reads_supported_pulses_from_card_meta_when_agent_meta_is_empty():
+    """
+    Exercise the
+    test_personal_agent_catalog_reads_supported_pulses_from_card_meta_when_agent_meta_is_empty
+    regression scenario.
+    """
+    payload = _normalize_catalog(
+        {
+            "plazas": [
+                {
+                    "url": "http://127.0.0.1:8011",
+                    "online": True,
+                    "card": {"name": "Plaza"},
+                    "agents": [
+                        {
+                            "agent_id": "pulser-1",
+                            "name": "SystemPulser",
+                            "pit_type": "Pulser",
+                            "card": {
+                                "name": "SystemPulser",
+                                "pit_type": "Pulser",
+                                "practices": [{"id": "get_pulse_data", "name": "Get Pulse Data"}],
+                                "meta": {
+                                    "supported_pulses": [
+                                        {"pulse_name": "object_save", "pulse_address": "plaza://pulse/object_save"},
+                                        {"pulse_name": "object_load", "pulse_address": "plaza://pulse/object_load"},
+                                    ]
+                                },
+                            },
+                            "meta": {},
+                        }
+                    ],
+                }
+            ]
+        },
+        "http://127.0.0.1:8011",
+    )
+
+    assert payload["pulser_count"] == 1
+    assert payload["pulsers"][0]["name"] == "SystemPulser"
+    assert payload["pulsers"][0]["party"] == ""
+    assert {pulse["pulse_name"] for pulse in payload["pulsers"][0]["supported_pulses"]} == {"object_load", "object_save"}
+    assert {pulse["pulse_name"] for pulse in payload["pulses"]} == {"object_load", "object_save"}
+
+
+def test_personal_agent_catalog_preserves_pulser_party_metadata():
+    """
+    Exercise the test_personal_agent_catalog_preserves_pulser_party_metadata
+    regression scenario.
+    """
+    payload = _normalize_catalog(
+        {
+            "plazas": [
+                {
+                    "url": "http://127.0.0.1:8011",
+                    "online": True,
+                    "card": {"name": "Plaza"},
+                    "agents": [
+                        {
+                            "agent_id": "pulser-1",
+                            "name": "SystemPulser",
+                            "pit_type": "Pulser",
+                            "party": "System",
+                            "card": {
+                                "name": "SystemPulser",
+                                "pit_type": "Pulser",
+                                "party": "System",
+                                "practices": [{"id": "get_pulse_data", "name": "Get Pulse Data"}],
+                                "meta": {
+                                    "party": "System",
+                                    "supported_pulses": [
+                                        {"pulse_name": "object_save", "pulse_address": "plaza://pulse/object_save"},
+                                        {"pulse_name": "object_load", "pulse_address": "plaza://pulse/object_load"},
+                                    ]
+                                },
+                            },
+                            "meta": {"party": "System"},
+                        }
+                    ],
+                }
+            ]
+        },
+        "http://127.0.0.1:8011",
+    )
+
+    assert payload["pulsers"][0]["party"] == "System"
 
 
 def test_personal_agent_catalog_consolidates_duplicate_pulse_names_into_one_shared_entry():

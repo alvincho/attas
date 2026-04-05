@@ -1,0 +1,117 @@
+{
+  "id": "878c5e38-4c6d-54ae-9ef0-9f261d23aedc",
+  "agent_id": "878c5e38-4c6d-54ae-9ef0-9f261d23aedc",
+  "name": "monitor_local_manager",
+  "type": "Pulse",
+  "description": "Return the managed-work monitor payload for one manager-local environment.",
+  "owner": "Plaza",
+  "address": "",
+  "meta": {
+    "pulse_id": "urn:plaza:pulse:monitor.local.manager",
+    "pulse_address": "plaza://pulse/monitor_local_manager",
+    "pulse_definition": {
+      "pds_version": "0.1.0",
+      "resource_type": "pulse_definition",
+      "id": "urn:plaza:pulse:monitor.local.manager",
+      "version": "1.0.0",
+      "name": "monitor_local_manager",
+      "title": "Monitor Local Manager",
+      "description": "Return the managed-work monitor payload for one manager-local environment.",
+      "pulse_class": "fact",
+      "status": "stable",
+      "concept": {
+        "definition": "Return the managed-work monitor payload for one manager-local environment."
+      },
+      "interface": {
+        "schema_language": "json-schema-2020-12",
+        "request_schema": {
+          "type": "object",
+          "properties": {
+            "manager_address": {
+              "type": "string"
+            },
+            "party": {
+              "type": "string"
+            }
+          }
+        },
+        "response_schema": {}
+      }
+    },
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "manager_address": {
+          "type": "string"
+        },
+        "party": {
+          "type": "string"
+        }
+      }
+    },
+    "output_schema": {},
+    "description": "Return the managed-work monitor payload for one manager-local environment.",
+    "examples": []
+  },
+  "card": {
+    "name": "monitor_local_manager",
+    "description": "Return the managed-work monitor payload for one manager-local environment.",
+    "pit_type": "Pulse",
+    "owner": "Plaza",
+    "tags": [],
+    "meta": {
+      "pulse_id": "urn:plaza:pulse:monitor.local.manager",
+      "pulse_address": "plaza://pulse/monitor_local_manager",
+      "pulse_definition": {
+        "pds_version": "0.1.0",
+        "resource_type": "pulse_definition",
+        "id": "urn:plaza:pulse:monitor.local.manager",
+        "version": "1.0.0",
+        "name": "monitor_local_manager",
+        "title": "Monitor Local Manager",
+        "description": "Return the managed-work monitor payload for one manager-local environment.",
+        "pulse_class": "fact",
+        "status": "stable",
+        "concept": {
+          "definition": "Return the managed-work monitor payload for one manager-local environment."
+        },
+        "interface": {
+          "schema_language": "json-schema-2020-12",
+          "request_schema": {
+            "type": "object",
+            "properties": {
+              "manager_address": {
+                "type": "string"
+              },
+              "party": {
+                "type": "string"
+              }
+            }
+          },
+          "response_schema": {}
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "manager_address": {
+            "type": "string"
+          },
+          "party": {
+            "type": "string"
+          }
+        }
+      },
+      "output_schema": {},
+      "description": "Return the managed-work monitor payload for one manager-local environment.",
+      "examples": []
+    },
+    "pit_address": {
+      "pit_id": "878c5e38-4c6d-54ae-9ef0-9f261d23aedc",
+      "plazas": [
+        "http://127.0.0.1:8011"
+      ]
+    }
+  },
+  "updated_at": "2026-04-04T10:28:12.868399+00:00"
+}

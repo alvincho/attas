@@ -1,0 +1,153 @@
+{
+  "id": "82195e23-73f8-51c4-979b-ff571f13dc2e",
+  "agent_id": "82195e23-73f8-51c4-979b-ff571f13dc2e",
+  "name": "create_managed_ticket",
+  "type": "Pulse",
+  "description": "Create one manual managed-work ticket through BossPulser and teamwork.",
+  "owner": "Plaza",
+  "address": "",
+  "meta": {
+    "pulse_id": "urn:plaza:pulse:create.managed.ticket",
+    "pulse_address": "plaza://pulse/create_managed_ticket",
+    "pulse_definition": {
+      "pds_version": "0.1.0",
+      "resource_type": "pulse_definition",
+      "id": "urn:plaza:pulse:create.managed.ticket",
+      "version": "1.0.0",
+      "name": "create_managed_ticket",
+      "title": "Create Managed Ticket",
+      "description": "Create one manual managed-work ticket through BossPulser and teamwork.",
+      "pulse_class": "fact",
+      "status": "stable",
+      "concept": {
+        "definition": "Create one manual managed-work ticket through BossPulser and teamwork."
+      },
+      "interface": {
+        "schema_language": "json-schema-2020-12",
+        "request_schema": {
+          "type": "object",
+          "properties": {
+            "manager_address": {
+              "type": "string"
+            },
+            "required_capability": {
+              "type": "string"
+            },
+            "payload": {
+              "type": "object"
+            },
+            "targets": {
+              "type": "array"
+            },
+            "priority": {
+              "type": "integer"
+            }
+          }
+        },
+        "response_schema": {}
+      }
+    },
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "manager_address": {
+          "type": "string"
+        },
+        "required_capability": {
+          "type": "string"
+        },
+        "payload": {
+          "type": "object"
+        },
+        "targets": {
+          "type": "array"
+        },
+        "priority": {
+          "type": "integer"
+        }
+      }
+    },
+    "output_schema": {},
+    "description": "Create one manual managed-work ticket through BossPulser and teamwork.",
+    "examples": []
+  },
+  "card": {
+    "name": "create_managed_ticket",
+    "description": "Create one manual managed-work ticket through BossPulser and teamwork.",
+    "pit_type": "Pulse",
+    "owner": "Plaza",
+    "tags": [],
+    "meta": {
+      "pulse_id": "urn:plaza:pulse:create.managed.ticket",
+      "pulse_address": "plaza://pulse/create_managed_ticket",
+      "pulse_definition": {
+        "pds_version": "0.1.0",
+        "resource_type": "pulse_definition",
+        "id": "urn:plaza:pulse:create.managed.ticket",
+        "version": "1.0.0",
+        "name": "create_managed_ticket",
+        "title": "Create Managed Ticket",
+        "description": "Create one manual managed-work ticket through BossPulser and teamwork.",
+        "pulse_class": "fact",
+        "status": "stable",
+        "concept": {
+          "definition": "Create one manual managed-work ticket through BossPulser and teamwork."
+        },
+        "interface": {
+          "schema_language": "json-schema-2020-12",
+          "request_schema": {
+            "type": "object",
+            "properties": {
+              "manager_address": {
+                "type": "string"
+              },
+              "required_capability": {
+                "type": "string"
+              },
+              "payload": {
+                "type": "object"
+              },
+              "targets": {
+                "type": "array"
+              },
+              "priority": {
+                "type": "integer"
+              }
+            }
+          },
+          "response_schema": {}
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "manager_address": {
+            "type": "string"
+          },
+          "required_capability": {
+            "type": "string"
+          },
+          "payload": {
+            "type": "object"
+          },
+          "targets": {
+            "type": "array"
+          },
+          "priority": {
+            "type": "integer"
+          }
+        }
+      },
+      "output_schema": {},
+      "description": "Create one manual managed-work ticket through BossPulser and teamwork.",
+      "examples": []
+    },
+    "pit_address": {
+      "pit_id": "82195e23-73f8-51c4-979b-ff571f13dc2e",
+      "plazas": [
+        "http://127.0.0.1:8011"
+      ]
+    }
+  },
+  "updated_at": "2026-04-04T10:28:12.868353+00:00"
+}

@@ -5,6 +5,10 @@ Prompits provides the core HTTP-native agent runtime, Plaza coordination layer, 
 pool/practice infrastructure for FinMAS. Within Prompits, the teamwork package models
 cooperative agent workflows and their supporting runtime pieces.
 
+Experimental notice: the teamwork agents in this module are still under active
+development, so advertised behaviors and configuration affordances may continue to
+shift.
+
 Core types exposed here include `DispatcherManagerAgent`, `TeamManagerAgent`, and
 `TeamWorkerAgent`, which carry the main behavior or state managed by this module.
 """
@@ -35,6 +39,7 @@ from prompits.dispatcher.runtime import (
 from prompits.teamwork.practices import (
     ControlManagerJobPractice,
     GetManagerJobPractice,
+    HireWorkerManagerPractice,
     ListManagerDbTablesPractice,
     PostManagerJobResultPractice,
     PreviewManagerDbTablePractice,
@@ -43,7 +48,7 @@ from prompits.teamwork.practices import (
     ReportManagerJobPractice,
     SubmitManagerJobPractice,
 )
-from prompits.teamwork.runtime import normalize_teamwork_config
+from prompits.teamwork.runtime import build_team_worker_hire_state, normalize_teamwork_config
 
 
 class _ManagerDiscoveryMixin:
@@ -190,7 +195,7 @@ class _ManagerDiscoveryMixin:
 
 
 class TeamManagerAgent(_ManagerDiscoveryMixin, DispatcherAgent):
-    """Agent implementation for team manager workflows."""
+    """Experimental agent implementation for team manager workflows."""
     def __init__(
         self,
         name: str = "Manager",
@@ -268,6 +273,150 @@ class TeamManagerAgent(_ManagerDiscoveryMixin, DispatcherAgent):
     def _manager_worker_identity(self) -> str:
         """Internal helper to return the manager worker identity."""
         return str(self.manager_worker_id or self.name)
+
+    @staticmethod
+    def _extract_worker_address(entry: Any) -> str:
+        """Internal helper to extract the worker address."""
+        if not isinstance(entry, Mapping):
+            return ""
+        card = entry.get("card") if isinstance(entry.get("card"), Mapping) else {}
+        for candidate in (entry.get("address"), card.get("address"), entry.get("pit_address")):
+            normalized = str(candidate or "").strip().rstrip("/")
+            if normalized:
+                return normalized
+        return ""
+
+    @staticmethod
+    def _worker_card(entry: Any) -> Mapping[str, Any]:
+        """Internal helper to return the worker card mapping."""
+        if not isinstance(entry, Mapping):
+            return {}
+        card = entry.get("card")
+        return card if isinstance(card, Mapping) else {}
+
+    @classmethod
+    def _worker_supports_capability(cls, entry: Any, capability: str = "") -> bool:
+        """Internal helper to determine whether the worker supports a capability."""
+        normalized_capability = str(capability or "").strip().lower()
+        if not normalized_capability:
+            return True
+        card = cls._worker_card(entry)
+        advertised = normalize_capabilities(card.get("capabilities"))
+        if normalized_capability in advertised or "*" in advertised:
+            return True
+        metadata = card.get("meta") if isinstance(card.get("meta"), Mapping) else {}
+        job_capabilities = metadata.get("job_capabilities")
+        if isinstance(job_capabilities, list):
+            for item in job_capabilities:
+                if not isinstance(item, Mapping):
+                    continue
+                if str(item.get("name") or item.get("capability") or "").strip().lower() == normalized_capability:
+                    return True
+        return False
+
+    @classmethod
+    def _worker_can_be_hired(cls, entry: Any) -> bool:
+        """Internal helper to determine whether the worker exposes the hire practice."""
+        card = cls._worker_card(entry)
+        practices = card.get("practices") if isinstance(card.get("practices"), list) else []
+        return any(
+            isinstance(practice, Mapping)
+            and str(practice.get("id") or "").strip().lower() == "worker-hire-manager"
+            for practice in practices
+        )
+
+    @classmethod
+    def _worker_is_available_for_hire(cls, entry: Any) -> bool:
+        """Internal helper to determine whether the worker is waiting for a manager."""
+        card = cls._worker_card(entry)
+        meta = card.get("meta") if isinstance(card.get("meta"), Mapping) else {}
+        assignment = meta.get("manager_assignment") if isinstance(meta.get("manager_assignment"), Mapping) else {}
+        if str(assignment.get("manager_address") or "").strip():
+            return False
+        status = str(assignment.get("status") or "").strip().lower()
+        if not status:
+            return True
+        return status in {"awaiting_hire", "available", "unassigned"}
+
+    @classmethod
+    def _worker_candidate_sort_key(cls, entry: Any) -> tuple[int, int, float, str]:
+        """Internal helper to sort hireable worker candidates."""
+        if not isinstance(entry, Mapping):
+            return (0, 0, 0.0, "")
+        card = cls._worker_card(entry)
+        assignment = (
+            card.get("meta", {}).get("manager_assignment", {})
+            if isinstance(card.get("meta"), Mapping)
+            else {}
+        )
+        try:
+            normalized_last_active = float(entry.get("last_active") or 0.0)
+        except (TypeError, ValueError):
+            normalized_last_active = 0.0
+        return (
+            1 if cls._worker_can_be_hired(entry) else 0,
+            1 if str(assignment.get("status") or "").strip().lower() == "awaiting_hire" else 0,
+            normalized_last_active,
+            str(entry.get("name") or card.get("name") or "").strip().lower(),
+        )
+
+    def hire_worker(
+        self,
+        *,
+        worker_address: str = "",
+        capability: str = "",
+        worker_name: str = "",
+        party: str = "",
+        assignment_source: str = "manager_hire",
+    ) -> Dict[str, Any]:
+        """Hire an available worker via Plaza-backed discovery or an explicit address."""
+        resolved_worker_address = str(worker_address or "").strip().rstrip("/")
+        normalized_worker_name = str(worker_name or "").strip().lower()
+        normalized_party = str(
+            party or self.manager_party or self.agent_card.get("party") or DISPATCHER_PARTY
+        ).strip() or DISPATCHER_PARTY
+
+        if not resolved_worker_address:
+            search_params = {"pit_type": "Agent", "role": "worker", "party": normalized_party}
+            if capability:
+                search_params["capability"] = str(capability or "").strip().lower()
+            results = self.search(**search_params) or []
+            candidates = [
+                entry
+                for entry in results
+                if self._worker_can_be_hired(entry)
+                and self._worker_is_available_for_hire(entry)
+                and self._worker_supports_capability(entry, capability)
+                and (
+                    not normalized_worker_name
+                    or str(entry.get("name") or self._worker_card(entry).get("name") or "").strip().lower() == normalized_worker_name
+                )
+            ]
+            if candidates:
+                selected = max(candidates, key=self._worker_candidate_sort_key)
+                resolved_worker_address = self._extract_worker_address(selected)
+
+        if not resolved_worker_address:
+            return {
+                "status": "pending",
+                "worker_address": "",
+                "error": "No available teamwork worker matched the requested hire criteria.",
+            }
+
+        payload = {
+            "manager_address": self.agent_card.get("address") or f"http://{self.host}:{self.port}",
+            "manager_name": self.name,
+            "manager_party": self.manager_party,
+            "assignment_source": str(assignment_source or "manager_hire").strip().lower() or "manager_hire",
+        }
+        response = self.UsePractice(
+            "worker-hire-manager",
+            payload,
+            pit_address=resolved_worker_address,
+        )
+        normalized_response = dict(response or {}) if isinstance(response, Mapping) else {}
+        normalized_response.setdefault("worker_address", resolved_worker_address)
+        return normalized_response
 
     def submit_job_to_manager(self, payload: Mapping[str, Any], *, manager_address: str = "") -> Dict[str, Any]:
         """Submit the job to manager."""
@@ -434,7 +583,7 @@ class TeamManagerAgent(_ManagerDiscoveryMixin, DispatcherAgent):
 
 
 class DispatcherManagerAgent(TeamManagerAgent):
-    """Agent implementation for dispatcher manager workflows."""
+    """Experimental agent implementation for dispatcher manager workflows."""
     def __init__(self, *args: Any, agent_card: Dict[str, Any] | None = None, manager_type: str = "dispatcher", **kwargs: Any):
         """Initialize the dispatcher manager agent."""
         card = dict(agent_card or {})
@@ -444,7 +593,7 @@ class DispatcherManagerAgent(TeamManagerAgent):
 
 
 class TeamWorkerAgent(_ManagerDiscoveryMixin, DispatcherWorkerAgent):
-    """Agent implementation for team worker workflows."""
+    """Experimental agent implementation for team worker workflows."""
     def __init__(
         self,
         name: str = "Worker",
@@ -458,12 +607,14 @@ class TeamWorkerAgent(_ManagerDiscoveryMixin, DispatcherWorkerAgent):
         capabilities: Any = None,
         job_capabilities: Any = None,
         poll_interval_sec: float | int | None = None,
+        hire_required: bool | None = None,
         config: Any = None,
         config_path: Any = None,
         auto_register: bool | None = None,
     ):
         """Initialize the team worker agent."""
         normalized_config = normalize_teamwork_config(config_path or config, role="worker")
+        worker_settings = normalized_config.get("dispatcher") if isinstance(normalized_config.get("dispatcher"), Mapping) else {}
         card = dict(agent_card or normalized_config.get("agent_card") or {})
         card.setdefault("name", str(normalized_config.get("name") or name))
         card["role"] = str(normalized_config.get("role") or card.get("role") or "worker")
@@ -477,6 +628,12 @@ class TeamWorkerAgent(_ManagerDiscoveryMixin, DispatcherWorkerAgent):
         resolved_manager_address = str(
             manager_address or normalized_config.get("dispatcher_address") or ""
         ).strip()
+        resolved_auto_register = bool(
+            auto_register if auto_register is not None else worker_settings.get("auto_register", False)
+        )
+        resolved_hire_required = bool(
+            hire_required if hire_required is not None else worker_settings.get("hire_required", False)
+        )
 
         super().__init__(
             name=str(normalized_config.get("name") or name),
@@ -491,37 +648,187 @@ class TeamWorkerAgent(_ManagerDiscoveryMixin, DispatcherWorkerAgent):
             poll_interval_sec=poll_interval_sec,
             config=normalized_config,
             config_path=None,
-            auto_register=auto_register,
+            auto_register=False,
         )
 
         self.manager_address = resolved_manager_address or str(self.dispatcher_address or "").strip()
+        self.manager_name = str(
+            worker_settings.get("manager_name")
+            or normalized_config.get("manager_name")
+            or ""
+        ).strip()
         self.manager_party = str(
             manager_party or normalized_config.get("dispatcher_party") or normalized_config.get("party") or self.agent_card.get("party") or DISPATCHER_PARTY
         ).strip() or DISPATCHER_PARTY
+        self.hire_required = resolved_hire_required
         self._manager_discovery_log_message = ""
         self._manager_discovery_log_at = 0.0
 
+        self.add_practice(HireWorkerManagerPractice())
+        self._sync_manager_assignment(
+            manager_address=self.manager_address,
+            manager_name=self.manager_name,
+            manager_party=self.manager_party,
+            assignment_source="config" if self.manager_address else "",
+        )
+
+        if self.plaza_url and resolved_auto_register:
+            self.register()
+
+    def _sync_manager_assignment(
+        self,
+        *,
+        manager_address: str = "",
+        manager_name: str = "",
+        manager_party: str = "",
+        assignment_source: str = "",
+        hired_at: str = "",
+        status: str = "",
+    ) -> dict[str, Any]:
+        """Internal helper to synchronize manager-assignment state onto the agent card."""
+        normalized_manager_address = str(manager_address or "").strip().rstrip("/")
+        if manager_name:
+            self.manager_name = str(manager_name or "").strip()
+        if manager_party:
+            self.manager_party = str(manager_party or "").strip() or self.manager_party
+        self.manager_address = normalized_manager_address
+        self.dispatcher_address = normalized_manager_address
+        self.worker_environment = self._build_worker_environment_snapshot()
+
         meta = dict(self.agent_card.get("meta") or {})
         meta["manager_party"] = self.manager_party
+        if self.manager_name:
+            meta["manager_name"] = self.manager_name
+        else:
+            meta.pop("manager_name", None)
+        assignment = build_team_worker_hire_state(
+            meta.get("manager_assignment"),
+            hire_required=self.hire_required,
+            manager_address=self.manager_address,
+            manager_name=self.manager_name,
+            manager_party=self.manager_party,
+            assignment_source=assignment_source,
+            hired_at=hired_at,
+            status=status,
+        )
+        meta["manager_assignment"] = assignment
         if self.manager_address:
             meta["manager_address"] = self.manager_address
+            meta["dispatcher_address"] = self.manager_address
+        else:
+            meta.pop("manager_address", None)
+            meta.pop("dispatcher_address", None)
         self.agent_card["meta"] = meta
+        return assignment
+
+    def _worker_hire_state(self) -> dict[str, Any]:
+        """Return the current worker hire-state payload."""
+        meta = dict(self.agent_card.get("meta") or {})
+        return build_team_worker_hire_state(
+            meta.get("manager_assignment"),
+            hire_required=self.hire_required,
+            manager_address=self.manager_address,
+            manager_name=self.manager_name,
+            manager_party=self.manager_party,
+        )
+
+    def _remember_manager_address(self, address: Any, *, source: str = "") -> str:
+        """Remember the manager address and keep the worker assignment metadata in sync."""
+        normalized = str(address or "").strip().rstrip("/")
+        if not normalized:
+            self._sync_manager_assignment(
+                manager_address="",
+                manager_name=self.manager_name,
+                manager_party=self.manager_party,
+                assignment_source="",
+            )
+            return ""
+        remembered = super()._remember_manager_address(normalized, source=source)
+        self._sync_manager_assignment(
+            manager_address=remembered,
+            manager_name=self.manager_name,
+            manager_party=self.manager_party,
+            assignment_source=str(source or "manager_assignment").strip().lower().replace(" ", "_"),
+        )
+        return remembered
+
+    def accept_manager_hire(
+        self,
+        *,
+        manager_address: str,
+        manager_name: str = "",
+        manager_party: str = "",
+        assignment_source: str = "hire",
+        hired_at: str = "",
+    ) -> Dict[str, Any]:
+        """Accept an explicit manager hire assignment from a teamwork manager."""
+        normalized_manager_address = str(manager_address or "").strip().rstrip("/")
+        if not normalized_manager_address:
+            raise ValueError("manager_address is required to hire a teamwork worker.")
+        self.manager_name = str(manager_name or self.manager_name or "").strip()
+        if manager_party:
+            self.manager_party = str(manager_party or "").strip() or self.manager_party
+        remembered = super()._remember_manager_address(
+            normalized_manager_address,
+            source=str(assignment_source or "hire").strip().lower() or "hire",
+        )
+        assignment = self._sync_manager_assignment(
+            manager_address=remembered,
+            manager_name=self.manager_name,
+            manager_party=self.manager_party,
+            assignment_source=assignment_source,
+            hired_at=hired_at,
+            status="hired",
+        )
+        if self.plaza_url and getattr(self, "plaza_token", ""):
+            try:
+                self.register()
+            except Exception:
+                self.logger.warning("Worker could not refresh Plaza registration after hire.", exc_info=True)
+        return {
+            "status": "hired",
+            "worker_id": self._worker_identity(),
+            "worker_address": self.agent_card.get("address") or f"http://{self.host}:{self.port}",
+            "manager_assignment": assignment,
+            "capabilities": self.advertised_capabilities(),
+        }
 
     def _resolve_dispatcher_address(self) -> str:
         """Internal helper to resolve the dispatcher address."""
         return self._resolve_manager_address()
+
+    def _resolve_manager_address(self) -> str:
+        """Internal helper to resolve the manager address."""
+        remembered = str(getattr(self, "manager_address", "") or "").strip().rstrip("/")
+        if remembered:
+            return self._remember_manager_address(remembered)
+        if self.hire_required:
+            self._log_manager_discovery_message(
+                "Worker is advertised on Plaza and waiting for a manager hire assignment.",
+                level="info",
+            )
+            return ""
+        return super()._resolve_manager_address()
 
     def _build_worker_environment_snapshot(self, *, config: Any = None, config_path: Any = None) -> dict[str, Any]:
         """Internal helper to build the worker environment snapshot."""
         environment = super()._build_worker_environment_snapshot(config=config, config_path=config_path)
         environment["manager_address"] = str(getattr(self, "manager_address", "") or "").strip()
         environment["manager_party"] = str(getattr(self, "manager_party", "") or "").strip()
+        environment["hire_required"] = bool(getattr(self, "hire_required", False))
         return environment
 
     def _send_worker_heartbeat(self, *, event_type: str = "heartbeat") -> Dict[str, Any]:
         """Internal helper to send the worker heartbeat."""
         manager_address = self._resolve_manager_address()
         if not manager_address:
+            if self.hire_required:
+                return {
+                    "status": "waiting_for_hire",
+                    "worker_id": self._worker_identity(),
+                    "error": "Manager has not hired this worker yet.",
+                    "manager_assignment": self._worker_hire_state(),
+                }
             return {"status": "pending", "worker_id": self._worker_identity(), "error": "Manager is not available yet."}
         return self.UsePractice(
             "manager-register-worker",
@@ -542,6 +849,13 @@ class TeamWorkerAgent(_ManagerDiscoveryMixin, DispatcherWorkerAgent):
         """Request the job."""
         manager_address = self._resolve_manager_address()
         if not manager_address:
+            if self.hire_required:
+                return {
+                    "status": "waiting_for_hire",
+                    "job": None,
+                    "error": "Manager has not hired this worker yet.",
+                    "manager_assignment": self._worker_hire_state(),
+                }
             return {"status": "pending", "job": None, "error": "Manager is not available yet."}
         response = self.UsePractice(
             "manager-get-job",
@@ -578,6 +892,19 @@ class TeamWorkerAgent(_ManagerDiscoveryMixin, DispatcherWorkerAgent):
         if not manager_address:
             raise ValueError("manager_address is required for job submission.")
         return self.UsePractice("manager-submit-job", dict(payload or {}), pit_address=manager_address)
+
+    def run_once(self, handler: Callable[[JobDetail], Any] | None = None) -> Dict[str, Any]:
+        """Run the worker once, waiting for hire when explicit assignment is required."""
+        if self.hire_required and not self._resolve_manager_address():
+            self.register_capabilities()
+            self._reset_progress(phase="idle", message="Waiting for a manager hire assignment.")
+            return {
+                "status": "waiting_for_hire",
+                "job": None,
+                "error": "Manager has not hired this worker yet.",
+                "manager_assignment": self._worker_hire_state(),
+            }
+        return super().run_once(handler=handler)
 
 
 __all__ = [

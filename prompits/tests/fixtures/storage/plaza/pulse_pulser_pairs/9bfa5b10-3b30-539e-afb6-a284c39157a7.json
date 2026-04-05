@@ -1,0 +1,57 @@
+{
+  "pulse_id": "urn:plaza:pulse:monitor.managed.work",
+  "pulse_name": "monitor_managed_work",
+  "pulse_address": "b230c27a-2101-5043-8603-153c3fbd58a4",
+  "pulse_definition": {
+    "pds_version": "0.1.0",
+    "resource_type": "pulse_definition",
+    "id": "urn:plaza:pulse:monitor.managed.work",
+    "version": "1.0.0",
+    "name": "monitor_managed_work",
+    "title": "Monitor Managed Work",
+    "description": "Return the BossPulser managed-work monitor payload for one teamwork manager.",
+    "pulse_class": "fact",
+    "status": "stable",
+    "concept": {
+      "definition": "Return the BossPulser managed-work monitor payload for one teamwork manager."
+    },
+    "interface": {
+      "schema_language": "json-schema-2020-12",
+      "request_schema": {
+        "type": "object",
+        "properties": {
+          "manager_address": {
+            "type": "string"
+          },
+          "party": {
+            "type": "string"
+          }
+        }
+      },
+      "response_schema": {}
+    },
+    "test_data": {
+      "manager_address": "http://127.0.0.1:8170",
+      "party": "Phemacast"
+    }
+  },
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "manager_address": {
+        "type": "string"
+      },
+      "party": {
+        "type": "string"
+      }
+    }
+  },
+  "pulser_id": "5444b86e-e2d4-4e5b-b4c9-139b10b6871b",
+  "pulser_name": "BossPulser",
+  "pulser_address": "5444b86e-e2d4-4e5b-b4c9-139b10b6871b",
+  "status": "stable",
+  "pulse_directory_id": "b230c27a-2101-5043-8603-153c3fbd58a4",
+  "pulser_directory_id": "5444b86e-e2d4-4e5b-b4c9-139b10b6871b",
+  "id": "9bfa5b10-3b30-539e-afb6-a284c39157a7",
+  "updated_at": "2026-04-04T10:28:13.061029+00:00"
+}

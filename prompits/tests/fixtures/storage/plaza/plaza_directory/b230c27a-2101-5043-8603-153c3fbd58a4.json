@@ -1,0 +1,117 @@
+{
+  "id": "b230c27a-2101-5043-8603-153c3fbd58a4",
+  "agent_id": "b230c27a-2101-5043-8603-153c3fbd58a4",
+  "name": "monitor_managed_work",
+  "type": "Pulse",
+  "description": "Return the BossPulser managed-work monitor payload for one teamwork manager.",
+  "owner": "Plaza",
+  "address": "",
+  "meta": {
+    "pulse_id": "urn:plaza:pulse:monitor.managed.work",
+    "pulse_address": "plaza://pulse/monitor_managed_work",
+    "pulse_definition": {
+      "pds_version": "0.1.0",
+      "resource_type": "pulse_definition",
+      "id": "urn:plaza:pulse:monitor.managed.work",
+      "version": "1.0.0",
+      "name": "monitor_managed_work",
+      "title": "Monitor Managed Work",
+      "description": "Return the BossPulser managed-work monitor payload for one teamwork manager.",
+      "pulse_class": "fact",
+      "status": "stable",
+      "concept": {
+        "definition": "Return the BossPulser managed-work monitor payload for one teamwork manager."
+      },
+      "interface": {
+        "schema_language": "json-schema-2020-12",
+        "request_schema": {
+          "type": "object",
+          "properties": {
+            "manager_address": {
+              "type": "string"
+            },
+            "party": {
+              "type": "string"
+            }
+          }
+        },
+        "response_schema": {}
+      }
+    },
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "manager_address": {
+          "type": "string"
+        },
+        "party": {
+          "type": "string"
+        }
+      }
+    },
+    "output_schema": {},
+    "description": "Return the BossPulser managed-work monitor payload for one teamwork manager.",
+    "examples": []
+  },
+  "card": {
+    "name": "monitor_managed_work",
+    "description": "Return the BossPulser managed-work monitor payload for one teamwork manager.",
+    "pit_type": "Pulse",
+    "owner": "Plaza",
+    "tags": [],
+    "meta": {
+      "pulse_id": "urn:plaza:pulse:monitor.managed.work",
+      "pulse_address": "plaza://pulse/monitor_managed_work",
+      "pulse_definition": {
+        "pds_version": "0.1.0",
+        "resource_type": "pulse_definition",
+        "id": "urn:plaza:pulse:monitor.managed.work",
+        "version": "1.0.0",
+        "name": "monitor_managed_work",
+        "title": "Monitor Managed Work",
+        "description": "Return the BossPulser managed-work monitor payload for one teamwork manager.",
+        "pulse_class": "fact",
+        "status": "stable",
+        "concept": {
+          "definition": "Return the BossPulser managed-work monitor payload for one teamwork manager."
+        },
+        "interface": {
+          "schema_language": "json-schema-2020-12",
+          "request_schema": {
+            "type": "object",
+            "properties": {
+              "manager_address": {
+                "type": "string"
+              },
+              "party": {
+                "type": "string"
+              }
+            }
+          },
+          "response_schema": {}
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "manager_address": {
+            "type": "string"
+          },
+          "party": {
+            "type": "string"
+          }
+        }
+      },
+      "output_schema": {},
+      "description": "Return the BossPulser managed-work monitor payload for one teamwork manager.",
+      "examples": []
+    },
+    "pit_address": {
+      "pit_id": "b230c27a-2101-5043-8603-153c3fbd58a4",
+      "plazas": [
+        "http://127.0.0.1:8011"
+      ]
+    }
+  },
+  "updated_at": "2026-04-04T10:28:12.868372+00:00"
+}

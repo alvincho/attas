@@ -1,0 +1,217 @@
+{
+  "id": "7b6baf96-4b86-59c5-bf24-8e9f26ebe5b7",
+  "agent_id": "7b6baf96-4b86-59c5-bf24-8e9f26ebe5b7",
+  "name": "list_bucket",
+  "type": "Pulse",
+  "description": "List logical buckets visible to the requesting agent in this storage pulser.",
+  "owner": "Plaza",
+  "address": "",
+  "meta": {
+    "pulse_id": "urn:plaza:pulse:list.bucket",
+    "pulse_address": "7b6baf96-4b86-59c5-bf24-8e9f26ebe5b7",
+    "pulse_definition": {
+      "pds_version": "0.1.0",
+      "resource_type": "pulse_definition",
+      "id": "urn:plaza:pulse:list.bucket",
+      "version": "1.0.0",
+      "name": "list_bucket",
+      "title": "List Bucket",
+      "description": "List logical buckets visible to the requesting agent in this storage pulser.",
+      "pulse_class": "fact",
+      "status": "stable",
+      "concept": {
+        "definition": "List logical buckets visible to the requesting agent in this storage pulser."
+      },
+      "interface": {
+        "schema_language": "json-schema-2020-12",
+        "request_schema": {
+          "type": "object",
+          "properties": {
+            "visibility": {
+              "type": "string",
+              "enum": [
+                "all",
+                "private",
+                "public"
+              ],
+              "default": "all"
+            },
+            "limit": {
+              "type": "integer",
+              "default": 200
+            }
+          }
+        },
+        "response_schema": {
+          "type": "object",
+          "properties": {
+            "visibility_filter": {
+              "type": "string"
+            },
+            "returned_count": {
+              "type": "integer"
+            },
+            "buckets": {
+              "type": "array"
+            }
+          },
+          "required": [
+            "visibility_filter",
+            "returned_count",
+            "buckets"
+          ]
+        }
+      }
+    },
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "visibility": {
+          "type": "string",
+          "enum": [
+            "all",
+            "private",
+            "public"
+          ],
+          "default": "all"
+        },
+        "limit": {
+          "type": "integer",
+          "default": 200
+        }
+      }
+    },
+    "output_schema": {
+      "type": "object",
+      "properties": {
+        "visibility_filter": {
+          "type": "string"
+        },
+        "returned_count": {
+          "type": "integer"
+        },
+        "buckets": {
+          "type": "array"
+        }
+      },
+      "required": [
+        "visibility_filter",
+        "returned_count",
+        "buckets"
+      ]
+    },
+    "description": "List logical buckets visible to the requesting agent in this storage pulser.",
+    "examples": []
+  },
+  "card": {
+    "name": "list_bucket",
+    "description": "List logical buckets visible to the requesting agent in this storage pulser.",
+    "pit_type": "Pulse",
+    "owner": "Plaza",
+    "tags": [],
+    "meta": {
+      "pulse_id": "urn:plaza:pulse:list.bucket",
+      "pulse_address": "7b6baf96-4b86-59c5-bf24-8e9f26ebe5b7",
+      "pulse_definition": {
+        "pds_version": "0.1.0",
+        "resource_type": "pulse_definition",
+        "id": "urn:plaza:pulse:list.bucket",
+        "version": "1.0.0",
+        "name": "list_bucket",
+        "title": "List Bucket",
+        "description": "List logical buckets visible to the requesting agent in this storage pulser.",
+        "pulse_class": "fact",
+        "status": "stable",
+        "concept": {
+          "definition": "List logical buckets visible to the requesting agent in this storage pulser."
+        },
+        "interface": {
+          "schema_language": "json-schema-2020-12",
+          "request_schema": {
+            "type": "object",
+            "properties": {
+              "visibility": {
+                "type": "string",
+                "enum": [
+                  "all",
+                  "private",
+                  "public"
+                ],
+                "default": "all"
+              },
+              "limit": {
+                "type": "integer",
+                "default": 200
+              }
+            }
+          },
+          "response_schema": {
+            "type": "object",
+            "properties": {
+              "visibility_filter": {
+                "type": "string"
+              },
+              "returned_count": {
+                "type": "integer"
+              },
+              "buckets": {
+                "type": "array"
+              }
+            },
+            "required": [
+              "visibility_filter",
+              "returned_count",
+              "buckets"
+            ]
+          }
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "visibility": {
+            "type": "string",
+            "enum": [
+              "all",
+              "private",
+              "public"
+            ],
+            "default": "all"
+          },
+          "limit": {
+            "type": "integer",
+            "default": 200
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "visibility_filter": {
+            "type": "string"
+          },
+          "returned_count": {
+            "type": "integer"
+          },
+          "buckets": {
+            "type": "array"
+          }
+        },
+        "required": [
+          "visibility_filter",
+          "returned_count",
+          "buckets"
+        ]
+      },
+      "description": "List logical buckets visible to the requesting agent in this storage pulser.",
+      "examples": []
+    },
+    "pit_address": {
+      "pit_id": "7b6baf96-4b86-59c5-bf24-8e9f26ebe5b7",
+      "plazas": [
+        "http://127.0.0.1:8011"
+      ]
+    }
+  },
+  "updated_at": "2026-04-04T10:28:14.839112+00:00"
+}

@@ -318,6 +318,140 @@ def test_api_pulser_resolves_api_key_from_pulser_registry_to_query_param(monkeyp
     assert "Authorization" not in capture["headers"]
 
 
+def test_api_pulser_uses_request_api_key_when_direct_mode_is_enabled(monkeypatch):
+    """
+    Exercise the
+    test_api_pulser_uses_request_api_key_when_direct_mode_is_enabled regression
+    scenario.
+    """
+    capture = {}
+    monkeypatch.setattr(
+        "phemacast.pulsers.api_pulser.httpx.Client",
+        lambda timeout=10.0: FakeHttpClient(capture),
+    )
+
+    pulser = APIsPulser(
+        config={
+            "name": "RequestScopedKeyPulser",
+            "api_key": "config-secret",
+            "supported_pulses": [
+                {
+                    "name": "quote",
+                    "pulse_address": "plaza://pulse/quote",
+                    "api": {
+                        "url": "https://example.test/quote/{symbol}",
+                        "method": "GET",
+                        "api_key_header": "x-api-key",
+                    },
+                }
+            ],
+        },
+        auto_register=False,
+    )
+
+    payload = pulser.fetch_pulse_payload(
+        "quote",
+        {"symbol": "AAPL", "api_key": "request-secret", "direct_mode": True},
+        pulser.supported_pulses[0],
+    )
+
+    assert payload["_input"] == {"symbol": "AAPL"}
+    assert capture["headers"]["x-api-key"] == "request-secret"
+    assert pulser.last_fetch_debug["input_data"] == {"symbol": "AAPL"}
+    assert pulser.last_fetch_debug["request"]["direct_mode"] is True
+    assert pulser.last_fetch_debug["request"]["auth_source"] == "request"
+
+
+def test_api_pulser_request_api_key_does_not_override_without_direct_mode(monkeypatch):
+    """
+    Exercise the
+    test_api_pulser_request_api_key_does_not_override_without_direct_mode regression
+    scenario.
+    """
+    capture = {}
+    monkeypatch.setattr(
+        "phemacast.pulsers.api_pulser.httpx.Client",
+        lambda timeout=10.0: FakeHttpClient(capture),
+    )
+
+    pulser = APIsPulser(
+        config={
+            "name": "ConfigScopedKeyPulser",
+            "api_key": "config-secret",
+            "supported_pulses": [
+                {
+                    "name": "quote",
+                    "pulse_address": "plaza://pulse/quote",
+                    "api": {
+                        "url": "https://example.test/quote/{symbol}",
+                        "method": "GET",
+                        "api_key_header": "x-api-key",
+                    },
+                }
+            ],
+        },
+        auto_register=False,
+    )
+
+    payload = pulser.fetch_pulse_payload(
+        "quote",
+        {"symbol": "AAPL", "api_key": "request-secret"},
+        pulser.supported_pulses[0],
+    )
+
+    assert payload["_input"]["symbol"] == "AAPL"
+    assert payload["_input"]["api_key"] == "request-secret"
+    assert capture["headers"]["x-api-key"] == "config-secret"
+    assert pulser.last_fetch_debug["request"]["direct_mode"] is False
+    assert pulser.last_fetch_debug["request"]["auth_source"] == "config"
+
+
+def test_api_pulser_direct_mode_reuses_registry_query_param_binding(monkeypatch):
+    """
+    Exercise the
+    test_api_pulser_direct_mode_reuses_registry_query_param_binding regression
+    scenario.
+    """
+    capture = {}
+    monkeypatch.setattr(
+        "phemacast.pulsers.api_pulser.httpx.Client",
+        lambda timeout=10.0: FakeHttpClient(capture),
+    )
+
+    pulser = APIsPulser(
+        config={
+            "name": "DirectQueryParamPulser",
+            "api_keys": [
+                {"id": "alpha", "value": "config-secret", "param": "apikey"},
+            ],
+            "supported_pulses": [
+                {
+                    "name": "quote",
+                    "pulse_address": "plaza://pulse/quote",
+                    "api": {
+                        "url": "https://example.test/query?function=GLOBAL_QUOTE&symbol={symbol}",
+                        "method": "GET",
+                        "api_key_id": "alpha",
+                    },
+                }
+            ],
+        },
+        auto_register=False,
+    )
+
+    payload = pulser.fetch_pulse_payload(
+        "quote",
+        {"symbol": "IBM", "api_key": "request-secret", "direct_mode": True},
+        pulser.supported_pulses[0],
+    )
+
+    assert payload["_input"] == {"symbol": "IBM"}
+    assert capture["url"] == "https://example.test/query?function=GLOBAL_QUOTE&symbol=IBM&apikey=request-secret"
+    assert "Authorization" not in capture["headers"]
+    assert pulser.last_fetch_debug["request"]["auth_source"] == "request"
+    assert pulser.last_fetch_debug["request"]["direct_mode"] is True
+
+
 def test_api_pulser_returns_clear_error_when_registry_api_key_is_missing(monkeypatch):
     """
     Exercise the

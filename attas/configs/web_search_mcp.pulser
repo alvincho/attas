@@ -1,0 +1,88 @@
+{
+    "name": "WebSearchMCPPulser",
+    "type": "phemacast.pulsers.mcp_pulser.MCPPulser",
+    "host": "127.0.0.1",
+    "port": 8033,
+    "plaza_url": "http://127.0.0.1:8011",
+    "role": "pulser",
+    "description": "Calls a deep-research-compatible MCP search tool and normalizes results into the finance workflow source shape.",
+    "tags": [
+        "research",
+        "web",
+        "search",
+        "mcp"
+    ],
+    "supported_pulses": [
+        {
+            "name": "research_sources",
+            "pulse_address": "4ea0f87e-9f66-5e7e-92ba-e486e3bcd1b4",
+            "description": "Searches the web via MCP and returns normalized research sources for downstream finance workflows.",
+            "tags": [
+                "research",
+                "sources",
+                "search"
+            ],
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string"
+                    },
+                    "number_of_sources": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "default": 5
+                    }
+                },
+                "required": [
+                    "query",
+                    "number_of_sources"
+                ]
+            },
+            "mapping": {
+                "query": "_input.query",
+                "number_of_sources": "_input.number_of_sources",
+                "sources": {
+                    "source": "sources",
+                    "limit_from": "_input.number_of_sources",
+                    "items": {
+                        "id": "id",
+                        "title": "title",
+                        "url": "url",
+                        "source_domain": "source_domain",
+                        "snippet": "snippet",
+                        "published_at": "published_at",
+                        "citation.id": "citation.id",
+                        "citation.title": "citation.title",
+                        "citation.url": "citation.url",
+                        "citation.source_domain": "citation.source_domain",
+                        "citation.published_at": "citation.published_at",
+                        "citation.locator": "citation.locator"
+                    }
+                }
+            },
+            "test_data": {
+                "query": "NVIDIA Blackwell supply chain",
+                "number_of_sources": 3
+            },
+            "cost": 0,
+            "party": "attas",
+            "mcp": {
+                "tool": "search",
+                "arguments": {
+                    "query": "{query}"
+                },
+                "response_normalization": {
+                    "kind": "research_sources"
+                }
+            }
+        }
+    ],
+    "mcp": {
+        "transport": "http",
+        "url": "env:WEB_SEARCH_MCP_URL",
+        "headers": {
+            "Authorization": "env:WEB_SEARCH_MCP_AUTHORIZATION"
+        }
+    }
+}

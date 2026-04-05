@@ -6,14 +6,24 @@ This document captures the current feature surface of `phemacast/personal_agent`
 
 - Local-first prototype served by FastAPI.
 - Browser-based personal terminal for pulses, providers, positions, transactions, analytics, and workflow cost.
+- Managed-work operator pane for BossPulser or teamwork boss endpoints.
 - Mock in-memory dashboard data for rapid UI development.
 - Plaza-aware browser and mind-map tooling that can discover pulsers and run pulse tests.
+- Generic destination status normalization for Notion publishing, NotebookLM export packs, Slack, Teams, and email lanes.
 
 ## Backend Routes
 
 - `GET /`: HTML application shell.
 - `GET /index`: redirect to root.
 - `GET /api/dashboard`: dashboard bootstrap payload.
+- `GET /api/channels/catalog`: generic B2B delivery lane catalog.
+- `GET /api/managed-work/monitor`: proxied managed-work monitor summary for BossPulser or teamwork bosses.
+- `GET /api/managed-work/tickets`: proxied managed-work ticket list.
+- `GET /api/managed-work/tickets/{ticket_id}`: proxied managed-work ticket detail with destination summary.
+- `GET /api/managed-work/schedules`: proxied managed-work schedule list.
+- `GET /api/managed-work/schedules/{schedule_id}/history`: proxied schedule history.
+- `POST /api/managed-work/schedules/{schedule_id}/control`: proxied schedule issue/delete controls.
+- `GET /api/jobs/{job_id}`: proxied job detail with fallback to managed ticket detail.
 - `GET /api/workspaces/{workspace_id}`: workspace detail lookup.
 - `GET /api/plaza/catalog?plaza_url=...`: normalized Plaza pulser catalog.
 - `POST /api/plaza/panes/run`: proxy to Plaza pulser test execution.
@@ -40,6 +50,7 @@ This document captures the current feature surface of `phemacast/personal_agent`
 ## App Shell
 
 - Left rail with system metadata.
+- Left rail now includes the default Boss endpoint for new managed-work panes.
 - Theme switcher with three themes:
 - Mercury Ledger
 - Signal Paper
@@ -51,9 +62,44 @@ This document captures the current feature surface of `phemacast/personal_agent`
 - New Mind Map Window
 - Settings
 - Workspace dock area for docked windows.
+- Managed work is opened as a browser pane instead of a fixed workspace column.
 - Floating layer for externalized windows.
 - Workspace deck sidebar.
 - Activity relay sidebar.
+
+## Managed Work Operator
+
+- Managed-work browser pane type with its own saved connection state.
+- Per-pane Boss configuration:
+- boss URL
+- manager address
+- manager party
+- Boss-backed works list with selection state and refresh controls.
+- Assignment view for:
+- boss issuance
+- manager assignment
+- worker assignment
+- execution timestamps and heartbeat hints
+- Result view for:
+- job detail source
+- structured result summary
+- raw records preview when the boss detail route exposes them
+- Managed schedule cards with manual `Issue Now` control.
+- Managed-work pane tabs for:
+- works
+- assignments
+- results
+- destinations
+
+## Destination Publishing And Delivery
+
+- Notion destination card with publication status, page URL visibility, and markdown copy action.
+- NotebookLM destination card with export mode, directory visibility, and source URL bundle copy action.
+- Generic B2B channel cards for:
+- Slack
+- Teams
+- email
+- Channel payload preview and copy actions for routed delivery text.
 
 ## Workspace Management
 
@@ -148,6 +194,8 @@ This document captures the current feature surface of `phemacast/personal_agent`
 - connection mode
 - host
 - default Plaza URL
+- default Boss URL for new managed-work panes
+- default manager address/party for new managed-work panes
 - storage choice
 - refresh Plaza catalog action
 
@@ -165,6 +213,7 @@ This document captures the current feature surface of `phemacast/personal_agent`
 
 - Symbol search input with draft/commit behavior.
 - Browser-level Plaza refresh.
+- Direct `Managed Work` toolbar action to insert the managed-work pane.
 - View and Edit page modes.
 - Save local layout.
 - Load local layout.
@@ -178,6 +227,7 @@ This document captures the current feature surface of `phemacast/personal_agent`
 - Pane types:
 - Plain
 - Mind Map
+- Managed Work
 - Pane layout fields:
 - x
 - y

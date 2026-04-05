@@ -18,6 +18,7 @@ import re
 from contextlib import asynccontextmanager
 from datetime import timedelta
 from typing import Any, Dict, Iterable, Mapping
+from urllib.parse import urlsplit
 from uuid import uuid4
 
 import anyio
@@ -38,6 +39,78 @@ logger = logging.getLogger(__name__)
 
 _PLACEHOLDER_PATTERN = re.compile(r"\{([^{}]+)\}")
 _JSON_FENCE_PATTERN = re.compile(r"^\s*```(?:json)?\s*(.*?)\s*```\s*$", re.DOTALL)
+_DEFAULT_MCP_CLIENT_INFO = {
+    "name": "phemacast-mcp-pulser",
+    "version": "0.1.0",
+}
+_DEFAULT_MCP_CAPABILITIES = {
+    "sampling": {},
+    "roots": {"listChanged": True},
+}
+_RESEARCH_ID_PATHS = (
+    "id",
+    "document_id",
+    "documentId",
+    "metadata.id",
+)
+_RESEARCH_TITLE_PATHS = (
+    "title",
+    "name",
+    "metadata.title",
+)
+_RESEARCH_URL_PATHS = (
+    "url",
+    "canonical_url",
+    "canonicalUrl",
+    "source_url",
+    "sourceUrl",
+    "metadata.url",
+    "metadata.canonical_url",
+    "metadata.canonicalUrl",
+    "metadata.source_url",
+    "metadata.sourceUrl",
+)
+_RESEARCH_SOURCE_DOMAIN_PATHS = (
+    "source_domain",
+    "sourceDomain",
+    "domain",
+    "metadata.source_domain",
+    "metadata.sourceDomain",
+    "metadata.domain",
+)
+_RESEARCH_SNIPPET_PATHS = (
+    "snippet",
+    "summary",
+    "description",
+    "excerpt",
+    "metadata.snippet",
+    "metadata.summary",
+    "metadata.description",
+    "metadata.excerpt",
+    "metadata.text",
+    "text",
+    "content",
+)
+_RESEARCH_PUBLISHED_AT_PATHS = (
+    "published_at",
+    "publishedAt",
+    "publication_date",
+    "publicationDate",
+    "date_published",
+    "datePublished",
+    "metadata.published_at",
+    "metadata.publishedAt",
+    "metadata.publication_date",
+    "metadata.publicationDate",
+    "metadata.date_published",
+    "metadata.datePublished",
+)
+_RESEARCH_LOCATOR_PATHS = (
+    "locator",
+    "metadata.locator",
+    "metadata.position",
+    "metadata.section",
+)
 
 
 class MCPPulser(APIsPulser):
@@ -105,6 +178,31 @@ class MCPPulser(APIsPulser):
         if "arguments" in normalized:
             arguments = normalized.get("arguments")
             normalized["arguments"] = dict(arguments) if isinstance(arguments, Mapping) else {}
+
+        if "client_info" not in normalized and isinstance(normalized.get("clientInfo"), Mapping):
+            normalized["client_info"] = dict(normalized["clientInfo"])
+        if "client_info" in normalized:
+            client_info = normalized.get("client_info")
+            normalized["client_info"] = dict(client_info) if isinstance(client_info, Mapping) else {}
+
+        if "capabilities" in normalized:
+            capabilities = normalized.get("capabilities")
+            normalized["capabilities"] = dict(capabilities) if isinstance(capabilities, Mapping) else {}
+
+        if "initialize" in normalized:
+            initialize = normalized.get("initialize")
+            normalized["initialize"] = dict(initialize) if isinstance(initialize, Mapping) else {}
+
+        if "protocol_version" not in normalized and normalized.get("protocolVersion") is not None:
+            normalized["protocol_version"] = str(normalized["protocolVersion"])
+
+        if "response_normalization" not in normalized and isinstance(normalized.get("responseNormalization"), Mapping):
+            normalized["response_normalization"] = dict(normalized["responseNormalization"])
+        if "response_normalization" in normalized:
+            response_normalization = normalized.get("response_normalization")
+            normalized["response_normalization"] = (
+                dict(response_normalization) if isinstance(response_normalization, Mapping) else {}
+            )
         return normalized
 
     def _merge_mcp_config(self, *configs: Any) -> Dict[str, Any]:
@@ -268,6 +366,33 @@ class MCPPulser(APIsPulser):
         """Internal helper for call MCP tool sync."""
         return anyio.run(self._call_mcp_tool_async, mcp_config, tool_name, arguments)
 
+    def _build_http_initialize_params(self, mcp_config: Mapping[str, Any]) -> Dict[str, Any]:
+        """Internal helper to build initialize params for HTTP MCP servers."""
+        protocol_version = str(
+            mcp_config.get("protocol_version")
+            or mcp_config.get("protocolVersion")
+            or mcp_types.LATEST_PROTOCOL_VERSION
+        )
+
+        client_info = dict(_DEFAULT_MCP_CLIENT_INFO)
+        if isinstance(mcp_config.get("client_info"), Mapping):
+            client_info = self._deep_merge_dicts(client_info, dict(mcp_config["client_info"]))
+
+        capabilities = dict(_DEFAULT_MCP_CAPABILITIES)
+        if isinstance(mcp_config.get("capabilities"), Mapping):
+            capabilities = dict(mcp_config["capabilities"])
+
+        initialize_params: Dict[str, Any] = {
+            "protocolVersion": protocol_version,
+            "capabilities": capabilities,
+            "clientInfo": client_info,
+        }
+
+        if isinstance(mcp_config.get("initialize"), Mapping):
+            initialize_params = self._deep_merge_dicts(initialize_params, dict(mcp_config["initialize"]))
+
+        return initialize_params
+
     @staticmethod
     def _build_jsonrpc_message(method: str, *, params: Dict[str, Any] | None = None, request_id: str | None = None) -> Dict[str, Any]:
         """Internal helper to build the jsonrpc message."""
@@ -343,17 +468,7 @@ class MCPPulser(APIsPulser):
             if value is not None:
                 base_headers[str(key)] = str(value)
 
-        initialize_params = {
-            "protocolVersion": mcp_types.LATEST_PROTOCOL_VERSION,
-            "capabilities": {
-                "sampling": {},
-                "roots": {"listChanged": True},
-            },
-            "clientInfo": {
-                "name": "phemacast-mcp-pulser",
-                "version": "0.1.0",
-            },
-        }
+        initialize_params = self._build_http_initialize_params(mcp_config)
 
         async with httpx.AsyncClient(timeout=timeout, headers=base_headers) as client:
             init_response = await client.post(
@@ -368,7 +483,15 @@ class MCPPulser(APIsPulser):
             initialized_response = await client.post(url, json=initialized_payload, headers=session_headers or None)
             initialized_response.raise_for_status()
 
-            supported_versions = {str(value) for value in (1, mcp_types.LATEST_PROTOCOL_VERSION)}
+            supported_versions = {
+                str(value)
+                for value in (
+                    1,
+                    mcp_types.LATEST_PROTOCOL_VERSION,
+                    initialize_params.get("protocolVersion"),
+                )
+                if value not in (None, "")
+            }
             protocol_version = str((init_result or {}).get("protocolVersion") or "")
             if protocol_version and protocol_version not in supported_versions:
                 raise ValueError(f"Unsupported protocol version from the server: {protocol_version}")
@@ -491,6 +614,130 @@ class MCPPulser(APIsPulser):
 
         return result
 
+    @staticmethod
+    def _first_resolved_value(data: Mapping[str, Any], paths: Iterable[str]) -> Any:
+        """Return the first non-empty value resolved from a list of paths."""
+        for path in paths:
+            value = _resolve_path(data, str(path))
+            if value not in (None, "", [], {}):
+                return value
+        return None
+
+    @staticmethod
+    def _derive_source_domain(url: Any) -> str | None:
+        """Return a normalized source domain derived from a URL."""
+        if not isinstance(url, str):
+            return None
+        netloc = urlsplit(url.strip()).netloc.strip().lower()
+        if not netloc:
+            return None
+        netloc = netloc.split("@")[-1].split(":", 1)[0]
+        if netloc.startswith("www."):
+            netloc = netloc[4:]
+        return netloc or None
+
+    @staticmethod
+    def _coerce_snippet(value: Any, *, limit: int = 280) -> str | None:
+        """Return a trimmed snippet string suitable for search/fetch summaries."""
+        if not isinstance(value, str):
+            return None
+        text = value.strip()
+        if not text:
+            return None
+        if len(text) <= limit:
+            return text
+        return f"{text[: limit - 3].rstrip()}..."
+
+    def _normalize_research_source_item(self, item: Mapping[str, Any]) -> Dict[str, Any]:
+        """Normalize a search/fetch result into a stable research source shape."""
+        normalized = dict(item)
+        item_id = self._first_resolved_value(normalized, _RESEARCH_ID_PATHS)
+        title = self._first_resolved_value(normalized, _RESEARCH_TITLE_PATHS)
+        url = self._first_resolved_value(normalized, _RESEARCH_URL_PATHS)
+        source_domain = self._first_resolved_value(normalized, _RESEARCH_SOURCE_DOMAIN_PATHS) or self._derive_source_domain(url)
+        published_at = self._first_resolved_value(normalized, _RESEARCH_PUBLISHED_AT_PATHS)
+
+        snippet = self._coerce_snippet(self._first_resolved_value(normalized, _RESEARCH_SNIPPET_PATHS))
+        if not snippet and isinstance(normalized.get("text"), str):
+            snippet = self._coerce_snippet(normalized.get("text"))
+
+        for key, value in (
+            ("id", item_id),
+            ("title", title),
+            ("url", url),
+            ("source_domain", source_domain),
+            ("published_at", published_at),
+            ("snippet", snippet),
+        ):
+            if value not in (None, "", [], {}):
+                normalized[key] = value
+
+        citation: Dict[str, Any] = {}
+        raw_citation = normalized.get("citation")
+        if isinstance(raw_citation, Mapping):
+            citation.update(raw_citation)
+        metadata = normalized.get("metadata")
+        if isinstance(metadata, Mapping) and isinstance(metadata.get("citation"), Mapping):
+            citation.update(metadata["citation"])
+
+        locator = self._first_resolved_value(normalized, _RESEARCH_LOCATOR_PATHS)
+        for key, value in (
+            ("id", item_id),
+            ("title", title),
+            ("url", url),
+            ("source_domain", source_domain),
+            ("published_at", published_at),
+            ("locator", locator),
+        ):
+            if value not in (None, "", [], {}) and key not in citation:
+                citation[key] = value
+
+        if citation:
+            normalized["citation"] = citation
+
+        return normalized
+
+    def _normalize_research_sources(self, data: Any) -> Any:
+        """Normalize search/fetch payloads into a stable research source shape."""
+        if isinstance(data, list):
+            return [
+                self._normalize_research_source_item(item) if isinstance(item, Mapping) else item
+                for item in data
+            ]
+
+        if not isinstance(data, Mapping):
+            return data
+
+        normalized = dict(data)
+
+        for key in ("results", "items", "sources"):
+            value = normalized.get(key)
+            if isinstance(value, list):
+                normalized[key] = self._normalize_research_sources(value)
+
+        if isinstance(normalized.get("results"), list) and "sources" not in normalized:
+            normalized["sources"] = list(normalized["results"])
+
+        if isinstance(normalized.get("items"), list) and "sources" not in normalized:
+            normalized["sources"] = list(normalized["items"])
+
+        if any(isinstance(normalized.get(key), list) for key in ("results", "items", "sources")):
+            return normalized
+
+        return self._normalize_research_source_item(normalized)
+
+    def _apply_response_normalization(self, data: Any, mcp_config: Mapping[str, Any]) -> Any:
+        """Apply optional config-driven response normalization."""
+        normalization = mcp_config.get("response_normalization")
+        if not isinstance(normalization, Mapping):
+            return data
+
+        kind = str(normalization.get("kind") or normalization.get("type") or "").strip().lower()
+        if kind in {"research_source", "research_sources"}:
+            return self._normalize_research_sources(data)
+
+        return data
+
     def _redact_value(self, value: Any, key_hint: str | None = None) -> Any:
         """Internal helper to return the redact value."""
         if key_hint and self._is_sensitive_key(key_hint):
@@ -527,6 +774,11 @@ class MCPPulser(APIsPulser):
                     "headers": mcp_config.get("headers"),
                     "cwd": mcp_config.get("cwd"),
                     "root_path": mcp_config.get("root_path"),
+                    "protocol_version": mcp_config.get("protocol_version"),
+                    "client_info": mcp_config.get("client_info"),
+                    "capabilities": mcp_config.get("capabilities"),
+                    "initialize": mcp_config.get("initialize"),
+                    "response_normalization": mcp_config.get("response_normalization"),
                 }
             ),
         }
@@ -544,6 +796,8 @@ class MCPPulser(APIsPulser):
         if isinstance(data, Mapping) and data.get("error"):
             self.last_fetch_debug["extracted_payload"] = data
             return dict(data)
+
+        data = self._apply_response_normalization(data, mcp_config)
 
         root_path = mcp_config.get("root_path")
         if root_path:

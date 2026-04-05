@@ -1,0 +1,301 @@
+{
+  "id": "ef0c671b-37be-5630-8927-ec844ba98aea",
+  "agent_id": "ef0c671b-37be-5630-8927-ec844ba98aea",
+  "name": "object_load",
+  "type": "Pulse",
+  "description": "Load text, JSON, or binary content from a logical bucket.",
+  "owner": "Plaza",
+  "address": "",
+  "meta": {
+    "pulse_id": "urn:plaza:pulse:object.load",
+    "pulse_address": "ef0c671b-37be-5630-8927-ec844ba98aea",
+    "pulse_definition": {
+      "pds_version": "0.1.0",
+      "resource_type": "pulse_definition",
+      "id": "urn:plaza:pulse:object.load",
+      "version": "1.0.0",
+      "name": "object_load",
+      "title": "Object Load",
+      "description": "Load text, JSON, or binary content from a logical bucket.",
+      "pulse_class": "fact",
+      "status": "stable",
+      "concept": {
+        "definition": "Load text, JSON, or binary content from a logical bucket."
+      },
+      "interface": {
+        "schema_language": "json-schema-2020-12",
+        "request_schema": {
+          "type": "object",
+          "properties": {
+            "bucket_name": {
+              "type": "string"
+            },
+            "object_key": {
+              "type": "string"
+            },
+            "response_format": {
+              "type": "string",
+              "enum": [
+                "auto",
+                "json",
+                "text",
+                "base64"
+              ],
+              "default": "auto"
+            }
+          },
+          "required": [
+            "bucket_name",
+            "object_key"
+          ]
+        },
+        "response_schema": {
+          "type": "object",
+          "properties": {
+            "bucket_name": {
+              "type": "string"
+            },
+            "object_key": {
+              "type": "string"
+            },
+            "content_type": {
+              "type": "string"
+            },
+            "size_bytes": {
+              "type": "integer"
+            },
+            "etag": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "data": {},
+            "base64_data": {
+              "type": "string",
+              "contentEncoding": "base64"
+            }
+          },
+          "required": [
+            "bucket_name",
+            "object_key",
+            "etag"
+          ]
+        }
+      }
+    },
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "bucket_name": {
+          "type": "string"
+        },
+        "object_key": {
+          "type": "string"
+        },
+        "response_format": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "json",
+            "text",
+            "base64"
+          ],
+          "default": "auto"
+        }
+      },
+      "required": [
+        "bucket_name",
+        "object_key"
+      ]
+    },
+    "output_schema": {
+      "type": "object",
+      "properties": {
+        "bucket_name": {
+          "type": "string"
+        },
+        "object_key": {
+          "type": "string"
+        },
+        "content_type": {
+          "type": "string"
+        },
+        "size_bytes": {
+          "type": "integer"
+        },
+        "etag": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "data": {},
+        "base64_data": {
+          "type": "string",
+          "contentEncoding": "base64"
+        }
+      },
+      "required": [
+        "bucket_name",
+        "object_key",
+        "etag"
+      ]
+    },
+    "description": "Load text, JSON, or binary content from a logical bucket.",
+    "examples": []
+  },
+  "card": {
+    "name": "object_load",
+    "description": "Load text, JSON, or binary content from a logical bucket.",
+    "pit_type": "Pulse",
+    "owner": "Plaza",
+    "tags": [],
+    "meta": {
+      "pulse_id": "urn:plaza:pulse:object.load",
+      "pulse_address": "ef0c671b-37be-5630-8927-ec844ba98aea",
+      "pulse_definition": {
+        "pds_version": "0.1.0",
+        "resource_type": "pulse_definition",
+        "id": "urn:plaza:pulse:object.load",
+        "version": "1.0.0",
+        "name": "object_load",
+        "title": "Object Load",
+        "description": "Load text, JSON, or binary content from a logical bucket.",
+        "pulse_class": "fact",
+        "status": "stable",
+        "concept": {
+          "definition": "Load text, JSON, or binary content from a logical bucket."
+        },
+        "interface": {
+          "schema_language": "json-schema-2020-12",
+          "request_schema": {
+            "type": "object",
+            "properties": {
+              "bucket_name": {
+                "type": "string"
+              },
+              "object_key": {
+                "type": "string"
+              },
+              "response_format": {
+                "type": "string",
+                "enum": [
+                  "auto",
+                  "json",
+                  "text",
+                  "base64"
+                ],
+                "default": "auto"
+              }
+            },
+            "required": [
+              "bucket_name",
+              "object_key"
+            ]
+          },
+          "response_schema": {
+            "type": "object",
+            "properties": {
+              "bucket_name": {
+                "type": "string"
+              },
+              "object_key": {
+                "type": "string"
+              },
+              "content_type": {
+                "type": "string"
+              },
+              "size_bytes": {
+                "type": "integer"
+              },
+              "etag": {
+                "type": "string"
+              },
+              "text": {
+                "type": "string"
+              },
+              "data": {},
+              "base64_data": {
+                "type": "string",
+                "contentEncoding": "base64"
+              }
+            },
+            "required": [
+              "bucket_name",
+              "object_key",
+              "etag"
+            ]
+          }
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "bucket_name": {
+            "type": "string"
+          },
+          "object_key": {
+            "type": "string"
+          },
+          "response_format": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "json",
+              "text",
+              "base64"
+            ],
+            "default": "auto"
+          }
+        },
+        "required": [
+          "bucket_name",
+          "object_key"
+        ]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "bucket_name": {
+            "type": "string"
+          },
+          "object_key": {
+            "type": "string"
+          },
+          "content_type": {
+            "type": "string"
+          },
+          "size_bytes": {
+            "type": "integer"
+          },
+          "etag": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "data": {},
+          "base64_data": {
+            "type": "string",
+            "contentEncoding": "base64"
+          }
+        },
+        "required": [
+          "bucket_name",
+          "object_key",
+          "etag"
+        ]
+      },
+      "description": "Load text, JSON, or binary content from a logical bucket.",
+      "examples": []
+    },
+    "pit_address": {
+      "pit_id": "ef0c671b-37be-5630-8927-ec844ba98aea",
+      "plazas": [
+        "http://127.0.0.1:8011"
+      ]
+    }
+  },
+  "updated_at": "2026-04-04T10:28:14.839140+00:00"
+}

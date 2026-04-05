@@ -1,5 +1,17 @@
 # Prompits Example Configs
 
+## Translations
+
+- [English](README.md)
+- [繁體中文](README.zh-Hant.md)
+- [简体中文](README.zh-Hans.md)
+- [Español](README.es.md)
+- [Français](README.fr.md)
+- [Italiano](README.it.md)
+- [Deutsch](README.de.md)
+- [日本語](README.ja.md)
+- [한국어](README.ko.md)
+
 These files are minimal local examples for the current Prompits runtime. They are meant for open source documentation, demos, and first-run onboarding.
 
 ## Files

@@ -1,0 +1,77 @@
+{
+  "pulse_id": "urn:plaza:pulse:join.team",
+  "pulse_name": "join_team",
+  "pulse_address": "plaza://pulse/join_team",
+  "pulse_definition": {
+    "pds_version": "0.1.0",
+    "resource_type": "pulse_definition",
+    "id": "urn:plaza:pulse:join.team",
+    "version": "1.0.0",
+    "name": "join_team",
+    "title": "Join Team",
+    "description": "Join one BossPulser team manifest and prepare one local manager environment.",
+    "pulse_class": "fact",
+    "status": "stable",
+    "concept": {
+      "definition": "Join one BossPulser team manifest and prepare one local manager environment."
+    },
+    "interface": {
+      "schema_language": "json-schema-2020-12",
+      "request_schema": {
+        "type": "object",
+        "properties": {
+          "team_manifest": {
+            "type": "object"
+          },
+          "manager_name": {
+            "type": "string"
+          },
+          "manager_port": {
+            "type": "integer"
+          },
+          "worker_count": {
+            "type": "integer"
+          }
+        }
+      },
+      "response_schema": {}
+    },
+    "test_data": {
+      "team_manifest": {
+        "api_version": "phemacast.team_manifest.v1",
+        "team_name": "Map Runner",
+        "team_slug": "map-runner",
+        "party": "Phemacast",
+        "plaza_url": "http://127.0.0.1:8011"
+      },
+      "manager_name": "MapRunnerManagerEast",
+      "manager_port": 8270,
+      "worker_count": 2
+    }
+  },
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "team_manifest": {
+        "type": "object"
+      },
+      "manager_name": {
+        "type": "string"
+      },
+      "manager_port": {
+        "type": "integer"
+      },
+      "worker_count": {
+        "type": "integer"
+      }
+    }
+  },
+  "pulser_id": "f3d360fb-7e8e-4e6c-a9fa-ede41d8d6228",
+  "pulser_name": "ManagerPulser",
+  "pulser_address": "f3d360fb-7e8e-4e6c-a9fa-ede41d8d6228",
+  "status": "stable",
+  "pulse_directory_id": "0e0243c9-87de-5607-80e2-a1fe36da3f52",
+  "pulser_directory_id": "f3d360fb-7e8e-4e6c-a9fa-ede41d8d6228",
+  "id": "3573f672-bf4b-56f4-8373-66fbb35b4be6",
+  "updated_at": "2026-04-04T10:28:25.283842+00:00"
+}

@@ -1,0 +1,27 @@
+{
+  "name": "DemoFinancialBriefingPulser",
+  "type": "attas.pulsers.financial_briefing_pulser.FinancialBriefingPulser",
+  "host": "127.0.0.1",
+  "port": 8271,
+  "plaza_url": "http://127.0.0.1:8272",
+  "role": "pulser",
+  "description": "Attas finance briefing step pulser for MapPhemar and Personal Agent workflow editing.",
+  "tags": [
+    "demo",
+    "attas",
+    "finance",
+    "briefing",
+    "workflow",
+    "phema",
+    "map-phemar",
+    "personal-agent"
+  ],
+  "pools": [
+    {
+      "type": "FileSystemPool",
+      "name": "demo_financial_briefing_agent_pool",
+      "description": "Metadata and practice storage for the finance briefing pulser demo.",
+      "root_path": "demos/pulsers/finance-briefings/storage/agent-pool"
+    }
+  ]
+}

@@ -17,23 +17,23 @@
     "job_capabilities": [
       {
         "name": "security_master",
-        "description": "Create a demo security master row for a symbol."
+        "description": "Refresh the full U.S. listed security master from Nasdaq Trader."
       },
       {
         "name": "daily_price",
-        "description": "Create a demo daily price row for a symbol."
+        "description": "Fetch live Yahoo Finance end-of-day prices for the requested symbol."
       },
       {
         "name": "fundamentals",
-        "description": "Create a demo fundamentals row for a symbol."
+        "description": "Refresh SEC raw archives and map the requested company into ads_fundamentals."
       },
       {
         "name": "financial_statements",
-        "description": "Create a demo financial statement row for a symbol."
+        "description": "Refresh SEC raw archives and map the requested company into ads_financial_statements."
       },
       {
         "name": "news",
-        "description": "Create a demo news row for a symbol."
+        "description": "Fetch live SEC, CFTC, and BLS RSS feeds into ads_news."
       }
     ],
     "auto_register": false

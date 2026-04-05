@@ -1,0 +1,85 @@
+{
+  "pulse_id": "urn:plaza:pulse:create.team",
+  "pulse_name": "create_team",
+  "pulse_address": "ac4b2d37-15e9-551a-b4a2-f2cdcb0b0581",
+  "pulse_definition": {
+    "pds_version": "0.1.0",
+    "resource_type": "pulse_definition",
+    "id": "urn:plaza:pulse:create.team",
+    "version": "1.0.0",
+    "name": "create_team",
+    "title": "Create Team",
+    "description": "Generate boss, manager, and worker teamwork configs for a new Phemacast team.",
+    "pulse_class": "fact",
+    "status": "stable",
+    "concept": {
+      "definition": "Generate boss, manager, and worker teamwork configs for a new Phemacast team."
+    },
+    "interface": {
+      "schema_language": "json-schema-2020-12",
+      "request_schema": {
+        "type": "object",
+        "properties": {
+          "team_name": {
+            "type": "string"
+          },
+          "party": {
+            "type": "string"
+          },
+          "plaza_url": {
+            "type": "string"
+          },
+          "worker_count": {
+            "type": "integer"
+          },
+          "job_capabilities": {
+            "type": "array"
+          }
+        }
+      },
+      "response_schema": {}
+    },
+    "test_data": {
+      "team_name": "Map Runner",
+      "party": "Phemacast",
+      "plaza_url": "http://127.0.0.1:8011",
+      "worker_count": 2,
+      "job_capabilities": [
+        {
+          "name": "run map",
+          "type": "phemacast.jobcaps.map_jobcap:RunMapJobCap",
+          "description": "Execute a stored map phema through MapCastr.",
+          "default_priority": 100
+        }
+      ]
+    }
+  },
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "team_name": {
+        "type": "string"
+      },
+      "party": {
+        "type": "string"
+      },
+      "plaza_url": {
+        "type": "string"
+      },
+      "worker_count": {
+        "type": "integer"
+      },
+      "job_capabilities": {
+        "type": "array"
+      }
+    }
+  },
+  "pulser_id": "5444b86e-e2d4-4e5b-b4c9-139b10b6871b",
+  "pulser_name": "BossPulser",
+  "pulser_address": "5444b86e-e2d4-4e5b-b4c9-139b10b6871b",
+  "status": "stable",
+  "pulse_directory_id": "ac4b2d37-15e9-551a-b4a2-f2cdcb0b0581",
+  "pulser_directory_id": "5444b86e-e2d4-4e5b-b4c9-139b10b6871b",
+  "id": "adafc54d-b2a5-5d24-bae6-90691e4ec6da",
+  "updated_at": "2026-04-04T10:28:13.060912+00:00"
+}

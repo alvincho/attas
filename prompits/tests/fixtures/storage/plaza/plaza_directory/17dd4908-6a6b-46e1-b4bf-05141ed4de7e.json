@@ -1,0 +1,615 @@
+{
+  "id": "17dd4908-6a6b-46e1-b4bf-05141ed4de7e",
+  "agent_id": "17dd4908-6a6b-46e1-b4bf-05141ed4de7e",
+  "name": "CollectiblesDispatcher",
+  "type": "Agent",
+  "description": "Queue-based collectibles dispatcher for catalog ingestion jobs.",
+  "owner": "CollectiblesDispatcher",
+  "address": "http://127.0.0.1:8066",
+  "meta": {
+    "dispatcher_tables": [
+      "dispatcher_jobs",
+      "dispatcher_worker_capabilities",
+      "dispatcher_worker_history",
+      "dispatcher_job_results",
+      "dispatcher_raw_payloads"
+    ],
+    "job_capabilities": [
+      {
+        "name": "UPU WNS Catalog",
+        "description": "Scan the UPU WNS catalog and enqueue resumable per-page jobs without duplicating downstream work."
+      },
+      {
+        "name": "UPU WNS Page",
+        "description": "Fetch one UPU WNS result page and enqueue listing jobs for the stamps found on that page."
+      },
+      {
+        "name": "UPU WNS Listing",
+        "description": "Fetch one UPU WNS stamp detail page and write the catalog item into the collectibles database."
+      },
+      {
+        "name": "UPU WNS Item Image",
+        "description": "Download one UPU WNS stamp image to local media storage and backfill the saved path into the database."
+      }
+    ],
+    "party": "Collectible",
+    "direct_auth_token": "dispatcher-local-direct-token",
+    "accepts_inbound_from_plaza": true,
+    "accepts_direct_call": true,
+    "connectivity_mode": "plaza-forward"
+  },
+  "card": {
+    "name": "CollectiblesDispatcher",
+    "role": "generic",
+    "tags": [
+      "prompits",
+      "dispatcher",
+      "queue"
+    ],
+    "host": "127.0.0.1",
+    "port": 8066,
+    "address": "http://127.0.0.1:8066",
+    "party": "Collectible",
+    "description": "Queue-based collectibles dispatcher for catalog ingestion jobs.",
+    "meta": {
+      "dispatcher_tables": [
+        "dispatcher_jobs",
+        "dispatcher_worker_capabilities",
+        "dispatcher_worker_history",
+        "dispatcher_job_results",
+        "dispatcher_raw_payloads"
+      ],
+      "job_capabilities": [
+        {
+          "name": "UPU WNS Catalog",
+          "description": "Scan the UPU WNS catalog and enqueue resumable per-page jobs without duplicating downstream work."
+        },
+        {
+          "name": "UPU WNS Page",
+          "description": "Fetch one UPU WNS result page and enqueue listing jobs for the stamps found on that page."
+        },
+        {
+          "name": "UPU WNS Listing",
+          "description": "Fetch one UPU WNS stamp detail page and write the catalog item into the collectibles database."
+        },
+        {
+          "name": "UPU WNS Item Image",
+          "description": "Download one UPU WNS stamp image to local media storage and backfill the saved path into the database."
+        }
+      ],
+      "party": "Collectible",
+      "direct_auth_token": "dispatcher-local-direct-token",
+      "accepts_inbound_from_plaza": true,
+      "accepts_direct_call": true,
+      "connectivity_mode": "plaza-forward"
+    },
+    "pit_type": "Agent",
+    "accepts_inbound_from_plaza": true,
+    "accepts_direct_call": true,
+    "connectivity_mode": "plaza-forward",
+    "pit_address": {
+      "pit_id": "17dd4908-6a6b-46e1-b4bf-05141ed4de7e",
+      "plazas": [
+        "http://127.0.0.1:8011"
+      ]
+    },
+    "practices": [
+      {
+        "name": "Pool Query",
+        "description": "Execute a SQL query against the PostgreSQL pool.",
+        "id": "pool-query",
+        "cost": 0,
+        "tags": [
+          "pool",
+          "postgres",
+          "storage",
+          "query"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {
+          "query": {
+            "type": "string",
+            "description": "SQL query string."
+          },
+          "params": {
+            "type": "object",
+            "description": "Optional query parameters."
+          }
+        },
+        "path": "/pool_query"
+      },
+      {
+        "name": "Pool Get Table Data",
+        "description": "Read rows from a PostgreSQL table.",
+        "id": "pool-get-table-data",
+        "cost": 0,
+        "tags": [
+          "pool",
+          "postgres",
+          "storage",
+          "read"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {
+          "table_name": {
+            "type": "string",
+            "description": "Logical table name."
+          },
+          "id_or_where": {
+            "type": "object",
+            "description": "Optional id or equality filter."
+          },
+          "table_schema": {
+            "type": "object",
+            "description": "Optional table schema for decoding."
+          }
+        },
+        "path": "/pool_get_table_data"
+      },
+      {
+        "name": "Pool Store Memory",
+        "description": "Store one memory record in the PostgreSQL pool.",
+        "id": "pool-store-memory",
+        "cost": 0,
+        "tags": [
+          "pool",
+          "postgres",
+          "memory",
+          "store"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {
+          "content": {
+            "type": "string",
+            "description": "Memory content."
+          },
+          "memory_id": {
+            "type": "string",
+            "description": "Optional stable memory id."
+          },
+          "metadata": {
+            "type": "object",
+            "description": "Optional metadata payload."
+          },
+          "tags": {
+            "type": "array",
+            "description": "Optional string tags."
+          },
+          "memory_type": {
+            "type": "string",
+            "description": "Memory category."
+          },
+          "table_name": {
+            "type": "string",
+            "description": "Optional override table name."
+          }
+        },
+        "path": "/pool_store_memory"
+      },
+      {
+        "name": "Pool Search Memory",
+        "description": "Search stored memory records in the PostgreSQL pool.",
+        "id": "pool-search-memory",
+        "cost": 0,
+        "tags": [
+          "pool",
+          "postgres",
+          "memory",
+          "search"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {
+          "query": {
+            "type": "string",
+            "description": "Case-insensitive search text."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum number of matches."
+          },
+          "table_name": {
+            "type": "string",
+            "description": "Optional override table name."
+          }
+        },
+        "path": "/pool_search_memory"
+      },
+      {
+        "name": "Pool Disconnect",
+        "description": "Close the PostgreSQL pool connection.",
+        "id": "pool-disconnect",
+        "cost": 0,
+        "tags": [
+          "pool",
+          "postgres",
+          "storage",
+          "disconnect"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {},
+        "path": "/pool_disconnect"
+      },
+      {
+        "name": "Pool Create Table",
+        "description": "Create a table in the PostgreSQL pool.",
+        "id": "pool-create-table",
+        "cost": 0,
+        "tags": [
+          "pool",
+          "postgres",
+          "storage",
+          "create-table"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {
+          "table_name": {
+            "type": "string",
+            "description": "Logical table name."
+          },
+          "schema": {
+            "type": "object",
+            "description": "Table schema definition."
+          }
+        },
+        "path": "/pool_create_table"
+      },
+      {
+        "name": "Pool Table Exists",
+        "description": "Check whether a PostgreSQL table exists.",
+        "id": "pool-table-exists",
+        "cost": 0,
+        "tags": [
+          "pool",
+          "postgres",
+          "storage",
+          "table-exists"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {
+          "table_name": {
+            "type": "string",
+            "description": "Logical table name."
+          }
+        },
+        "path": "/pool_table_exists"
+      },
+      {
+        "name": "Pool Connect",
+        "description": "Connect the PostgreSQL pool to its database.",
+        "id": "pool-connect",
+        "cost": 0,
+        "tags": [
+          "pool",
+          "postgres",
+          "storage",
+          "connect"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {},
+        "path": "/pool_connect"
+      },
+      {
+        "name": "Pool Insert",
+        "description": "Insert or upsert one row in the PostgreSQL pool.",
+        "id": "pool-insert",
+        "cost": 0,
+        "tags": [
+          "pool",
+          "postgres",
+          "storage",
+          "insert"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {
+          "table_name": {
+            "type": "string",
+            "description": "Logical table name."
+          },
+          "data": {
+            "type": "object",
+            "description": "Row payload to persist."
+          }
+        },
+        "path": "/pool_insert"
+      },
+      {
+        "name": "Post Dispatcher Job Result",
+        "description": "Accept a JobResult payload, persist outputs, and update the queue.",
+        "id": "dispatcher-post-job-result",
+        "cost": 0,
+        "tags": [
+          "prompits",
+          "dispatcher",
+          "results"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {},
+        "path": "/dispatcher_post_job_result"
+      },
+      {
+        "name": "Control Dispatcher Job",
+        "description": "Pause, stop, resume, cancel, or delete a queued job.",
+        "id": "dispatcher-control-job",
+        "cost": 0,
+        "tags": [
+          "prompits",
+          "dispatcher",
+          "queue",
+          "control"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {},
+        "path": "/dispatcher_control_job"
+      },
+      {
+        "name": "List Dispatcher DB Tables",
+        "description": "List available tables in the dispatcher database.",
+        "id": "dispatcher-db-list-tables",
+        "cost": 0,
+        "tags": [
+          "prompits",
+          "dispatcher",
+          "database",
+          "read"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {},
+        "path": "/dispatcher_db_list_tables"
+      },
+      {
+        "name": "Query Dispatcher DB",
+        "description": "Run a read-only SQL query against the dispatcher database.",
+        "id": "dispatcher-db-query",
+        "cost": 0,
+        "tags": [
+          "prompits",
+          "dispatcher",
+          "database",
+          "sql",
+          "read"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {},
+        "path": "/dispatcher_db_query"
+      },
+      {
+        "name": "Report Dispatcher Job",
+        "description": "Compatibility alias for PostDispatcherJobResult.",
+        "id": "dispatcher-report-job",
+        "cost": 0,
+        "tags": [
+          "prompits",
+          "dispatcher",
+          "results"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {},
+        "path": "/dispatcher_report_job"
+      },
+      {
+        "name": "Submit Dispatcher Job",
+        "description": "Queue a job for dispatcher workers.",
+        "id": "dispatcher-submit-job",
+        "cost": 0,
+        "tags": [
+          "prompits",
+          "dispatcher",
+          "queue"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {},
+        "path": "/dispatcher_submit_job"
+      },
+      {
+        "name": "Register Dispatcher Worker",
+        "description": "Upsert worker capabilities and heartbeat metadata for the queue.",
+        "id": "dispatcher-register-worker",
+        "cost": 0,
+        "tags": [
+          "prompits",
+          "dispatcher",
+          "workers"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {},
+        "path": "/dispatcher_register_worker"
+      },
+      {
+        "name": "Get Dispatcher Job",
+        "description": "Claim the next queued job and return it as a JobDetail payload.",
+        "id": "dispatcher-get-job",
+        "cost": 0,
+        "tags": [
+          "prompits",
+          "dispatcher",
+          "queue"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {},
+        "path": "/dispatcher_get_job"
+      },
+      {
+        "name": "Preview Dispatcher DB Table",
+        "description": "Preview rows from one dispatcher table.",
+        "id": "dispatcher-db-preview-table",
+        "cost": 0,
+        "tags": [
+          "prompits",
+          "dispatcher",
+          "database",
+          "read"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {},
+        "path": "/dispatcher_db_preview_table"
+      },
+      {
+        "name": "Mailbox",
+        "description": "Default inbound message endpoint for generic agent delivery.",
+        "id": "mailbox",
+        "cost": 0,
+        "tags": [
+          "message",
+          "mailbox"
+        ],
+        "examples": [
+          "POST /mailbox {'sender':'alice','content':'hello','msg_type':'message'}"
+        ],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {
+          "sender": {
+            "type": "string",
+            "description": "Sending agent name or id."
+          },
+          "receiver": {
+            "type": "string",
+            "description": "Target agent name or id."
+          },
+          "content": {
+            "type": "object",
+            "description": "Message payload."
+          },
+          "msg_type": {
+            "type": "string",
+            "description": "Message routing key."
+          }
+        },
+        "path": "/mailbox"
+      }
+    ],
+    "agent_id": "17dd4908-6a6b-46e1-b4bf-05141ed4de7e"
+  },
+  "updated_at": "2026-04-04T10:28:07.615225+00:00"
+}

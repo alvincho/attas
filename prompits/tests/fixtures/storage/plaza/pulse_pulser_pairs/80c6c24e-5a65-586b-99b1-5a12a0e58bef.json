@@ -1,0 +1,63 @@
+{
+  "pulse_id": "urn:plaza:pulse:discover.teams",
+  "pulse_name": "discover_teams",
+  "pulse_address": "plaza://pulse/discover_teams",
+  "pulse_definition": {
+    "pds_version": "0.1.0",
+    "resource_type": "pulse_definition",
+    "id": "urn:plaza:pulse:discover.teams",
+    "version": "1.0.0",
+    "name": "discover_teams",
+    "title": "Discover Teams",
+    "description": "Discover teamwork managers and associated workers from Plaza.",
+    "pulse_class": "fact",
+    "status": "stable",
+    "concept": {
+      "definition": "Discover teamwork managers and associated workers from Plaza."
+    },
+    "interface": {
+      "schema_language": "json-schema-2020-12",
+      "request_schema": {
+        "type": "object",
+        "properties": {
+          "party": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "include_workers": {
+            "type": "boolean"
+          }
+        }
+      },
+      "response_schema": {}
+    },
+    "test_data": {
+      "party": "Phemacast",
+      "include_workers": true
+    }
+  },
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "party": {
+        "type": "string"
+      },
+      "name": {
+        "type": "string"
+      },
+      "include_workers": {
+        "type": "boolean"
+      }
+    }
+  },
+  "pulser_id": "f3d360fb-7e8e-4e6c-a9fa-ede41d8d6228",
+  "pulser_name": "ManagerPulser",
+  "pulser_address": "f3d360fb-7e8e-4e6c-a9fa-ede41d8d6228",
+  "status": "stable",
+  "pulse_directory_id": "dbdaa1f3-0826-568c-bc67-ec7040d358e0",
+  "pulser_directory_id": "f3d360fb-7e8e-4e6c-a9fa-ede41d8d6228",
+  "id": "80c6c24e-5a65-586b-99b1-5a12a0e58bef",
+  "updated_at": "2026-04-04T10:28:25.283764+00:00"
+}

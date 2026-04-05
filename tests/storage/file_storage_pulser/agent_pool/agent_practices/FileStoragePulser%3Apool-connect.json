@@ -1,6 +1,6 @@
 {
-  "id": "FileStoragePulser:pool-connect",
-  "agent_name": "FileStoragePulser",
+  "id": "SystemPulser:pool-connect",
+  "agent_name": "SystemPulser",
   "practice_id": "pool-connect",
   "practice_name": "Pool Connect",
   "practice_description": "Initialize the filesystem pool root.",
@@ -27,5 +27,5 @@
     "path": "/pool_connect"
   },
   "is_deleted": false,
-  "updated_at": "2026-04-03T03:54:34.589686+00:00"
+  "updated_at": "2026-04-04T06:56:56.303431+00:00"
 }

@@ -1,0 +1,616 @@
+{
+  "id": "finance-research-roundup-notebooklm-diagram",
+  "phema_id": "finance-research-roundup-notebooklm-diagram",
+  "name": "Finance Research Roundup Workflow Diagram",
+  "description": "Run the research roundup as a stepwise MapPhemar workflow using Attas-owned finance briefing pulses.",
+  "owner": "FinMAS demos",
+  "address": "plaza://phema/finance-research-roundup-notebooklm-diagram",
+  "tags": [
+    "demo",
+    "diagram",
+    "map-phemar",
+    "finance",
+    "briefing",
+    "research",
+    "notebooklm",
+    "phema"
+  ],
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "subject": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "object"
+          }
+        ]
+      },
+      "search_results": {
+        "type": "object"
+      },
+      "fetched_documents": {
+        "type": "array"
+      },
+      "watchlist": {
+        "type": "array"
+      },
+      "analysis": {
+        "type": "object"
+      },
+      "as_of": {
+        "type": "string"
+      },
+      "title": {
+        "type": "string"
+      },
+      "owner": {
+        "type": "string"
+      },
+      "output_dir": {
+        "type": "string"
+      },
+      "include_pdf": {
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "subject"
+    ]
+  },
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "briefing_payload": {
+        "type": "object"
+      },
+      "briefing_phema": {
+        "type": "object"
+      },
+      "notebooklm_pack": {
+        "type": "object"
+      }
+    },
+    "required": [
+      "briefing_payload",
+      "briefing_phema",
+      "notebooklm_pack"
+    ]
+  },
+  "sections": [
+    {
+      "name": "Flow",
+      "description": "Diagram-backed finance workflow lane for briefing production, report publication, and NotebookLM export.",
+      "modifier": "",
+      "content": [
+        {
+          "type": "text",
+          "text": "Input -> Prepare Research Context -> Sources -> Citations/Facts/Risks/Catalysts/Conflicts -> Takeaways/Open Questions/Summary -> Assemble Briefing -> Report Phema + NotebookLM Pack -> Output"
+        }
+      ]
+    }
+  ],
+  "resolution_mode": "dynamic",
+  "meta": {
+    "builder": "MapPhemar",
+    "kind": "diagram",
+    "resolution_mode": "dynamic",
+    "map_phemar": {
+      "version": 1,
+      "diagram": {
+        "plazaUrl": "http://127.0.0.1:8266",
+        "showGrid": true,
+        "inspectorWidth": 320,
+        "expandedSourcePaths": [],
+        "nextNodeIndex": 16,
+        "nextEdgeIndex": 41,
+        "nodes": [
+          {
+            "id": "mind-boundary-input",
+            "role": "input",
+            "type": "pill",
+            "title": "Input",
+            "x": 8,
+            "y": 62,
+            "w": 16,
+            "h": 10,
+            "outputSchema": {
+              "type": "object"
+            },
+            "paramsText": "{}"
+          },
+          {
+            "id": "node-prepare-context",
+            "type": "rectangle",
+            "title": "Prepare Research Context",
+            "subtitle": "DemoFinancialBriefingPulser / prepare_finance_briefing_context",
+            "x": 30,
+            "y": 56,
+            "w": 24,
+            "h": 14,
+            "pulserMode": "specific",
+            "pulserName": "DemoFinancialBriefingPulser",
+            "pulserAddress": "http://127.0.0.1:8271",
+            "practiceId": "get_pulse_data",
+            "pulseName": "prepare_finance_briefing_context",
+            "pulseAddress": "plaza://pulse/attas_finance_prepare_finance_briefing_context",
+            "inputSchema": {},
+            "outputSchema": {},
+            "paramsText": "{\n  \"workflow_name\": \"research_roundup\"\n}"
+          },
+          {
+            "id": "node-build-sources",
+            "type": "rectangle",
+            "title": "Build Sources",
+            "subtitle": "DemoFinancialBriefingPulser / build_finance_source_bundle",
+            "x": 58,
+            "y": 56,
+            "w": 22,
+            "h": 14,
+            "pulserMode": "specific",
+            "pulserName": "DemoFinancialBriefingPulser",
+            "pulserAddress": "http://127.0.0.1:8271",
+            "practiceId": "get_pulse_data",
+            "pulseName": "build_finance_source_bundle",
+            "pulseAddress": "plaza://pulse/attas_finance_build_finance_source_bundle",
+            "inputSchema": {},
+            "outputSchema": {}
+          },
+          {
+            "id": "node-build-citations",
+            "type": "rectangle",
+            "title": "Build Citations",
+            "subtitle": "DemoFinancialBriefingPulser / build_finance_citations",
+            "x": 86,
+            "y": 26,
+            "w": 22,
+            "h": 12,
+            "pulserMode": "specific",
+            "pulserName": "DemoFinancialBriefingPulser",
+            "pulserAddress": "http://127.0.0.1:8271",
+            "practiceId": "get_pulse_data",
+            "pulseName": "build_finance_citations",
+            "pulseAddress": "plaza://pulse/attas_finance_build_finance_citations",
+            "inputSchema": {},
+            "outputSchema": {}
+          },
+          {
+            "id": "node-build-facts",
+            "type": "rectangle",
+            "title": "Build Facts",
+            "subtitle": "DemoFinancialBriefingPulser / build_finance_facts",
+            "x": 86,
+            "y": 46,
+            "w": 22,
+            "h": 12,
+            "pulserMode": "specific",
+            "pulserName": "DemoFinancialBriefingPulser",
+            "pulserAddress": "http://127.0.0.1:8271",
+            "practiceId": "get_pulse_data",
+            "pulseName": "build_finance_facts",
+            "pulseAddress": "plaza://pulse/attas_finance_build_finance_facts",
+            "inputSchema": {},
+            "outputSchema": {}
+          },
+          {
+            "id": "node-build-risks",
+            "type": "rectangle",
+            "title": "Build Risks",
+            "subtitle": "DemoFinancialBriefingPulser / build_finance_risks",
+            "x": 86,
+            "y": 64,
+            "w": 22,
+            "h": 12,
+            "pulserMode": "specific",
+            "pulserName": "DemoFinancialBriefingPulser",
+            "pulserAddress": "http://127.0.0.1:8271",
+            "practiceId": "get_pulse_data",
+            "pulseName": "build_finance_risks",
+            "pulseAddress": "plaza://pulse/attas_finance_build_finance_risks",
+            "inputSchema": {},
+            "outputSchema": {}
+          },
+          {
+            "id": "node-build-catalysts",
+            "type": "rectangle",
+            "title": "Build Catalysts",
+            "subtitle": "DemoFinancialBriefingPulser / build_finance_catalysts",
+            "x": 86,
+            "y": 82,
+            "w": 22,
+            "h": 12,
+            "pulserMode": "specific",
+            "pulserName": "DemoFinancialBriefingPulser",
+            "pulserAddress": "http://127.0.0.1:8271",
+            "practiceId": "get_pulse_data",
+            "pulseName": "build_finance_catalysts",
+            "pulseAddress": "plaza://pulse/attas_finance_build_finance_catalysts",
+            "inputSchema": {},
+            "outputSchema": {}
+          },
+          {
+            "id": "node-build-conflicts",
+            "type": "rectangle",
+            "title": "Build Conflicts",
+            "subtitle": "DemoFinancialBriefingPulser / build_finance_conflicting_evidence",
+            "x": 86,
+            "y": 100,
+            "w": 22,
+            "h": 12,
+            "pulserMode": "specific",
+            "pulserName": "DemoFinancialBriefingPulser",
+            "pulserAddress": "http://127.0.0.1:8271",
+            "practiceId": "get_pulse_data",
+            "pulseName": "build_finance_conflicting_evidence",
+            "pulseAddress": "plaza://pulse/attas_finance_build_finance_conflicting_evidence",
+            "inputSchema": {},
+            "outputSchema": {}
+          },
+          {
+            "id": "node-build-takeaways",
+            "type": "rectangle",
+            "title": "Build Takeaways",
+            "subtitle": "DemoFinancialBriefingPulser / build_finance_takeaways",
+            "x": 116,
+            "y": 56,
+            "w": 24,
+            "h": 14,
+            "pulserMode": "specific",
+            "pulserName": "DemoFinancialBriefingPulser",
+            "pulserAddress": "http://127.0.0.1:8271",
+            "practiceId": "get_pulse_data",
+            "pulseName": "build_finance_takeaways",
+            "pulseAddress": "plaza://pulse/attas_finance_build_finance_takeaways",
+            "inputSchema": {},
+            "outputSchema": {}
+          },
+          {
+            "id": "node-build-open-questions",
+            "type": "rectangle",
+            "title": "Build Open Questions",
+            "subtitle": "DemoFinancialBriefingPulser / build_finance_open_questions",
+            "x": 116,
+            "y": 84,
+            "w": 24,
+            "h": 14,
+            "pulserMode": "specific",
+            "pulserName": "DemoFinancialBriefingPulser",
+            "pulserAddress": "http://127.0.0.1:8271",
+            "practiceId": "get_pulse_data",
+            "pulseName": "build_finance_open_questions",
+            "pulseAddress": "plaza://pulse/attas_finance_build_finance_open_questions",
+            "inputSchema": {},
+            "outputSchema": {}
+          },
+          {
+            "id": "node-build-summary",
+            "type": "rectangle",
+            "title": "Build Summary",
+            "subtitle": "DemoFinancialBriefingPulser / build_finance_summary",
+            "x": 116,
+            "y": 24,
+            "w": 24,
+            "h": 14,
+            "pulserMode": "specific",
+            "pulserName": "DemoFinancialBriefingPulser",
+            "pulserAddress": "http://127.0.0.1:8271",
+            "practiceId": "get_pulse_data",
+            "pulseName": "build_finance_summary",
+            "pulseAddress": "plaza://pulse/attas_finance_build_finance_summary",
+            "inputSchema": {},
+            "outputSchema": {}
+          },
+          {
+            "id": "node-assemble-briefing",
+            "type": "rectangle",
+            "title": "Assemble Briefing",
+            "subtitle": "DemoFinancialBriefingPulser / assemble_finance_briefing_payload",
+            "x": 148,
+            "y": 56,
+            "w": 26,
+            "h": 14,
+            "pulserMode": "specific",
+            "pulserName": "DemoFinancialBriefingPulser",
+            "pulserAddress": "http://127.0.0.1:8271",
+            "practiceId": "get_pulse_data",
+            "pulseName": "assemble_finance_briefing_payload",
+            "pulseAddress": "plaza://pulse/attas_finance_assemble_finance_briefing_payload",
+            "inputSchema": {},
+            "outputSchema": {}
+          },
+          {
+            "id": "node-report-phema",
+            "type": "rectangle",
+            "title": "Report Phema",
+            "subtitle": "DemoFinancialBriefingPulser / briefing_to_phema",
+            "x": 180,
+            "y": 42,
+            "w": 22,
+            "h": 12,
+            "pulserMode": "specific",
+            "pulserName": "DemoFinancialBriefingPulser",
+            "pulserAddress": "http://127.0.0.1:8271",
+            "practiceId": "get_pulse_data",
+            "pulseName": "briefing_to_phema",
+            "pulseAddress": "plaza://pulse/attas_finance_briefing_to_phema",
+            "inputSchema": {},
+            "outputSchema": {}
+          },
+          {
+            "id": "node-notebooklm-pack",
+            "type": "rectangle",
+            "title": "NotebookLM Pack",
+            "subtitle": "DemoFinancialBriefingPulser / notebooklm_export_pack",
+            "x": 180,
+            "y": 72,
+            "w": 24,
+            "h": 12,
+            "pulserMode": "specific",
+            "pulserName": "DemoFinancialBriefingPulser",
+            "pulserAddress": "http://127.0.0.1:8271",
+            "practiceId": "get_pulse_data",
+            "pulseName": "notebooklm_export_pack",
+            "pulseAddress": "plaza://pulse/attas_finance_notebooklm_export_pack",
+            "inputSchema": {},
+            "outputSchema": {}
+          },
+          {
+            "id": "mind-boundary-output",
+            "role": "output",
+            "type": "pill",
+            "title": "Output",
+            "x": 210,
+            "y": 62,
+            "w": 18,
+            "h": 10,
+            "inputSchema": {}
+          }
+        ],
+        "edges": [
+          {
+            "id": "edge-1",
+            "from": "mind-boundary-input",
+            "to": "node-prepare-context",
+            "mappingText": "{}"
+          },
+          {
+            "id": "edge-2",
+            "from": "node-prepare-context",
+            "to": "node-build-sources",
+            "mappingText": "{}"
+          },
+          {
+            "id": "edge-3",
+            "from": "node-build-sources",
+            "to": "node-build-citations",
+            "mappingText": "{}"
+          },
+          {
+            "id": "edge-4",
+            "from": "node-prepare-context",
+            "to": "node-build-facts",
+            "mappingText": "{}"
+          },
+          {
+            "id": "edge-5",
+            "from": "node-build-sources",
+            "to": "node-build-facts",
+            "mappingText": "{}"
+          },
+          {
+            "id": "edge-6",
+            "from": "node-prepare-context",
+            "to": "node-build-risks",
+            "mappingText": "{}"
+          },
+          {
+            "id": "edge-7",
+            "from": "node-build-sources",
+            "to": "node-build-risks",
+            "mappingText": "{}"
+          },
+          {
+            "id": "edge-8",
+            "from": "node-prepare-context",
+            "to": "node-build-catalysts",
+            "mappingText": "{}"
+          },
+          {
+            "id": "edge-9",
+            "from": "node-build-sources",
+            "to": "node-build-catalysts",
+            "mappingText": "{}"
+          },
+          {
+            "id": "edge-10",
+            "from": "node-prepare-context",
+            "to": "node-build-conflicts",
+            "mappingText": "{}"
+          },
+          {
+            "id": "edge-11",
+            "from": "node-build-sources",
+            "to": "node-build-conflicts",
+            "mappingText": "{}"
+          },
+          {
+            "id": "edge-12",
+            "from": "node-prepare-context",
+            "to": "node-build-takeaways",
+            "mappingText": "{}"
+          },
+          {
+            "id": "edge-13",
+            "from": "node-build-sources",
+            "to": "node-build-takeaways",
+            "mappingText": "{}"
+          },
+          {
+            "id": "edge-14",
+            "from": "node-build-risks",
+            "to": "node-build-takeaways",
+            "mappingText": "{}"
+          },
+          {
+            "id": "edge-15",
+            "from": "node-build-catalysts",
+            "to": "node-build-takeaways",
+            "mappingText": "{}"
+          },
+          {
+            "id": "edge-16",
+            "from": "node-prepare-context",
+            "to": "node-build-open-questions",
+            "mappingText": "{}"
+          },
+          {
+            "id": "edge-17",
+            "from": "node-build-risks",
+            "to": "node-build-open-questions",
+            "mappingText": "{}"
+          },
+          {
+            "id": "edge-18",
+            "from": "node-build-catalysts",
+            "to": "node-build-open-questions",
+            "mappingText": "{}"
+          },
+          {
+            "id": "edge-19",
+            "from": "node-build-conflicts",
+            "to": "node-build-open-questions",
+            "mappingText": "{}"
+          },
+          {
+            "id": "edge-20",
+            "from": "node-prepare-context",
+            "to": "node-build-summary",
+            "mappingText": "{}"
+          },
+          {
+            "id": "edge-21",
+            "from": "node-build-sources",
+            "to": "node-build-summary",
+            "mappingText": "{}"
+          },
+          {
+            "id": "edge-22",
+            "from": "node-build-risks",
+            "to": "node-build-summary",
+            "mappingText": "{}"
+          },
+          {
+            "id": "edge-23",
+            "from": "node-build-catalysts",
+            "to": "node-build-summary",
+            "mappingText": "{}"
+          },
+          {
+            "id": "edge-24",
+            "from": "node-build-takeaways",
+            "to": "node-build-summary",
+            "mappingText": "{}"
+          },
+          {
+            "id": "edge-25",
+            "from": "node-prepare-context",
+            "to": "node-assemble-briefing",
+            "mappingText": "{}"
+          },
+          {
+            "id": "edge-26",
+            "from": "node-build-sources",
+            "to": "node-assemble-briefing",
+            "mappingText": "{}"
+          },
+          {
+            "id": "edge-27",
+            "from": "node-build-citations",
+            "to": "node-assemble-briefing",
+            "mappingText": "{}"
+          },
+          {
+            "id": "edge-28",
+            "from": "node-build-facts",
+            "to": "node-assemble-briefing",
+            "mappingText": "{}"
+          },
+          {
+            "id": "edge-29",
+            "from": "node-build-risks",
+            "to": "node-assemble-briefing",
+            "mappingText": "{}"
+          },
+          {
+            "id": "edge-30",
+            "from": "node-build-catalysts",
+            "to": "node-assemble-briefing",
+            "mappingText": "{}"
+          },
+          {
+            "id": "edge-31",
+            "from": "node-build-takeaways",
+            "to": "node-assemble-briefing",
+            "mappingText": "{}"
+          },
+          {
+            "id": "edge-32",
+            "from": "node-build-conflicts",
+            "to": "node-assemble-briefing",
+            "mappingText": "{}"
+          },
+          {
+            "id": "edge-33",
+            "from": "node-build-open-questions",
+            "to": "node-assemble-briefing",
+            "mappingText": "{}"
+          },
+          {
+            "id": "edge-34",
+            "from": "node-build-summary",
+            "to": "node-assemble-briefing",
+            "mappingText": "{}"
+          },
+          {
+            "id": "edge-35",
+            "from": "node-assemble-briefing",
+            "to": "node-report-phema",
+            "mappingText": "{}"
+          },
+          {
+            "id": "edge-36",
+            "from": "node-prepare-context",
+            "to": "node-notebooklm-pack",
+            "mappingText": "{}"
+          },
+          {
+            "id": "edge-37",
+            "from": "node-assemble-briefing",
+            "to": "node-notebooklm-pack",
+            "mappingText": "{}"
+          },
+          {
+            "id": "edge-38",
+            "from": "node-assemble-briefing",
+            "to": "mind-boundary-output",
+            "mappingText": "{}"
+          },
+          {
+            "id": "edge-39",
+            "from": "node-report-phema",
+            "to": "mind-boundary-output",
+            "mappingText": "{}"
+          },
+          {
+            "id": "edge-40",
+            "from": "node-notebooklm-pack",
+            "to": "mind-boundary-output",
+            "mappingText": "{}"
+          }
+        ]
+      }
+    }
+  }
+}

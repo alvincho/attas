@@ -1,0 +1,45 @@
+{
+  "payload_type": "attas.finance_briefing",
+  "payload_version": 1,
+  "workflow": "watchlist_check",
+  "workflow_label": "Watchlist Check",
+  "title": "Watchlist Check: NVDA",
+  "owner": "attas.workflows.briefings",
+  "as_of": "2026-04-04T07:38:29Z",
+  "subject": {
+    "label": "NVDA",
+    "symbols": []
+  },
+  "watchlist": [],
+  "summary": {
+    "stance": "balanced",
+    "headline": "Watchlist check on 0 names: balanced read",
+    "channel_text": "Watchlist check on 0 names: balanced read Takeaway: Watchlist names should be ranked by confirmation speed rather than headline volume alone."
+  },
+  "facts": [],
+  "inferred_takeaways": [
+    {
+      "statement": "Watchlist names should be ranked by confirmation speed rather than headline volume alone.",
+      "basis": "The workflow is focused on fast decision support for monitored names.",
+      "citation_ids": []
+    }
+  ],
+  "risks": [],
+  "catalysts": [],
+  "conflicting_evidence": [],
+  "open_questions": [],
+  "citations": [],
+  "sources": [],
+  "meta": {
+    "generated_at": "2026-04-04T07:38:29Z",
+    "source_count": 0,
+    "citation_count": 0,
+    "watchlist_count": 0,
+    "notebooklm_import_mode": "beta_export_only"
+  },
+  "publication": {
+    "notion_title": "Watchlist Check: NVDA",
+    "notion_markdown": "# Watchlist Check: NVDA\n\n_Watchlist Check_\n\nAs of 2026-04-04T07:38:29Z\n\n## Watchlist Read\n\nWatchlist check on 0 names: balanced read\n\nWatchlist check on 0 names: balanced read Takeaway: Watchlist names should be ranked by confirmation speed rather than headline volume alone.\n\n## Facts\n\n- None identified.\n\n## Inferred Takeaways\n\n- Watchlist names should be ranked by confirmation speed rather than headline volume alone. Basis: The workflow is focused on fast decision support for monitored names.\n\n## Risks\n\n- None identified.\n\n## Catalysts\n\n- None identified.\n\n## Conflicting Evidence\n\n- None identified.\n\n## Open Questions\n\n- None identified.\n\n## Citations\n\n- None identified.\n",
+    "channel_text": "Watchlist check on 0 names: balanced read Takeaway: Watchlist names should be ranked by confirmation speed rather than headline volume alone."
+  }
+}

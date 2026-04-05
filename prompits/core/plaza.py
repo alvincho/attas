@@ -166,16 +166,37 @@ class PlazaAgent(BaseAgent):
     DEFAULT_AUTH_EMAIL_DOMAIN = "plaza.local"
     USERNAME_PATTERN = re.compile(r"^[a-z0-9](?:[a-z0-9._-]{1,30}[a-z0-9])?$")
 
-    def __init__(self, host="127.0.0.1", port=8000, pool: Optional[Pool] = None):
+    @staticmethod
+    def _runtime_meta_from_config(config: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+        """Internal helper to extract runtime-only BaseAgent metadata from config."""
+        if not isinstance(config, dict):
+            return {}
+        meta: Dict[str, Any] = {}
+        for key in ("remote_use_practice_policy", "remote_use_practice_audit"):
+            value = config.get(key)
+            if isinstance(value, dict):
+                meta[key] = copy.deepcopy(value)
+        return meta
+
+    def __init__(
+        self,
+        host="127.0.0.1",
+        port=8000,
+        pool: Optional[Pool] = None,
+        config: Optional[Dict[str, Any]] = None,
+        config_path: Optional[str] = None,
+    ):
         # Plaza Config
         """Initialize the Plaza agent."""
+        runtime_meta = self._runtime_meta_from_config(config)
         agent_card = {
              "name": "Plaza", 
              "role": "coordinator", 
              "tags": ["mediator"],
              "host": host,
              "port": port,
-             "address": f"http://{host}:{port}"
+             "address": f"http://{host}:{port}",
+             "meta": runtime_meta,
         }
         super().__init__(name="Plaza", host=host, port=port, agent_card=agent_card, pool=pool)
         self.app.add_middleware(

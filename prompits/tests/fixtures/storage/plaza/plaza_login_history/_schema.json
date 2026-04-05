@@ -1,0 +1,27 @@
+{
+  "name": "plaza_login_history",
+  "description": "Login/relogin events by agent_id",
+  "primary_key": [
+    "id"
+  ],
+  "rowSchema": {
+    "id": {
+      "type": "string"
+    },
+    "agent_id": {
+      "type": "string"
+    },
+    "agent_name": {
+      "type": "string"
+    },
+    "address": {
+      "type": "string"
+    },
+    "event": {
+      "type": "string"
+    },
+    "timestamp": {
+      "type": "float"
+    }
+  }
+}

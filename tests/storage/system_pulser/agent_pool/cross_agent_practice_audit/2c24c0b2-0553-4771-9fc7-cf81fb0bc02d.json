@@ -1,0 +1,24 @@
+{
+  "id": "2c24c0b2-0553-4771-9fc7-cf81fb0bc02d",
+  "request_id": "02d66fbb-d50a-4062-aa2b-068f6f0045b6",
+  "timestamp": "2026-04-04T10:21:23.351444+00:00",
+  "direction": "inbound",
+  "event": "request",
+  "local_agent_name": "SystemPulser",
+  "local_agent_id": "file-storage-id",
+  "peer_agent_id": "plaza:http://127.0.0.1:8011",
+  "peer_name": "Plaza",
+  "peer_address": "",
+  "practice_id": "get_pulse_data",
+  "plaza_url": "http://127.0.0.1:8011",
+  "auth_mode": "plaza",
+  "policy_allowed": true,
+  "policy_reason": "inbound default is allow",
+  "outcome": "allowed",
+  "status_code": 200,
+  "error": "",
+  "metadata": {
+    "matched_rule": null,
+    "policy_mode": "default"
+  }
+}

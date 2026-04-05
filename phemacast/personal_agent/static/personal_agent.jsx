@@ -28,6 +28,17 @@ const SETTINGS_TABS = [
   { id: "connection", label: "Connection" },
   { id: "storage", label: "Storage" },
 ];
+const OPERATOR_TABS = [
+  { id: "works", label: "Works" },
+  { id: "assignments", label: "Assignments" },
+  { id: "results", label: "Results" },
+  { id: "destinations", label: "Destinations" },
+];
+const DEFAULT_OPERATOR_CHANNELS = [
+  { kind: "slack", label: "Slack", status: "available", detail: "Desk channel delivery lane." },
+  { kind: "teams", label: "Teams", status: "available", detail: "Microsoft Teams delivery lane." },
+  { kind: "email", label: "Email", status: "available", detail: "Direct email delivery lane." },
+];
 
 const LLM_CONFIG_TYPES = [
   { id: "api", label: "API" },
@@ -37,11 +48,13 @@ const LLM_CONFIG_TYPES = [
 const LLM_API_PROVIDERS = ["openai", "anthropic", "google", "openrouter", "ollama", "custom"];
 const FILE_SAVE_BACKENDS = [
   { id: "filesystem", label: "Local Filesystem" },
-  { id: "file_storage_pulser", label: "FileStoragePulser" },
+  { id: "system_pulser", label: "SystemPulser" },
 ];
+const LEGACY_SYSTEM_PULSER_BACKEND = ["file", "storage", "pulser"].join("_");
 const BROWSER_PANE_TYPES = [
   { id: "plain_text", label: "Plain" },
   { id: "mind_map", label: "Diagram" },
+  { id: "managed_work", label: "Managed Work" },
 ];
 const BROWSER_PANE_FORMATS = ["plain_text", "json", "list", "chart"];
 const BROWSER_CHART_TYPES = ["bar", "line", "candle"];
@@ -95,6 +108,20 @@ const KNOWN_PLAZA_PATH_SUFFIXES = [
   "/.well-known/agent-card",
   "/health",
   "/search",
+];
+const KNOWN_BOSS_PATH_SUFFIXES = [
+  "/api/managed-work/monitor",
+  "/api/managed-work/tickets",
+  "/api/managed-work/schedules",
+  "/api/jobs",
+  "/api/status",
+  "/api/teams",
+  "/health",
+];
+const KNOWN_BOSS_PATH_PREFIXES = [
+  "/api/managed-work/tickets/",
+  "/api/managed-work/schedules/",
+  "/api/jobs/",
 ];
 const WORKSPACE_LEFT_INSET = 12;
 const WORKSPACE_TOP_INSET = 32;
@@ -194,14 +221,14 @@ function buildMapPhemarRequestUrl(path, extraParams = null, storageDirectory = "
 }
 
 function browserLayoutStorageTarget(preferences, appState) {
-  if (normalizeFileSaveBackend(preferences?.fileSaveBackend) === "file_storage_pulser") {
-    const pulser = configuredFileStoragePulser(preferences, appState);
-    const pulserLabel = formatConfiguredFileStoragePulserLabel(preferences, pulser);
+  if (normalizeFileSaveBackend(preferences?.fileSaveBackend) === "system_pulser") {
+    const pulser = configuredSystemPulser(preferences, appState);
+    const pulserLabel = formatConfiguredSystemPulserLabel(preferences, pulser);
     const bucketName = String(preferences?.fileSaveBucketName || "unset bucket").trim();
     const objectKey = joinStorageObjectKey(preferences?.fileSaveObjectPrefix, BROWSER_LAYOUT_STORAGE_FILE_NAME);
     return {
-      backend: "file_storage_pulser",
-      label: `FileStoragePulser · ${pulserLabel}`,
+      backend: "system_pulser",
+      label: `SystemPulser · ${pulserLabel}`,
       detail: `${bucketName}/${objectKey}`,
       objectKey,
       bucketName,
@@ -234,14 +261,14 @@ function snapshotStorageTarget(kind, preferences, appState, windowId = "") {
 }
 
 function defaultSaveStorageTarget(preferences, appState) {
-  if (normalizeFileSaveBackend(preferences?.fileSaveBackend) === "file_storage_pulser") {
-    const pulser = configuredFileStoragePulser(preferences, appState);
-    const pulserLabel = formatConfiguredFileStoragePulserLabel(preferences, pulser);
+  if (normalizeFileSaveBackend(preferences?.fileSaveBackend) === "system_pulser") {
+    const pulser = configuredSystemPulser(preferences, appState);
+    const pulserLabel = formatConfiguredSystemPulserLabel(preferences, pulser);
     const bucketName = String(preferences?.fileSaveBucketName || "unset bucket").trim();
     const objectPrefix = String(preferences?.fileSaveObjectPrefix || "").trim().replace(/^\/+|\/+$/g, "");
     return {
-      backend: "file_storage_pulser",
-      label: `FileStoragePulser · ${pulserLabel}`,
+      backend: "system_pulser",
+      label: `SystemPulser · ${pulserLabel}`,
       detail: objectPrefix ? `${bucketName}/${objectPrefix}` : bucketName,
     };
   }
@@ -264,6 +291,10 @@ function formatStorageTargetSummary(target) {
 
 function isDataPaneType(type) {
   return type === "plain_text" || type === "mind_map";
+}
+
+function isOperatorPaneType(type) {
+  return type === "managed_work";
 }
 
 function cloneValue(value) {
@@ -301,7 +332,11 @@ function clamp(value, min, max) {
 }
 
 function normalizeFileSaveBackend(value) {
-  return FILE_SAVE_BACKENDS.some((entry) => entry.id === value) ? value : "filesystem";
+  const normalized = String(value || "").trim();
+  if (normalized === LEGACY_SYSTEM_PULSER_BACKEND) {
+    return "system_pulser";
+  }
+  return FILE_SAVE_BACKENDS.some((entry) => entry.id === normalized) ? normalized : "filesystem";
 }
 
 function openPersonalAgentUserGuide() {
@@ -1048,7 +1083,7 @@ function safeJsonParse(value, fallback) {
   }
 }
 
-function normalizePlazaUrl(value) {
+function normalizeServiceUrl(value, knownSuffixes, knownPrefixes = []) {
   const raw = String(value || "").trim();
   if (!raw) {
     return "";
@@ -1057,9 +1092,14 @@ function normalizePlazaUrl(value) {
   try {
     const url = new URL(withProtocol);
     let pathname = url.pathname.replace(/\/+$/, "");
-    KNOWN_PLAZA_PATH_SUFFIXES.forEach((suffix) => {
+    knownSuffixes.forEach((suffix) => {
       if (pathname.endsWith(suffix)) {
         pathname = pathname.slice(0, -suffix.length);
+      }
+    });
+    knownPrefixes.forEach((prefix) => {
+      if (pathname.startsWith(prefix)) {
+        pathname = "";
       }
     });
     url.pathname = pathname.replace(/\/+$/, "");
@@ -1069,6 +1109,14 @@ function normalizePlazaUrl(value) {
   } catch (error) {
     return withProtocol.replace(/\/$/, "");
   }
+}
+
+function normalizePlazaUrl(value) {
+  return normalizeServiceUrl(value, KNOWN_PLAZA_PATH_SUFFIXES);
+}
+
+function normalizeBossUrl(value) {
+  return normalizeServiceUrl(value, KNOWN_BOSS_PATH_SUFFIXES, KNOWN_BOSS_PATH_PREFIXES);
 }
 
 async function loadJsonResponse(response) {
@@ -1294,20 +1342,30 @@ function isFileStorageCatalogPulser(pulser) {
   return Boolean(fileStoragePulserSavePulse(pulser) && fileStoragePulserLoadPulse(pulser));
 }
 
-function availableFileStoragePulsers(appState) {
+function pulserPartyValue(pulser) {
+  return String(pulser?.party || pulser?.meta?.party || pulser?.card?.party || pulser?.card?.meta?.party || "").trim();
+}
+
+function isSystemPartyPulser(pulser) {
+  return pulserPartyValue(pulser).toLowerCase() === "system";
+}
+
+function availableSystemPulsers(appState) {
   const knownPulsers = [
     ...(appState?.globalPlazaStatus?.pulsers || []),
     ...((appState?.workspaces || []).flatMap((workspace) => (
       (workspace?.windows || []).flatMap((windowItem) => windowItem?.browserCatalog?.pulsers || [])
     ))),
   ];
-  return dedupePulsers(knownPulsers.filter((pulser) => isFileStorageCatalogPulser(pulser))).sort((left, right) => (
+  const storagePulsers = dedupePulsers(knownPulsers.filter((pulser) => isFileStorageCatalogPulser(pulser))).sort((left, right) => (
     String(left?.name || "").localeCompare(String(right?.name || ""))
     || String(left?.address || "").localeCompare(String(right?.address || ""))
   ));
+  const preferred = storagePulsers.filter((pulser) => isSystemPartyPulser(pulser));
+  return preferred.length ? preferred : storagePulsers;
 }
 
-function selectedFileStoragePulser(preferences, pulsers) {
+function selectedSystemPulser(preferences, pulsers) {
   const exact = (pulsers || []).find((pulser) => (
     (preferences?.fileSavePulserId && pulser.agent_id === preferences.fileSavePulserId)
     || (preferences?.fileSavePulserName && pulser.name === preferences.fileSavePulserName)
@@ -1316,8 +1374,8 @@ function selectedFileStoragePulser(preferences, pulsers) {
   return exact || ((pulsers || []).length === 1 ? pulsers[0] : null);
 }
 
-function configuredFileStoragePulser(preferences, appState) {
-  const exact = selectedFileStoragePulser(preferences, availableFileStoragePulsers(appState));
+function configuredSystemPulser(preferences, appState) {
+  const exact = selectedSystemPulser(preferences, availableSystemPulsers(appState));
   if (exact) {
     return exact;
   }
@@ -1428,13 +1486,13 @@ function formatCompatiblePulserOptionLabel(pulser, options = {}) {
   }, options);
 }
 
-function formatConfiguredFileStoragePulserLabel(preferences, pulser, options = {}) {
+function formatConfiguredSystemPulserLabel(preferences, pulser, options = {}) {
   if (pulser) {
     return formatPulserDisplayName(pulser, options);
   }
   const fallbackName = String(preferences?.fileSavePulserName || preferences?.fileSavePulserId || "").trim();
   if (!fallbackName) {
-    return "Unset FileStoragePulser";
+    return "Unset SystemPulser";
   }
   return formatPulserDisplayName({
     name: fallbackName,
@@ -1460,15 +1518,34 @@ function normalizePulserAgent(agent, plazaName) {
   }
   const card = agent.card && typeof agent.card === "object" ? agent.card : {};
   const meta = agent.meta && typeof agent.meta === "object" ? agent.meta : {};
+  const cardMeta = card.meta && typeof card.meta === "object" ? card.meta : {};
   const pitType = String(agent.pit_type || card.pit_type || agent.type || card.type || "").trim();
-  if (pitType !== "Pulser") {
+  const rawPractices = Array.isArray(agent.practices)
+    ? agent.practices
+    : (Array.isArray(card.practices) ? card.practices : []);
+  const rawSupportedPulses = Array.isArray(agent.supported_pulses)
+    ? agent.supported_pulses
+    : (Array.isArray(meta.supported_pulses)
+      ? meta.supported_pulses
+      : (Array.isArray(cardMeta.supported_pulses) ? cardMeta.supported_pulses : []));
+  const hasPulserIdentity = Boolean(
+    String(agent.agent_id || card.agent_id || "").trim()
+    || String(agent.name || card.name || "").trim()
+    || String(agent.address || card.address || "").trim()
+    || String(agent.practice_id || agent.practiceId || "").trim()
+    || rawSupportedPulses.length,
+  );
+  if (pitType && pitType !== "Pulser") {
     return null;
   }
-  const practices = (Array.isArray(card.practices) ? card.practices : [])
+  if (!pitType && !hasPulserIdentity) {
+    return null;
+  }
+  const practices = rawPractices
     .map((entry) => normalizePracticeEntry(entry))
     .filter(Boolean);
   const supportedPulses = dedupeSupportedPulses(
-    (Array.isArray(meta.supported_pulses) ? meta.supported_pulses : [])
+    rawSupportedPulses
       .map((entry) => normalizeSupportedPulseEntry(entry))
       .filter(Boolean),
   );
@@ -1478,19 +1555,47 @@ function normalizePulserAgent(agent, plazaName) {
     address: String(card.address || agent.address || "").trim(),
     description: String(agent.description || card.description || ""),
     owner: String(agent.owner || card.owner || ""),
-    practice_id: defaultPracticeId(practices),
+    party: String(agent.party || card.party || meta.party || cardMeta.party || "").trim(),
+    practice_id: String(agent.practice_id || agent.practiceId || defaultPracticeId(practices)).trim() || defaultPracticeId(practices),
     practices,
     supported_pulses: supportedPulses,
-    last_active: Number(agent.last_active || 0),
-    plaza_name: plazaName,
-    pulse_count: supportedPulses.length,
+    last_active: Number(agent.last_active ?? agent.lastActive ?? 0),
+    plaza_name: String(agent.plaza_name || agent.plazaName || plazaName || ""),
+    pulse_count: Number((agent.pulse_count ?? agent.pulseCount ?? supportedPulses.length) || supportedPulses.length),
   };
 }
 
 function standardizeCatalogPayload(payload, plazaUrl) {
   const normalizedUrl = normalizePlazaUrl(plazaUrl || payload?.plaza_url || payload?.plazaUrl || "");
-  const pulsers = Array.isArray(payload?.pulsers) ? payload.pulsers : [];
-  const pulses = Array.isArray(payload?.pulses) ? payload.pulses : [];
+  const plazaSummaries = Array.isArray(payload?.plazas) ? payload.plazas : [];
+  const rawPulsers = Array.isArray(payload?.pulsers) ? payload.pulsers : [];
+  const plazaDerivedPulsers = plazaSummaries.flatMap((plaza) => {
+    if (!plaza || typeof plaza !== "object") {
+      return [];
+    }
+    const card = plaza.card && typeof plaza.card === "object" ? plaza.card : {};
+    const plazaName = String(card.name || plaza.name || plaza.url || "Plaza");
+    return (Array.isArray(plaza.agents) ? plaza.agents : [])
+      .map((agent) => normalizePulserAgent(agent, plazaName))
+      .filter(Boolean);
+  });
+  const pulsers = dedupePulsers(
+    [...rawPulsers, ...plazaDerivedPulsers]
+      .map((entry) => normalizePulserAgent(entry, entry?.plaza_name || entry?.plazaName || ""))
+      .filter(Boolean),
+  ).sort((left, right) => (
+    String(left?.name || "").localeCompare(String(right?.name || ""))
+    || String(left?.address || "").localeCompare(String(right?.address || ""))
+  ));
+  const rawPulses = Array.isArray(payload?.pulses) ? payload.pulses : [];
+  const pulses = dedupeCatalogPulses(
+    (rawPulses.length ? rawPulses : pulsers.flatMap((pulser) => pulser.supported_pulses || []))
+      .map((entry) => normalizeCatalogPulseEntry(entry))
+      .filter(Boolean),
+  ).sort((left, right) => (
+    String(left?.pulse_name || "").localeCompare(String(right?.pulse_name || ""))
+    || String(left?.pulse_address || "").localeCompare(String(right?.pulse_address || ""))
+  ));
   const uniquePulseKeys = new Set(
     pulses
       .map((pulse) => String(pulse?.pulse_address || pulse?.pulse_name || pulse?.pulse_id || "").trim())
@@ -1505,7 +1610,7 @@ function standardizeCatalogPayload(payload, plazaUrl) {
     plaza_url: normalizedUrl,
     pulsers,
     pulses,
-    plazas: Array.isArray(payload?.plazas) ? payload.plazas : [],
+    plazas: plazaSummaries,
     pulserCount: Number((payload?.pulserCount ?? payload?.pulser_count ?? pulsers.length) || 0),
     pulseCount: Number((payload?.pulseCount ?? payload?.pulse_count ?? uniquePulseKeys.size) || 0),
     pulser_count: Number((payload?.pulser_count ?? payload?.pulserCount ?? pulsers.length) || 0),
@@ -1879,14 +1984,14 @@ function normalizeMapPhemaRecord(phema, existing = null) {
 
 async function loadMapPhemaLibraryFromConfiguredStorage(appState) {
   const target = mapPhemaStorageTarget(appState.preferences, appState);
-  if (target.backend !== "file_storage_pulser") {
-    throw new Error("MapPhemar configured storage is not using a FileStoragePulser.");
+  if (target.backend !== "system_pulser") {
+    throw new Error("MapPhemar configured storage is not using a SystemPulser.");
   }
   if (!target.pulser) {
-    throw new Error("Choose a FileStoragePulser in Settings before loading saved Phemas.");
+    throw new Error("Choose a SystemPulser in Settings before loading saved Phemas.");
   }
   if (!target.bucketName || target.bucketName === "unset bucket") {
-    throw new Error("Set a default FileStoragePulser bucket name in Settings before loading saved Phemas.");
+    throw new Error("Set a default SystemPulser bucket name in Settings before loading saved Phemas.");
   }
   const loadPulse = fileStoragePulserLoadPulse(target.pulser);
   async function loadObjectKey(objectKey) {
@@ -1934,14 +2039,14 @@ async function loadMapPhemaLibraryFromConfiguredStorage(appState) {
 
 async function saveMapPhemaLibraryToConfiguredStorage(library, appState) {
   const target = mapPhemaStorageTarget(appState.preferences, appState);
-  if (target.backend !== "file_storage_pulser") {
-    throw new Error("MapPhemar configured storage is not using a FileStoragePulser.");
+  if (target.backend !== "system_pulser") {
+    throw new Error("MapPhemar configured storage is not using a SystemPulser.");
   }
   if (!target.pulser) {
-    throw new Error("Choose a FileStoragePulser in Settings before saving Phemas.");
+    throw new Error("Choose a SystemPulser in Settings before saving Phemas.");
   }
   if (!target.bucketName || target.bucketName === "unset bucket") {
-    throw new Error("Set a default FileStoragePulser bucket name in Settings before saving Phemas.");
+    throw new Error("Set a default SystemPulser bucket name in Settings before saving Phemas.");
   }
   const savePulse = fileStoragePulserSavePulse(target.pulser);
   await runPulserRequest({
@@ -1969,7 +2074,7 @@ async function saveMapPhemaLibraryToConfiguredStorage(library, appState) {
 async function fetchMapPhemaLibrary(query = "", appState = null) {
   const storageState = resolveMapPhemaAppState(appState);
   const target = mapPhemaStorageTarget(storageState.preferences, storageState);
-  if (target.backend === "file_storage_pulser") {
+  if (target.backend === "system_pulser") {
     try {
       const library = await loadMapPhemaLibraryFromConfiguredStorage(storageState);
       return filterMapPhemaRows(library?.phemas || [], query);
@@ -1994,7 +2099,7 @@ async function fetchMapPhemaLibrary(query = "", appState = null) {
 async function fetchMapPhema(phemaId, appState = null) {
   const storageState = resolveMapPhemaAppState(appState);
   const target = mapPhemaStorageTarget(storageState.preferences, storageState);
-  if (target.backend === "file_storage_pulser") {
+  if (target.backend === "system_pulser") {
     const library = await loadMapPhemaLibraryFromConfiguredStorage(storageState);
     const phema = (library?.phemas || []).find((entry) => String(entry?.phema_id || entry?.id || "") === String(phemaId || "").trim()) || null;
     if (!(phema && typeof phema === "object")) {
@@ -2021,7 +2126,7 @@ async function fetchMapPhema(phemaId, appState = null) {
 async function saveMapPhemaPayload(phema, appState = null) {
   const storageState = resolveMapPhemaAppState(appState);
   const target = mapPhemaStorageTarget(storageState.preferences, storageState);
-  if (target.backend === "file_storage_pulser") {
+  if (target.backend === "system_pulser") {
     if (!(phema && typeof phema === "object")) {
       throw new Error("Phema payload must be a JSON object.");
     }
@@ -2102,14 +2207,14 @@ async function loadLocalJsonFilePayload(filePayload) {
 }
 
 function workspaceLayoutStorageTarget(preferences, appState) {
-  if (normalizeFileSaveBackend(preferences?.fileSaveBackend) === "file_storage_pulser") {
-    const pulser = configuredFileStoragePulser(preferences, appState);
-    const pulserLabel = formatConfiguredFileStoragePulserLabel(preferences, pulser);
+  if (normalizeFileSaveBackend(preferences?.fileSaveBackend) === "system_pulser") {
+    const pulser = configuredSystemPulser(preferences, appState);
+    const pulserLabel = formatConfiguredSystemPulserLabel(preferences, pulser);
     const bucketName = String(preferences?.fileSaveBucketName || "unset bucket").trim();
     const objectKey = joinStorageObjectKey(preferences?.fileSaveObjectPrefix, WORKSPACE_LAYOUT_STORAGE_FILE_NAME);
     return {
-      backend: "file_storage_pulser",
-      label: `FileStoragePulser · ${pulserLabel}`,
+      backend: "system_pulser",
+      label: `SystemPulser · ${pulserLabel}`,
       detail: `${bucketName}/${objectKey}`,
       objectKey,
       bucketName,
@@ -2134,14 +2239,14 @@ function mapPhemaStorageTarget(preferences, appState = null) {
   const scopeLabel = inheritedSettings
     ? (MAP_PHEMAR_SETTINGS_SCOPE === "personal_agent" ? "Personal Agent" : "Inherited")
     : "MapPhemar";
-  if (normalizeFileSaveBackend(preferences?.fileSaveBackend) === "file_storage_pulser") {
-    const pulser = configuredFileStoragePulser(preferences, appState);
-    const pulserLabel = formatConfiguredFileStoragePulserLabel(preferences, pulser);
+  if (normalizeFileSaveBackend(preferences?.fileSaveBackend) === "system_pulser") {
+    const pulser = configuredSystemPulser(preferences, appState);
+    const pulserLabel = formatConfiguredSystemPulserLabel(preferences, pulser);
     const bucketName = String(preferences?.fileSaveBucketName || "unset bucket").trim();
     const objectKey = mapPhemaLibraryObjectKey(preferences?.fileSaveObjectPrefix);
     const legacyObjectKey = legacyMapPhemaLibraryObjectKey(preferences?.fileSaveObjectPrefix);
     return {
-      backend: "file_storage_pulser",
+      backend: "system_pulser",
       label: `${scopeLabel} · ${pulserLabel}`,
       detail: `${bucketName}/${objectKey}`,
       objectKey,
@@ -2326,12 +2431,12 @@ function extractBrowserSnapshotLibrary(payload) {
 
 async function saveWorkspaceLayoutLibraryToConfiguredStorage(library, appState) {
   const target = workspaceLayoutStorageTarget(appState.preferences, appState);
-  if (target.backend === "file_storage_pulser") {
+  if (target.backend === "system_pulser") {
     if (!target.pulser) {
-      throw new Error("Choose a FileStoragePulser in Settings before saving a workspace.");
+      throw new Error("Choose a SystemPulser in Settings before saving a workspace.");
     }
     if (!target.bucketName || target.bucketName === "unset bucket") {
-      throw new Error("Set a default FileStoragePulser bucket name in Settings before saving a workspace.");
+      throw new Error("Set a default SystemPulser bucket name in Settings before saving a workspace.");
     }
     const savePulse = fileStoragePulserSavePulse(target.pulser);
     await runPulserRequest({
@@ -2367,12 +2472,12 @@ async function saveWorkspaceLayoutLibraryToConfiguredStorage(library, appState) 
 
 async function loadWorkspaceLayoutLibraryFromConfiguredStorage(appState) {
   const target = workspaceLayoutStorageTarget(appState.preferences, appState);
-  if (target.backend === "file_storage_pulser") {
+  if (target.backend === "system_pulser") {
     if (!target.pulser) {
-      throw new Error("Choose a FileStoragePulser in Settings before loading a workspace.");
+      throw new Error("Choose a SystemPulser in Settings before loading a workspace.");
     }
     if (!target.bucketName || target.bucketName === "unset bucket") {
-      throw new Error("Set a default FileStoragePulser bucket name in Settings before loading a workspace.");
+      throw new Error("Set a default SystemPulser bucket name in Settings before loading a workspace.");
     }
     const loadPulse = fileStoragePulserLoadPulse(target.pulser);
     const payload = await runPulserRequest({
@@ -2426,12 +2531,12 @@ async function refreshWorkspaceLayoutsFromConfiguredStorage(appState) {
 
 async function saveBrowserSnapshotLibraryToConfiguredStorage(library, appState) {
   const target = browserLayoutStorageTarget(appState.preferences, appState);
-  if (target.backend === "file_storage_pulser") {
+  if (target.backend === "system_pulser") {
     if (!target.pulser) {
-      throw new Error("Choose a FileStoragePulser in Settings before saving layouts.");
+      throw new Error("Choose a SystemPulser in Settings before saving layouts.");
     }
     if (!target.bucketName || target.bucketName === "unset bucket") {
-      throw new Error("Set a default FileStoragePulser bucket name in Settings before saving layouts.");
+      throw new Error("Set a default SystemPulser bucket name in Settings before saving layouts.");
     }
     const savePulse = fileStoragePulserSavePulse(target.pulser);
     await runPulserRequest({
@@ -2467,12 +2572,12 @@ async function saveBrowserSnapshotLibraryToConfiguredStorage(library, appState) 
 
 async function loadBrowserSnapshotLibraryFromConfiguredStorage(appState) {
   const target = browserLayoutStorageTarget(appState.preferences, appState);
-  if (target.backend === "file_storage_pulser") {
+  if (target.backend === "system_pulser") {
     if (!target.pulser) {
-      throw new Error("Choose a FileStoragePulser in Settings before loading layouts.");
+      throw new Error("Choose a SystemPulser in Settings before loading layouts.");
     }
     if (!target.bucketName || target.bucketName === "unset bucket") {
-      throw new Error("Set a default FileStoragePulser bucket name in Settings before loading layouts.");
+      throw new Error("Set a default SystemPulser bucket name in Settings before loading layouts.");
     }
     const loadPulse = fileStoragePulserLoadPulse(target.pulser);
     const payload = await runPulserRequest({
@@ -2579,6 +2684,9 @@ function createDefaultPreferences(dashboard) {
     connectionMode: dashboard.meta?.mode || "Prototype Web Terminal",
     connectionHost: window.location.origin,
     connectionPlazaUrl: dashboard.meta?.plaza_url || "http://127.0.0.1:8011",
+    operatorBossUrl: dashboard.meta?.boss_url || window.location.origin,
+    operatorManagerAddress: dashboard.meta?.manager_address || "",
+    operatorManagerParty: dashboard.meta?.party || "Phemacast",
     connectionDefaultParamsText: "{}",
     connectionStorage: dashboard.settings?.active_storage || "Filesystem + SQLite edge cache",
     fileSaveBackend: normalizeFileSaveBackend(dashboard.settings?.default_file_save_backend || "filesystem"),
@@ -2629,6 +2737,15 @@ function normalizePreferences(candidate, dashboard) {
   merged.connectionDefaultParamsText = typeof merged.connectionDefaultParamsText === "string"
     ? merged.connectionDefaultParamsText
     : defaults.connectionDefaultParamsText;
+  merged.operatorBossUrl = typeof merged.operatorBossUrl === "string"
+    ? merged.operatorBossUrl
+    : defaults.operatorBossUrl;
+  merged.operatorManagerAddress = typeof merged.operatorManagerAddress === "string"
+    ? merged.operatorManagerAddress
+    : defaults.operatorManagerAddress;
+  merged.operatorManagerParty = typeof merged.operatorManagerParty === "string"
+    ? merged.operatorManagerParty
+    : defaults.operatorManagerParty;
   merged.fileSaveBackend = normalizeFileSaveBackend(merged.fileSaveBackend);
   merged.fileSaveLocalDirectory = typeof merged.fileSaveLocalDirectory === "string"
     ? merged.fileSaveLocalDirectory
@@ -2728,16 +2845,57 @@ function createDiagramRunDialogState() {
   };
 }
 
+function createOperatorConsoleState(preferences, candidate = null) {
+  const hasCandidate = Boolean(candidate && typeof candidate === "object");
+  return {
+    view: OPERATOR_TABS.some((entry) => entry.id === candidate?.view) ? candidate.view : "works",
+    status: typeof candidate?.status === "string" ? candidate.status : "idle",
+    error: typeof candidate?.error === "string" ? candidate.error : "",
+    manager: candidate?.manager && typeof candidate.manager === "object" ? candidate.manager : {},
+    summary: candidate?.summary && typeof candidate.summary === "object" ? candidate.summary : {},
+    workers: Array.isArray(candidate?.workers) ? candidate.workers : [],
+    tickets: Array.isArray(candidate?.tickets) ? candidate.tickets : [],
+    schedules: Array.isArray(candidate?.schedules) ? candidate.schedules : [],
+    channelCatalog: Array.isArray(candidate?.channelCatalog) && candidate.channelCatalog.length
+      ? candidate.channelCatalog
+      : cloneValue(DEFAULT_OPERATOR_CHANNELS),
+    selectedTicketId: typeof candidate?.selectedTicketId === "string" ? candidate.selectedTicketId : "",
+    selectedScheduleId: typeof candidate?.selectedScheduleId === "string" ? candidate.selectedScheduleId : "",
+    selectedTicketStatus: typeof candidate?.selectedTicketStatus === "string" ? candidate.selectedTicketStatus : "idle",
+    selectedTicketError: typeof candidate?.selectedTicketError === "string" ? candidate.selectedTicketError : "",
+    selectedTicket: candidate?.selectedTicket || null,
+    selectedJobStatus: typeof candidate?.selectedJobStatus === "string" ? candidate.selectedJobStatus : "idle",
+    selectedJobError: typeof candidate?.selectedJobError === "string" ? candidate.selectedJobError : "",
+    selectedJob: candidate?.selectedJob || null,
+    controlStatus: typeof candidate?.controlStatus === "string" ? candidate.controlStatus : "idle",
+    controlError: typeof candidate?.controlError === "string" ? candidate.controlError : "",
+    lastRefreshedAt: typeof candidate?.lastRefreshedAt === "string" ? candidate.lastRefreshedAt : "",
+    bossUrl: hasCandidate && typeof candidate?.bossUrl === "string"
+      ? candidate.bossUrl
+      : String(preferences?.operatorBossUrl || "").trim(),
+    managerAddress: hasCandidate && typeof candidate?.managerAddress === "string"
+      ? candidate.managerAddress
+      : String(preferences?.operatorManagerAddress || "").trim(),
+    managerParty: hasCandidate && typeof candidate?.managerParty === "string"
+      ? candidate.managerParty
+      : String(preferences?.operatorManagerParty || "").trim(),
+  };
+}
+
 function createBrowserPane(type, index, preferences, dashboard) {
   const paneType = BROWSER_PANE_TYPES.some((entry) => entry.id === type) ? type : "plain_text";
-  const defaultWidth = paneType === "mind_map" ? 360 : 420;
-  const defaultHeight = paneType === "mind_map" ? 240 : 240;
+  const defaultWidth = paneType === "mind_map" ? 360 : paneType === "managed_work" ? 520 : 420;
+  const defaultHeight = paneType === "managed_work" ? 420 : 240;
   const column = index % 2;
   const row = Math.floor(index / 2);
   return {
     id: createId("pane"),
     type: paneType,
-    title: paneType === "mind_map" ? `Diagram ${index + 1}` : `Pulse Pane ${index + 1}`,
+    title: paneType === "mind_map"
+      ? `Diagram ${index + 1}`
+      : paneType === "managed_work"
+        ? `Managed Work ${index + 1}`
+        : `Pulse Pane ${index + 1}`,
     x: 16 + column * 28 + column * defaultWidth,
     y: 16 + row * 28 + row * defaultHeight,
     width: defaultWidth,
@@ -2767,6 +2925,7 @@ function createBrowserPane(type, index, preferences, dashboard) {
     lastSavedAt: "",
     lastSavedLocation: "",
     mindMapState: paneType === "mind_map" ? createDefaultMindMapState(preferences, dashboard) : null,
+    operatorState: paneType === "managed_work" ? createOperatorConsoleState(preferences) : null,
   };
 }
 
@@ -2902,6 +3061,9 @@ function normalizePaneState(candidate, index, preferences, dashboard) {
     z: Number.isFinite(candidate?.z) ? candidate.z : base.z,
     mindMapState: normalizedType === "mind_map"
       ? normalizeMindMapState(candidate?.mindMapState, preferences, dashboard)
+      : null,
+    operatorState: normalizedType === "managed_work"
+      ? createOperatorConsoleState(preferences, candidate?.operatorState)
       : null,
   };
 }
@@ -3119,6 +3281,7 @@ function createMapPhemarInitialState(dashboard) {
     snapshotDialog: { open: false, windowId: "", kind: "browser", mode: "save", name: "", selectedSnapshotId: "", error: "" },
     workspaceDialog: { open: false, mode: "save", name: "", selectedLayoutId: "", error: "" },
     diagramRunDialog: createDiagramRunDialogState(),
+    operator: createOperatorConsoleState(preferences),
     globalPlazaStatus: emptyCatalog(preferences.connectionPlazaUrl),
     nextWorkspaceIndex: 2,
     paneMenuWindowId: "",
@@ -3157,6 +3320,7 @@ function createInitialState() {
       snapshotDialog: { open: false, windowId: "", kind: "browser", mode: "save", name: "", selectedSnapshotId: "", error: "" },
       workspaceDialog: { open: false, mode: "save", name: "", selectedLayoutId: "", error: "" },
       diagramRunDialog: createDiagramRunDialogState(),
+      operator: createOperatorConsoleState(preferences),
       globalPlazaStatus: emptyCatalog(preferences.connectionPlazaUrl),
       nextWorkspaceIndex: normalizedWorkspaces.length + 1,
       paneMenuWindowId: "",
@@ -3188,6 +3352,7 @@ function createInitialState() {
       snapshotDialog: { open: false, windowId: "", kind: "browser", mode: "save", name: "", selectedSnapshotId: "", error: "" },
       workspaceDialog: { open: false, mode: "save", name: "", selectedLayoutId: "", error: "" },
       diagramRunDialog: createDiagramRunDialogState(),
+      operator: createOperatorConsoleState(preferences),
       globalPlazaStatus: emptyCatalog(preferences.connectionPlazaUrl),
       nextWorkspaceIndex: normalizedWorkspaces.length + 1,
       paneMenuWindowId: "",
@@ -5380,6 +5545,100 @@ function ValueRenderer({ value, format, chartType }) {
   return <pre className="value-pre">{JSON.stringify(value, null, 2)}</pre>;
 }
 
+function operatorTicketId(ticket) {
+  return String(ticket?.ticket?.id || ticket?.ticket_id || "").trim();
+}
+
+function operatorScheduleId(schedule) {
+  return String(schedule?.schedule?.id || schedule?.schedule_id || "").trim();
+}
+
+function defaultOperatorDestinationStatus() {
+  return {
+    notion: { label: "Notion", status: "not_configured", title: "", detail: "", url: "", available: false, actions: [] },
+    notebooklm: { label: "NotebookLM", status: "not_configured", detail: "", directory: "", source_url_bundle: "", mode: "", available: false, actions: [] },
+    channels: cloneValue(DEFAULT_OPERATOR_CHANNELS),
+    publication_preview: "",
+  };
+}
+
+function operatorDestinationStatus(ticket) {
+  const destinationStatus = ticket?.destination_status;
+  if (!destinationStatus || typeof destinationStatus !== "object") {
+    return defaultOperatorDestinationStatus();
+  }
+  return {
+    ...defaultOperatorDestinationStatus(),
+    ...destinationStatus,
+    channels: Array.isArray(destinationStatus.channels) && destinationStatus.channels.length
+      ? destinationStatus.channels
+      : cloneValue(DEFAULT_OPERATOR_CHANNELS),
+  };
+}
+
+function formatTimestamp(value) {
+  const normalized = String(value || "").trim();
+  if (!normalized) {
+    return "Not recorded";
+  }
+  const parsed = new Date(normalized);
+  if (Number.isNaN(parsed.getTime())) {
+    return normalized;
+  }
+  return parsed.toLocaleString();
+}
+
+function compactText(value, maxLength = 160) {
+  const normalized = String(value || "").trim();
+  if (!normalized || normalized.length <= maxLength) {
+    return normalized;
+  }
+  return `${normalized.slice(0, Math.max(0, maxLength - 1)).trimEnd()}…`;
+}
+
+function labelizeStatus(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (!normalized) {
+    return "Unknown";
+  }
+  return normalized
+    .split(/[_\-\s]+/)
+    .filter(Boolean)
+    .map((part) => part[0].toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function statusPillClass(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (["ready", "delivered", "published", "completed", "exported", "online"].includes(normalized)) {
+    return "status-pill ready";
+  }
+  if (["loading", "queued", "running", "claimed"].includes(normalized)) {
+    return "status-pill loading";
+  }
+  if (["failed", "attention", "stopped", "cancelled", "deleted"].includes(normalized)) {
+    return "status-pill offline";
+  }
+  return "status-pill";
+}
+
+function operatorSummaryCounts(operator) {
+  const tickets = Array.isArray(operator?.tickets) ? operator.tickets : [];
+  const destinationReadyCount = tickets.filter((ticket) => {
+    const destination = operatorDestinationStatus(ticket);
+    const notionReady = ["ready", "published"].includes(String(destination?.notion?.status || ""));
+    const notebookReady = ["ready", "exported"].includes(String(destination?.notebooklm?.status || ""));
+    const channelReady = (destination.channels || []).some((lane) => ["ready", "delivered"].includes(String(lane?.status || "")));
+    return notionReady || notebookReady || channelReady;
+  }).length;
+  return {
+    total: tickets.length,
+    attention: tickets.filter((ticket) => Boolean(ticket?.execution_state?.attention_required)).length,
+    assigned: tickets.filter((ticket) => String(ticket?.worker_assignment?.status || "").trim().toLowerCase() !== "unassigned").length,
+    destinations: destinationReadyCount,
+  };
+}
+
 function App() {
   const [state, setState] = useState(createInitialState);
   const [phemaDialog, setPhemaDialog] = useState(createPhemaDialogState);
@@ -5440,6 +5699,358 @@ function App() {
 
   function activeWindowList() {
     return state.workspaces.flatMap((workspace) => workspace.windows);
+  }
+
+  function operatorPaneLocation(appState, windowId, paneId) {
+    const located = findPaneLocation(appState, windowId, paneId);
+    if (!located || !isOperatorPaneType(located.pane.type)) {
+      return null;
+    }
+    return located;
+  }
+
+  function selectedOperatorTicket(windowId, paneId) {
+    const operator = operatorPaneLocation(state, windowId, paneId)?.pane?.operatorState;
+    if (!operator) {
+      return null;
+    }
+    if (operator.selectedTicket && operatorTicketId(operator.selectedTicket) === operator.selectedTicketId) {
+      return operator.selectedTicket;
+    }
+    return operator.tickets.find((entry) => operatorTicketId(entry) === operator.selectedTicketId) || null;
+  }
+
+  function selectedOperatorSchedule(windowId, paneId) {
+    const operator = operatorPaneLocation(state, windowId, paneId)?.pane?.operatorState;
+    if (!operator) {
+      return null;
+    }
+    return operator.schedules.find((entry) => operatorScheduleId(entry) === operator.selectedScheduleId) || null;
+  }
+
+  function operatorPaneConnection(appState, windowId, paneId) {
+    const operator = operatorPaneLocation(appState, windowId, paneId)?.pane?.operatorState;
+    if (!operator) {
+      return null;
+    }
+    return {
+      operator,
+      bossUrl: normalizeBossUrl(operator.bossUrl || ""),
+      managerAddress: String(operator.managerAddress || "").trim(),
+      managerParty: String(operator.managerParty || "").trim(),
+    };
+  }
+
+  async function copyOperatorText(value, label = "text") {
+    const normalized = String(value || "").trim();
+    if (!normalized) {
+      return;
+    }
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(normalized);
+        return;
+      }
+    } catch (error) {
+      console.warn(`Unable to copy ${label}.`, error);
+    }
+    window.prompt(`Copy ${label}`, normalized);
+  }
+
+  function openOperatorUrl(url) {
+    const normalized = String(url || "").trim();
+    if (!normalized) {
+      return;
+    }
+    window.open(normalized, "_blank", "noopener,noreferrer");
+  }
+
+  async function refreshOperatorTicketDetail(windowId, paneId, ticketId) {
+    const normalizedTicketId = String(ticketId || "").trim();
+    const currentState = latestStateRef.current;
+    const connection = operatorPaneConnection(currentState, windowId, paneId);
+    if (!normalizedTicketId || !connection?.bossUrl) {
+      return;
+    }
+    updateState((next) => {
+      const target = operatorPaneLocation(next, windowId, paneId)?.pane?.operatorState;
+      if (!target) {
+        return;
+      }
+      target.selectedTicketStatus = "loading";
+      target.selectedTicketError = "";
+    });
+    const params = new URLSearchParams({ boss_url: connection.bossUrl });
+    if (connection.managerAddress) {
+      params.set("manager_address", connection.managerAddress);
+    }
+    if (connection.managerParty) {
+      params.set("party", connection.managerParty);
+    }
+    try {
+      const response = await fetch(`/api/managed-work/tickets/${encodeURIComponent(normalizedTicketId)}?${params.toString()}`);
+      const payload = await loadJsonResponse(response);
+      if (!response.ok) {
+        throw new Error(payload.detail || payload.message || "Unable to load managed work detail.");
+      }
+      updateState((next) => {
+        const target = operatorPaneLocation(next, windowId, paneId)?.pane?.operatorState;
+        if (!target || target.selectedTicketId !== normalizedTicketId) {
+          return;
+        }
+        target.selectedTicketStatus = "ready";
+        target.selectedTicketError = "";
+        target.selectedTicket = payload.ticket || null;
+        target.channelCatalog = Array.isArray(payload.channel_catalog) && payload.channel_catalog.length
+          ? payload.channel_catalog
+          : target.channelCatalog;
+      });
+    } catch (error) {
+      updateState((next) => {
+        const target = operatorPaneLocation(next, windowId, paneId)?.pane?.operatorState;
+        if (!target || target.selectedTicketId !== normalizedTicketId) {
+          return;
+        }
+        target.selectedTicketStatus = "error";
+        target.selectedTicketError = error.message || "Unable to load managed work detail.";
+      });
+    }
+  }
+
+  async function refreshOperatorJobDetail(windowId, paneId, jobId) {
+    const normalizedJobId = String(jobId || "").trim();
+    const currentState = latestStateRef.current;
+    const connection = operatorPaneConnection(currentState, windowId, paneId);
+    if (!normalizedJobId || !connection?.bossUrl) {
+      return;
+    }
+    updateState((next) => {
+      const target = operatorPaneLocation(next, windowId, paneId)?.pane?.operatorState;
+      if (!target) {
+        return;
+      }
+      target.selectedJobStatus = "loading";
+      target.selectedJobError = "";
+    });
+    const params = new URLSearchParams({ boss_url: connection.bossUrl });
+    if (connection.managerAddress) {
+      params.set("manager_address", connection.managerAddress);
+      params.set("dispatcher_address", connection.managerAddress);
+    }
+    if (connection.managerParty) {
+      params.set("party", connection.managerParty);
+    }
+    try {
+      const response = await fetch(`/api/jobs/${encodeURIComponent(normalizedJobId)}?${params.toString()}`);
+      const payload = await loadJsonResponse(response);
+      if (!response.ok) {
+        throw new Error(payload.detail || payload.message || "Unable to load job detail.");
+      }
+      updateState((next) => {
+        const target = operatorPaneLocation(next, windowId, paneId)?.pane?.operatorState;
+        if (!target || target.selectedTicketId !== normalizedJobId) {
+          return;
+        }
+        target.selectedJobStatus = "ready";
+        target.selectedJobError = "";
+        target.selectedJob = payload;
+        target.channelCatalog = Array.isArray(payload.channel_catalog) && payload.channel_catalog.length
+          ? payload.channel_catalog
+          : target.channelCatalog;
+      });
+    } catch (error) {
+      updateState((next) => {
+        const target = operatorPaneLocation(next, windowId, paneId)?.pane?.operatorState;
+        if (!target || target.selectedTicketId !== normalizedJobId) {
+          return;
+        }
+        target.selectedJobStatus = "error";
+        target.selectedJobError = error.message || "Unable to load job detail.";
+      });
+    }
+  }
+
+  async function refreshOperatorMonitor(windowId, paneId, options = {}) {
+    const preserveSelection = options.preserveSelection !== false;
+    const currentState = latestStateRef.current;
+    const connection = operatorPaneConnection(currentState, windowId, paneId);
+    if (!connection) {
+      return;
+    }
+    if (!connection.bossUrl) {
+      updateState((next) => {
+        const target = operatorPaneLocation(next, windowId, paneId)?.pane?.operatorState;
+        if (!target) {
+          return;
+        }
+        target.status = "idle";
+        target.error = "Set a Boss URL in Pane Config to load managed work.";
+        target.manager = {};
+        target.summary = {};
+        target.workers = [];
+        target.tickets = [];
+        target.schedules = [];
+        target.channelCatalog = cloneValue(DEFAULT_OPERATOR_CHANNELS);
+        target.selectedTicketId = "";
+        target.selectedScheduleId = "";
+        target.selectedTicketStatus = "idle";
+        target.selectedTicket = null;
+        target.selectedJobStatus = "idle";
+        target.selectedJob = null;
+      });
+      return;
+    }
+    updateState((next) => {
+      const target = operatorPaneLocation(next, windowId, paneId)?.pane?.operatorState;
+      if (!target) {
+        return;
+      }
+      target.status = "loading";
+      target.error = "";
+    });
+    const params = new URLSearchParams({
+      boss_url: connection.bossUrl,
+      ticket_limit: "24",
+      schedule_limit: "12",
+      preview_limit: "500",
+    });
+    if (connection.managerAddress) {
+      params.set("manager_address", connection.managerAddress);
+    }
+    if (connection.managerParty) {
+      params.set("party", connection.managerParty);
+    }
+    try {
+      const response = await fetch(`/api/managed-work/monitor?${params.toString()}`);
+      const payload = await loadJsonResponse(response);
+      if (!response.ok) {
+        throw new Error(payload.detail || payload.message || "Unable to load managed work monitor.");
+      }
+      const tickets = Array.isArray(payload.tickets) ? payload.tickets : [];
+      const schedules = Array.isArray(payload.schedules) ? payload.schedules : [];
+      const currentOperator = connection.operator;
+      const currentTicketId = preserveSelection ? String(currentOperator?.selectedTicketId || "").trim() : "";
+      const currentScheduleId = preserveSelection ? String(currentOperator?.selectedScheduleId || "").trim() : "";
+      const nextTicketId = tickets.some((entry) => operatorTicketId(entry) === currentTicketId)
+        ? currentTicketId
+        : operatorTicketId(tickets[0]);
+      const nextScheduleId = schedules.some((entry) => operatorScheduleId(entry) === currentScheduleId)
+        ? currentScheduleId
+        : operatorScheduleId(schedules[0]);
+      updateState((next) => {
+        const target = operatorPaneLocation(next, windowId, paneId)?.pane?.operatorState;
+        if (!target) {
+          return;
+        }
+        target.status = "ready";
+        target.error = "";
+        target.manager = payload.manager_assignment || payload.manager || {};
+        target.summary = payload.summary || {};
+        target.workers = Array.isArray(payload.workers) ? payload.workers : [];
+        target.tickets = tickets;
+        target.schedules = schedules;
+        target.channelCatalog = Array.isArray(payload.channel_catalog) && payload.channel_catalog.length
+          ? payload.channel_catalog
+          : cloneValue(DEFAULT_OPERATOR_CHANNELS);
+        target.selectedTicketId = nextTicketId;
+        target.selectedScheduleId = nextScheduleId;
+        target.lastRefreshedAt = new Date().toISOString();
+        if (!nextTicketId) {
+          target.selectedTicketStatus = "idle";
+          target.selectedTicket = null;
+          target.selectedJobStatus = "idle";
+          target.selectedJob = null;
+        }
+      });
+      if (nextTicketId) {
+        void refreshOperatorTicketDetail(windowId, paneId, nextTicketId);
+        void refreshOperatorJobDetail(windowId, paneId, nextTicketId);
+      }
+    } catch (error) {
+      updateState((next) => {
+        const target = operatorPaneLocation(next, windowId, paneId)?.pane?.operatorState;
+        if (!target) {
+          return;
+        }
+        target.status = "error";
+        target.error = error.message || "Unable to load managed work monitor.";
+        target.channelCatalog = target.channelCatalog.length
+          ? target.channelCatalog
+          : cloneValue(DEFAULT_OPERATOR_CHANNELS);
+      });
+    }
+  }
+
+  function selectOperatorTicket(windowId, paneId, ticketId) {
+    const normalizedTicketId = String(ticketId || "").trim();
+    updateState((next) => {
+      const target = operatorPaneLocation(next, windowId, paneId)?.pane?.operatorState;
+      if (!target) {
+        return;
+      }
+      target.selectedTicketId = normalizedTicketId;
+      target.selectedTicket = null;
+      target.selectedJob = null;
+      target.selectedTicketStatus = normalizedTicketId ? "loading" : "idle";
+      target.selectedJobStatus = normalizedTicketId ? "loading" : "idle";
+      target.selectedTicketError = "";
+      target.selectedJobError = "";
+      target.view = target.view === "works" ? "assignments" : target.view;
+    });
+    if (normalizedTicketId) {
+      void refreshOperatorTicketDetail(windowId, paneId, normalizedTicketId);
+      void refreshOperatorJobDetail(windowId, paneId, normalizedTicketId);
+    }
+  }
+
+  async function issueOperatorSchedule(windowId, paneId, scheduleId) {
+    const normalizedScheduleId = String(scheduleId || "").trim();
+    const currentState = latestStateRef.current;
+    const connection = operatorPaneConnection(currentState, windowId, paneId);
+    if (!normalizedScheduleId || !connection?.bossUrl) {
+      return;
+    }
+    updateState((next) => {
+      const target = operatorPaneLocation(next, windowId, paneId)?.pane?.operatorState;
+      if (!target) {
+        return;
+      }
+      target.controlStatus = "loading";
+      target.controlError = "";
+      target.selectedScheduleId = normalizedScheduleId;
+    });
+    try {
+      const response = await fetch(
+        `/api/managed-work/schedules/${encodeURIComponent(normalizedScheduleId)}/control?${new URLSearchParams({ boss_url: connection.bossUrl }).toString()}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "issue" }),
+        },
+      );
+      const payload = await loadJsonResponse(response);
+      if (!response.ok) {
+        throw new Error(payload.detail || payload.message || "Unable to issue the schedule.");
+      }
+      updateState((next) => {
+        const target = operatorPaneLocation(next, windowId, paneId)?.pane?.operatorState;
+        if (!target) {
+          return;
+        }
+        target.controlStatus = "ready";
+        target.controlError = "";
+      });
+      void refreshOperatorMonitor(windowId, paneId, { preserveSelection: true });
+    } catch (error) {
+      updateState((next) => {
+        const target = operatorPaneLocation(next, windowId, paneId)?.pane?.operatorState;
+        if (!target) {
+          return;
+        }
+        target.controlStatus = "error";
+        target.controlError = error.message || "Unable to issue the schedule.";
+      });
+    }
   }
 
 function windowMinimums(windowItem) {
@@ -5531,6 +6142,9 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
   function paneMinimums(pane) {
     if (pane.type === "mind_map") {
       return { width: 280, height: 190 };
+    }
+    if (pane.type === "managed_work") {
+      return { width: 360, height: 260 };
     }
     return { width: 240, height: 170 };
   }
@@ -5799,13 +6413,13 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
   ]);
 
   useEffect(() => {
-    if (normalizeFileSaveBackend(state.preferences.fileSaveBackend) !== "file_storage_pulser") {
+    if (normalizeFileSaveBackend(state.preferences.fileSaveBackend) !== "system_pulser") {
       storagePlazaRefreshRef.current = "";
       return;
     }
     const plazaUrl = String(state.preferences.connectionPlazaUrl || "").trim();
     const refreshKey = `${plazaUrl}|${state.preferences.fileSavePulserId || state.preferences.fileSavePulserAddress || state.preferences.fileSavePulserName || ""}`;
-    if (!plazaUrl || state.globalPlazaStatus.status === "loading" || selectedFileStoragePulser(state.preferences, availableFileStoragePulsers(state))) {
+    if (!plazaUrl || state.globalPlazaStatus.status === "loading" || selectedSystemPulser(state.preferences, availableSystemPulsers(state))) {
       storagePlazaRefreshRef.current = refreshKey;
       return;
     }
@@ -5825,9 +6439,9 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
   ]);
 
   useEffect(() => {
-    const usingFileStoragePulser = normalizeFileSaveBackend(state.preferences.fileSaveBackend) === "file_storage_pulser";
+    const usingSystemPulser = normalizeFileSaveBackend(state.preferences.fileSaveBackend) === "system_pulser";
     const viewingStorageSettings = state.settingsOpen && state.settingsTab === "storage";
-    if (!usingFileStoragePulser || !viewingStorageSettings) {
+    if (!usingSystemPulser || !viewingStorageSettings) {
       storageBucketRefreshRef.current = "";
       setStorageBuckets([]);
       setStorageBucketStatus("idle");
@@ -6169,15 +6783,15 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
   }
 
   async function ensureStoragePulserReady(appState = state) {
-    if (normalizeFileSaveBackend(appState.preferences.fileSaveBackend) !== "file_storage_pulser") {
+    if (normalizeFileSaveBackend(appState.preferences.fileSaveBackend) !== "system_pulser") {
       return { appState, pulser: null };
     }
     const plazaUrl = String(appState.preferences.connectionPlazaUrl || "").trim();
-    const exactPulser = selectedFileStoragePulser(appState.preferences, availableFileStoragePulsers(appState));
+    const exactPulser = selectedSystemPulser(appState.preferences, availableSystemPulsers(appState));
     if (exactPulser || !plazaUrl) {
       return {
         appState,
-        pulser: configuredFileStoragePulser(appState.preferences, appState),
+        pulser: configuredSystemPulser(appState.preferences, appState),
       };
     }
 
@@ -6204,7 +6818,7 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
       };
       return {
         appState: refreshedAppState,
-        pulser: configuredFileStoragePulser(refreshedAppState.preferences, refreshedAppState),
+        pulser: configuredSystemPulser(refreshedAppState.preferences, refreshedAppState),
       };
     } catch (error) {
       updateState((next) => {
@@ -6214,7 +6828,7 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
           error: error.message || "Unable to load Plaza catalog.",
         };
       });
-      const fallbackPulser = configuredFileStoragePulser(appState.preferences, appState);
+      const fallbackPulser = configuredSystemPulser(appState.preferences, appState);
       if (fallbackPulser) {
         return { appState, pulser: fallbackPulser };
       }
@@ -6241,20 +6855,20 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
 
   async function fetchStorageBucketCatalog(preferencesOverride = null) {
     const normalizedPreferences = normalizePreferences(preferencesOverride || state.preferences, state.dashboard);
-    if (normalizeFileSaveBackend(normalizedPreferences.fileSaveBackend) !== "file_storage_pulser") {
+    if (normalizeFileSaveBackend(normalizedPreferences.fileSaveBackend) !== "system_pulser") {
       return [];
     }
     const prepared = await ensureStoragePulserReady({
       ...state,
       preferences: normalizedPreferences,
     });
-    const pulser = prepared.pulser || configuredFileStoragePulser(normalizedPreferences, prepared.appState);
+    const pulser = prepared.pulser || configuredSystemPulser(normalizedPreferences, prepared.appState);
     if (!pulser) {
       return [];
     }
     const listBucketPulse = fileStoragePulserListBucketPulse(pulser);
     if (!listBucketPulse) {
-      throw new Error("Selected FileStoragePulser does not expose list_bucket.");
+      throw new Error("Selected SystemPulser does not expose list_bucket.");
     }
     const payload = unwrapStoragePulserPayload(await runPulserRequest({
       ...storagePulserRequestBase(prepared.appState, normalizedPreferences, pulser),
@@ -6299,13 +6913,13 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
         ...state,
         preferences: normalizedPreferences,
       });
-      const pulser = prepared.pulser || configuredFileStoragePulser(normalizedPreferences, prepared.appState);
+      const pulser = prepared.pulser || configuredSystemPulser(normalizedPreferences, prepared.appState);
       if (!pulser) {
-        throw new Error("Choose a FileStoragePulser in Settings before creating a bucket.");
+        throw new Error("Choose a SystemPulser in Settings before creating a bucket.");
       }
       const createBucketPulse = fileStoragePulserCreateBucketPulse(pulser);
       if (!createBucketPulse) {
-        throw new Error("Selected FileStoragePulser does not expose bucket_create.");
+        throw new Error("Selected SystemPulser does not expose bucket_create.");
       }
       const createdBucket = unwrapStoragePulserPayload(await runPulserRequest({
         ...storagePulserRequestBase(prepared.appState, normalizedPreferences, pulser),
@@ -6347,6 +6961,9 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
   }
 
   function syncPaneWithCatalog(windowItem, pane) {
+    if (!isDataPaneType(pane?.type)) {
+      return;
+    }
     const catalog = windowItem.browserCatalog || emptyCatalog(windowItem.browserDefaults?.plazaUrl || "");
     const pulseCatalog = collectCatalogPulses(catalog);
     const selectedPulse = findSelectedCatalogPulse(pulseCatalog, pane);
@@ -6696,7 +7313,14 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
 
   async function runBrowserPane(windowId, paneId) {
     const located = findPaneLocation(state, windowId, paneId);
-    if (!located || !isDataPaneType(located.pane.type)) {
+    if (!located) {
+      return;
+    }
+    if (isOperatorPaneType(located.pane.type)) {
+      await refreshOperatorMonitor(windowId, paneId, { preserveSelection: true });
+      return;
+    }
+    if (!isDataPaneType(located.pane.type)) {
       return;
     }
     const windowItem = located.windowItem;
@@ -6860,16 +7484,16 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
     });
     try {
       let savedLocation = "";
-      if (normalizeFileSaveBackend(state.preferences.fileSaveBackend) === "file_storage_pulser") {
+      if (normalizeFileSaveBackend(state.preferences.fileSaveBackend) === "system_pulser") {
         const prepared = await ensureStoragePulserReady(state);
-        const pulser = configuredFileStoragePulser(prepared.appState.preferences, prepared.appState);
+        const pulser = configuredSystemPulser(prepared.appState.preferences, prepared.appState);
         const savePulse = fileStoragePulserSavePulse(pulser);
         if (!pulser || !savePulse) {
-          throw new Error("Choose a FileStoragePulser in Settings before saving.");
+          throw new Error("Choose a SystemPulser in Settings before saving.");
         }
         const bucketName = String(prepared.appState.preferences.fileSaveBucketName || "").trim();
         if (!bucketName) {
-          throw new Error("Set a default FileStoragePulser bucket name in Settings before saving.");
+          throw new Error("Set a default SystemPulser bucket name in Settings before saving.");
         }
         const objectKey = joinStorageObjectKey(prepared.appState.preferences.fileSaveObjectPrefix, fileName);
         await runPulserRequest({
@@ -6934,7 +7558,10 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
         return;
       }
       windowItem.panes
-        .filter((pane) => isDataPaneType(pane.type) && (pane.pulserId || pane.pulseName))
+        .filter((pane) => (
+          (isDataPaneType(pane.type) && (pane.pulserId || pane.pulseName))
+          || isOperatorPaneType(pane.type)
+        ))
         .forEach((pane) => {
           jobs.push(runBrowserPane(windowItem.id, pane.id));
         });
@@ -7843,6 +8470,16 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
     });
   }
 
+  function updateOperatorPaneField(windowId, paneId, field, value) {
+    updateState((next) => {
+      const located = operatorPaneLocation(next, windowId, paneId);
+      if (!located) {
+        return;
+      }
+      located.pane.operatorState[field] = value;
+    });
+  }
+
   function updatePaneMindMapState(windowId, paneId, mutator) {
     updateState((next) => {
       const located = findPaneLocation(next, windowId, paneId);
@@ -8498,7 +9135,9 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
     .sort((left, right) => (left.z || 0) - (right.z || 0));
   const workspaceWorld = workspaceWorldMetrics(workspace);
   const workspaceIsRefreshing = Boolean(
-    (workspace?.windows || []).some((windowItem) => windowItem.type === "browser" && windowItem.panes.some((pane) => pane.status === "loading")),
+    (workspace?.windows || []).some((windowItem) => windowItem.type === "browser" && windowItem.panes.some((pane) => (
+      pane.status === "loading" || String(pane?.operatorState?.status || "") === "loading"
+    ))),
   );
   const workspacePlazaStatusClass = state.globalPlazaStatus.connected
     ? "status-pill ready"
@@ -8524,14 +9163,18 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
     };
     const value = pane.result !== null ? getDisplayValue(pane) : null;
     const isMindMapPane = pane.type === "mind_map";
+    const isOperatorPane = isOperatorPaneType(pane.type);
+    const effectivePaneStatus = isOperatorPane ? String(pane.operatorState?.status || "idle") : pane.status;
     const paneMap = isMindMapPane ? normalizeMindMapState(pane.mindMapState, state.preferences, state.dashboard) : null;
     const diagramDisplayMode = pane.diagramDisplayMode === "info" ? "info" : "diagram";
     const showDiagramPreview = isMindMapPane && diagramDisplayMode !== "info";
     const paneEditorLabel = IS_MAP_PHEMAR_MODE ? "MapPhemar" : "Editor";
     const paneEditorTitle = IS_MAP_PHEMAR_MODE ? "Open diagram in MapPhemar" : "Open linked diagram in the MapPhemar editor";
-    const canSaveResult = pane.result !== null && pane.result !== undefined && !pane.error;
+    const canSaveResult = !isOperatorPane && pane.result !== null && pane.result !== undefined && !pane.error;
     const paneValueContent = pane.error ? (
       <div className="pane-empty error">{pane.error}</div>
+    ) : isOperatorPane ? (
+      renderManagedWorkPane(windowItem, pane)
     ) : value === null ? (
       <div className="pane-empty">
         {pane.pulseName || pane.pulseAddress ? "Ready." : "Select a pulse."}
@@ -8542,7 +9185,7 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
     return (
       <article
         key={pane.id}
-        className={`pane-card pane-card--${pane.status} pane-card--floating${isMindMapPane ? " pane-card--mind-map" : ""}`}
+        className={`pane-card pane-card--${effectivePaneStatus} pane-card--floating${isMindMapPane ? " pane-card--mind-map" : ""}${isOperatorPane ? " pane-card--managed-work" : ""}`}
         style={paneStyle}
         onMouseDown={(event) => handlePaneMouseDown(windowItem.id, pane.id, event)}
       >
@@ -8581,17 +9224,17 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
                 </button>
               </>
             ) : (
-              <button
-                className="icon-button"
-                onClick={() => runBrowserPane(windowItem.id, pane.id)}
-                disabled={pane.status === "loading"}
-                aria-label="Refresh pane"
-                title={pane.status === "loading" ? "Refreshing..." : "Refresh pane"}
-              >
-                <RefreshIcon />
-              </button>
+                <button
+                  className="icon-button"
+                  onClick={() => runBrowserPane(windowItem.id, pane.id)}
+                  disabled={effectivePaneStatus === "loading"}
+                  aria-label="Refresh pane"
+                  title={effectivePaneStatus === "loading" ? "Refreshing..." : "Refresh pane"}
+                >
+                  <RefreshIcon />
+                </button>
             )}
-            {isMindMapPane ? null : (
+            {isMindMapPane || isOperatorPane ? null : (
               <button
                 className="ghost-button"
                 onClick={() => savePaneResultToDefaultLocation(windowItem.id, pane.id)}
@@ -8656,13 +9299,13 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
             </div>
           </div>
         ) : (
-          <div className="pane-card-body">
+          <div className={isOperatorPane ? "pane-card-body pane-card-body--operator" : "pane-card-body"}>
             {paneValueContent}
           </div>
         )}
-        {pane.saveError ? (
+        {!isOperatorPane && pane.saveError ? (
           <div className="pane-save-status pane-save-status--error">{pane.saveError}</div>
-        ) : pane.lastSavedLocation ? (
+        ) : !isOperatorPane && pane.lastSavedLocation ? (
           <div className="pane-save-status">
             Saved to <code>{pane.lastSavedLocation}</code>{pane.lastSavedAt ? ` at ${pane.lastSavedAt}` : ""}
           </div>
@@ -8697,6 +9340,7 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
             </div>
             <div className="browser-toolbar-buttons">
               <button className="ghost-button" onClick={() => refreshBrowserCatalog(windowItem.id)}>{windowItem.browserCatalog.status === "loading" ? "Refreshing..." : "Refresh"}</button>
+              <button className="ghost-button" onClick={() => addPane(windowItem.id, "managed_work")}>Managed Work</button>
               <button
                 className={state.snapshotDialog.open && state.snapshotDialog.windowId === windowItem.id && state.snapshotDialog.mode === "save" ? "ghost-button active" : "ghost-button"}
                 onClick={() => openSnapshotDialog(windowItem.id, "save")}
@@ -9779,6 +10423,8 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
     const previewValue = pane.result !== null ? getDisplayValue(pane) : null;
     const isDiagramPane = pane.type === "mind_map";
     const isDataPane = isDataPaneType(pane.type);
+    const isOperatorPane = isOperatorPaneType(pane.type);
+    const operatorState = isOperatorPane ? (pane.operatorState || createOperatorConsoleState(state.preferences)) : null;
     const currentSymbol = String(windowItem.browserDefaults?.symbol || "").trim().toUpperCase();
     const diagramReadiness = isDiagramPane
       ? mindMapRunReadiness(
@@ -9787,30 +10433,46 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
           windowItem.browserCatalog || emptyCatalog(state.preferences.connectionPlazaUrl),
         )
       : null;
-    const paneStatusLabel = pane.status === "loading"
-      ? "Getting data..."
-      : pane.status === "error"
-        ? (pane.error || "Request failed.")
-        : pane.status === "ready"
-          ? (pane.lastRunAt ? `Updated ${pane.lastRunAt}` : "Data loaded.")
-          : isDiagramPane
-            ? (
-              diagramReadiness?.canRun
-                ? (
-                  diagramReadiness.executionWarnings?.length
-                    ? `${diagramReadiness.executionWarnings.length} diagram node${diagramReadiness.executionWarnings.length === 1 ? "" : "s"} still need pulse or pulser setup.`
-                    : (currentSymbol ? `Ready to run with symbol ${currentSymbol}.` : "Ready to run diagram input.")
-                )
-                : (diagramReadiness?.reason || "Connect a diagram path from Input to Output before running.")
-            )
-            : selectedPulse
-              ? "Ready to fetch."
-              : "Choose a pulse and pulser.";
-    const paneStatusClass = pane.status === "error"
-      ? "pane-config-status error"
+    const paneStatusLabel = isOperatorPane
+      ? (
+        operatorState?.status === "loading"
+          ? "Refreshing managed work..."
+          : operatorState?.status === "error"
+            ? (operatorState?.error || "Unable to load managed work.")
+            : operatorState?.status === "ready"
+              ? `${operatorState?.tickets?.length || 0} tickets · ${operatorState?.schedules?.length || 0} schedules`
+              : "Configure a Boss URL to load managed work."
+      )
       : pane.status === "loading"
-        ? "pane-config-status loading"
-        : "pane-config-status";
+        ? "Getting data..."
+        : pane.status === "error"
+          ? (pane.error || "Request failed.")
+          : pane.status === "ready"
+            ? (pane.lastRunAt ? `Updated ${pane.lastRunAt}` : "Data loaded.")
+            : isDiagramPane
+              ? (
+                diagramReadiness?.canRun
+                  ? (
+                    diagramReadiness.executionWarnings?.length
+                      ? `${diagramReadiness.executionWarnings.length} diagram node${diagramReadiness.executionWarnings.length === 1 ? "" : "s"} still need pulse or pulser setup.`
+                      : (currentSymbol ? `Ready to run with symbol ${currentSymbol}.` : "Ready to run diagram input.")
+                  )
+                  : (diagramReadiness?.reason || "Connect a diagram path from Input to Output before running.")
+              )
+              : selectedPulse
+                ? "Ready to fetch."
+                : "Choose a pulse and pulser.";
+    const paneStatusClass = isOperatorPane
+      ? operatorState?.status === "error"
+        ? "pane-config-status error"
+        : operatorState?.status === "loading"
+          ? "pane-config-status loading"
+          : "pane-config-status"
+      : pane.status === "error"
+        ? "pane-config-status error"
+        : pane.status === "loading"
+          ? "pane-config-status loading"
+          : "pane-config-status";
 
     return (
       <div className="modal-backdrop" onClick={closePaneConfig}>
@@ -9825,7 +10487,58 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
               />
               <button className="ghost-button pane-config-close" onClick={closePaneConfig}>Close</button>
             </div>
-            {isDataPane ? (
+            {isOperatorPane ? (
+              <>
+                <label className="field wide">
+                  <span>Boss URL</span>
+                  <input
+                    value={operatorState?.bossUrl || ""}
+                    onChange={(event) => updateOperatorPaneField(windowItem.id, pane.id, "bossUrl", event.target.value)}
+                    placeholder="http://127.0.0.1:8170"
+                  />
+                </label>
+                <label className="field">
+                  <span>Manager Address</span>
+                  <input
+                    value={operatorState?.managerAddress || ""}
+                    onChange={(event) => updateOperatorPaneField(windowItem.id, pane.id, "managerAddress", event.target.value)}
+                    placeholder="Optional"
+                  />
+                </label>
+                <label className="field">
+                  <span>Manager Party</span>
+                  <input
+                    value={operatorState?.managerParty || ""}
+                    onChange={(event) => updateOperatorPaneField(windowItem.id, pane.id, "managerParty", event.target.value)}
+                    placeholder="Optional"
+                  />
+                </label>
+                <div className="field wide field--pulse-description">
+                  <span>Managed Work Scope</span>
+                  <div className="pulse-description-card">
+                    This pane monitors one BossPulser or teamwork boss endpoint. Assignments, results, and delivery lanes stay attached to the pane layout.
+                  </div>
+                </div>
+                <div className="field field--get-data">
+                  <span>&nbsp;</span>
+                  <button
+                    className="ghost-button pane-config-run-button"
+                    onClick={() => refreshOperatorMonitor(windowItem.id, pane.id, { preserveSelection: true })}
+                    disabled={operatorState?.status === "loading"}
+                  >
+                    {operatorState?.status === "loading" ? "Refreshing..." : "Refresh Managed Work"}
+                  </button>
+                </div>
+                <div className="pane-config-status-row wide">
+                  <div className={paneStatusClass}>{paneStatusLabel}</div>
+                </div>
+                <div className="connection-card wide">
+                  <strong>Resolved Boss Endpoint</strong>
+                  <span>{normalizeBossUrl(operatorState?.bossUrl || "") || "Boss URL not set"}</span>
+                  <span>{operatorState?.managerAddress || operatorState?.managerParty ? `${operatorState?.managerParty || "Party"} · ${operatorState?.managerAddress || "Manager auto-select"}` : "Manager address not pinned"}</span>
+                </div>
+              </>
+            ) : isDataPane ? (
               <>
                 {isDiagramPane ? (
                   <div className="field wide field--pulse-description">
@@ -10283,11 +10996,11 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
     const selectedLlm = state.preferences.llmConfigs.find((entry) => entry.id === state.settingsLlmSelectedId)
       || state.preferences.llmConfigs[0]
       || null;
-    const storagePulsers = availableFileStoragePulsers(state);
-    const selectedStoragePulser = selectedFileStoragePulser(state.preferences, storagePulsers);
+    const storagePulsers = availableSystemPulsers(state);
+    const selectedStoragePulser = selectedSystemPulser(state.preferences, storagePulsers);
     const mapPhemaStorageInfo = mapPhemaStorageTarget(state.preferences, state);
     const configuredStorageSummary = formatStorageTargetSummary(defaultSaveStorageTarget(state.preferences, state));
-    const usingFileStoragePulser = normalizeFileSaveBackend(state.preferences.fileSaveBackend) === "file_storage_pulser";
+    const usingSystemPulser = normalizeFileSaveBackend(state.preferences.fileSaveBackend) === "system_pulser";
     const currentBucketName = String(state.preferences.fileSaveBucketName || "").trim();
     const storageBucketOptions = sortStorageBucketRows([
       ...(currentBucketName && !storageBuckets.some((entry) => String(entry?.bucket_name || "").trim() === currentBucketName)
@@ -10353,10 +11066,18 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
                 <label className="field"><span>Connection Mode</span><input value={state.preferences.connectionMode} onChange={(event) => updateState((next) => { next.preferences.connectionMode = event.target.value; })} /></label>
                 <label className="field"><span>Host</span><input value={state.preferences.connectionHost} onChange={(event) => updateState((next) => { next.preferences.connectionHost = event.target.value; })} /></label>
                 <label className="field wide"><span>Plaza URL</span><input value={state.preferences.connectionPlazaUrl} onChange={(event) => updateState((next) => { next.preferences.connectionPlazaUrl = event.target.value; })} /></label>
+                <label className="field wide"><span>Default Boss URL</span><input value={state.preferences.operatorBossUrl} onChange={(event) => updateState((next) => { next.preferences.operatorBossUrl = event.target.value; })} /></label>
+                <label className="field"><span>Default Manager Address</span><input value={state.preferences.operatorManagerAddress} onChange={(event) => updateState((next) => { next.preferences.operatorManagerAddress = event.target.value; })} /></label>
+                <label className="field"><span>Default Manager Party</span><input value={state.preferences.operatorManagerParty} onChange={(event) => updateState((next) => { next.preferences.operatorManagerParty = event.target.value; })} /></label>
                 <label className="field wide"><span>Default Params JSON</span><textarea value={state.preferences.connectionDefaultParamsText} onChange={(event) => updateState((next) => { next.preferences.connectionDefaultParamsText = event.target.value; })} /></label>
                 <div className="connection-card">
                   <strong>Configured Storage</strong>
                   <span>{configuredStorageSummary}</span>
+                </div>
+                <div className="connection-card">
+                  <strong>Managed Work Pane Defaults</strong>
+                  <span>{normalizeBossUrl(state.preferences.operatorBossUrl) || "Boss URL not set"}</span>
+                  <span>New managed-work panes inherit these values until you override them in Pane Config.</span>
                 </div>
                 <div className="connection-card wide">
                   <strong>{state.globalPlazaStatus.connected ? "Plaza Connected" : state.globalPlazaStatus.status === "loading" ? "Checking Plaza..." : "Plaza Offline"}</strong>
@@ -10387,13 +11108,13 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
                           ))}
                         </select>
                       </label>
-                      {usingFileStoragePulser ? (
+                      {usingSystemPulser ? (
                         <button className={state.globalPlazaStatus.status === "loading" ? "ghost-button settings-storage-refresh active" : "ghost-button settings-storage-refresh"} onClick={refreshGlobalPlaza}>
                           {state.globalPlazaStatus.status === "loading" ? "Refreshing..." : "Refresh Plaza Catalog"}
                         </button>
                       ) : null}
                     </div>
-                    {usingFileStoragePulser === false ? (
+                    {usingSystemPulser === false ? (
                       <>
                         <div className="settings-storage-directory-row">
                           <label className="field settings-storage-directory-field">
@@ -10418,7 +11139,7 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
                     ) : (
                       <>
                         <label className="field wide">
-                          <span>FileStoragePulser</span>
+                          <span>SystemPulser</span>
                           <select
                             value={selectedStoragePulser?.agent_id || state.preferences.fileSavePulserId || ""}
                             onChange={(event) => updateState((next) => {
@@ -10428,10 +11149,10 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
                               next.preferences.fileSavePulserAddress = pulser?.address || "";
                             })}
                           >
-                            <option value="">{storagePulsers.length ? "Choose FileStoragePulser" : "Refresh Plaza catalog first"}</option>
+                            <option value="">{storagePulsers.length ? "Choose SystemPulser" : "Refresh Plaza catalog first"}</option>
                             {storagePulsers.map((pulser) => (
                               <option key={pulser.agent_id || pulser.name} value={pulser.agent_id || ""}>
-                                {formatPulserDisplayName(pulser, { includeAddress: true, fallbackName: "FileStoragePulser" })}
+                                {formatPulserDisplayName(pulser, { includeAddress: true, fallbackName: "SystemPulser" })}
                               </option>
                             ))}
                           </select>
@@ -10455,7 +11176,7 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
                                 ? "Loading current buckets..."
                                 : selectedStoragePulser
                                   ? (storageBucketOptions.length ? "Choose bucket" : "No buckets yet")
-                                  : "Choose FileStoragePulser first"}
+                                  : "Choose SystemPulser first"}
                             </option>
                             {storageBucketOptions.map((bucket) => {
                               const bucketName = String(bucket?.bucket_name || bucket?.name || "").trim();
@@ -10483,7 +11204,7 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
                               setStorageBucketCreateStatus("idle");
                             }}
                             disabled={!canCreateStorageBucket || storageBucketCreateStatus === "loading"}
-                            title={!canCreateStorageBucket ? "Selected FileStoragePulser does not expose bucket_create." : "Create a new private bucket on the selected FileStoragePulser"}
+                            title={!canCreateStorageBucket ? "Selected SystemPulser does not expose bucket_create." : "Create a new private bucket on the selected SystemPulser"}
                           >
                             {storageBucketAddMode ? "Cancel New" : "Add New"}
                           </button>
@@ -10523,11 +11244,11 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
                           {storageBucketError
                             || (selectedStoragePulser
                               ? storageBucketStatus === "loading"
-                                ? "Loading current buckets from the selected FileStoragePulser..."
+                                ? "Loading current buckets from the selected SystemPulser..."
                                 : listedStorageBucketCount
-                                  ? `${listedStorageBucketCount} bucket${listedStorageBucketCount === 1 ? "" : "s"} available on the selected FileStoragePulser.`
-                                  : "No buckets found yet. Create one to start saving through FileStoragePulser."
-                              : "Choose a FileStoragePulser to load current buckets.")}
+                                  ? `${listedStorageBucketCount} bucket${listedStorageBucketCount === 1 ? "" : "s"} available on the selected SystemPulser.`
+                                  : "No buckets found yet. Create one to start saving through SystemPulser."
+                              : "Choose a SystemPulser to load current buckets.")}
                         </div>
                         <label className="field">
                           <span>Object Prefix</span>
@@ -10538,11 +11259,11 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
                           />
                         </label>
                         <div className="connection-card wide">
-                          <strong>{formatConfiguredFileStoragePulserLabel(state.preferences, selectedStoragePulser, { fallbackName: "FileStoragePulser" })}</strong>
+                          <strong>{formatConfiguredSystemPulserLabel(state.preferences, selectedStoragePulser, { fallbackName: "SystemPulser" })}</strong>
                           <span>
                             {selectedStoragePulser
                               ? `${state.preferences.fileSaveBucketName || "unset bucket"} / ${state.preferences.fileSaveObjectPrefix || "(root prefix)"}`
-                              : "Refresh the Plaza catalog, then choose a FileStoragePulser that supports object_save."}
+                              : "Refresh the Plaza catalog, then choose a SystemPulser that supports object_save."}
                           </span>
                         </div>
                       </>
@@ -10560,7 +11281,7 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
                           <span>
                             {normalizeFileSaveBackend(state.preferences.fileSaveBackend) === "filesystem"
                               ? "Pane Save Result writes JSON into the configured local directory."
-                              : "Pane Save Result sends JSON through object_save on the configured FileStoragePulser."}
+                              : "Pane Save Result sends JSON through object_save on the configured SystemPulser."}
                           </span>
                         </>
                       )}
@@ -10709,9 +11430,305 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
       window.close();
       return;
     }
-    if (mapPhemarBackHref) {
+  if (mapPhemarBackHref) {
       window.location.href = mapPhemarBackHref;
     }
+  }
+
+  function renderManagedWorkPane(windowItem, pane) {
+    const operator = pane.operatorState || createOperatorConsoleState(state.preferences);
+    const counts = operatorSummaryCounts(operator);
+    const selectedTicket = selectedOperatorTicket(windowItem.id, pane.id);
+    const selectedSchedule = selectedOperatorSchedule(windowItem.id, pane.id);
+    const selectedJob = operator.selectedJob;
+    const destination = operatorDestinationStatus(selectedTicket);
+    const selectedResultSummary = selectedTicket?.result_summary?.summary && typeof selectedTicket.result_summary.summary === "object"
+      ? selectedTicket.result_summary.summary
+      : selectedTicket?.result_summary || {};
+    const operatorStatusLabel = operator.status === "loading"
+      ? "Refreshing"
+      : operator.status === "ready"
+        ? "Synced"
+        : operator.status === "error"
+          ? "Attention"
+          : "Idle";
+    const operatorNote = operator.error
+      ? operator.error
+      : operator.lastRefreshedAt
+        ? `Last refresh ${formatTimestamp(operator.lastRefreshedAt)}`
+        : operator.bossUrl
+          ? "Ready to monitor managed work."
+          : "Set the Boss URL in Pane Config to start monitoring.";
+
+    function renderEmptyState(title, detail) {
+      return (
+        <div className="pane-empty wide operator-empty">
+          <strong>{title}</strong>
+          <span>{detail}</span>
+        </div>
+      );
+    }
+
+    function renderWorkRows() {
+      if (!operator.tickets.length) {
+        return renderEmptyState(
+          operator.bossUrl ? "No managed work yet." : "Boss URL not configured.",
+          operator.bossUrl
+            ? "Refresh again after BossPulser or the teamwork boss has issued work."
+            : "Open Pane Config, add the Boss URL, and refresh this managed-work pane.",
+        );
+      }
+      return (
+        <div className="operator-ticket-list">
+          {operator.tickets.map((ticket) => {
+            const ticketId = operatorTicketId(ticket);
+            const workerName = String(ticket?.worker_assignment?.worker_name || ticket?.worker_assignment?.worker_id || "Unassigned").trim();
+            const executionStatus = String(ticket?.execution_state?.status || ticket?.result_summary?.status || "queued").trim().toLowerCase();
+            const title = String(ticket?.ticket?.title || ticket?.work_item?.title || ticket?.work_item?.required_capability || ticketId || "Managed work").trim();
+            return (
+              <button
+                key={ticketId || title}
+                className={operator.selectedTicketId === ticketId ? "snapshot-row operator-ticket-row active" : "snapshot-row operator-ticket-row"}
+                onClick={() => selectOperatorTicket(windowItem.id, pane.id, ticketId)}
+              >
+                <div className="operator-ticket-row-top">
+                  <strong>{title}</strong>
+                  <span className={statusPillClass(executionStatus)}>{labelizeStatus(executionStatus)}</span>
+                </div>
+                <span>{compactText(ticket?.work_item?.required_capability || "Capability not set", 72)}</span>
+                <span>{`Worker: ${workerName}`}</span>
+                <span>{`Updated: ${formatTimestamp(ticket?.ticket?.updated_at || ticket?.execution_state?.updated_at || ticket?.execution_state?.completed_at)}`}</span>
+              </button>
+            );
+          })}
+        </div>
+      );
+    }
+
+    function renderScheduleRows() {
+      if (!operator.schedules.length) {
+        return <div className="pane-empty small">No saved schedules published by the boss yet.</div>;
+      }
+      return (
+        <div className="operator-schedule-list">
+          {operator.schedules.slice(0, 4).map((schedule) => {
+            const scheduleId = operatorScheduleId(schedule);
+            const scheduleStatus = String(schedule?.schedule?.status || "scheduled").trim().toLowerCase();
+            return (
+              <article key={scheduleId || schedule?.schedule?.name} className={selectedSchedule && operatorScheduleId(selectedSchedule) === scheduleId ? "connection-card operator-schedule-card active" : "connection-card operator-schedule-card"}>
+                <div className="operator-ticket-row-top">
+                  <strong>{schedule?.schedule?.name || schedule?.work_item?.title || scheduleId || "Managed schedule"}</strong>
+                  <span className={statusPillClass(scheduleStatus)}>{labelizeStatus(scheduleStatus)}</span>
+                </div>
+                <span>{compactText(schedule?.work_item?.required_capability || "Capability not set", 72)}</span>
+                <span>{`Next run: ${formatTimestamp(schedule?.schedule?.scheduled_for || schedule?.schedule?.schedule_time)}`}</span>
+                <div className="operator-action-row">
+                  <button className="ghost-button" onClick={() => issueOperatorSchedule(windowItem.id, pane.id, scheduleId)} disabled={operator.controlStatus === "loading"}>
+                    {operator.controlStatus === "loading" && operator.selectedScheduleId === scheduleId ? "Issuing..." : "Issue Now"}
+                  </button>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      );
+    }
+
+    function renderAssignmentCards() {
+      if (!selectedTicket) {
+        return renderEmptyState("Pick a work item.", "Select a managed ticket to inspect manager assignment and worker execution.");
+      }
+      return (
+        <div className="operator-detail-grid">
+          <article className="connection-card">
+            <strong>Boss Issuance</strong>
+            <span>{selectedTicket?.ticket?.source || "manual"}</span>
+            <span>{selectedTicket?.ticket?.workflow_id || selectedTicket?.ticket?.schedule_id || "Direct ticket"}</span>
+          </article>
+          <article className="connection-card">
+            <strong>Manager Assignment</strong>
+            <span>{selectedTicket?.manager_assignment?.manager_name || selectedTicket?.manager_assignment?.manager_address || "Manager not recorded"}</span>
+            <span>{selectedTicket?.manager_assignment?.manager_party || "Party not recorded"}</span>
+            <span>{formatTimestamp(selectedTicket?.manager_assignment?.assigned_at)}</span>
+          </article>
+          <article className="connection-card">
+            <strong>Worker Assignment</strong>
+            <span>{selectedTicket?.worker_assignment?.worker_name || selectedTicket?.worker_assignment?.worker_id || "Unassigned"}</span>
+            <span>{selectedTicket?.worker_assignment?.worker_address || selectedTicket?.worker_assignment?.status || "No worker address yet"}</span>
+            <span>{`Claimed: ${formatTimestamp(selectedTicket?.worker_assignment?.claimed_at)}`}</span>
+          </article>
+          <article className="connection-card wide">
+            <strong>Execution Timeline</strong>
+            <span>{`Status: ${labelizeStatus(selectedTicket?.execution_state?.status || selectedTicket?.result_summary?.status)}`}</span>
+            <span>{`Queued: ${formatTimestamp(selectedTicket?.execution_state?.created_at)}`}</span>
+            <span>{`Completed: ${formatTimestamp(selectedTicket?.execution_state?.completed_at)}`}</span>
+            {selectedJob?.latest_heartbeat ? (
+              <span>{`Latest heartbeat: ${formatTimestamp(selectedJob.latest_heartbeat?.updated_at || selectedJob.latest_heartbeat?.created_at)}`}</span>
+            ) : null}
+            {selectedTicket?.execution_state?.error ? <span>{compactText(selectedTicket.execution_state.error, 220)}</span> : null}
+          </article>
+        </div>
+      );
+    }
+
+    function renderResultCards() {
+      if (!selectedTicket) {
+        return renderEmptyState("No result selected.", "Choose a ticket to inspect the structured result summary and raw job detail.");
+      }
+      return (
+        <div className="operator-detail-grid">
+          <article className="connection-card">
+            <strong>Result Status</strong>
+            <span>{labelizeStatus(selectedTicket?.result_summary?.status || selectedTicket?.execution_state?.status)}</span>
+            <span>{`Stored rows: ${selectedTicket?.result_summary?.stored_rows || 0}`}</span>
+            <span>{selectedTicket?.result_summary?.target_table || "No target table recorded"}</span>
+          </article>
+          <article className="connection-card">
+            <strong>Job Detail</strong>
+            <span>{selectedJob?.detail_source || (selectedJob?.job ? "job_detail" : "managed_ticket_detail")}</span>
+            <span>{selectedJob?.job?.id || selectedTicket?.ticket?.id || "No job id"}</span>
+            <span>{selectedJob?.job?.required_capability || selectedTicket?.work_item?.required_capability || "Capability not recorded"}</span>
+          </article>
+          <article className="preview-card wide">
+            <div className="subhead">
+              <strong>Result Summary</strong>
+              <span>{formatTimestamp(selectedTicket?.execution_state?.updated_at || selectedTicket?.ticket?.updated_at)}</span>
+            </div>
+            {Object.keys(selectedResultSummary || {}).length
+              ? <ValueRenderer value={selectedResultSummary} format="json" chartType="bar" />
+              : <div className="pane-empty small">No structured result summary recorded yet.</div>}
+          </article>
+          <article className="preview-card wide">
+            <div className="subhead">
+              <strong>Raw Records</strong>
+              <span>{Array.isArray(selectedJob?.raw_records) ? `${selectedJob.raw_records.length} rows` : "No rows"}</span>
+            </div>
+            {Array.isArray(selectedJob?.raw_records) && selectedJob.raw_records.length
+              ? <ValueRenderer value={selectedJob.raw_records} format="json" chartType="bar" />
+              : <div className="pane-empty small">The boss detail route has not recorded raw records for this run.</div>}
+          </article>
+        </div>
+      );
+    }
+
+    function renderDestinationCards() {
+      if (!selectedTicket) {
+        return renderEmptyState("No destination view yet.", "Choose a ticket to inspect Notion publishing, NotebookLM export, and B2B delivery lanes.");
+      }
+      const notionMarkdown = selectedTicket?.work_item?.metadata?.publication?.notion_markdown
+        || destination?.notion?.metadata?.publication?.notion_markdown
+        || "";
+      const notebookBundle = destination?.notebooklm?.source_url_bundle || "";
+      return (
+        <div className="operator-detail-grid">
+          <article className="connection-card">
+            <div className="operator-ticket-row-top">
+              <strong>{destination?.notion?.label || "Notion"}</strong>
+              <span className={statusPillClass(destination?.notion?.status)}>{labelizeStatus(destination?.notion?.status)}</span>
+            </div>
+            <span>{destination?.notion?.title || destination?.notion?.detail || "No Notion publication payload recorded."}</span>
+            <span>{destination?.notion?.url || "Page URL not recorded"}</span>
+            <div className="operator-action-row">
+              {destination?.notion?.url ? <button className="ghost-button" onClick={() => openOperatorUrl(destination.notion.url)}>Open Page</button> : null}
+              {notionMarkdown ? <button className="ghost-button" onClick={() => copyOperatorText(notionMarkdown, "Notion markdown")}>Copy Markdown</button> : null}
+            </div>
+          </article>
+          <article className="connection-card">
+            <div className="operator-ticket-row-top">
+              <strong>{destination?.notebooklm?.label || "NotebookLM"}</strong>
+              <span className={statusPillClass(destination?.notebooklm?.status)}>{labelizeStatus(destination?.notebooklm?.status)}</span>
+            </div>
+            <span>{destination?.notebooklm?.detail || destination?.notebooklm?.mode || "No NotebookLM export payload recorded."}</span>
+            <span>{destination?.notebooklm?.directory || "Export directory not recorded"}</span>
+            <div className="operator-action-row">
+              {destination?.notebooklm?.directory ? <button className="ghost-button" onClick={() => copyOperatorText(destination.notebooklm.directory, "NotebookLM directory")}>Copy Directory</button> : null}
+              {notebookBundle ? <button className="ghost-button" onClick={() => copyOperatorText(notebookBundle, "NotebookLM source URLs")}>Copy URLs</button> : null}
+            </div>
+          </article>
+          {destination.channels.map((lane) => (
+            <article key={lane.kind || lane.label} className="connection-card">
+              <div className="operator-ticket-row-top">
+                <strong>{lane.label || lane.kind || "Channel"}</strong>
+                <span className={statusPillClass(lane.status)}>{labelizeStatus(lane.status)}</span>
+              </div>
+              <span>{lane.recipient || lane.destination || "Recipient not configured"}</span>
+              <span>{lane.detail || "Lane is available for routed delivery."}</span>
+              <div className="operator-action-row">
+                {destination.publication_preview ? <button className="ghost-button" onClick={() => copyOperatorText(destination.publication_preview, `${lane.label || lane.kind} payload`)}>Copy Payload</button> : null}
+                {lane.url ? <button className="ghost-button" onClick={() => openOperatorUrl(lane.url)}>Open</button> : null}
+              </div>
+            </article>
+          ))}
+          <article className="preview-card wide">
+            <div className="subhead">
+              <strong>Channel Payload Preview</strong>
+              <span>{destination.publication_preview ? "Ready" : "Not recorded"}</span>
+            </div>
+            {destination.publication_preview
+              ? <ValueRenderer value={destination.publication_preview} format="plain_text" chartType="bar" />
+              : <div className="pane-empty small">The selected run has not recorded a channel-ready payload yet.</div>}
+          </article>
+        </div>
+      );
+    }
+
+    let tabContent = null;
+    if (operator.view === "assignments") {
+      tabContent = renderAssignmentCards();
+    } else if (operator.view === "results") {
+      tabContent = renderResultCards();
+    } else if (operator.view === "destinations") {
+      tabContent = renderDestinationCards();
+    } else {
+      tabContent = (
+        <>
+          {renderWorkRows()}
+          <section className="operator-schedule-section">
+            <div className="subhead">
+              <strong>Managed Schedules</strong>
+              <span>{operator.schedules.length} tracked</span>
+            </div>
+            {renderScheduleRows()}
+            {operator.controlError ? <div className="form-error">{operator.controlError}</div> : null}
+          </section>
+        </>
+      );
+    }
+
+    return (
+      <div className="operator-console operator-pane">
+        <div className="operator-console-head">
+          <div className="segmented operator-tabs">
+            {OPERATOR_TABS.map((tab) => (
+              <button key={tab.id} className={operator.view === tab.id ? "segment active" : "segment"} onClick={() => updateOperatorPaneField(windowItem.id, pane.id, "view", tab.id)}>
+                {tab.label}
+              </button>
+            ))}
+          </div>
+          <div className="operator-console-actions">
+            <span className={statusPillClass(operator.status)}>{operatorStatusLabel}</span>
+            <button className={operator.status === "loading" ? "ghost-button active" : "ghost-button"} onClick={() => refreshOperatorMonitor(windowItem.id, pane.id, { preserveSelection: true })}>
+              {operator.status === "loading" ? "Refreshing..." : "Refresh"}
+            </button>
+          </div>
+        </div>
+
+        <div className="operator-summary-strip" aria-label="Managed work summary">
+          <span className="operator-metric-chip"><strong>{counts.total}</strong><small>Works</small></span>
+          <span className="operator-metric-chip"><strong>{counts.assigned}</strong><small>Assigned</small></span>
+          <span className="operator-metric-chip"><strong>{counts.attention}</strong><small>Attention</small></span>
+          <span className="operator-metric-chip"><strong>{counts.destinations}</strong><small>Ready</small></span>
+        </div>
+
+        <div className={operator.error ? "operator-console-note operator-console-note--error" : "operator-console-note"}>
+          {operatorNote}
+        </div>
+
+        <div className="operator-console-body">
+          {tabContent}
+        </div>
+      </div>
+    );
   }
 
   if (IS_MAP_PHEMAR_MODE) {
@@ -10784,6 +11801,7 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
                 <div className="meta-stack">
                   <div><strong>Mode</strong><span>{state.dashboard.meta?.mode}</span></div>
                   <div><strong>Plaza</strong><span>{state.preferences.connectionPlazaUrl}</span></div>
+                  <div><strong>Default Boss</strong><span>{state.preferences.operatorBossUrl || "Not set"}</span></div>
                   <div><strong>Storage</strong><span>{defaultSaveStorageSummary}</span></div>
                 </div>
               </div>

@@ -5,6 +5,9 @@ Prompits provides the core HTTP-native agent runtime, Plaza coordination layer, 
 pool/practice infrastructure for FinMAS. Within Prompits, the teamwork package models
 cooperative agent workflows and their supporting runtime pieces.
 
+Experimental notice: the teamwork practice surface is still under active development,
+so new aliases and manager-mediated flows may continue to change.
+
 Core types exposed here include `ControlManagerJobPractice`, `GetManagerJobPractice`,
 `ListManagerDbTablesPractice`, `PostManagerJobResultPractice`, and
 `PreviewManagerDbTablePractice`, which carry the main behavior or state managed by this
@@ -13,8 +16,11 @@ module.
 
 from __future__ import annotations
 
+from typing import Any
+
 from prompits.dispatcher.practices import (
     ControlDispatcherJobPractice,
+    DispatcherPractice,
     GetDispatcherJobPractice,
     ListDispatcherDbTablesPractice,
     PostDispatcherJobResultPractice,
@@ -46,6 +52,27 @@ class RegisterManagerWorkerPractice(RegisterDispatcherWorkerPractice):
         self.description = "Upsert worker capabilities and heartbeat metadata for a manager queue."
         self.id = "manager-register-worker"
         self.tags = ["prompits", "teamwork", "manager", "workers"]
+
+
+class HireWorkerManagerPractice(DispatcherPractice):
+    """Practice implementation for worker hire workflows."""
+    def __init__(self):
+        """Initialize the worker hire manager practice."""
+        super().__init__(
+            name="Hire Worker Manager",
+            description="Assign one manager to a waiting teamwork worker.",
+            id="worker-hire-manager",
+            tags=["prompits", "teamwork", "worker", "hire"],
+            inputModes=["http-post", "json"],
+            outputModes=["json"],
+            parameters={},
+        )
+
+    def execute(self, **kwargs) -> Any:
+        """Handle execute for the worker hire manager practice."""
+        if not self.agent or not hasattr(self.agent, "accept_manager_hire"):
+            raise RuntimeError("Teamwork worker is not bound to this practice.")
+        return self.agent.accept_manager_hire(**kwargs)
 
 
 class GetManagerJobPractice(GetDispatcherJobPractice):
@@ -128,6 +155,7 @@ class ReportManagerJobPractice(ReportDispatcherJobPractice):
 __all__ = [
     "ControlManagerJobPractice",
     "GetManagerJobPractice",
+    "HireWorkerManagerPractice",
     "ListManagerDbTablesPractice",
     "PostManagerJobResultPractice",
     "PreviewManagerDbTablePractice",

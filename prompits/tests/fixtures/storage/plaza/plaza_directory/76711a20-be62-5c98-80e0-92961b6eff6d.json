@@ -1,0 +1,285 @@
+{
+  "id": "76711a20-be62-5c98-80e0-92961b6eff6d",
+  "agent_id": "76711a20-be62-5c98-80e0-92961b6eff6d",
+  "name": "file",
+  "type": "Pulse",
+  "description": "Load file content from an HTTP(S) URL or a local filesystem path.",
+  "owner": "Plaza",
+  "address": "",
+  "meta": {
+    "pulse_id": "urn:plaza:pulse:file",
+    "pulse_address": "76711a20-be62-5c98-80e0-92961b6eff6d",
+    "pulse_definition": {
+      "pds_version": "0.1.0",
+      "resource_type": "pulse_definition",
+      "id": "urn:plaza:pulse:file",
+      "version": "1.0.0",
+      "name": "file",
+      "title": "File",
+      "description": "Load file content from an HTTP(S) URL or a local filesystem path.",
+      "pulse_class": "fact",
+      "status": "stable",
+      "concept": {
+        "definition": "Load file content from an HTTP(S) URL or a local filesystem path."
+      },
+      "interface": {
+        "schema_language": "json-schema-2020-12",
+        "request_schema": {
+          "type": "object",
+          "properties": {
+            "url": {
+              "type": "string",
+              "description": "HTTP(S) URL or file:// URL to load."
+            },
+            "local_path": {
+              "type": "string",
+              "description": "Absolute or relative filesystem path to load."
+            }
+          },
+          "oneOf": [
+            {
+              "required": [
+                "url"
+              ]
+            },
+            {
+              "required": [
+                "local_path"
+              ]
+            }
+          ]
+        },
+        "response_schema": {
+          "type": "object",
+          "properties": {
+            "format": {
+              "type": "string",
+              "enum": [
+                "json",
+                "text",
+                "base64"
+              ],
+              "description": "Normalized representation used for content."
+            },
+            "content": {
+              "type": [
+                "object",
+                "array",
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Parsed JSON value, UTF-8 text, or base64-encoded binary payload."
+            }
+          },
+          "required": [
+            "format",
+            "content"
+          ]
+        }
+      }
+    },
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string",
+          "description": "HTTP(S) URL or file:// URL to load."
+        },
+        "local_path": {
+          "type": "string",
+          "description": "Absolute or relative filesystem path to load."
+        }
+      },
+      "oneOf": [
+        {
+          "required": [
+            "url"
+          ]
+        },
+        {
+          "required": [
+            "local_path"
+          ]
+        }
+      ]
+    },
+    "output_schema": {
+      "type": "object",
+      "properties": {
+        "format": {
+          "type": "string",
+          "enum": [
+            "json",
+            "text",
+            "base64"
+          ],
+          "description": "Normalized representation used for content."
+        },
+        "content": {
+          "type": [
+            "object",
+            "array",
+            "string",
+            "number",
+            "boolean",
+            "null"
+          ],
+          "description": "Parsed JSON value, UTF-8 text, or base64-encoded binary payload."
+        }
+      },
+      "required": [
+        "format",
+        "content"
+      ]
+    },
+    "description": "Load file content from an HTTP(S) URL or a local filesystem path.",
+    "examples": []
+  },
+  "card": {
+    "name": "file",
+    "description": "Load file content from an HTTP(S) URL or a local filesystem path.",
+    "pit_type": "Pulse",
+    "owner": "Plaza",
+    "tags": [],
+    "meta": {
+      "pulse_id": "urn:plaza:pulse:file",
+      "pulse_address": "76711a20-be62-5c98-80e0-92961b6eff6d",
+      "pulse_definition": {
+        "pds_version": "0.1.0",
+        "resource_type": "pulse_definition",
+        "id": "urn:plaza:pulse:file",
+        "version": "1.0.0",
+        "name": "file",
+        "title": "File",
+        "description": "Load file content from an HTTP(S) URL or a local filesystem path.",
+        "pulse_class": "fact",
+        "status": "stable",
+        "concept": {
+          "definition": "Load file content from an HTTP(S) URL or a local filesystem path."
+        },
+        "interface": {
+          "schema_language": "json-schema-2020-12",
+          "request_schema": {
+            "type": "object",
+            "properties": {
+              "url": {
+                "type": "string",
+                "description": "HTTP(S) URL or file:// URL to load."
+              },
+              "local_path": {
+                "type": "string",
+                "description": "Absolute or relative filesystem path to load."
+              }
+            },
+            "oneOf": [
+              {
+                "required": [
+                  "url"
+                ]
+              },
+              {
+                "required": [
+                  "local_path"
+                ]
+              }
+            ]
+          },
+          "response_schema": {
+            "type": "object",
+            "properties": {
+              "format": {
+                "type": "string",
+                "enum": [
+                  "json",
+                  "text",
+                  "base64"
+                ],
+                "description": "Normalized representation used for content."
+              },
+              "content": {
+                "type": [
+                  "object",
+                  "array",
+                  "string",
+                  "number",
+                  "boolean",
+                  "null"
+                ],
+                "description": "Parsed JSON value, UTF-8 text, or base64-encoded binary payload."
+              }
+            },
+            "required": [
+              "format",
+              "content"
+            ]
+          }
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "HTTP(S) URL or file:// URL to load."
+          },
+          "local_path": {
+            "type": "string",
+            "description": "Absolute or relative filesystem path to load."
+          }
+        },
+        "oneOf": [
+          {
+            "required": [
+              "url"
+            ]
+          },
+          {
+            "required": [
+              "local_path"
+            ]
+          }
+        ]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "format": {
+            "type": "string",
+            "enum": [
+              "json",
+              "text",
+              "base64"
+            ],
+            "description": "Normalized representation used for content."
+          },
+          "content": {
+            "type": [
+              "object",
+              "array",
+              "string",
+              "number",
+              "boolean",
+              "null"
+            ],
+            "description": "Parsed JSON value, UTF-8 text, or base64-encoded binary payload."
+          }
+        },
+        "required": [
+          "format",
+          "content"
+        ]
+      },
+      "description": "Load file content from an HTTP(S) URL or a local filesystem path.",
+      "examples": []
+    },
+    "pit_address": {
+      "pit_id": "76711a20-be62-5c98-80e0-92961b6eff6d",
+      "plazas": [
+        "http://127.0.0.1:8011"
+      ]
+    }
+  },
+  "updated_at": "2026-04-04T10:28:14.839084+00:00"
+}

@@ -1,0 +1,129 @@
+{
+  "id": "30e2f689-e3db-5357-bf39-97bcb41487ab",
+  "agent_id": "30e2f689-e3db-5357-bf39-97bcb41487ab",
+  "name": "team_status",
+  "type": "Pulse",
+  "description": "Summarize current queue and worker health for one teamwork manager.",
+  "owner": "Plaza",
+  "address": "",
+  "meta": {
+    "pulse_id": "urn:plaza:pulse:team.status",
+    "pulse_address": "plaza://pulse/team_status",
+    "pulse_definition": {
+      "pds_version": "0.1.0",
+      "resource_type": "pulse_definition",
+      "id": "urn:plaza:pulse:team.status",
+      "version": "1.0.0",
+      "name": "team_status",
+      "title": "Team Status",
+      "description": "Summarize current queue and worker health for one teamwork manager.",
+      "pulse_class": "fact",
+      "status": "stable",
+      "concept": {
+        "definition": "Summarize current queue and worker health for one teamwork manager."
+      },
+      "interface": {
+        "schema_language": "json-schema-2020-12",
+        "request_schema": {
+          "type": "object",
+          "properties": {
+            "manager_address": {
+              "type": "string"
+            },
+            "party": {
+              "type": "string"
+            },
+            "preview_limit": {
+              "type": "integer"
+            }
+          }
+        },
+        "response_schema": {}
+      }
+    },
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "manager_address": {
+          "type": "string"
+        },
+        "party": {
+          "type": "string"
+        },
+        "preview_limit": {
+          "type": "integer"
+        }
+      }
+    },
+    "output_schema": {},
+    "description": "Summarize current queue and worker health for one teamwork manager.",
+    "examples": []
+  },
+  "card": {
+    "name": "team_status",
+    "description": "Summarize current queue and worker health for one teamwork manager.",
+    "pit_type": "Pulse",
+    "owner": "Plaza",
+    "tags": [],
+    "meta": {
+      "pulse_id": "urn:plaza:pulse:team.status",
+      "pulse_address": "plaza://pulse/team_status",
+      "pulse_definition": {
+        "pds_version": "0.1.0",
+        "resource_type": "pulse_definition",
+        "id": "urn:plaza:pulse:team.status",
+        "version": "1.0.0",
+        "name": "team_status",
+        "title": "Team Status",
+        "description": "Summarize current queue and worker health for one teamwork manager.",
+        "pulse_class": "fact",
+        "status": "stable",
+        "concept": {
+          "definition": "Summarize current queue and worker health for one teamwork manager."
+        },
+        "interface": {
+          "schema_language": "json-schema-2020-12",
+          "request_schema": {
+            "type": "object",
+            "properties": {
+              "manager_address": {
+                "type": "string"
+              },
+              "party": {
+                "type": "string"
+              },
+              "preview_limit": {
+                "type": "integer"
+              }
+            }
+          },
+          "response_schema": {}
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "manager_address": {
+            "type": "string"
+          },
+          "party": {
+            "type": "string"
+          },
+          "preview_limit": {
+            "type": "integer"
+          }
+        }
+      },
+      "output_schema": {},
+      "description": "Summarize current queue and worker health for one teamwork manager.",
+      "examples": []
+    },
+    "pit_address": {
+      "pit_id": "30e2f689-e3db-5357-bf39-97bcb41487ab",
+      "plazas": [
+        "http://127.0.0.1:8011"
+      ]
+    }
+  },
+  "updated_at": "2026-04-04T10:28:12.868326+00:00"
+}

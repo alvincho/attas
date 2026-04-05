@@ -18,39 +18,56 @@
     "job_capabilities": [
       {
         "name": "security_master",
-        "description": "Create a demo security master row.",
-        "payload_template": {
-          "symbol": "AAPL"
-        }
+        "description": "Refresh the full U.S. listed security master from Nasdaq Trader."
       },
       {
         "name": "daily_price",
-        "description": "Create a demo daily price row.",
+        "description": "Fetch live Yahoo Finance end-of-day prices for the requested symbol.",
         "payload_template": {
           "symbol": "AAPL"
         }
       },
       {
         "name": "fundamentals",
-        "description": "Create a demo fundamentals row.",
+        "description": "Refresh SEC raw archives and map the requested company into ads_fundamentals.",
         "payload_template": {
           "symbol": "AAPL"
         }
       },
       {
         "name": "financial_statements",
-        "description": "Create a demo financial statement row.",
+        "description": "Refresh SEC raw archives and map the requested company into ads_financial_statements.",
         "payload_template": {
-          "symbol": "AAPL",
-          "statement_type": "income_statement"
+          "symbol": "AAPL"
         }
       },
       {
         "name": "news",
-        "description": "Create a demo news row.",
+        "description": "Fetch live SEC, CFTC, and BLS RSS feeds into ads_news.",
         "payload_template": {
-          "symbol": "AAPL"
-        }
+          "feeds": [
+            {
+              "source": "SEC",
+              "url": "https://www.sec.gov/news/pressreleases.rss"
+            },
+            {
+              "source": "CFTC",
+              "url": "https://www.cftc.gov/RSS/RSSGP/rssgp.xml"
+            },
+            {
+              "source": "BLS",
+              "url": "https://www.bls.gov/feed/bls_latest.rss"
+            }
+          ]
+        },
+        "parameters": [
+          {
+            "key": "feeds",
+            "label": "RSS Feed URLs",
+            "type": "feed_list",
+            "help": "Add, remove, or edit the feeds this job should collect."
+          }
+        ]
       }
     ],
     "monitor_refresh_sec": 5,

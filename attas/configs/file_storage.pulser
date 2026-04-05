@@ -1,6 +1,6 @@
 {
-    "name": "FileStoragePulser",
-    "type": "phemacast.pulsers.file_storage_pulser.FileStoragePulser",
+    "name": "SystemPulser",
+    "type": "phemacast.pulsers.system_pulser.SystemPulser",
     "host": "127.0.0.1",
     "port": 8067,
     "plaza_url": "http://127.0.0.1:8011",
@@ -18,12 +18,12 @@
         {
             "type": "FileSystemPool",
             "name": "file_storage_agent_pool",
-            "description": "Credential and practice metadata pool for FileStoragePulser.",
-            "root_path": "tests/storage/file_storage_pulser/agent_pool"
+            "description": "Credential and practice metadata pool for SystemPulser.",
+            "root_path": "tests/storage/system_pulser/agent_pool"
         }
     ],
     "storage": {
         "type": "filesystem",
-        "root_path": "tests/storage/file_storage_pulser/content"
+        "root_path": "tests/storage/system_pulser/content"
     }
 }

@@ -9,8 +9,8 @@
     {
       "type": "SQLitePool",
       "name": "ads_worker_pool",
-      "description": "SQLite worker state for the demo.",
-      "db_path": "demos/data-pipeline/storage/ads_worker.sqlite"
+      "description": "Shared SQLite ADS store for the live demo worker.",
+      "db_path": "demos/data-pipeline/storage/ads_dispatcher.sqlite"
     }
   ],
   "ads": {
@@ -25,26 +25,29 @@
     "job_capabilities": [
       {
         "name": "security_master",
-        "callable": "ads.examples.job_caps:mock_security_master_cap"
+        "type": "ads.us_listed:USListedSecJobCap"
       },
       {
         "name": "daily_price",
-        "callable": "ads.examples.job_caps:mock_daily_price_cap"
+        "type": "ads.yfinance:YFinanceEODJobCap"
       },
       {
         "name": "fundamentals",
-        "callable": "ads.examples.job_caps:mock_fundamentals_cap"
+        "type": "ads.examples.live_data_pipeline:LiveSECFundamentalsJobCap",
+        "cache_dir": "demos/data-pipeline/storage/sec_edgar"
       },
       {
         "name": "financial_statements",
-        "callable": "ads.examples.job_caps:mock_financial_statements_cap"
+        "type": "ads.examples.live_data_pipeline:LiveSECFinancialStatementsJobCap",
+        "cache_dir": "demos/data-pipeline/storage/sec_edgar"
       },
       {
         "name": "news",
-        "callable": "ads.examples.job_caps:mock_news_cap"
+        "type": "ads.rss_news:RSSNewsJobCap"
       }
     ],
     "poll_interval_sec": 2,
+    "yfinance_request_cooldown_sec": 120,
     "auto_register": false
   }
 }

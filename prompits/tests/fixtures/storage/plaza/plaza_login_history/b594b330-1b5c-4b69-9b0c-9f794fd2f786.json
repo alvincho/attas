@@ -1,0 +1,8 @@
+{
+  "id": "b594b330-1b5c-4b69-9b0c-9f794fd2f786",
+  "agent_id": "5444b86e-e2d4-4e5b-b4c9-139b10b6871b",
+  "agent_name": "BossPulser",
+  "address": "http://127.0.0.1:8220",
+  "event": "relogin",
+  "timestamp": "2026-04-04T10:28:13.059767+00:00"
+}

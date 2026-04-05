@@ -37,8 +37,9 @@ const LLM_CONFIG_TYPES = [
 const LLM_API_PROVIDERS = ["openai", "anthropic", "google", "openrouter", "ollama", "custom"];
 const FILE_SAVE_BACKENDS = [
   { id: "filesystem", label: "Local Filesystem" },
-  { id: "file_storage_pulser", label: "FileStoragePulser" },
+  { id: "system_pulser", label: "SystemPulser" },
 ];
+const LEGACY_SYSTEM_PULSER_BACKEND = ["file", "storage", "pulser"].join("_");
 const BROWSER_PANE_TYPES = [
   { id: "plain_text", label: "Plain" },
   { id: "mind_map", label: "Diagram" },
@@ -195,14 +196,14 @@ function buildMapPhemarRequestUrl(path, extraParams = null, storageDirectory = "
 }
 
 function browserLayoutStorageTarget(preferences, appState) {
-  if (normalizeFileSaveBackend(preferences?.fileSaveBackend) === "file_storage_pulser") {
-    const pulser = configuredFileStoragePulser(preferences, appState);
-    const pulserLabel = formatConfiguredFileStoragePulserLabel(preferences, pulser);
+  if (normalizeFileSaveBackend(preferences?.fileSaveBackend) === "system_pulser") {
+    const pulser = configuredSystemPulser(preferences, appState);
+    const pulserLabel = formatConfiguredSystemPulserLabel(preferences, pulser);
     const bucketName = String(preferences?.fileSaveBucketName || "unset bucket").trim();
     const objectKey = joinStorageObjectKey(preferences?.fileSaveObjectPrefix, BROWSER_LAYOUT_STORAGE_FILE_NAME);
     return {
-      backend: "file_storage_pulser",
-      label: `FileStoragePulser · ${pulserLabel}`,
+      backend: "system_pulser",
+      label: `SystemPulser · ${pulserLabel}`,
       detail: `${bucketName}/${objectKey}`,
       objectKey,
       bucketName,
@@ -235,14 +236,14 @@ function snapshotStorageTarget(kind, preferences, appState, windowId = "") {
 }
 
 function defaultSaveStorageTarget(preferences, appState) {
-  if (normalizeFileSaveBackend(preferences?.fileSaveBackend) === "file_storage_pulser") {
-    const pulser = configuredFileStoragePulser(preferences, appState);
-    const pulserLabel = formatConfiguredFileStoragePulserLabel(preferences, pulser);
+  if (normalizeFileSaveBackend(preferences?.fileSaveBackend) === "system_pulser") {
+    const pulser = configuredSystemPulser(preferences, appState);
+    const pulserLabel = formatConfiguredSystemPulserLabel(preferences, pulser);
     const bucketName = String(preferences?.fileSaveBucketName || "unset bucket").trim();
     const objectPrefix = String(preferences?.fileSaveObjectPrefix || "").trim().replace(/^\/+|\/+$/g, "");
     return {
-      backend: "file_storage_pulser",
-      label: `FileStoragePulser · ${pulserLabel}`,
+      backend: "system_pulser",
+      label: `SystemPulser · ${pulserLabel}`,
       detail: objectPrefix ? `${bucketName}/${objectPrefix}` : bucketName,
     };
   }
@@ -302,7 +303,11 @@ function clamp(value, min, max) {
 }
 
 function normalizeFileSaveBackend(value) {
-  return FILE_SAVE_BACKENDS.some((entry) => entry.id === value) ? value : "filesystem";
+  const normalized = String(value || "").trim();
+  if (normalized === LEGACY_SYSTEM_PULSER_BACKEND) {
+    return "system_pulser";
+  }
+  return FILE_SAVE_BACKENDS.some((entry) => entry.id === normalized) ? normalized : "filesystem";
 }
 
 function openMapPhemarUserGuide() {
@@ -1384,20 +1389,30 @@ function isFileStorageCatalogPulser(pulser) {
   return Boolean(fileStoragePulserSavePulse(pulser) && fileStoragePulserLoadPulse(pulser));
 }
 
-function availableFileStoragePulsers(appState) {
+function pulserPartyValue(pulser) {
+  return String(pulser?.party || pulser?.meta?.party || pulser?.card?.party || pulser?.card?.meta?.party || "").trim();
+}
+
+function isSystemPartyPulser(pulser) {
+  return pulserPartyValue(pulser).toLowerCase() === "system";
+}
+
+function availableSystemPulsers(appState) {
   const knownPulsers = [
     ...(appState?.globalPlazaStatus?.pulsers || []),
     ...((appState?.workspaces || []).flatMap((workspace) => (
       (workspace?.windows || []).flatMap((windowItem) => windowItem?.browserCatalog?.pulsers || [])
     ))),
   ];
-  return dedupePulsers(knownPulsers.filter((pulser) => isFileStorageCatalogPulser(pulser))).sort((left, right) => (
+  const storagePulsers = dedupePulsers(knownPulsers.filter((pulser) => isFileStorageCatalogPulser(pulser))).sort((left, right) => (
     String(left?.name || "").localeCompare(String(right?.name || ""))
     || String(left?.address || "").localeCompare(String(right?.address || ""))
   ));
+  const preferred = storagePulsers.filter((pulser) => isSystemPartyPulser(pulser));
+  return preferred.length ? preferred : storagePulsers;
 }
 
-function selectedFileStoragePulser(preferences, pulsers) {
+function selectedSystemPulser(preferences, pulsers) {
   const exact = (pulsers || []).find((pulser) => (
     (preferences?.fileSavePulserId && pulser.agent_id === preferences.fileSavePulserId)
     || (preferences?.fileSavePulserName && pulser.name === preferences.fileSavePulserName)
@@ -1406,8 +1421,8 @@ function selectedFileStoragePulser(preferences, pulsers) {
   return exact || ((pulsers || []).length === 1 ? pulsers[0] : null);
 }
 
-function configuredFileStoragePulser(preferences, appState) {
-  const exact = selectedFileStoragePulser(preferences, availableFileStoragePulsers(appState));
+function configuredSystemPulser(preferences, appState) {
+  const exact = selectedSystemPulser(preferences, availableSystemPulsers(appState));
   if (exact) {
     return exact;
   }
@@ -1552,13 +1567,13 @@ function formatCompatiblePulserOptionLabel(pulser, options = {}) {
   }, options);
 }
 
-function formatConfiguredFileStoragePulserLabel(preferences, pulser, options = {}) {
+function formatConfiguredSystemPulserLabel(preferences, pulser, options = {}) {
   if (pulser) {
     return formatPulserDisplayName(pulser, options);
   }
   const fallbackName = String(preferences?.fileSavePulserName || preferences?.fileSavePulserId || "").trim();
   if (!fallbackName) {
-    return "Unset FileStoragePulser";
+    return "Unset SystemPulser";
   }
   return formatPulserDisplayName({
     name: fallbackName,
@@ -1584,15 +1599,34 @@ function normalizePulserAgent(agent, plazaName) {
   }
   const card = agent.card && typeof agent.card === "object" ? agent.card : {};
   const meta = agent.meta && typeof agent.meta === "object" ? agent.meta : {};
+  const cardMeta = card.meta && typeof card.meta === "object" ? card.meta : {};
   const pitType = String(agent.pit_type || card.pit_type || agent.type || card.type || "").trim();
-  if (pitType !== "Pulser") {
+  const rawPractices = Array.isArray(agent.practices)
+    ? agent.practices
+    : (Array.isArray(card.practices) ? card.practices : []);
+  const rawSupportedPulses = Array.isArray(agent.supported_pulses)
+    ? agent.supported_pulses
+    : (Array.isArray(meta.supported_pulses)
+      ? meta.supported_pulses
+      : (Array.isArray(cardMeta.supported_pulses) ? cardMeta.supported_pulses : []));
+  const hasPulserIdentity = Boolean(
+    String(agent.agent_id || card.agent_id || "").trim()
+    || String(agent.name || card.name || "").trim()
+    || String(agent.address || card.address || "").trim()
+    || String(agent.practice_id || agent.practiceId || "").trim()
+    || rawSupportedPulses.length,
+  );
+  if (pitType && pitType !== "Pulser") {
     return null;
   }
-  const practices = (Array.isArray(card.practices) ? card.practices : [])
+  if (!pitType && !hasPulserIdentity) {
+    return null;
+  }
+  const practices = rawPractices
     .map((entry) => normalizePracticeEntry(entry))
     .filter(Boolean);
   const supportedPulses = dedupeSupportedPulses(
-    (Array.isArray(meta.supported_pulses) ? meta.supported_pulses : [])
+    rawSupportedPulses
       .map((entry) => normalizeSupportedPulseEntry(entry))
       .filter(Boolean),
   );
@@ -1602,19 +1636,47 @@ function normalizePulserAgent(agent, plazaName) {
     address: String(card.address || agent.address || "").trim(),
     description: String(agent.description || card.description || ""),
     owner: String(agent.owner || card.owner || ""),
-    practice_id: defaultPracticeId(practices),
+    party: String(agent.party || card.party || meta.party || cardMeta.party || "").trim(),
+    practice_id: String(agent.practice_id || agent.practiceId || defaultPracticeId(practices)).trim() || defaultPracticeId(practices),
     practices,
     supported_pulses: supportedPulses,
-    last_active: Number(agent.last_active || 0),
-    plaza_name: plazaName,
-    pulse_count: supportedPulses.length,
+    last_active: Number(agent.last_active ?? agent.lastActive ?? 0),
+    plaza_name: String(agent.plaza_name || agent.plazaName || plazaName || ""),
+    pulse_count: Number((agent.pulse_count ?? agent.pulseCount ?? supportedPulses.length) || supportedPulses.length),
   };
 }
 
 function standardizeCatalogPayload(payload, plazaUrl) {
   const normalizedUrl = normalizePlazaUrl(plazaUrl || payload?.plaza_url || payload?.plazaUrl || "");
-  const pulsers = Array.isArray(payload?.pulsers) ? payload.pulsers : [];
-  const pulses = Array.isArray(payload?.pulses) ? payload.pulses : [];
+  const plazaSummaries = Array.isArray(payload?.plazas) ? payload.plazas : [];
+  const rawPulsers = Array.isArray(payload?.pulsers) ? payload.pulsers : [];
+  const plazaDerivedPulsers = plazaSummaries.flatMap((plaza) => {
+    if (!plaza || typeof plaza !== "object") {
+      return [];
+    }
+    const card = plaza.card && typeof plaza.card === "object" ? plaza.card : {};
+    const plazaName = String(card.name || plaza.name || plaza.url || "Plaza");
+    return (Array.isArray(plaza.agents) ? plaza.agents : [])
+      .map((agent) => normalizePulserAgent(agent, plazaName))
+      .filter(Boolean);
+  });
+  const pulsers = dedupePulsers(
+    [...rawPulsers, ...plazaDerivedPulsers]
+      .map((entry) => normalizePulserAgent(entry, entry?.plaza_name || entry?.plazaName || ""))
+      .filter(Boolean),
+  ).sort((left, right) => (
+    String(left?.name || "").localeCompare(String(right?.name || ""))
+    || String(left?.address || "").localeCompare(String(right?.address || ""))
+  ));
+  const rawPulses = Array.isArray(payload?.pulses) ? payload.pulses : [];
+  const pulses = dedupeCatalogPulses(
+    (rawPulses.length ? rawPulses : pulsers.flatMap((pulser) => pulser.supported_pulses || []))
+      .map((entry) => normalizeCatalogPulseEntry(entry))
+      .filter(Boolean),
+  ).sort((left, right) => (
+    String(left?.pulse_name || "").localeCompare(String(right?.pulse_name || ""))
+    || String(left?.pulse_address || "").localeCompare(String(right?.pulse_address || ""))
+  ));
   const uniquePulseKeys = new Set(
     pulses
       .map((pulse) => String(pulse?.pulse_address || pulse?.pulse_name || pulse?.pulse_id || "").trim())
@@ -1629,7 +1691,7 @@ function standardizeCatalogPayload(payload, plazaUrl) {
     plaza_url: normalizedUrl,
     pulsers,
     pulses,
-    plazas: Array.isArray(payload?.plazas) ? payload.plazas : [],
+    plazas: plazaSummaries,
     pulserCount: Number((payload?.pulserCount ?? payload?.pulser_count ?? pulsers.length) || 0),
     pulseCount: Number((payload?.pulseCount ?? payload?.pulse_count ?? uniquePulseKeys.size) || 0),
     pulser_count: Number((payload?.pulser_count ?? payload?.pulserCount ?? pulsers.length) || 0),
@@ -2006,14 +2068,14 @@ function normalizeMapPhemaRecord(phema, existing = null) {
 
 async function loadMapPhemaLibraryFromConfiguredStorage(appState) {
   const target = mapPhemaStorageTarget(appState.preferences, appState);
-  if (target.backend !== "file_storage_pulser") {
-    throw new Error("MapPhemar configured storage is not using a FileStoragePulser.");
+  if (target.backend !== "system_pulser") {
+    throw new Error("MapPhemar configured storage is not using a SystemPulser.");
   }
   if (!target.pulser) {
-    throw new Error("Choose a FileStoragePulser in Settings before loading saved Phemas.");
+    throw new Error("Choose a SystemPulser in Settings before loading saved Phemas.");
   }
   if (!target.bucketName || target.bucketName === "unset bucket") {
-    throw new Error("Set a default FileStoragePulser bucket name in Settings before loading saved Phemas.");
+    throw new Error("Set a default SystemPulser bucket name in Settings before loading saved Phemas.");
   }
   const loadPulse = fileStoragePulserLoadPulse(target.pulser);
   async function loadObjectKey(objectKey) {
@@ -2061,14 +2123,14 @@ async function loadMapPhemaLibraryFromConfiguredStorage(appState) {
 
 async function saveMapPhemaLibraryToConfiguredStorage(library, appState) {
   const target = mapPhemaStorageTarget(appState.preferences, appState);
-  if (target.backend !== "file_storage_pulser") {
-    throw new Error("MapPhemar configured storage is not using a FileStoragePulser.");
+  if (target.backend !== "system_pulser") {
+    throw new Error("MapPhemar configured storage is not using a SystemPulser.");
   }
   if (!target.pulser) {
-    throw new Error("Choose a FileStoragePulser in Settings before saving Phemas.");
+    throw new Error("Choose a SystemPulser in Settings before saving Phemas.");
   }
   if (!target.bucketName || target.bucketName === "unset bucket") {
-    throw new Error("Set a default FileStoragePulser bucket name in Settings before saving Phemas.");
+    throw new Error("Set a default SystemPulser bucket name in Settings before saving Phemas.");
   }
   const savePulse = fileStoragePulserSavePulse(target.pulser);
   unwrapStoragePulserPayload(await runPulserRequest({
@@ -2096,7 +2158,7 @@ async function saveMapPhemaLibraryToConfiguredStorage(library, appState) {
 async function fetchMapPhemaLibrary(query = "", appState = null) {
   const storageState = resolveMapPhemaAppState(appState);
   const target = mapPhemaStorageTarget(storageState.preferences, storageState);
-  if (target.backend === "file_storage_pulser") {
+  if (target.backend === "system_pulser") {
     try {
       const library = await loadMapPhemaLibraryFromConfiguredStorage(storageState);
       return filterMapPhemaRows(library?.phemas || [], query);
@@ -2114,7 +2176,7 @@ async function fetchMapPhemaLibrary(query = "", appState = null) {
 async function fetchMapPhema(phemaId, appState = null) {
   const storageState = resolveMapPhemaAppState(appState);
   const target = mapPhemaStorageTarget(storageState.preferences, storageState);
-  if (target.backend === "file_storage_pulser") {
+  if (target.backend === "system_pulser") {
     const library = await loadMapPhemaLibraryFromConfiguredStorage(storageState);
     const phema = (library?.phemas || []).find((entry) => String(entry?.phema_id || entry?.id || "") === String(phemaId || "").trim()) || null;
     if (!(phema && typeof phema === "object")) {
@@ -2138,7 +2200,7 @@ async function fetchMapPhema(phemaId, appState = null) {
 async function saveMapPhemaPayload(phema, appState = null) {
   const storageState = resolveMapPhemaAppState(appState);
   const target = mapPhemaStorageTarget(storageState.preferences, storageState);
-  if (target.backend === "file_storage_pulser") {
+  if (target.backend === "system_pulser") {
     if (!(phema && typeof phema === "object")) {
       throw new Error("Phema payload must be a JSON object.");
     }
@@ -2345,14 +2407,14 @@ async function loadLocalFilesystemMapPhemaEntries(directory) {
 }
 
 function workspaceLayoutStorageTarget(preferences, appState) {
-  if (normalizeFileSaveBackend(preferences?.fileSaveBackend) === "file_storage_pulser") {
-    const pulser = configuredFileStoragePulser(preferences, appState);
-    const pulserLabel = formatConfiguredFileStoragePulserLabel(preferences, pulser);
+  if (normalizeFileSaveBackend(preferences?.fileSaveBackend) === "system_pulser") {
+    const pulser = configuredSystemPulser(preferences, appState);
+    const pulserLabel = formatConfiguredSystemPulserLabel(preferences, pulser);
     const bucketName = String(preferences?.fileSaveBucketName || "unset bucket").trim();
     const objectKey = joinStorageObjectKey(preferences?.fileSaveObjectPrefix, WORKSPACE_LAYOUT_STORAGE_FILE_NAME);
     return {
-      backend: "file_storage_pulser",
-      label: `FileStoragePulser · ${pulserLabel}`,
+      backend: "system_pulser",
+      label: `SystemPulser · ${pulserLabel}`,
       detail: `${bucketName}/${objectKey}`,
       objectKey,
       bucketName,
@@ -2377,14 +2439,14 @@ function mapPhemaStorageTarget(preferences, appState = null) {
   const scopeLabel = inheritedSettings
     ? (MAP_PHEMAR_SETTINGS_SCOPE === "personal_agent" ? "Personal Agent" : "Inherited")
     : "MapPhemar";
-  if (normalizeFileSaveBackend(preferences?.fileSaveBackend) === "file_storage_pulser") {
-    const pulser = configuredFileStoragePulser(preferences, appState);
-    const pulserLabel = formatConfiguredFileStoragePulserLabel(preferences, pulser);
+  if (normalizeFileSaveBackend(preferences?.fileSaveBackend) === "system_pulser") {
+    const pulser = configuredSystemPulser(preferences, appState);
+    const pulserLabel = formatConfiguredSystemPulserLabel(preferences, pulser);
     const bucketName = String(preferences?.fileSaveBucketName || "unset bucket").trim();
     const objectKey = mapPhemaLibraryObjectKey(preferences?.fileSaveObjectPrefix);
     const legacyObjectKey = legacyMapPhemaLibraryObjectKey(preferences?.fileSaveObjectPrefix);
     return {
-      backend: "file_storage_pulser",
+      backend: "system_pulser",
       label: `${scopeLabel} · ${pulserLabel}`,
       detail: `${bucketName}/${objectKey}`,
       objectKey,
@@ -2567,12 +2629,12 @@ function extractBrowserSnapshotLibrary(payload) {
 
 async function saveWorkspaceLayoutLibraryToConfiguredStorage(library, appState) {
   const target = workspaceLayoutStorageTarget(appState.preferences, appState);
-  if (target.backend === "file_storage_pulser") {
+  if (target.backend === "system_pulser") {
     if (!target.pulser) {
-      throw new Error("Choose a FileStoragePulser in Settings before saving a workspace.");
+      throw new Error("Choose a SystemPulser in Settings before saving a workspace.");
     }
     if (!target.bucketName || target.bucketName === "unset bucket") {
-      throw new Error("Set a default FileStoragePulser bucket name in Settings before saving a workspace.");
+      throw new Error("Set a default SystemPulser bucket name in Settings before saving a workspace.");
     }
     const savePulse = fileStoragePulserSavePulse(target.pulser);
     unwrapStoragePulserPayload(await runPulserRequest({
@@ -2608,12 +2670,12 @@ async function saveWorkspaceLayoutLibraryToConfiguredStorage(library, appState) 
 
 async function loadWorkspaceLayoutLibraryFromConfiguredStorage(appState) {
   const target = workspaceLayoutStorageTarget(appState.preferences, appState);
-  if (target.backend === "file_storage_pulser") {
+  if (target.backend === "system_pulser") {
     if (!target.pulser) {
-      throw new Error("Choose a FileStoragePulser in Settings before loading a workspace.");
+      throw new Error("Choose a SystemPulser in Settings before loading a workspace.");
     }
     if (!target.bucketName || target.bucketName === "unset bucket") {
-      throw new Error("Set a default FileStoragePulser bucket name in Settings before loading a workspace.");
+      throw new Error("Set a default SystemPulser bucket name in Settings before loading a workspace.");
     }
     const loadPulse = fileStoragePulserLoadPulse(target.pulser);
     const payload = unwrapStoragePulserPayload(await runPulserRequest({
@@ -2667,12 +2729,12 @@ async function refreshWorkspaceLayoutsFromConfiguredStorage(appState) {
 
 async function saveBrowserSnapshotLibraryToConfiguredStorage(library, appState) {
   const target = browserLayoutStorageTarget(appState.preferences, appState);
-  if (target.backend === "file_storage_pulser") {
+  if (target.backend === "system_pulser") {
     if (!target.pulser) {
-      throw new Error("Choose a FileStoragePulser in Settings before saving layouts.");
+      throw new Error("Choose a SystemPulser in Settings before saving layouts.");
     }
     if (!target.bucketName || target.bucketName === "unset bucket") {
-      throw new Error("Set a default FileStoragePulser bucket name in Settings before saving layouts.");
+      throw new Error("Set a default SystemPulser bucket name in Settings before saving layouts.");
     }
     const savePulse = fileStoragePulserSavePulse(target.pulser);
     unwrapStoragePulserPayload(await runPulserRequest({
@@ -2708,12 +2770,12 @@ async function saveBrowserSnapshotLibraryToConfiguredStorage(library, appState) 
 
 async function loadBrowserSnapshotLibraryFromConfiguredStorage(appState) {
   const target = browserLayoutStorageTarget(appState.preferences, appState);
-  if (target.backend === "file_storage_pulser") {
+  if (target.backend === "system_pulser") {
     if (!target.pulser) {
-      throw new Error("Choose a FileStoragePulser in Settings before loading layouts.");
+      throw new Error("Choose a SystemPulser in Settings before loading layouts.");
     }
     if (!target.bucketName || target.bucketName === "unset bucket") {
-      throw new Error("Set a default FileStoragePulser bucket name in Settings before loading layouts.");
+      throw new Error("Set a default SystemPulser bucket name in Settings before loading layouts.");
     }
     const loadPulse = fileStoragePulserLoadPulse(target.pulser);
     const payload = unwrapStoragePulserPayload(await runPulserRequest({
@@ -6151,13 +6213,13 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
   ]);
 
   useEffect(() => {
-    if (normalizeFileSaveBackend(state.preferences.fileSaveBackend) !== "file_storage_pulser") {
+    if (normalizeFileSaveBackend(state.preferences.fileSaveBackend) !== "system_pulser") {
       storagePlazaRefreshRef.current = "";
       return;
     }
     const plazaUrl = String(state.preferences.connectionPlazaUrl || "").trim();
     const refreshKey = `${plazaUrl}|${state.preferences.fileSavePulserId || state.preferences.fileSavePulserAddress || state.preferences.fileSavePulserName || ""}`;
-    if (!plazaUrl || state.globalPlazaStatus.status === "loading" || selectedFileStoragePulser(state.preferences, availableFileStoragePulsers(state))) {
+    if (!plazaUrl || state.globalPlazaStatus.status === "loading" || selectedSystemPulser(state.preferences, availableSystemPulsers(state))) {
       storagePlazaRefreshRef.current = refreshKey;
       return;
     }
@@ -6181,7 +6243,7 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
       return undefined;
     }
     const settingsPreferences = currentSettingsPreferences(state);
-    if (normalizeFileSaveBackend(settingsPreferences.fileSaveBackend) !== "file_storage_pulser") {
+    if (normalizeFileSaveBackend(settingsPreferences.fileSaveBackend) !== "system_pulser") {
       updateState((next) => {
         if (!next.settingsOpen) {
           return;
@@ -6538,15 +6600,15 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
   }
 
   async function ensureStoragePulserReady(appState = state) {
-    if (normalizeFileSaveBackend(appState.preferences.fileSaveBackend) !== "file_storage_pulser") {
+    if (normalizeFileSaveBackend(appState.preferences.fileSaveBackend) !== "system_pulser") {
       return { appState, pulser: null };
     }
     const plazaUrl = String(appState.preferences.connectionPlazaUrl || "").trim();
-    const exactPulser = selectedFileStoragePulser(appState.preferences, availableFileStoragePulsers(appState));
+    const exactPulser = selectedSystemPulser(appState.preferences, availableSystemPulsers(appState));
     if (exactPulser || !plazaUrl) {
       return {
         appState,
-        pulser: configuredFileStoragePulser(appState.preferences, appState),
+        pulser: configuredSystemPulser(appState.preferences, appState),
       };
     }
 
@@ -6573,7 +6635,7 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
       };
       return {
         appState: refreshedAppState,
-        pulser: configuredFileStoragePulser(refreshedAppState.preferences, refreshedAppState),
+        pulser: configuredSystemPulser(refreshedAppState.preferences, refreshedAppState),
       };
     } catch (error) {
       updateState((next) => {
@@ -6583,7 +6645,7 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
           error: error.message || "Unable to load Plaza catalog.",
         };
       });
-      const fallbackPulser = configuredFileStoragePulser(appState.preferences, appState);
+      const fallbackPulser = configuredSystemPulser(appState.preferences, appState);
       if (fallbackPulser) {
         return { appState, pulser: fallbackPulser };
       }
@@ -6598,7 +6660,7 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
       ...state,
       preferences: normalizedPreferences,
     };
-    if (normalizeFileSaveBackend(normalizedPreferences.fileSaveBackend) !== "file_storage_pulser") {
+    if (normalizeFileSaveBackend(normalizedPreferences.fileSaveBackend) !== "system_pulser") {
       if (!isCancelled()) {
         updateState((next) => {
           if (!next.settingsOpen) {
@@ -6614,7 +6676,7 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
       return { appState: baseAppState, pulser: null, buckets: [] };
     }
 
-    const requestedPulser = configuredFileStoragePulser(normalizedPreferences, baseAppState);
+    const requestedPulser = configuredSystemPulser(normalizedPreferences, baseAppState);
     if (!requestedPulser && !String(normalizedPreferences.connectionPlazaUrl || "").trim()) {
       if (!isCancelled()) {
         updateState((next) => {
@@ -6644,7 +6706,7 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
       if (isCancelled()) {
         return { appState: prepared.appState, pulser: prepared.pulser || null, buckets: [] };
       }
-      const pulser = prepared.pulser || configuredFileStoragePulser(normalizedPreferences, prepared.appState);
+      const pulser = prepared.pulser || configuredSystemPulser(normalizedPreferences, prepared.appState);
       if (!pulser) {
         updateState((next) => {
           if (!next.settingsOpen) {
@@ -6659,7 +6721,7 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
 
       const listBucketPulse = fileStoragePulserListBucketPulse(pulser);
       if (!listBucketPulse) {
-        throw new Error("Selected FileStoragePulser cannot list buckets.");
+        throw new Error("Selected SystemPulser cannot list buckets.");
       }
 
       const requestBase = {
@@ -6678,7 +6740,7 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
           visibility: "all",
           limit: 500,
         },
-      }), "Unable to load buckets from the selected FileStoragePulser.");
+      }), "Unable to load buckets from the selected SystemPulser.");
       if (isCancelled()) {
         return { appState: prepared.appState, pulser, buckets: [] };
       }
@@ -6689,10 +6751,10 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
           return;
         }
         const livePreferences = currentSettingsPreferences(next);
-        if (normalizeFileSaveBackend(livePreferences.fileSaveBackend) !== "file_storage_pulser") {
+        if (normalizeFileSaveBackend(livePreferences.fileSaveBackend) !== "system_pulser") {
           return;
         }
-        const livePulser = configuredFileStoragePulser(livePreferences, {
+        const livePulser = configuredSystemPulser(livePreferences, {
           ...next,
           preferences: livePreferences,
         });
@@ -6727,12 +6789,12 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
             return;
           }
           const livePreferences = currentSettingsPreferences(next);
-          if (normalizeFileSaveBackend(livePreferences.fileSaveBackend) !== "file_storage_pulser") {
+          if (normalizeFileSaveBackend(livePreferences.fileSaveBackend) !== "system_pulser") {
             return;
           }
           next.settingsBucketOptions = [];
           next.settingsBucketStatus = "idle";
-          next.settingsBucketError = error.message || "Unable to load buckets from the selected FileStoragePulser.";
+          next.settingsBucketError = error.message || "Unable to load buckets from the selected SystemPulser.";
         });
       }
       throw error;
@@ -6760,13 +6822,13 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
         ...state,
         preferences: normalizedPreferences,
       });
-      const pulser = prepared.pulser || configuredFileStoragePulser(normalizedPreferences, prepared.appState);
+      const pulser = prepared.pulser || configuredSystemPulser(normalizedPreferences, prepared.appState);
       if (!pulser) {
-        throw new Error("Choose a FileStoragePulser before adding a bucket.");
+        throw new Error("Choose a SystemPulser before adding a bucket.");
       }
       const createBucketPulse = fileStoragePulserCreateBucketPulse(pulser);
       if (!createBucketPulse) {
-        throw new Error("Selected FileStoragePulser cannot create buckets.");
+        throw new Error("Selected SystemPulser cannot create buckets.");
       }
       const requestBase = {
         plaza_url: prepared.appState.globalPlazaStatus.plazaUrl || normalizedPreferences.connectionPlazaUrl,
@@ -6784,7 +6846,7 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
           bucket_name: bucketName,
           visibility: "private",
         },
-      }), "Unable to create the bucket on the selected FileStoragePulser.");
+      }), "Unable to create the bucket on the selected SystemPulser.");
 
       const nextPreferences = normalizePreferences({
         ...normalizedPreferences,
@@ -6828,12 +6890,12 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
       ...state,
       preferences: normalizedPreferences,
     });
-    const pulser = prepared.pulser || configuredFileStoragePulser(normalizedPreferences, prepared.appState);
+    const pulser = prepared.pulser || configuredSystemPulser(normalizedPreferences, prepared.appState);
     if (!pulser) {
-      throw new Error("Choose a FileStoragePulser in Settings before saving.");
+      throw new Error("Choose a SystemPulser in Settings before saving.");
     }
 
-    const pulserName = pulser.name || pulser.agent_id || "the selected FileStoragePulser";
+    const pulserName = pulser.name || pulser.agent_id || "the selected SystemPulser";
     const requestBase = {
       plaza_url: prepared.appState.globalPlazaStatus.plazaUrl || normalizedPreferences.connectionPlazaUrl,
       pulser_id: pulser.agent_id || "",
@@ -6890,7 +6952,7 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
       };
     }
 
-    throw new Error(`Selected FileStoragePulser cannot verify buckets. Choose one that exposes list_bucket or bucket_browse.`);
+    throw new Error(`Selected SystemPulser cannot verify buckets. Choose one that exposes list_bucket or bucket_browse.`);
   }
 
   async function saveSettingsModal() {
@@ -6901,7 +6963,7 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
     });
     try {
       const nextPreferences = normalizePreferences(draftPreferences, state.dashboard);
-      if (normalizeFileSaveBackend(nextPreferences.fileSaveBackend) === "file_storage_pulser") {
+      if (normalizeFileSaveBackend(nextPreferences.fileSaveBackend) === "system_pulser") {
         const verified = await verifyFileStorageBucketOnPulser(nextPreferences);
         nextPreferences.fileSavePulserId = String(verified.pulser?.agent_id || nextPreferences.fileSavePulserId || "");
         nextPreferences.fileSavePulserName = String(verified.pulser?.name || nextPreferences.fileSavePulserName || "");
@@ -7057,7 +7119,7 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
     const plazaUrl = String(normalizedPreferences.connectionPlazaUrl || "").trim();
     updateState((next) => {
       next.settingsBucketError = "";
-      if (normalizeFileSaveBackend(currentSettingsPreferences(next).fileSaveBackend) === "file_storage_pulser") {
+      if (normalizeFileSaveBackend(currentSettingsPreferences(next).fileSaveBackend) === "system_pulser") {
         next.settingsBucketStatus = "loading";
       }
       next.globalPlazaStatus = {
@@ -7076,7 +7138,7 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
       updateState((next) => {
         next.globalPlazaStatus = refreshedStatus;
       });
-      if (normalizeFileSaveBackend(normalizedPreferences.fileSaveBackend) === "file_storage_pulser") {
+      if (normalizeFileSaveBackend(normalizedPreferences.fileSaveBackend) === "system_pulser") {
         await refreshSettingsBucketOptions(normalizedPreferences, {
           appStateOverride: {
             ...state,
@@ -7092,7 +7154,7 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
           status: "error",
           error: error.message || "Unable to load Plaza catalog.",
         };
-        if (normalizeFileSaveBackend(currentSettingsPreferences(next).fileSaveBackend) === "file_storage_pulser") {
+        if (normalizeFileSaveBackend(currentSettingsPreferences(next).fileSaveBackend) === "system_pulser") {
           next.settingsBucketStatus = "idle";
           next.settingsBucketError = error.message || "Unable to refresh the Plaza catalog.";
         }
@@ -7494,16 +7556,16 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
     });
     try {
       let savedLocation = "";
-      if (normalizeFileSaveBackend(state.preferences.fileSaveBackend) === "file_storage_pulser") {
+      if (normalizeFileSaveBackend(state.preferences.fileSaveBackend) === "system_pulser") {
         const prepared = await ensureStoragePulserReady(state);
-        const pulser = configuredFileStoragePulser(prepared.appState.preferences, prepared.appState);
+        const pulser = configuredSystemPulser(prepared.appState.preferences, prepared.appState);
         const savePulse = fileStoragePulserSavePulse(pulser);
         if (!pulser || !savePulse) {
-          throw new Error("Choose a FileStoragePulser in Settings before saving.");
+          throw new Error("Choose a SystemPulser in Settings before saving.");
         }
         const bucketName = String(prepared.appState.preferences.fileSaveBucketName || "").trim();
         if (!bucketName) {
-          throw new Error("Set a default FileStoragePulser bucket name in Settings before saving.");
+          throw new Error("Set a default SystemPulser bucket name in Settings before saving.");
         }
         const objectKey = joinStorageObjectKey(prepared.appState.preferences.fileSaveObjectPrefix, fileName);
         unwrapStoragePulserPayload(await runPulserRequest({
@@ -10979,14 +11041,14 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
     const selectedLlm = state.preferences.llmConfigs.find((entry) => entry.id === state.settingsLlmSelectedId)
       || state.preferences.llmConfigs[0]
       || null;
-    const storagePulsers = availableFileStoragePulsers(state);
-    const selectedStoragePulser = selectedFileStoragePulser(settingsPreferences, storagePulsers);
-    const settingsUsesFileStoragePulser = normalizeFileSaveBackend(settingsPreferences.fileSaveBackend) === "file_storage_pulser";
+    const storagePulsers = availableSystemPulsers(state);
+    const selectedStoragePulser = selectedSystemPulser(settingsPreferences, storagePulsers);
+    const settingsUsesSystemPulser = normalizeFileSaveBackend(settingsPreferences.fileSaveBackend) === "system_pulser";
     const settingsBucketOptions = normalizeBucketCatalogEntries(state.settingsBucketOptions);
     const settingsCatalogBusy = state.globalPlazaStatus.status === "loading";
     const settingsBucketBusy = state.settingsBucketStatus === "loading" || state.settingsBucketStatus === "creating";
     const bucketSelectPlaceholder = !selectedStoragePulser
-      ? (storagePulsers.length ? "Choose FileStoragePulser first" : "Refresh Plaza catalog first")
+      ? (storagePulsers.length ? "Choose SystemPulser first" : "Refresh Plaza catalog first")
       : state.settingsBucketStatus === "loading"
         ? "Loading current buckets..."
         : settingsBucketOptions.length
@@ -11083,7 +11145,7 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
                           ))}
                         </select>
                       </label>
-                      {settingsUsesFileStoragePulser ? (
+                      {settingsUsesSystemPulser ? (
                         <div className="settings-storage-backend-actions">
                           <button
                             className="ghost-button"
@@ -11095,7 +11157,7 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
                         </div>
                       ) : null}
                     </div>
-                    {!settingsUsesFileStoragePulser ? (
+                    {!settingsUsesSystemPulser ? (
                       <>
                         <div className="settings-storage-directory-row wide">
                           <label className="field settings-storage-directory-field">
@@ -11120,7 +11182,7 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
                     ) : (
                       <>
                         <label className="field wide">
-                          <span>FileStoragePulser</span>
+                          <span>SystemPulser</span>
                           <select
                             value={selectedStoragePulser?.agent_id || settingsPreferences.fileSavePulserId || ""}
                             onChange={(event) => updateSettingsDraft((draft) => {
@@ -11131,10 +11193,10 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
                               draft.fileSaveBucketName = "";
                             })}
                           >
-                            <option value="">{storagePulsers.length ? "Choose FileStoragePulser" : "Refresh Plaza catalog first"}</option>
+                            <option value="">{storagePulsers.length ? "Choose SystemPulser" : "Refresh Plaza catalog first"}</option>
                             {storagePulsers.map((pulser) => (
                               <option key={pulser.agent_id || pulser.name} value={pulser.agent_id || ""}>
-                                {formatPulserDisplayName(pulser, { includeAddress: true, fallbackName: "FileStoragePulser" })}
+                                {formatPulserDisplayName(pulser, { includeAddress: true, fallbackName: "SystemPulser" })}
                               </option>
                             ))}
                           </select>
@@ -11206,11 +11268,11 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
                           />
                         </label>
                         <div className="connection-card wide">
-                          <strong>{formatConfiguredFileStoragePulserLabel(settingsPreferences, selectedStoragePulser, { fallbackName: "FileStoragePulser" })}</strong>
+                          <strong>{formatConfiguredSystemPulserLabel(settingsPreferences, selectedStoragePulser, { fallbackName: "SystemPulser" })}</strong>
                           <span>
                             {selectedStoragePulser
                               ? `${settingsPreferences.fileSaveBucketName || "select a bucket"} / ${settingsPreferences.fileSaveObjectPrefix || "(root prefix)"}`
-                              : "Refresh the Plaza catalog, then choose a FileStoragePulser that supports object_save."}
+                              : "Refresh the Plaza catalog, then choose a SystemPulser that supports object_save."}
                           </span>
                           {selectedStoragePulser ? (
                             <span>
@@ -11238,7 +11300,7 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
                           <span>
                             {normalizeFileSaveBackend(settingsPreferences.fileSaveBackend) === "filesystem"
                               ? "Pane Save Result writes JSON into the configured local directory."
-                              : "Pane Save Result sends JSON through object_save on the configured FileStoragePulser."}
+                              : "Pane Save Result sends JSON through object_save on the configured SystemPulser."}
                           </span>
                         </>
                       )}

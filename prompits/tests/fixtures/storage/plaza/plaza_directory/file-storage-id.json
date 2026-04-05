@@ -1,0 +1,3049 @@
+{
+  "id": "file-storage-id",
+  "agent_id": "file-storage-id",
+  "name": "SystemPulser",
+  "type": "Pulser",
+  "description": "System utility pulser that exposes a generic file pulse for local paths and remote URLs.",
+  "owner": "SystemPulser",
+  "address": "http://127.0.0.1:8068",
+  "meta": {
+    "party": "System",
+    "request_timeout_sec": 30.0,
+    "storage_backend": "filesystem",
+    "accepts_inbound_from_plaza": true,
+    "accepts_direct_call": true,
+    "connectivity_mode": "plaza-forward",
+    "pulse_address": "76711a20-be62-5c98-80e0-92961b6eff6d",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string",
+          "description": "HTTP(S) URL or file:// URL to load."
+        },
+        "local_path": {
+          "type": "string",
+          "description": "Absolute or relative filesystem path to load."
+        }
+      },
+      "oneOf": [
+        {
+          "required": [
+            "url"
+          ]
+        },
+        {
+          "required": [
+            "local_path"
+          ]
+        }
+      ]
+    },
+    "supported_pulses": [
+      {
+        "name": "file",
+        "aliases": [
+          "read_file",
+          "load_file",
+          "File"
+        ],
+        "pulse_address": "76711a20-be62-5c98-80e0-92961b6eff6d",
+        "description": "Load file content from an HTTP(S) URL or a local filesystem path.",
+        "party": "System",
+        "tags": [
+          "system",
+          "file",
+          "url",
+          "local-path"
+        ],
+        "input_schema": {
+          "type": "object",
+          "properties": {
+            "url": {
+              "type": "string",
+              "description": "HTTP(S) URL or file:// URL to load."
+            },
+            "local_path": {
+              "type": "string",
+              "description": "Absolute or relative filesystem path to load."
+            }
+          },
+          "oneOf": [
+            {
+              "required": [
+                "url"
+              ]
+            },
+            {
+              "required": [
+                "local_path"
+              ]
+            }
+          ]
+        },
+        "output_schema": {
+          "type": "object",
+          "properties": {
+            "format": {
+              "type": "string",
+              "enum": [
+                "json",
+                "text",
+                "base64"
+              ],
+              "description": "Normalized representation used for content."
+            },
+            "content": {
+              "type": [
+                "object",
+                "array",
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Parsed JSON value, UTF-8 text, or base64-encoded binary payload."
+            }
+          },
+          "required": [
+            "format",
+            "content"
+          ]
+        },
+        "test_data": {
+          "local_path": "README.md"
+        },
+        "pulse_definition": {
+          "pds_version": "0.1.0",
+          "resource_type": "pulse_definition",
+          "id": "urn:plaza:pulse:file",
+          "version": "1.0.0",
+          "name": "file",
+          "title": "File",
+          "description": "Load file content from an HTTP(S) URL or a local filesystem path.",
+          "pulse_class": "fact",
+          "status": "stable",
+          "concept": {
+            "definition": "Load file content from an HTTP(S) URL or a local filesystem path."
+          },
+          "interface": {
+            "schema_language": "json-schema-2020-12",
+            "request_schema": {
+              "type": "object",
+              "properties": {
+                "url": {
+                  "type": "string",
+                  "description": "HTTP(S) URL or file:// URL to load."
+                },
+                "local_path": {
+                  "type": "string",
+                  "description": "Absolute or relative filesystem path to load."
+                }
+              },
+              "oneOf": [
+                {
+                  "required": [
+                    "url"
+                  ]
+                },
+                {
+                  "required": [
+                    "local_path"
+                  ]
+                }
+              ]
+            },
+            "response_schema": {
+              "type": "object",
+              "properties": {
+                "format": {
+                  "type": "string",
+                  "enum": [
+                    "json",
+                    "text",
+                    "base64"
+                  ],
+                  "description": "Normalized representation used for content."
+                },
+                "content": {
+                  "type": [
+                    "object",
+                    "array",
+                    "string",
+                    "number",
+                    "boolean",
+                    "null"
+                  ],
+                  "description": "Parsed JSON value, UTF-8 text, or base64-encoded binary payload."
+                }
+              },
+              "required": [
+                "format",
+                "content"
+              ]
+            }
+          }
+        },
+        "pulse_id": "urn:plaza:pulse:file",
+        "pulse_name": "file",
+        "title": "File",
+        "interface": {
+          "schema_language": "json-schema-2020-12",
+          "request_schema": {
+            "type": "object",
+            "properties": {
+              "url": {
+                "type": "string",
+                "description": "HTTP(S) URL or file:// URL to load."
+              },
+              "local_path": {
+                "type": "string",
+                "description": "Absolute or relative filesystem path to load."
+              }
+            },
+            "oneOf": [
+              {
+                "required": [
+                  "url"
+                ]
+              },
+              {
+                "required": [
+                  "local_path"
+                ]
+              }
+            ]
+          },
+          "response_schema": {
+            "type": "object",
+            "properties": {
+              "format": {
+                "type": "string",
+                "enum": [
+                  "json",
+                  "text",
+                  "base64"
+                ],
+                "description": "Normalized representation used for content."
+              },
+              "content": {
+                "type": [
+                  "object",
+                  "array",
+                  "string",
+                  "number",
+                  "boolean",
+                  "null"
+                ],
+                "description": "Parsed JSON value, UTF-8 text, or base64-encoded binary payload."
+              }
+            },
+            "required": [
+              "format",
+              "content"
+            ]
+          }
+        },
+        "concept": {
+          "definition": "Load file content from an HTTP(S) URL or a local filesystem path."
+        },
+        "resource_type": "pulse_definition",
+        "pds_version": "0.1.0",
+        "status": "stable",
+        "pulse_class": "fact",
+        "mapping": {},
+        "cost": 0
+      },
+      {
+        "name": "bucket_create",
+        "aliases": [
+          "create_bucket"
+        ],
+        "pulse_address": "84d5c848-7a15-5675-87fb-059f23522e97",
+        "description": "Create a logical bucket with private or public visibility.",
+        "party": "System",
+        "tags": [
+          "storage",
+          "bucket",
+          "create",
+          "system"
+        ],
+        "input_schema": {
+          "type": "object",
+          "properties": {
+            "bucket_name": {
+              "type": "string"
+            },
+            "visibility": {
+              "type": "string",
+              "enum": [
+                "private",
+                "public"
+              ],
+              "default": "private"
+            }
+          },
+          "required": [
+            "bucket_name"
+          ]
+        },
+        "output_schema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string"
+            },
+            "bucket_name": {
+              "type": "string"
+            },
+            "visibility": {
+              "type": "string"
+            },
+            "owner_agent_id": {
+              "type": "string"
+            },
+            "owner_agent_name": {
+              "type": "string"
+            },
+            "created_at": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "status",
+            "bucket_name",
+            "visibility"
+          ]
+        },
+        "test_data": {
+          "bucket_name": "demo-assets",
+          "visibility": "private"
+        },
+        "pulse_definition": {
+          "pds_version": "0.1.0",
+          "resource_type": "pulse_definition",
+          "id": "urn:plaza:pulse:bucket.create",
+          "version": "1.0.0",
+          "name": "bucket_create",
+          "title": "Bucket Create",
+          "description": "Create a logical bucket with private or public visibility.",
+          "pulse_class": "fact",
+          "status": "stable",
+          "concept": {
+            "definition": "Create a logical bucket with private or public visibility."
+          },
+          "interface": {
+            "schema_language": "json-schema-2020-12",
+            "request_schema": {
+              "type": "object",
+              "properties": {
+                "bucket_name": {
+                  "type": "string"
+                },
+                "visibility": {
+                  "type": "string",
+                  "enum": [
+                    "private",
+                    "public"
+                  ],
+                  "default": "private"
+                }
+              },
+              "required": [
+                "bucket_name"
+              ]
+            },
+            "response_schema": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "string"
+                },
+                "bucket_name": {
+                  "type": "string"
+                },
+                "visibility": {
+                  "type": "string"
+                },
+                "owner_agent_id": {
+                  "type": "string"
+                },
+                "owner_agent_name": {
+                  "type": "string"
+                },
+                "created_at": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "status",
+                "bucket_name",
+                "visibility"
+              ]
+            }
+          }
+        },
+        "pulse_id": "urn:plaza:pulse:bucket.create",
+        "pulse_name": "bucket_create",
+        "title": "Bucket Create",
+        "interface": {
+          "schema_language": "json-schema-2020-12",
+          "request_schema": {
+            "type": "object",
+            "properties": {
+              "bucket_name": {
+                "type": "string"
+              },
+              "visibility": {
+                "type": "string",
+                "enum": [
+                  "private",
+                  "public"
+                ],
+                "default": "private"
+              }
+            },
+            "required": [
+              "bucket_name"
+            ]
+          },
+          "response_schema": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string"
+              },
+              "bucket_name": {
+                "type": "string"
+              },
+              "visibility": {
+                "type": "string"
+              },
+              "owner_agent_id": {
+                "type": "string"
+              },
+              "owner_agent_name": {
+                "type": "string"
+              },
+              "created_at": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "status",
+              "bucket_name",
+              "visibility"
+            ]
+          }
+        },
+        "concept": {
+          "definition": "Create a logical bucket with private or public visibility."
+        },
+        "resource_type": "pulse_definition",
+        "pds_version": "0.1.0",
+        "status": "stable",
+        "pulse_class": "fact",
+        "mapping": {},
+        "cost": 0
+      },
+      {
+        "name": "list_bucket",
+        "aliases": [
+          "bucket_list",
+          "list_buckets"
+        ],
+        "pulse_address": "7b6baf96-4b86-59c5-bf24-8e9f26ebe5b7",
+        "description": "List logical buckets visible to the requesting agent in this storage pulser.",
+        "party": "System",
+        "tags": [
+          "storage",
+          "bucket",
+          "list",
+          "system"
+        ],
+        "input_schema": {
+          "type": "object",
+          "properties": {
+            "visibility": {
+              "type": "string",
+              "enum": [
+                "all",
+                "private",
+                "public"
+              ],
+              "default": "all"
+            },
+            "limit": {
+              "type": "integer",
+              "default": 200
+            }
+          }
+        },
+        "output_schema": {
+          "type": "object",
+          "properties": {
+            "visibility_filter": {
+              "type": "string"
+            },
+            "returned_count": {
+              "type": "integer"
+            },
+            "buckets": {
+              "type": "array"
+            }
+          },
+          "required": [
+            "visibility_filter",
+            "returned_count",
+            "buckets"
+          ]
+        },
+        "test_data": {
+          "visibility": "all"
+        },
+        "pulse_definition": {
+          "pds_version": "0.1.0",
+          "resource_type": "pulse_definition",
+          "id": "urn:plaza:pulse:list.bucket",
+          "version": "1.0.0",
+          "name": "list_bucket",
+          "title": "List Bucket",
+          "description": "List logical buckets visible to the requesting agent in this storage pulser.",
+          "pulse_class": "fact",
+          "status": "stable",
+          "concept": {
+            "definition": "List logical buckets visible to the requesting agent in this storage pulser."
+          },
+          "interface": {
+            "schema_language": "json-schema-2020-12",
+            "request_schema": {
+              "type": "object",
+              "properties": {
+                "visibility": {
+                  "type": "string",
+                  "enum": [
+                    "all",
+                    "private",
+                    "public"
+                  ],
+                  "default": "all"
+                },
+                "limit": {
+                  "type": "integer",
+                  "default": 200
+                }
+              }
+            },
+            "response_schema": {
+              "type": "object",
+              "properties": {
+                "visibility_filter": {
+                  "type": "string"
+                },
+                "returned_count": {
+                  "type": "integer"
+                },
+                "buckets": {
+                  "type": "array"
+                }
+              },
+              "required": [
+                "visibility_filter",
+                "returned_count",
+                "buckets"
+              ]
+            }
+          }
+        },
+        "pulse_id": "urn:plaza:pulse:list.bucket",
+        "pulse_name": "list_bucket",
+        "title": "List Bucket",
+        "interface": {
+          "schema_language": "json-schema-2020-12",
+          "request_schema": {
+            "type": "object",
+            "properties": {
+              "visibility": {
+                "type": "string",
+                "enum": [
+                  "all",
+                  "private",
+                  "public"
+                ],
+                "default": "all"
+              },
+              "limit": {
+                "type": "integer",
+                "default": 200
+              }
+            }
+          },
+          "response_schema": {
+            "type": "object",
+            "properties": {
+              "visibility_filter": {
+                "type": "string"
+              },
+              "returned_count": {
+                "type": "integer"
+              },
+              "buckets": {
+                "type": "array"
+              }
+            },
+            "required": [
+              "visibility_filter",
+              "returned_count",
+              "buckets"
+            ]
+          }
+        },
+        "concept": {
+          "definition": "List logical buckets visible to the requesting agent in this storage pulser."
+        },
+        "resource_type": "pulse_definition",
+        "pds_version": "0.1.0",
+        "status": "stable",
+        "pulse_class": "fact",
+        "mapping": {},
+        "cost": 0
+      },
+      {
+        "name": "bucket_browse",
+        "aliases": [
+          "browse_bucket"
+        ],
+        "pulse_address": "5db986be-43ee-5699-90f9-b20cb461a254",
+        "description": "List stored objects in a logical bucket.",
+        "party": "System",
+        "tags": [
+          "storage",
+          "bucket",
+          "browse",
+          "system"
+        ],
+        "input_schema": {
+          "type": "object",
+          "properties": {
+            "bucket_name": {
+              "type": "string"
+            },
+            "prefix": {
+              "type": "string"
+            },
+            "limit": {
+              "type": "integer",
+              "default": 200
+            }
+          },
+          "required": [
+            "bucket_name"
+          ]
+        },
+        "output_schema": {
+          "type": "object",
+          "properties": {
+            "bucket_name": {
+              "type": "string"
+            },
+            "visibility": {
+              "type": "string"
+            },
+            "returned_count": {
+              "type": "integer"
+            },
+            "objects": {
+              "type": "array"
+            }
+          },
+          "required": [
+            "bucket_name",
+            "objects"
+          ]
+        },
+        "test_data": {
+          "bucket_name": "demo-assets"
+        },
+        "pulse_definition": {
+          "pds_version": "0.1.0",
+          "resource_type": "pulse_definition",
+          "id": "urn:plaza:pulse:bucket.browse",
+          "version": "1.0.0",
+          "name": "bucket_browse",
+          "title": "Bucket Browse",
+          "description": "List stored objects in a logical bucket.",
+          "pulse_class": "fact",
+          "status": "stable",
+          "concept": {
+            "definition": "List stored objects in a logical bucket."
+          },
+          "interface": {
+            "schema_language": "json-schema-2020-12",
+            "request_schema": {
+              "type": "object",
+              "properties": {
+                "bucket_name": {
+                  "type": "string"
+                },
+                "prefix": {
+                  "type": "string"
+                },
+                "limit": {
+                  "type": "integer",
+                  "default": 200
+                }
+              },
+              "required": [
+                "bucket_name"
+              ]
+            },
+            "response_schema": {
+              "type": "object",
+              "properties": {
+                "bucket_name": {
+                  "type": "string"
+                },
+                "visibility": {
+                  "type": "string"
+                },
+                "returned_count": {
+                  "type": "integer"
+                },
+                "objects": {
+                  "type": "array"
+                }
+              },
+              "required": [
+                "bucket_name",
+                "objects"
+              ]
+            }
+          }
+        },
+        "pulse_id": "urn:plaza:pulse:bucket.browse",
+        "pulse_name": "bucket_browse",
+        "title": "Bucket Browse",
+        "interface": {
+          "schema_language": "json-schema-2020-12",
+          "request_schema": {
+            "type": "object",
+            "properties": {
+              "bucket_name": {
+                "type": "string"
+              },
+              "prefix": {
+                "type": "string"
+              },
+              "limit": {
+                "type": "integer",
+                "default": 200
+              }
+            },
+            "required": [
+              "bucket_name"
+            ]
+          },
+          "response_schema": {
+            "type": "object",
+            "properties": {
+              "bucket_name": {
+                "type": "string"
+              },
+              "visibility": {
+                "type": "string"
+              },
+              "returned_count": {
+                "type": "integer"
+              },
+              "objects": {
+                "type": "array"
+              }
+            },
+            "required": [
+              "bucket_name",
+              "objects"
+            ]
+          }
+        },
+        "concept": {
+          "definition": "List stored objects in a logical bucket."
+        },
+        "resource_type": "pulse_definition",
+        "pds_version": "0.1.0",
+        "status": "stable",
+        "pulse_class": "fact",
+        "mapping": {},
+        "cost": 0
+      },
+      {
+        "name": "object_save",
+        "aliases": [
+          "save_object",
+          "object_put"
+        ],
+        "pulse_address": "ebbfb69f-030b-5f46-823e-a237bf0a8f9c",
+        "description": "Persist text, JSON, or binary content in a logical bucket.",
+        "party": "System",
+        "tags": [
+          "storage",
+          "object",
+          "save",
+          "system"
+        ],
+        "input_schema": {
+          "type": "object",
+          "properties": {
+            "bucket_name": {
+              "type": "string"
+            },
+            "object_key": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "data": {
+              "description": "Any JSON-serializable payload."
+            },
+            "base64_data": {
+              "type": "string",
+              "contentEncoding": "base64",
+              "description": "Base64-encoded binary blob such as a PDF, image, audio file, or video clip."
+            },
+            "content_type": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "bucket_name",
+            "object_key"
+          ]
+        },
+        "output_schema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string"
+            },
+            "bucket_name": {
+              "type": "string"
+            },
+            "object_key": {
+              "type": "string"
+            },
+            "content_type": {
+              "type": "string"
+            },
+            "size_bytes": {
+              "type": "integer"
+            },
+            "etag": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "status",
+            "bucket_name",
+            "object_key",
+            "etag"
+          ]
+        },
+        "test_data": {
+          "bucket_name": "demo-assets",
+          "object_key": "notes/hello.txt",
+          "text": "hello world"
+        },
+        "pulse_definition": {
+          "pds_version": "0.1.0",
+          "resource_type": "pulse_definition",
+          "id": "urn:plaza:pulse:object.save",
+          "version": "1.0.0",
+          "name": "object_save",
+          "title": "Object Save",
+          "description": "Persist text, JSON, or binary content in a logical bucket.",
+          "pulse_class": "fact",
+          "status": "stable",
+          "concept": {
+            "definition": "Persist text, JSON, or binary content in a logical bucket."
+          },
+          "interface": {
+            "schema_language": "json-schema-2020-12",
+            "request_schema": {
+              "type": "object",
+              "properties": {
+                "bucket_name": {
+                  "type": "string"
+                },
+                "object_key": {
+                  "type": "string"
+                },
+                "text": {
+                  "type": "string"
+                },
+                "data": {
+                  "description": "Any JSON-serializable payload."
+                },
+                "base64_data": {
+                  "type": "string",
+                  "contentEncoding": "base64",
+                  "description": "Base64-encoded binary blob such as a PDF, image, audio file, or video clip."
+                },
+                "content_type": {
+                  "type": "string"
+                },
+                "metadata": {
+                  "type": "object"
+                }
+              },
+              "required": [
+                "bucket_name",
+                "object_key"
+              ]
+            },
+            "response_schema": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "string"
+                },
+                "bucket_name": {
+                  "type": "string"
+                },
+                "object_key": {
+                  "type": "string"
+                },
+                "content_type": {
+                  "type": "string"
+                },
+                "size_bytes": {
+                  "type": "integer"
+                },
+                "etag": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "status",
+                "bucket_name",
+                "object_key",
+                "etag"
+              ]
+            }
+          }
+        },
+        "pulse_id": "urn:plaza:pulse:object.save",
+        "pulse_name": "object_save",
+        "title": "Object Save",
+        "interface": {
+          "schema_language": "json-schema-2020-12",
+          "request_schema": {
+            "type": "object",
+            "properties": {
+              "bucket_name": {
+                "type": "string"
+              },
+              "object_key": {
+                "type": "string"
+              },
+              "text": {
+                "type": "string"
+              },
+              "data": {
+                "description": "Any JSON-serializable payload."
+              },
+              "base64_data": {
+                "type": "string",
+                "contentEncoding": "base64",
+                "description": "Base64-encoded binary blob such as a PDF, image, audio file, or video clip."
+              },
+              "content_type": {
+                "type": "string"
+              },
+              "metadata": {
+                "type": "object"
+              }
+            },
+            "required": [
+              "bucket_name",
+              "object_key"
+            ]
+          },
+          "response_schema": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string"
+              },
+              "bucket_name": {
+                "type": "string"
+              },
+              "object_key": {
+                "type": "string"
+              },
+              "content_type": {
+                "type": "string"
+              },
+              "size_bytes": {
+                "type": "integer"
+              },
+              "etag": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "status",
+              "bucket_name",
+              "object_key",
+              "etag"
+            ]
+          }
+        },
+        "concept": {
+          "definition": "Persist text, JSON, or binary content in a logical bucket."
+        },
+        "resource_type": "pulse_definition",
+        "pds_version": "0.1.0",
+        "status": "stable",
+        "pulse_class": "fact",
+        "mapping": {},
+        "cost": 0
+      },
+      {
+        "name": "object_load",
+        "aliases": [
+          "load_object",
+          "object_get"
+        ],
+        "pulse_address": "ef0c671b-37be-5630-8927-ec844ba98aea",
+        "description": "Load text, JSON, or binary content from a logical bucket.",
+        "party": "System",
+        "tags": [
+          "storage",
+          "object",
+          "load",
+          "system"
+        ],
+        "input_schema": {
+          "type": "object",
+          "properties": {
+            "bucket_name": {
+              "type": "string"
+            },
+            "object_key": {
+              "type": "string"
+            },
+            "response_format": {
+              "type": "string",
+              "enum": [
+                "auto",
+                "json",
+                "text",
+                "base64"
+              ],
+              "default": "auto"
+            }
+          },
+          "required": [
+            "bucket_name",
+            "object_key"
+          ]
+        },
+        "output_schema": {
+          "type": "object",
+          "properties": {
+            "bucket_name": {
+              "type": "string"
+            },
+            "object_key": {
+              "type": "string"
+            },
+            "content_type": {
+              "type": "string"
+            },
+            "size_bytes": {
+              "type": "integer"
+            },
+            "etag": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "data": {},
+            "base64_data": {
+              "type": "string",
+              "contentEncoding": "base64"
+            }
+          },
+          "required": [
+            "bucket_name",
+            "object_key",
+            "etag"
+          ]
+        },
+        "test_data": {
+          "bucket_name": "demo-assets",
+          "object_key": "notes/hello.txt",
+          "response_format": "text"
+        },
+        "pulse_definition": {
+          "pds_version": "0.1.0",
+          "resource_type": "pulse_definition",
+          "id": "urn:plaza:pulse:object.load",
+          "version": "1.0.0",
+          "name": "object_load",
+          "title": "Object Load",
+          "description": "Load text, JSON, or binary content from a logical bucket.",
+          "pulse_class": "fact",
+          "status": "stable",
+          "concept": {
+            "definition": "Load text, JSON, or binary content from a logical bucket."
+          },
+          "interface": {
+            "schema_language": "json-schema-2020-12",
+            "request_schema": {
+              "type": "object",
+              "properties": {
+                "bucket_name": {
+                  "type": "string"
+                },
+                "object_key": {
+                  "type": "string"
+                },
+                "response_format": {
+                  "type": "string",
+                  "enum": [
+                    "auto",
+                    "json",
+                    "text",
+                    "base64"
+                  ],
+                  "default": "auto"
+                }
+              },
+              "required": [
+                "bucket_name",
+                "object_key"
+              ]
+            },
+            "response_schema": {
+              "type": "object",
+              "properties": {
+                "bucket_name": {
+                  "type": "string"
+                },
+                "object_key": {
+                  "type": "string"
+                },
+                "content_type": {
+                  "type": "string"
+                },
+                "size_bytes": {
+                  "type": "integer"
+                },
+                "etag": {
+                  "type": "string"
+                },
+                "text": {
+                  "type": "string"
+                },
+                "data": {},
+                "base64_data": {
+                  "type": "string",
+                  "contentEncoding": "base64"
+                }
+              },
+              "required": [
+                "bucket_name",
+                "object_key",
+                "etag"
+              ]
+            }
+          }
+        },
+        "pulse_id": "urn:plaza:pulse:object.load",
+        "pulse_name": "object_load",
+        "title": "Object Load",
+        "interface": {
+          "schema_language": "json-schema-2020-12",
+          "request_schema": {
+            "type": "object",
+            "properties": {
+              "bucket_name": {
+                "type": "string"
+              },
+              "object_key": {
+                "type": "string"
+              },
+              "response_format": {
+                "type": "string",
+                "enum": [
+                  "auto",
+                  "json",
+                  "text",
+                  "base64"
+                ],
+                "default": "auto"
+              }
+            },
+            "required": [
+              "bucket_name",
+              "object_key"
+            ]
+          },
+          "response_schema": {
+            "type": "object",
+            "properties": {
+              "bucket_name": {
+                "type": "string"
+              },
+              "object_key": {
+                "type": "string"
+              },
+              "content_type": {
+                "type": "string"
+              },
+              "size_bytes": {
+                "type": "integer"
+              },
+              "etag": {
+                "type": "string"
+              },
+              "text": {
+                "type": "string"
+              },
+              "data": {},
+              "base64_data": {
+                "type": "string",
+                "contentEncoding": "base64"
+              }
+            },
+            "required": [
+              "bucket_name",
+              "object_key",
+              "etag"
+            ]
+          }
+        },
+        "concept": {
+          "definition": "Load text, JSON, or binary content from a logical bucket."
+        },
+        "resource_type": "pulse_definition",
+        "pds_version": "0.1.0",
+        "status": "stable",
+        "pulse_class": "fact",
+        "mapping": {},
+        "cost": 0
+      }
+    ],
+    "pulse_id": "urn:plaza:pulse:file",
+    "pulse_definition": {
+      "pds_version": "0.1.0",
+      "resource_type": "pulse_definition",
+      "id": "urn:plaza:pulse:file",
+      "version": "1.0.0",
+      "name": "file",
+      "title": "File",
+      "description": "Load file content from an HTTP(S) URL or a local filesystem path.",
+      "pulse_class": "fact",
+      "status": "stable",
+      "concept": {
+        "definition": "Load file content from an HTTP(S) URL or a local filesystem path."
+      },
+      "interface": {
+        "schema_language": "json-schema-2020-12",
+        "request_schema": {
+          "type": "object",
+          "properties": {
+            "url": {
+              "type": "string",
+              "description": "HTTP(S) URL or file:// URL to load."
+            },
+            "local_path": {
+              "type": "string",
+              "description": "Absolute or relative filesystem path to load."
+            }
+          },
+          "oneOf": [
+            {
+              "required": [
+                "url"
+              ]
+            },
+            {
+              "required": [
+                "local_path"
+              ]
+            }
+          ]
+        },
+        "response_schema": {
+          "type": "object",
+          "properties": {
+            "format": {
+              "type": "string",
+              "enum": [
+                "json",
+                "text",
+                "base64"
+              ],
+              "description": "Normalized representation used for content."
+            },
+            "content": {
+              "type": [
+                "object",
+                "array",
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Parsed JSON value, UTF-8 text, or base64-encoded binary payload."
+            }
+          },
+          "required": [
+            "format",
+            "content"
+          ]
+        }
+      }
+    },
+    "storage_root": "/Users/alvincho/Library/Mobile Documents/com~apple~CloudDocs/Documents/Projects/DevOps/Retis/FinMAS/tests/storage/system_pulser/content"
+  },
+  "card": {
+    "name": "SystemPulser",
+    "role": "pulser",
+    "tags": [
+      "system",
+      "file",
+      "url",
+      "storage",
+      "pulser",
+      "s3",
+      "bucket",
+      "object",
+      "pulse"
+    ],
+    "host": "127.0.0.1",
+    "port": 8068,
+    "address": "http://127.0.0.1:8068",
+    "party": "System",
+    "description": "System utility pulser that exposes a generic file pulse for local paths and remote URLs.",
+    "meta": {
+      "party": "System",
+      "request_timeout_sec": 30.0,
+      "storage_backend": "filesystem",
+      "accepts_inbound_from_plaza": true,
+      "accepts_direct_call": true,
+      "connectivity_mode": "plaza-forward",
+      "pulse_address": "76711a20-be62-5c98-80e0-92961b6eff6d",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "HTTP(S) URL or file:// URL to load."
+          },
+          "local_path": {
+            "type": "string",
+            "description": "Absolute or relative filesystem path to load."
+          }
+        },
+        "oneOf": [
+          {
+            "required": [
+              "url"
+            ]
+          },
+          {
+            "required": [
+              "local_path"
+            ]
+          }
+        ]
+      },
+      "supported_pulses": [
+        {
+          "name": "file",
+          "aliases": [
+            "read_file",
+            "load_file",
+            "File"
+          ],
+          "pulse_address": "76711a20-be62-5c98-80e0-92961b6eff6d",
+          "description": "Load file content from an HTTP(S) URL or a local filesystem path.",
+          "party": "System",
+          "tags": [
+            "system",
+            "file",
+            "url",
+            "local-path"
+          ],
+          "input_schema": {
+            "type": "object",
+            "properties": {
+              "url": {
+                "type": "string",
+                "description": "HTTP(S) URL or file:// URL to load."
+              },
+              "local_path": {
+                "type": "string",
+                "description": "Absolute or relative filesystem path to load."
+              }
+            },
+            "oneOf": [
+              {
+                "required": [
+                  "url"
+                ]
+              },
+              {
+                "required": [
+                  "local_path"
+                ]
+              }
+            ]
+          },
+          "output_schema": {
+            "type": "object",
+            "properties": {
+              "format": {
+                "type": "string",
+                "enum": [
+                  "json",
+                  "text",
+                  "base64"
+                ],
+                "description": "Normalized representation used for content."
+              },
+              "content": {
+                "type": [
+                  "object",
+                  "array",
+                  "string",
+                  "number",
+                  "boolean",
+                  "null"
+                ],
+                "description": "Parsed JSON value, UTF-8 text, or base64-encoded binary payload."
+              }
+            },
+            "required": [
+              "format",
+              "content"
+            ]
+          },
+          "test_data": {
+            "local_path": "README.md"
+          },
+          "pulse_definition": {
+            "pds_version": "0.1.0",
+            "resource_type": "pulse_definition",
+            "id": "urn:plaza:pulse:file",
+            "version": "1.0.0",
+            "name": "file",
+            "title": "File",
+            "description": "Load file content from an HTTP(S) URL or a local filesystem path.",
+            "pulse_class": "fact",
+            "status": "stable",
+            "concept": {
+              "definition": "Load file content from an HTTP(S) URL or a local filesystem path."
+            },
+            "interface": {
+              "schema_language": "json-schema-2020-12",
+              "request_schema": {
+                "type": "object",
+                "properties": {
+                  "url": {
+                    "type": "string",
+                    "description": "HTTP(S) URL or file:// URL to load."
+                  },
+                  "local_path": {
+                    "type": "string",
+                    "description": "Absolute or relative filesystem path to load."
+                  }
+                },
+                "oneOf": [
+                  {
+                    "required": [
+                      "url"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "local_path"
+                    ]
+                  }
+                ]
+              },
+              "response_schema": {
+                "type": "object",
+                "properties": {
+                  "format": {
+                    "type": "string",
+                    "enum": [
+                      "json",
+                      "text",
+                      "base64"
+                    ],
+                    "description": "Normalized representation used for content."
+                  },
+                  "content": {
+                    "type": [
+                      "object",
+                      "array",
+                      "string",
+                      "number",
+                      "boolean",
+                      "null"
+                    ],
+                    "description": "Parsed JSON value, UTF-8 text, or base64-encoded binary payload."
+                  }
+                },
+                "required": [
+                  "format",
+                  "content"
+                ]
+              }
+            }
+          },
+          "pulse_id": "urn:plaza:pulse:file",
+          "pulse_name": "file",
+          "title": "File",
+          "interface": {
+            "schema_language": "json-schema-2020-12",
+            "request_schema": {
+              "type": "object",
+              "properties": {
+                "url": {
+                  "type": "string",
+                  "description": "HTTP(S) URL or file:// URL to load."
+                },
+                "local_path": {
+                  "type": "string",
+                  "description": "Absolute or relative filesystem path to load."
+                }
+              },
+              "oneOf": [
+                {
+                  "required": [
+                    "url"
+                  ]
+                },
+                {
+                  "required": [
+                    "local_path"
+                  ]
+                }
+              ]
+            },
+            "response_schema": {
+              "type": "object",
+              "properties": {
+                "format": {
+                  "type": "string",
+                  "enum": [
+                    "json",
+                    "text",
+                    "base64"
+                  ],
+                  "description": "Normalized representation used for content."
+                },
+                "content": {
+                  "type": [
+                    "object",
+                    "array",
+                    "string",
+                    "number",
+                    "boolean",
+                    "null"
+                  ],
+                  "description": "Parsed JSON value, UTF-8 text, or base64-encoded binary payload."
+                }
+              },
+              "required": [
+                "format",
+                "content"
+              ]
+            }
+          },
+          "concept": {
+            "definition": "Load file content from an HTTP(S) URL or a local filesystem path."
+          },
+          "resource_type": "pulse_definition",
+          "pds_version": "0.1.0",
+          "status": "stable",
+          "pulse_class": "fact",
+          "mapping": {},
+          "cost": 0
+        },
+        {
+          "name": "bucket_create",
+          "aliases": [
+            "create_bucket"
+          ],
+          "pulse_address": "84d5c848-7a15-5675-87fb-059f23522e97",
+          "description": "Create a logical bucket with private or public visibility.",
+          "party": "System",
+          "tags": [
+            "storage",
+            "bucket",
+            "create",
+            "system"
+          ],
+          "input_schema": {
+            "type": "object",
+            "properties": {
+              "bucket_name": {
+                "type": "string"
+              },
+              "visibility": {
+                "type": "string",
+                "enum": [
+                  "private",
+                  "public"
+                ],
+                "default": "private"
+              }
+            },
+            "required": [
+              "bucket_name"
+            ]
+          },
+          "output_schema": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string"
+              },
+              "bucket_name": {
+                "type": "string"
+              },
+              "visibility": {
+                "type": "string"
+              },
+              "owner_agent_id": {
+                "type": "string"
+              },
+              "owner_agent_name": {
+                "type": "string"
+              },
+              "created_at": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "status",
+              "bucket_name",
+              "visibility"
+            ]
+          },
+          "test_data": {
+            "bucket_name": "demo-assets",
+            "visibility": "private"
+          },
+          "pulse_definition": {
+            "pds_version": "0.1.0",
+            "resource_type": "pulse_definition",
+            "id": "urn:plaza:pulse:bucket.create",
+            "version": "1.0.0",
+            "name": "bucket_create",
+            "title": "Bucket Create",
+            "description": "Create a logical bucket with private or public visibility.",
+            "pulse_class": "fact",
+            "status": "stable",
+            "concept": {
+              "definition": "Create a logical bucket with private or public visibility."
+            },
+            "interface": {
+              "schema_language": "json-schema-2020-12",
+              "request_schema": {
+                "type": "object",
+                "properties": {
+                  "bucket_name": {
+                    "type": "string"
+                  },
+                  "visibility": {
+                    "type": "string",
+                    "enum": [
+                      "private",
+                      "public"
+                    ],
+                    "default": "private"
+                  }
+                },
+                "required": [
+                  "bucket_name"
+                ]
+              },
+              "response_schema": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string"
+                  },
+                  "bucket_name": {
+                    "type": "string"
+                  },
+                  "visibility": {
+                    "type": "string"
+                  },
+                  "owner_agent_id": {
+                    "type": "string"
+                  },
+                  "owner_agent_name": {
+                    "type": "string"
+                  },
+                  "created_at": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "status",
+                  "bucket_name",
+                  "visibility"
+                ]
+              }
+            }
+          },
+          "pulse_id": "urn:plaza:pulse:bucket.create",
+          "pulse_name": "bucket_create",
+          "title": "Bucket Create",
+          "interface": {
+            "schema_language": "json-schema-2020-12",
+            "request_schema": {
+              "type": "object",
+              "properties": {
+                "bucket_name": {
+                  "type": "string"
+                },
+                "visibility": {
+                  "type": "string",
+                  "enum": [
+                    "private",
+                    "public"
+                  ],
+                  "default": "private"
+                }
+              },
+              "required": [
+                "bucket_name"
+              ]
+            },
+            "response_schema": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "string"
+                },
+                "bucket_name": {
+                  "type": "string"
+                },
+                "visibility": {
+                  "type": "string"
+                },
+                "owner_agent_id": {
+                  "type": "string"
+                },
+                "owner_agent_name": {
+                  "type": "string"
+                },
+                "created_at": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "status",
+                "bucket_name",
+                "visibility"
+              ]
+            }
+          },
+          "concept": {
+            "definition": "Create a logical bucket with private or public visibility."
+          },
+          "resource_type": "pulse_definition",
+          "pds_version": "0.1.0",
+          "status": "stable",
+          "pulse_class": "fact",
+          "mapping": {},
+          "cost": 0
+        },
+        {
+          "name": "list_bucket",
+          "aliases": [
+            "bucket_list",
+            "list_buckets"
+          ],
+          "pulse_address": "7b6baf96-4b86-59c5-bf24-8e9f26ebe5b7",
+          "description": "List logical buckets visible to the requesting agent in this storage pulser.",
+          "party": "System",
+          "tags": [
+            "storage",
+            "bucket",
+            "list",
+            "system"
+          ],
+          "input_schema": {
+            "type": "object",
+            "properties": {
+              "visibility": {
+                "type": "string",
+                "enum": [
+                  "all",
+                  "private",
+                  "public"
+                ],
+                "default": "all"
+              },
+              "limit": {
+                "type": "integer",
+                "default": 200
+              }
+            }
+          },
+          "output_schema": {
+            "type": "object",
+            "properties": {
+              "visibility_filter": {
+                "type": "string"
+              },
+              "returned_count": {
+                "type": "integer"
+              },
+              "buckets": {
+                "type": "array"
+              }
+            },
+            "required": [
+              "visibility_filter",
+              "returned_count",
+              "buckets"
+            ]
+          },
+          "test_data": {
+            "visibility": "all"
+          },
+          "pulse_definition": {
+            "pds_version": "0.1.0",
+            "resource_type": "pulse_definition",
+            "id": "urn:plaza:pulse:list.bucket",
+            "version": "1.0.0",
+            "name": "list_bucket",
+            "title": "List Bucket",
+            "description": "List logical buckets visible to the requesting agent in this storage pulser.",
+            "pulse_class": "fact",
+            "status": "stable",
+            "concept": {
+              "definition": "List logical buckets visible to the requesting agent in this storage pulser."
+            },
+            "interface": {
+              "schema_language": "json-schema-2020-12",
+              "request_schema": {
+                "type": "object",
+                "properties": {
+                  "visibility": {
+                    "type": "string",
+                    "enum": [
+                      "all",
+                      "private",
+                      "public"
+                    ],
+                    "default": "all"
+                  },
+                  "limit": {
+                    "type": "integer",
+                    "default": 200
+                  }
+                }
+              },
+              "response_schema": {
+                "type": "object",
+                "properties": {
+                  "visibility_filter": {
+                    "type": "string"
+                  },
+                  "returned_count": {
+                    "type": "integer"
+                  },
+                  "buckets": {
+                    "type": "array"
+                  }
+                },
+                "required": [
+                  "visibility_filter",
+                  "returned_count",
+                  "buckets"
+                ]
+              }
+            }
+          },
+          "pulse_id": "urn:plaza:pulse:list.bucket",
+          "pulse_name": "list_bucket",
+          "title": "List Bucket",
+          "interface": {
+            "schema_language": "json-schema-2020-12",
+            "request_schema": {
+              "type": "object",
+              "properties": {
+                "visibility": {
+                  "type": "string",
+                  "enum": [
+                    "all",
+                    "private",
+                    "public"
+                  ],
+                  "default": "all"
+                },
+                "limit": {
+                  "type": "integer",
+                  "default": 200
+                }
+              }
+            },
+            "response_schema": {
+              "type": "object",
+              "properties": {
+                "visibility_filter": {
+                  "type": "string"
+                },
+                "returned_count": {
+                  "type": "integer"
+                },
+                "buckets": {
+                  "type": "array"
+                }
+              },
+              "required": [
+                "visibility_filter",
+                "returned_count",
+                "buckets"
+              ]
+            }
+          },
+          "concept": {
+            "definition": "List logical buckets visible to the requesting agent in this storage pulser."
+          },
+          "resource_type": "pulse_definition",
+          "pds_version": "0.1.0",
+          "status": "stable",
+          "pulse_class": "fact",
+          "mapping": {},
+          "cost": 0
+        },
+        {
+          "name": "bucket_browse",
+          "aliases": [
+            "browse_bucket"
+          ],
+          "pulse_address": "5db986be-43ee-5699-90f9-b20cb461a254",
+          "description": "List stored objects in a logical bucket.",
+          "party": "System",
+          "tags": [
+            "storage",
+            "bucket",
+            "browse",
+            "system"
+          ],
+          "input_schema": {
+            "type": "object",
+            "properties": {
+              "bucket_name": {
+                "type": "string"
+              },
+              "prefix": {
+                "type": "string"
+              },
+              "limit": {
+                "type": "integer",
+                "default": 200
+              }
+            },
+            "required": [
+              "bucket_name"
+            ]
+          },
+          "output_schema": {
+            "type": "object",
+            "properties": {
+              "bucket_name": {
+                "type": "string"
+              },
+              "visibility": {
+                "type": "string"
+              },
+              "returned_count": {
+                "type": "integer"
+              },
+              "objects": {
+                "type": "array"
+              }
+            },
+            "required": [
+              "bucket_name",
+              "objects"
+            ]
+          },
+          "test_data": {
+            "bucket_name": "demo-assets"
+          },
+          "pulse_definition": {
+            "pds_version": "0.1.0",
+            "resource_type": "pulse_definition",
+            "id": "urn:plaza:pulse:bucket.browse",
+            "version": "1.0.0",
+            "name": "bucket_browse",
+            "title": "Bucket Browse",
+            "description": "List stored objects in a logical bucket.",
+            "pulse_class": "fact",
+            "status": "stable",
+            "concept": {
+              "definition": "List stored objects in a logical bucket."
+            },
+            "interface": {
+              "schema_language": "json-schema-2020-12",
+              "request_schema": {
+                "type": "object",
+                "properties": {
+                  "bucket_name": {
+                    "type": "string"
+                  },
+                  "prefix": {
+                    "type": "string"
+                  },
+                  "limit": {
+                    "type": "integer",
+                    "default": 200
+                  }
+                },
+                "required": [
+                  "bucket_name"
+                ]
+              },
+              "response_schema": {
+                "type": "object",
+                "properties": {
+                  "bucket_name": {
+                    "type": "string"
+                  },
+                  "visibility": {
+                    "type": "string"
+                  },
+                  "returned_count": {
+                    "type": "integer"
+                  },
+                  "objects": {
+                    "type": "array"
+                  }
+                },
+                "required": [
+                  "bucket_name",
+                  "objects"
+                ]
+              }
+            }
+          },
+          "pulse_id": "urn:plaza:pulse:bucket.browse",
+          "pulse_name": "bucket_browse",
+          "title": "Bucket Browse",
+          "interface": {
+            "schema_language": "json-schema-2020-12",
+            "request_schema": {
+              "type": "object",
+              "properties": {
+                "bucket_name": {
+                  "type": "string"
+                },
+                "prefix": {
+                  "type": "string"
+                },
+                "limit": {
+                  "type": "integer",
+                  "default": 200
+                }
+              },
+              "required": [
+                "bucket_name"
+              ]
+            },
+            "response_schema": {
+              "type": "object",
+              "properties": {
+                "bucket_name": {
+                  "type": "string"
+                },
+                "visibility": {
+                  "type": "string"
+                },
+                "returned_count": {
+                  "type": "integer"
+                },
+                "objects": {
+                  "type": "array"
+                }
+              },
+              "required": [
+                "bucket_name",
+                "objects"
+              ]
+            }
+          },
+          "concept": {
+            "definition": "List stored objects in a logical bucket."
+          },
+          "resource_type": "pulse_definition",
+          "pds_version": "0.1.0",
+          "status": "stable",
+          "pulse_class": "fact",
+          "mapping": {},
+          "cost": 0
+        },
+        {
+          "name": "object_save",
+          "aliases": [
+            "save_object",
+            "object_put"
+          ],
+          "pulse_address": "ebbfb69f-030b-5f46-823e-a237bf0a8f9c",
+          "description": "Persist text, JSON, or binary content in a logical bucket.",
+          "party": "System",
+          "tags": [
+            "storage",
+            "object",
+            "save",
+            "system"
+          ],
+          "input_schema": {
+            "type": "object",
+            "properties": {
+              "bucket_name": {
+                "type": "string"
+              },
+              "object_key": {
+                "type": "string"
+              },
+              "text": {
+                "type": "string"
+              },
+              "data": {
+                "description": "Any JSON-serializable payload."
+              },
+              "base64_data": {
+                "type": "string",
+                "contentEncoding": "base64",
+                "description": "Base64-encoded binary blob such as a PDF, image, audio file, or video clip."
+              },
+              "content_type": {
+                "type": "string"
+              },
+              "metadata": {
+                "type": "object"
+              }
+            },
+            "required": [
+              "bucket_name",
+              "object_key"
+            ]
+          },
+          "output_schema": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string"
+              },
+              "bucket_name": {
+                "type": "string"
+              },
+              "object_key": {
+                "type": "string"
+              },
+              "content_type": {
+                "type": "string"
+              },
+              "size_bytes": {
+                "type": "integer"
+              },
+              "etag": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "status",
+              "bucket_name",
+              "object_key",
+              "etag"
+            ]
+          },
+          "test_data": {
+            "bucket_name": "demo-assets",
+            "object_key": "notes/hello.txt",
+            "text": "hello world"
+          },
+          "pulse_definition": {
+            "pds_version": "0.1.0",
+            "resource_type": "pulse_definition",
+            "id": "urn:plaza:pulse:object.save",
+            "version": "1.0.0",
+            "name": "object_save",
+            "title": "Object Save",
+            "description": "Persist text, JSON, or binary content in a logical bucket.",
+            "pulse_class": "fact",
+            "status": "stable",
+            "concept": {
+              "definition": "Persist text, JSON, or binary content in a logical bucket."
+            },
+            "interface": {
+              "schema_language": "json-schema-2020-12",
+              "request_schema": {
+                "type": "object",
+                "properties": {
+                  "bucket_name": {
+                    "type": "string"
+                  },
+                  "object_key": {
+                    "type": "string"
+                  },
+                  "text": {
+                    "type": "string"
+                  },
+                  "data": {
+                    "description": "Any JSON-serializable payload."
+                  },
+                  "base64_data": {
+                    "type": "string",
+                    "contentEncoding": "base64",
+                    "description": "Base64-encoded binary blob such as a PDF, image, audio file, or video clip."
+                  },
+                  "content_type": {
+                    "type": "string"
+                  },
+                  "metadata": {
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "bucket_name",
+                  "object_key"
+                ]
+              },
+              "response_schema": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string"
+                  },
+                  "bucket_name": {
+                    "type": "string"
+                  },
+                  "object_key": {
+                    "type": "string"
+                  },
+                  "content_type": {
+                    "type": "string"
+                  },
+                  "size_bytes": {
+                    "type": "integer"
+                  },
+                  "etag": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "status",
+                  "bucket_name",
+                  "object_key",
+                  "etag"
+                ]
+              }
+            }
+          },
+          "pulse_id": "urn:plaza:pulse:object.save",
+          "pulse_name": "object_save",
+          "title": "Object Save",
+          "interface": {
+            "schema_language": "json-schema-2020-12",
+            "request_schema": {
+              "type": "object",
+              "properties": {
+                "bucket_name": {
+                  "type": "string"
+                },
+                "object_key": {
+                  "type": "string"
+                },
+                "text": {
+                  "type": "string"
+                },
+                "data": {
+                  "description": "Any JSON-serializable payload."
+                },
+                "base64_data": {
+                  "type": "string",
+                  "contentEncoding": "base64",
+                  "description": "Base64-encoded binary blob such as a PDF, image, audio file, or video clip."
+                },
+                "content_type": {
+                  "type": "string"
+                },
+                "metadata": {
+                  "type": "object"
+                }
+              },
+              "required": [
+                "bucket_name",
+                "object_key"
+              ]
+            },
+            "response_schema": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "string"
+                },
+                "bucket_name": {
+                  "type": "string"
+                },
+                "object_key": {
+                  "type": "string"
+                },
+                "content_type": {
+                  "type": "string"
+                },
+                "size_bytes": {
+                  "type": "integer"
+                },
+                "etag": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "status",
+                "bucket_name",
+                "object_key",
+                "etag"
+              ]
+            }
+          },
+          "concept": {
+            "definition": "Persist text, JSON, or binary content in a logical bucket."
+          },
+          "resource_type": "pulse_definition",
+          "pds_version": "0.1.0",
+          "status": "stable",
+          "pulse_class": "fact",
+          "mapping": {},
+          "cost": 0
+        },
+        {
+          "name": "object_load",
+          "aliases": [
+            "load_object",
+            "object_get"
+          ],
+          "pulse_address": "ef0c671b-37be-5630-8927-ec844ba98aea",
+          "description": "Load text, JSON, or binary content from a logical bucket.",
+          "party": "System",
+          "tags": [
+            "storage",
+            "object",
+            "load",
+            "system"
+          ],
+          "input_schema": {
+            "type": "object",
+            "properties": {
+              "bucket_name": {
+                "type": "string"
+              },
+              "object_key": {
+                "type": "string"
+              },
+              "response_format": {
+                "type": "string",
+                "enum": [
+                  "auto",
+                  "json",
+                  "text",
+                  "base64"
+                ],
+                "default": "auto"
+              }
+            },
+            "required": [
+              "bucket_name",
+              "object_key"
+            ]
+          },
+          "output_schema": {
+            "type": "object",
+            "properties": {
+              "bucket_name": {
+                "type": "string"
+              },
+              "object_key": {
+                "type": "string"
+              },
+              "content_type": {
+                "type": "string"
+              },
+              "size_bytes": {
+                "type": "integer"
+              },
+              "etag": {
+                "type": "string"
+              },
+              "text": {
+                "type": "string"
+              },
+              "data": {},
+              "base64_data": {
+                "type": "string",
+                "contentEncoding": "base64"
+              }
+            },
+            "required": [
+              "bucket_name",
+              "object_key",
+              "etag"
+            ]
+          },
+          "test_data": {
+            "bucket_name": "demo-assets",
+            "object_key": "notes/hello.txt",
+            "response_format": "text"
+          },
+          "pulse_definition": {
+            "pds_version": "0.1.0",
+            "resource_type": "pulse_definition",
+            "id": "urn:plaza:pulse:object.load",
+            "version": "1.0.0",
+            "name": "object_load",
+            "title": "Object Load",
+            "description": "Load text, JSON, or binary content from a logical bucket.",
+            "pulse_class": "fact",
+            "status": "stable",
+            "concept": {
+              "definition": "Load text, JSON, or binary content from a logical bucket."
+            },
+            "interface": {
+              "schema_language": "json-schema-2020-12",
+              "request_schema": {
+                "type": "object",
+                "properties": {
+                  "bucket_name": {
+                    "type": "string"
+                  },
+                  "object_key": {
+                    "type": "string"
+                  },
+                  "response_format": {
+                    "type": "string",
+                    "enum": [
+                      "auto",
+                      "json",
+                      "text",
+                      "base64"
+                    ],
+                    "default": "auto"
+                  }
+                },
+                "required": [
+                  "bucket_name",
+                  "object_key"
+                ]
+              },
+              "response_schema": {
+                "type": "object",
+                "properties": {
+                  "bucket_name": {
+                    "type": "string"
+                  },
+                  "object_key": {
+                    "type": "string"
+                  },
+                  "content_type": {
+                    "type": "string"
+                  },
+                  "size_bytes": {
+                    "type": "integer"
+                  },
+                  "etag": {
+                    "type": "string"
+                  },
+                  "text": {
+                    "type": "string"
+                  },
+                  "data": {},
+                  "base64_data": {
+                    "type": "string",
+                    "contentEncoding": "base64"
+                  }
+                },
+                "required": [
+                  "bucket_name",
+                  "object_key",
+                  "etag"
+                ]
+              }
+            }
+          },
+          "pulse_id": "urn:plaza:pulse:object.load",
+          "pulse_name": "object_load",
+          "title": "Object Load",
+          "interface": {
+            "schema_language": "json-schema-2020-12",
+            "request_schema": {
+              "type": "object",
+              "properties": {
+                "bucket_name": {
+                  "type": "string"
+                },
+                "object_key": {
+                  "type": "string"
+                },
+                "response_format": {
+                  "type": "string",
+                  "enum": [
+                    "auto",
+                    "json",
+                    "text",
+                    "base64"
+                  ],
+                  "default": "auto"
+                }
+              },
+              "required": [
+                "bucket_name",
+                "object_key"
+              ]
+            },
+            "response_schema": {
+              "type": "object",
+              "properties": {
+                "bucket_name": {
+                  "type": "string"
+                },
+                "object_key": {
+                  "type": "string"
+                },
+                "content_type": {
+                  "type": "string"
+                },
+                "size_bytes": {
+                  "type": "integer"
+                },
+                "etag": {
+                  "type": "string"
+                },
+                "text": {
+                  "type": "string"
+                },
+                "data": {},
+                "base64_data": {
+                  "type": "string",
+                  "contentEncoding": "base64"
+                }
+              },
+              "required": [
+                "bucket_name",
+                "object_key",
+                "etag"
+              ]
+            }
+          },
+          "concept": {
+            "definition": "Load text, JSON, or binary content from a logical bucket."
+          },
+          "resource_type": "pulse_definition",
+          "pds_version": "0.1.0",
+          "status": "stable",
+          "pulse_class": "fact",
+          "mapping": {},
+          "cost": 0
+        }
+      ],
+      "pulse_id": "urn:plaza:pulse:file",
+      "pulse_definition": {
+        "pds_version": "0.1.0",
+        "resource_type": "pulse_definition",
+        "id": "urn:plaza:pulse:file",
+        "version": "1.0.0",
+        "name": "file",
+        "title": "File",
+        "description": "Load file content from an HTTP(S) URL or a local filesystem path.",
+        "pulse_class": "fact",
+        "status": "stable",
+        "concept": {
+          "definition": "Load file content from an HTTP(S) URL or a local filesystem path."
+        },
+        "interface": {
+          "schema_language": "json-schema-2020-12",
+          "request_schema": {
+            "type": "object",
+            "properties": {
+              "url": {
+                "type": "string",
+                "description": "HTTP(S) URL or file:// URL to load."
+              },
+              "local_path": {
+                "type": "string",
+                "description": "Absolute or relative filesystem path to load."
+              }
+            },
+            "oneOf": [
+              {
+                "required": [
+                  "url"
+                ]
+              },
+              {
+                "required": [
+                  "local_path"
+                ]
+              }
+            ]
+          },
+          "response_schema": {
+            "type": "object",
+            "properties": {
+              "format": {
+                "type": "string",
+                "enum": [
+                  "json",
+                  "text",
+                  "base64"
+                ],
+                "description": "Normalized representation used for content."
+              },
+              "content": {
+                "type": [
+                  "object",
+                  "array",
+                  "string",
+                  "number",
+                  "boolean",
+                  "null"
+                ],
+                "description": "Parsed JSON value, UTF-8 text, or base64-encoded binary payload."
+              }
+            },
+            "required": [
+              "format",
+              "content"
+            ]
+          }
+        }
+      },
+      "storage_root": "/Users/alvincho/Library/Mobile Documents/com~apple~CloudDocs/Documents/Projects/DevOps/Retis/FinMAS/tests/storage/system_pulser/content"
+    },
+    "pit_type": "Pulser",
+    "accepts_inbound_from_plaza": true,
+    "accepts_direct_call": true,
+    "connectivity_mode": "plaza-forward",
+    "pit_address": {
+      "pit_id": "file-storage-id",
+      "plazas": [
+        "http://127.0.0.1:8011"
+      ]
+    },
+    "practices": [
+      {
+        "name": "Pool Search Memory",
+        "description": "Search stored memory records in the filesystem pool.",
+        "id": "pool-search-memory",
+        "cost": 0,
+        "tags": [
+          "pool",
+          "filesystem",
+          "memory",
+          "search"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {
+          "query": {
+            "type": "string",
+            "description": "Case-insensitive search text."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum number of matches."
+          },
+          "table_name": {
+            "type": "string",
+            "description": "Optional override table name."
+          }
+        },
+        "path": "/pool_search_memory"
+      },
+      {
+        "name": "Pool Create Table",
+        "description": "Create a table directory in the filesystem pool.",
+        "id": "pool-create-table",
+        "cost": 0,
+        "tags": [
+          "pool",
+          "filesystem",
+          "storage",
+          "create-table"
+        ],
+        "examples": [
+          {
+            "table_name": "agent_practices",
+            "schema": {
+              "name": "agent_practices"
+            }
+          }
+        ],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {
+          "table_name": {
+            "type": "string",
+            "description": "Logical table name."
+          },
+          "schema": {
+            "type": "object",
+            "description": "Table schema definition."
+          }
+        },
+        "path": "/pool_create_table"
+      },
+      {
+        "name": "Pool Connect",
+        "description": "Initialize the filesystem pool root.",
+        "id": "pool-connect",
+        "cost": 0,
+        "tags": [
+          "pool",
+          "filesystem",
+          "storage",
+          "connect"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {},
+        "path": "/pool_connect"
+      },
+      {
+        "name": "Pool Get Table Data",
+        "description": "Read rows from a filesystem-backed table.",
+        "id": "pool-get-table-data",
+        "cost": 0,
+        "tags": [
+          "pool",
+          "filesystem",
+          "storage",
+          "read"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {
+          "table_name": {
+            "type": "string",
+            "description": "Logical table name."
+          },
+          "id_or_where": {
+            "type": "object",
+            "description": "Optional id or equality filter."
+          },
+          "table_schema": {
+            "type": "object",
+            "description": "Optional table schema for decoding."
+          }
+        },
+        "path": "/pool_get_table_data"
+      },
+      {
+        "name": "Get Pulse Data",
+        "description": "Fetch or transform pulse payloads for the agent's supported pulses.",
+        "id": "get_pulse_data",
+        "cost": 0,
+        "tags": [
+          "pulser",
+          "pulse",
+          "data"
+        ],
+        "examples": [
+          "POST /get_pulse_data {'pulse_name': 'last_price', 'params': {'symbol': 'AAPL'}}"
+        ],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {
+          "pulse_name": {
+            "type": "string",
+            "description": "Optional pulse identifier. Defaults to the pulser's primary pulse.",
+            "enum": [
+              "file",
+              "bucket_create",
+              "list_bucket",
+              "bucket_browse",
+              "object_save",
+              "object_load"
+            ]
+          },
+          "pulse_address": {
+            "type": "string",
+            "description": "Optional pulse address override."
+          },
+          "params": {
+            "type": "object",
+            "properties": {
+              "url": {
+                "type": "string",
+                "description": "HTTP(S) URL or file:// URL to load."
+              },
+              "local_path": {
+                "type": "string",
+                "description": "Absolute or relative filesystem path to load."
+              }
+            },
+            "oneOf": [
+              {
+                "required": [
+                  "url"
+                ]
+              },
+              {
+                "required": [
+                  "local_path"
+                ]
+              }
+            ]
+          }
+        },
+        "path": "/get_pulse_data"
+      },
+      {
+        "name": "Pool Disconnect",
+        "description": "Mark the filesystem pool as disconnected.",
+        "id": "pool-disconnect",
+        "cost": 0,
+        "tags": [
+          "pool",
+          "filesystem",
+          "storage",
+          "disconnect"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {},
+        "path": "/pool_disconnect"
+      },
+      {
+        "name": "Mailbox",
+        "description": "Default inbound message endpoint for generic agent delivery.",
+        "id": "mailbox",
+        "cost": 0,
+        "tags": [
+          "message",
+          "mailbox"
+        ],
+        "examples": [
+          "POST /mailbox {'sender':'alice','content':'hello','msg_type':'message'}"
+        ],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {
+          "sender": {
+            "type": "string",
+            "description": "Sending agent name or id."
+          },
+          "receiver": {
+            "type": "string",
+            "description": "Target agent name or id."
+          },
+          "content": {
+            "type": "object",
+            "description": "Message payload."
+          },
+          "msg_type": {
+            "type": "string",
+            "description": "Message routing key."
+          }
+        },
+        "path": "/mailbox"
+      },
+      {
+        "name": "Pool Query",
+        "description": "Execute a query against the filesystem pool adapter.",
+        "id": "pool-query",
+        "cost": 0,
+        "tags": [
+          "pool",
+          "filesystem",
+          "storage",
+          "query"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {
+          "query": {
+            "type": "string",
+            "description": "Query or operation name."
+          },
+          "params": {
+            "type": "object",
+            "description": "Optional query parameters."
+          }
+        },
+        "path": "/pool_query"
+      },
+      {
+        "name": "Pool Insert",
+        "description": "Insert or replace one JSON row in the filesystem pool.",
+        "id": "pool-insert",
+        "cost": 0,
+        "tags": [
+          "pool",
+          "filesystem",
+          "storage",
+          "insert"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {
+          "table_name": {
+            "type": "string",
+            "description": "Logical table name."
+          },
+          "data": {
+            "type": "object",
+            "description": "Row payload to persist."
+          }
+        },
+        "path": "/pool_insert"
+      },
+      {
+        "name": "Pool Store Memory",
+        "description": "Store one memory record in the filesystem pool.",
+        "id": "pool-store-memory",
+        "cost": 0,
+        "tags": [
+          "pool",
+          "filesystem",
+          "memory",
+          "store"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {
+          "content": {
+            "type": "string",
+            "description": "Memory content."
+          },
+          "memory_id": {
+            "type": "string",
+            "description": "Optional stable memory id."
+          },
+          "metadata": {
+            "type": "object",
+            "description": "Optional metadata payload."
+          },
+          "tags": {
+            "type": "array",
+            "description": "Optional string tags."
+          },
+          "memory_type": {
+            "type": "string",
+            "description": "Memory category."
+          },
+          "table_name": {
+            "type": "string",
+            "description": "Optional override table name."
+          }
+        },
+        "path": "/pool_store_memory"
+      },
+      {
+        "name": "Pool Table Exists",
+        "description": "Check whether a filesystem-backed table exists.",
+        "id": "pool-table-exists",
+        "cost": 0,
+        "tags": [
+          "pool",
+          "filesystem",
+          "storage",
+          "table-exists"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {
+          "table_name": {
+            "type": "string",
+            "description": "Logical table name."
+          }
+        },
+        "path": "/pool_table_exists"
+      }
+    ],
+    "agent_id": "file-storage-id"
+  },
+  "updated_at": "2026-04-04T10:28:14.830579+00:00"
+}

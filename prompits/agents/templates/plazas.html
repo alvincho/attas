@@ -2694,6 +2694,41 @@
                     };
                 }
             },
+            AgentConfig: {
+                label: 'AgentConfig',
+                createModel(source) {
+                    const config = source.config && typeof source.config === 'object' && !Array.isArray(source.config)
+                        ? clone(source.config)
+                        : {};
+                    const access = summarizeAgentConfigAccess(config);
+                    return {
+                        kind: 'AgentConfig',
+                        name: source.name || config.name || 'AgentConfig',
+                        description: source.description || '',
+                        owner: source.owner || '',
+                        address: source.address || '',
+                        config_name: String(config.name || source.name || '').trim(),
+                        agent_type: String(config.type || source.meta?.agent_type || '').trim(),
+                        policy_json: prettyJson(access.policy),
+                        audit_json: prettyJson(access.audit),
+                        stored_config_json: prettyJson(config)
+                    };
+                },
+                emptyModel() {
+                    return {
+                        kind: 'AgentConfig',
+                        name: 'AgentConfig',
+                        description: '',
+                        owner: '',
+                        address: '',
+                        config_name: '',
+                        agent_type: '',
+                        policy_json: prettyJson({}),
+                        audit_json: prettyJson({}),
+                        stored_config_json: prettyJson({})
+                    };
+                }
+            },
             Custom: {
                 label: 'Custom',
                 createModel(source) {
@@ -3461,11 +3496,31 @@
                 return parts.join(' • ') || fallback;
             }
             if (typeof value === 'object') {
-                if (typeof value.message === 'string' && value.message.trim()) {
-                    return value.message.trim();
+                const message = typeof value.message === 'string' && value.message.trim()
+                    ? value.message.trim()
+                    : (typeof value.detail === 'string' && value.detail.trim() ? value.detail.trim() : '');
+                const parameters = value.parameters ?? value.params;
+                if (parameters && typeof parameters === 'object' && Object.keys(parameters).length) {
+                    const parameterText = Object.entries(parameters)
+                        .map(([key, item]) => {
+                            if (item === null || item === undefined || item === '') return '';
+                            if (typeof item === 'object') {
+                                try {
+                                    return `${key}=${JSON.stringify(item)}`;
+                                } catch (_) {
+                                    return `${key}=${String(item)}`;
+                                }
+                            }
+                            return `${key}=${String(item)}`;
+                        })
+                        .filter(Boolean)
+                        .join(', ');
+                    if (parameterText) {
+                        return message ? `${message} [${parameterText}]` : `[${parameterText}]`;
+                    }
                 }
-                if (typeof value.detail === 'string' && value.detail.trim()) {
-                    return value.detail.trim();
+                if (message) {
+                    return message;
                 }
                 if (Array.isArray(value.reasons) && value.reasons.length) {
                     return value.reasons.join(' • ');
@@ -4918,7 +4973,7 @@
                                 ? `<button class="ghost-btn" data-open-pulsers="1" data-open-pulsers-source="${escapeAttribute(sourceKey)}" data-pulser-payload="${escapeAttribute(JSON.stringify(availablePulsers))}" data-pulse-name="${escapeAttribute(pulseName)}" data-pulse-address="${escapeAttribute(pulseAddress)}" data-pulse-description="${escapeAttribute(agent.description || card.description || '')}">Pulsers (${activePulserCount})</button>`
                                 : ''}
                             ${isAgentConfig ? `<button class="ghost-btn" data-open-agent-launch="${escapeHtml(sourceKey)}">Launch</button>` : ''}
-                            ${hasEditor ? `<button class="ghost-btn" data-open-source="${escapeHtml(sourceKey)}">${isAgentConfig ? 'Inspect' : 'Edit'}</button>` : ''}
+                            ${hasEditor ? `<button class="ghost-btn" data-open-source="${escapeHtml(sourceKey)}">${isAgentConfig ? 'Policy' : 'Edit'}</button>` : ''}
                         </div>
                     </div>
                 </article>
@@ -4973,6 +5028,77 @@
                 poolType: String(pool?.type || '').trim(),
                 poolLocation,
             };
+        }
+
+        function countPolicyRules(value) {
+            if (Array.isArray(value)) {
+                return value.filter((entry) => entry !== null && entry !== undefined && entry !== '').length;
+            }
+            if (value && typeof value === 'object') return 1;
+            return 0;
+        }
+
+        function safeParseJson(value, fallback = {}) {
+            const trimmed = String(value || '').trim();
+            if (!trimmed) return clone(fallback);
+            try {
+                const parsed = JSON.parse(trimmed);
+                if (parsed && typeof parsed === 'object') {
+                    return parsed;
+                }
+            } catch (_) {
+                return clone(fallback);
+            }
+            return clone(fallback);
+        }
+
+        function summarizeAgentConfigAccess(config = {}) {
+            const policy = config && typeof config.remote_use_practice_policy === 'object' && !Array.isArray(config.remote_use_practice_policy)
+                ? clone(config.remote_use_practice_policy)
+                : {};
+            const audit = config && typeof config.remote_use_practice_audit === 'object' && !Array.isArray(config.remote_use_practice_audit)
+                ? clone(config.remote_use_practice_audit)
+                : {};
+            const outbound = policy.outbound && typeof policy.outbound === 'object' && !Array.isArray(policy.outbound) ? policy.outbound : {};
+            const inbound = policy.inbound && typeof policy.inbound === 'object' && !Array.isArray(policy.inbound) ? policy.inbound : {};
+            const outboundAllow = countPolicyRules(policy.outbound_allow || outbound.allow);
+            const outboundDeny = countPolicyRules(policy.outbound_deny || outbound.deny);
+            const inboundAllow = countPolicyRules(policy.inbound_allow || inbound.allow);
+            const inboundDeny = countPolicyRules(policy.inbound_deny || inbound.deny);
+            const outboundDefault = String(policy.outbound_default || outbound.default || policy.default || 'allow').trim() || 'allow';
+            const inboundDefault = String(policy.inbound_default || inbound.default || policy.default || 'allow').trim() || 'allow';
+            const auditEnabled = audit.enabled !== false;
+            const auditPersist = audit.persist !== false;
+            const auditLogs = audit.emit_logs !== false;
+            const chips = [
+                `Outbound ${outboundDefault}`,
+                `Inbound ${inboundDefault}`,
+                `${outboundAllow + inboundAllow} allow`,
+                `${outboundDeny + inboundDeny} deny`,
+                auditEnabled
+                    ? `Audit ${auditPersist ? 'persisted' : 'logs only'}${auditLogs ? ' + logs' : ''}`
+                    : 'Audit off',
+            ];
+            return {
+                policy,
+                audit,
+                outboundDefault,
+                inboundDefault,
+                outboundAllow,
+                outboundDeny,
+                inboundAllow,
+                inboundDeny,
+                auditEnabled,
+                auditPersist,
+                auditLogs,
+                chips,
+            };
+        }
+
+        function renderAgentConfigAccessSummary(summary) {
+            const chips = Array.isArray(summary?.chips) ? summary.chips : [];
+            if (!chips.length) return '';
+            return '<div class="node-meta-line">' + chips.map((chip) => `<span class="chip">${escapeHtml(chip)}</span>`).join('') + '</div>';
         }
 
         function normalizeAgentConfigLaunchSource(item) {
@@ -6929,7 +7055,12 @@
                     <div class="catalog-item-header">
                         <span class="type-pill ${escapeHtml(item.kind)}">${escapeHtml(item.kind)}</span>
                         ${item.kind === 'AgentConfig'
-                            ? `<button class="ghost-btn" data-open-agent-launch="${escapeHtml(item.sourceKey)}">Launch</button>`
+                            ? `
+                                <div class="editor-actions">
+                                    <button class="ghost-btn" data-open-source="${escapeHtml(item.sourceKey)}">Policy</button>
+                                    <button class="ghost-btn" data-open-agent-launch="${escapeHtml(item.sourceKey)}">Launch</button>
+                                </div>
+                            `
                             : `<button class="ghost-btn" data-open-source="${escapeHtml(item.sourceKey)}">Open</button>`}
                     </div>
                     <div class="catalog-name">${escapeHtml(item.name)}</div>
@@ -6973,7 +7104,7 @@
                     <div class="workspace-empty">
                         <div>
                             <h2 style="margin-bottom:0.75rem;">No draft open</h2>
-                            <p class="empty-note">Open a Schema, Pulse, or Phema from the monitor, or create a blank draft for future extension types.</p>
+                            <p class="empty-note">Open a Schema, Pulse, Phema, or AgentConfig from the monitor, or create a blank draft for future extension types.</p>
                         </div>
                     </div>
                 `;
@@ -7094,6 +7225,44 @@
                         <label>Extra Meta JSON</label>
                         <textarea class="json-editor" data-draft-id="${escapeHtml(draft.id)}" data-field="meta_json">${escapeHtml(draft.model.meta_json)}</textarea>
                         ${errors.meta_json ? `<div class="error-text">${escapeHtml(errors.meta_json)}</div>` : ''}
+                    </div>
+                `;
+            }
+
+            if (draft.kind === 'AgentConfig') {
+                const summary = summarizeAgentConfigAccess({
+                    remote_use_practice_policy: safeParseJson(draft.model.policy_json, {}),
+                    remote_use_practice_audit: safeParseJson(draft.model.audit_json, {}),
+                });
+                return `
+                    <div class="field-card">
+                        <label>Template Agent Name</label>
+                        <input class="editor-input" value="${escapeAttribute(draft.model.config_name || 'Unnamed agent')}" readonly>
+                    </div>
+                    <div class="field-card">
+                        <label>Agent Type</label>
+                        <input class="editor-input" value="${escapeAttribute(draft.model.agent_type || 'Unknown')}" readonly>
+                    </div>
+                    <div class="field-card full-span">
+                        <label>Access Summary</label>
+                        ${renderAgentConfigAccessSummary(summary)}
+                        <div class="draft-note">
+                            <div class="draft-caption">Edit the stored remote <code>UsePractice(...)</code> access rules and audit settings for this AgentConfig. Leave either JSON block as <code>{}</code> to remove it from the saved config.</div>
+                        </div>
+                    </div>
+                    <div class="field-card full-span">
+                        <label>Remote UsePractice Policy JSON</label>
+                        <textarea class="json-editor" data-draft-id="${escapeHtml(draft.id)}" data-field="policy_json">${escapeHtml(draft.model.policy_json)}</textarea>
+                        ${errors.policy_json ? `<div class="error-text">${escapeHtml(errors.policy_json)}</div>` : ''}
+                    </div>
+                    <div class="field-card full-span">
+                        <label>Remote UsePractice Audit JSON</label>
+                        <textarea class="json-editor" data-draft-id="${escapeHtml(draft.id)}" data-field="audit_json">${escapeHtml(draft.model.audit_json)}</textarea>
+                        ${errors.audit_json ? `<div class="error-text">${escapeHtml(errors.audit_json)}</div>` : ''}
+                    </div>
+                    <div class="field-card full-span">
+                        <label>Stored Config Preview</label>
+                        <textarea class="json-editor" readonly>${escapeHtml(draft.model.stored_config_json)}</textarea>
                     </div>
                 `;
             }
@@ -7263,6 +7432,48 @@
             if (Object.keys(compiled.errors).length) {
                 renderInspector();
                 return;
+            }
+
+            if (draft.kind === 'AgentConfig') {
+                try {
+                    const response = await authFetch('/api/agent_configs', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(compiled.payload)
+                    });
+                    const data = await response.json();
+                    if (!response.ok) {
+                        throw new Error(data.detail || data.message || 'Failed to save AgentConfig');
+                    }
+                    draft.sourceKey = data.agent_config?.id || draft.sourceKey;
+                    draft.isNew = false;
+                    draft.dirty = false;
+                    draft.savedAt = data.agent_config?.updated_at || new Date().toISOString();
+                    await fetchStatus();
+                    const source = findItem(draft.sourceKey);
+                    if (source) {
+                        const definition = EDITOR_DEFINITIONS.AgentConfig;
+                        draft.model = definition.createModel(source);
+                        draft.sourceSnapshot = {
+                            sourceKey: source.sourceKey,
+                            kind: source.kind,
+                            name: source.name,
+                            description: source.description,
+                            owner: source.owner,
+                            address: source.address,
+                            meta: source.meta,
+                            plazaUrl: source.plazaUrl,
+                            plazaName: source.plazaName,
+                            raw: source.raw
+                        };
+                    }
+                    persistUiState();
+                    renderAll();
+                    return;
+                } catch (error) {
+                    alert(error.message || 'Failed to save AgentConfig');
+                    return;
+                }
             }
 
             if (draft.kind === 'Phema') {
@@ -7459,6 +7670,35 @@
                         tags: tags || [],
                         sections: sections || [],
                         meta: meta || {}
+                    }
+                };
+            }
+
+            if (draft.kind === 'AgentConfig') {
+                const storedConfig = parseJsonField(draft.model.stored_config_json, 'Stored config JSON', errors, 'stored_config_json');
+                const policy = parseJsonField(draft.model.policy_json, 'Access policy JSON', errors, 'policy_json');
+                const audit = parseJsonField(draft.model.audit_json, 'Access audit JSON', errors, 'audit_json');
+                const config = storedConfig && typeof storedConfig === 'object' && !Array.isArray(storedConfig)
+                    ? clone(storedConfig)
+                    : {};
+                if (policy && Object.keys(policy).length) {
+                    config.remote_use_practice_policy = policy;
+                } else {
+                    delete config.remote_use_practice_policy;
+                }
+                if (audit && Object.keys(audit).length) {
+                    config.remote_use_practice_audit = audit;
+                } else {
+                    delete config.remote_use_practice_audit;
+                }
+                return {
+                    errors,
+                    payload: {
+                        config_id: draft.sourceKey || undefined,
+                        name: draft.model.name,
+                        description: draft.model.description,
+                        owner: draft.model.owner,
+                        config,
                     }
                 };
             }

@@ -1,5 +1,17 @@
 # Hello Plaza
 
+## Translations
+
+- [English](README.md)
+- [繁體中文](README.zh-Hant.md)
+- [简体中文](README.zh-Hans.md)
+- [Español](README.es.md)
+- [Français](README.fr.md)
+- [Italiano](README.it.md)
+- [Deutsch](README.de.md)
+- [日本語](README.ja.md)
+- [한국어](README.ko.md)
+
 `hello-plaza` is the smallest public demo in this workspace. It starts a local Plaza, registers one worker, and serves a browser-facing user agent so people can see the directory come to life.
 
 ## What This Demo Shows
@@ -30,6 +42,49 @@ source .venv/bin/activate
 pip install --upgrade pip
 pip install -r requirements.txt
 ```
+
+## Single-Command Launch
+
+From the repository root:
+
+```bash
+./demos/hello-plaza/run-demo.sh
+```
+
+This starts Plaza, the worker, and the user UI from one terminal, opens a browser guide page, and opens the user UI automatically.
+
+Set `DEMO_OPEN_BROWSER=0` if you want the launcher to stay in the terminal only.
+
+## Platform Quick Start
+
+### macOS And Linux
+
+From the repository root:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt
+./demos/hello-plaza/run-demo.sh
+```
+
+### Windows
+
+Use WSL2 with Ubuntu or another Linux distro. From the repository root inside WSL:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt
+./demos/hello-plaza/run-demo.sh
+```
+
+If browser tabs do not auto-open from WSL, keep the launcher running and open the printed `guide=` URL in a Windows browser.
+
+Native PowerShell / Command Prompt wrappers are not checked in yet, so WSL2 is the supported Windows path today.
+
 
 ## Quickstart
 

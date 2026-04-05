@@ -1,0 +1,117 @@
+{
+  "id": "f43a84ae-1bab-52b3-a4d9-587d42ec99ba",
+  "agent_id": "f43a84ae-1bab-52b3-a4d9-587d42ec99ba",
+  "name": "supported_jobcaps",
+  "type": "Pulse",
+  "description": "Aggregate supported job capabilities from teamwork managers and workers.",
+  "owner": "Plaza",
+  "address": "",
+  "meta": {
+    "pulse_id": "urn:plaza:pulse:supported.jobcaps",
+    "pulse_address": "plaza://pulse/supported_jobcaps",
+    "pulse_definition": {
+      "pds_version": "0.1.0",
+      "resource_type": "pulse_definition",
+      "id": "urn:plaza:pulse:supported.jobcaps",
+      "version": "1.0.0",
+      "name": "supported_jobcaps",
+      "title": "Supported Jobcaps",
+      "description": "Aggregate supported job capabilities from teamwork managers and workers.",
+      "pulse_class": "fact",
+      "status": "stable",
+      "concept": {
+        "definition": "Aggregate supported job capabilities from teamwork managers and workers."
+      },
+      "interface": {
+        "schema_language": "json-schema-2020-12",
+        "request_schema": {
+          "type": "object",
+          "properties": {
+            "party": {
+              "type": "string"
+            },
+            "manager_address": {
+              "type": "string"
+            }
+          }
+        },
+        "response_schema": {}
+      }
+    },
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "party": {
+          "type": "string"
+        },
+        "manager_address": {
+          "type": "string"
+        }
+      }
+    },
+    "output_schema": {},
+    "description": "Aggregate supported job capabilities from teamwork managers and workers.",
+    "examples": []
+  },
+  "card": {
+    "name": "supported_jobcaps",
+    "description": "Aggregate supported job capabilities from teamwork managers and workers.",
+    "pit_type": "Pulse",
+    "owner": "Plaza",
+    "tags": [],
+    "meta": {
+      "pulse_id": "urn:plaza:pulse:supported.jobcaps",
+      "pulse_address": "plaza://pulse/supported_jobcaps",
+      "pulse_definition": {
+        "pds_version": "0.1.0",
+        "resource_type": "pulse_definition",
+        "id": "urn:plaza:pulse:supported.jobcaps",
+        "version": "1.0.0",
+        "name": "supported_jobcaps",
+        "title": "Supported Jobcaps",
+        "description": "Aggregate supported job capabilities from teamwork managers and workers.",
+        "pulse_class": "fact",
+        "status": "stable",
+        "concept": {
+          "definition": "Aggregate supported job capabilities from teamwork managers and workers."
+        },
+        "interface": {
+          "schema_language": "json-schema-2020-12",
+          "request_schema": {
+            "type": "object",
+            "properties": {
+              "party": {
+                "type": "string"
+              },
+              "manager_address": {
+                "type": "string"
+              }
+            }
+          },
+          "response_schema": {}
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "party": {
+            "type": "string"
+          },
+          "manager_address": {
+            "type": "string"
+          }
+        }
+      },
+      "output_schema": {},
+      "description": "Aggregate supported job capabilities from teamwork managers and workers.",
+      "examples": []
+    },
+    "pit_address": {
+      "pit_id": "f43a84ae-1bab-52b3-a4d9-587d42ec99ba",
+      "plazas": [
+        "http://127.0.0.1:8011"
+      ]
+    }
+  },
+  "updated_at": "2026-04-04T10:28:12.868316+00:00"
+}

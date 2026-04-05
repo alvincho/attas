@@ -1,15 +1,15 @@
 """
-Regression tests for File Storage Pulser.
+Regression tests for System Pulser.
 
 Phemacast assembles pulse inputs, phemas, and castrs into rendered research artifacts
 and interactive tooling. These tests protect the Phemacast pipeline, demo flows, UI
 helpers, and pulser integrations.
 
 The pytest cases in this file document expected behavior through checks such as
-`test_file_storage_pulser_agent_config_loads_via_shared_agent_factory`,
-`test_file_storage_pulser_list_bucket_respects_visibility_scope`,
-`test_file_storage_pulser_private_bucket_is_owner_scoped`, and
-`test_file_storage_pulser_public_bucket_is_shared`, helping guard against regressions as
+`test_system_pulser_agent_config_loads_via_shared_agent_factory`,
+`test_system_pulser_list_bucket_respects_visibility_scope`,
+`test_system_pulser_private_bucket_is_owner_scoped`, and
+`test_system_pulser_public_bucket_is_shared`, helping guard against regressions as
 the packages evolve.
 """
 
@@ -26,7 +26,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../.
 
 from botocore.exceptions import ClientError
 
-from phemacast.pulsers.file_storage_pulser import FileStoragePulser
+from phemacast.pulsers.system_pulser import SystemPulser
 from prompits.tests.test_support import build_agent_from_config
 
 
@@ -100,12 +100,12 @@ def _caller(agent_id: str, agent_name: str | None = None) -> dict[str, str]:
     }
 
 
-def test_file_storage_pulser_private_bucket_is_owner_scoped(tmp_path):
+def test_system_pulser_private_bucket_is_owner_scoped(tmp_path):
     """
-    Exercise the test_file_storage_pulser_private_bucket_is_owner_scoped regression
+    Exercise the test_system_pulser_private_bucket_is_owner_scoped regression
     scenario.
     """
-    pulser = FileStoragePulser(
+    pulser = SystemPulser(
         config={
             "storage": {
                 "type": "filesystem",
@@ -156,12 +156,12 @@ def test_file_storage_pulser_private_bucket_is_owner_scoped(tmp_path):
     assert "private to its creating agent" in denied["error"]
 
 
-def test_file_storage_pulser_public_bucket_is_shared(tmp_path):
+def test_system_pulser_public_bucket_is_shared(tmp_path):
     """
-    Exercise the test_file_storage_pulser_public_bucket_is_shared regression
+    Exercise the test_system_pulser_public_bucket_is_shared regression
     scenario.
     """
-    pulser = FileStoragePulser(
+    pulser = SystemPulser(
         config={
             "storage": {
                 "type": "filesystem",
@@ -220,12 +220,12 @@ def test_file_storage_pulser_public_bucket_is_shared(tmp_path):
     assert load_from_other["data"] == {"ok": True, "source": "agent-b"}
 
 
-def test_file_storage_pulser_list_bucket_respects_visibility_scope(tmp_path):
+def test_system_pulser_list_bucket_respects_visibility_scope(tmp_path):
     """
-    Exercise the test_file_storage_pulser_list_bucket_respects_visibility_scope
+    Exercise the test_system_pulser_list_bucket_respects_visibility_scope
     regression scenario.
     """
-    pulser = FileStoragePulser(
+    pulser = SystemPulser(
         config={
             "storage": {
                 "type": "filesystem",
@@ -281,12 +281,12 @@ def test_file_storage_pulser_list_bucket_respects_visibility_scope(tmp_path):
     assert listed_public_only["buckets"][0]["visibility"] == "public"
 
 
-def test_file_storage_pulser_supports_binary_blob_objects(tmp_path):
+def test_system_pulser_supports_binary_blob_objects(tmp_path):
     """
-    Exercise the test_file_storage_pulser_supports_binary_blob_objects regression
+    Exercise the test_system_pulser_supports_binary_blob_objects regression
     scenario.
     """
-    pulser = FileStoragePulser(
+    pulser = SystemPulser(
         config={
             "storage": {
                 "type": "filesystem",
@@ -337,7 +337,7 @@ def test_remote_use_practice_injects_verified_caller_context_into_get_pulse_data
     test_remote_use_practice_injects_verified_caller_context_into_get_pulse_data
     regression scenario.
     """
-    pulser = FileStoragePulser(
+    pulser = SystemPulser(
         config={
             "storage": {
                 "type": "filesystem",
@@ -374,10 +374,10 @@ def test_remote_use_practice_injects_verified_caller_context_into_get_pulse_data
     assert result["owner_agent_name"] == "worker-1"
 
 
-def test_file_storage_pulser_agent_config_loads_via_shared_agent_factory():
+def test_system_pulser_agent_config_loads_via_shared_agent_factory():
     """
     Exercise the
-    test_file_storage_pulser_agent_config_loads_via_shared_agent_factory regression
+    test_system_pulser_agent_config_loads_via_shared_agent_factory regression
     scenario.
     """
     config_path = Path(__file__).resolve().parents[2] / "attas" / "configs" / "file_storage.pulser"
@@ -402,13 +402,14 @@ def test_file_storage_pulser_agent_config_loads_via_shared_agent_factory():
     ):
         agent = build_agent_from_config(str(config_path))
 
-    assert isinstance(agent, FileStoragePulser)
-    assert agent.name == "FileStoragePulser"
+    assert isinstance(agent, SystemPulser)
+    assert agent.name == "SystemPulser"
     assert agent.agent_id == "file-storage-id"
     assert agent.agent_card["party"] == "System"
     assert agent.agent_card["meta"]["party"] == "System"
     assert agent.agent_card["meta"]["storage_backend"] == "filesystem"
     assert {pulse["name"] for pulse in agent.supported_pulses} == {
+        "file",
         "bucket_create",
         "list_bucket",
         "bucket_browse",
@@ -419,18 +420,18 @@ def test_file_storage_pulser_agent_config_loads_via_shared_agent_factory():
     assert sent_payloads[0]["payload"]["pit_type"] == "Pulser"
 
 
-def test_file_storage_pulser_supports_s3_backend_via_logical_namespace(monkeypatch):
+def test_system_pulser_supports_s3_backend_via_logical_namespace(monkeypatch):
     """
-    Exercise the test_file_storage_pulser_supports_s3_backend_via_logical_namespace
+    Exercise the test_system_pulser_supports_s3_backend_via_logical_namespace
     regression scenario.
     """
     fake_client = FakeS3Client()
     monkeypatch.setattr(
-        "phemacast.pulsers.file_storage_pulser.boto3.client",
+        "phemacast.pulsers.system_pulser.boto3.client",
         lambda *args, **kwargs: fake_client,
     )
 
-    pulser = FileStoragePulser(
+    pulser = SystemPulser(
         config={
             "storage": {
                 "type": "s3",

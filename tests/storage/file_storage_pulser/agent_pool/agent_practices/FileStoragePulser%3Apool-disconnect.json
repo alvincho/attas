@@ -1,6 +1,6 @@
 {
-  "id": "FileStoragePulser:pool-disconnect",
-  "agent_name": "FileStoragePulser",
+  "id": "SystemPulser:pool-disconnect",
+  "agent_name": "SystemPulser",
   "practice_id": "pool-disconnect",
   "practice_name": "Pool Disconnect",
   "practice_description": "Mark the filesystem pool as disconnected.",
@@ -27,5 +27,5 @@
     "path": "/pool_disconnect"
   },
   "is_deleted": false,
-  "updated_at": "2026-04-03T03:54:34.589893+00:00"
+  "updated_at": "2026-04-04T06:56:56.303632+00:00"
 }

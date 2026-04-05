@@ -1,0 +1,29 @@
+{
+  "name": "SystemPulser",
+  "type": "phemacast.pulsers.system_pulser.SystemPulser",
+  "host": "127.0.0.1",
+  "port": 8068,
+  "plaza_url": "http://127.0.0.1:8011",
+  "party": "System",
+  "role": "pulser",
+  "description": "System utility pulser that exposes a generic file pulse for local paths and remote URLs.",
+  "tags": [
+    "system",
+    "file",
+    "url",
+    "storage",
+    "pulser"
+  ],
+  "storage": {
+    "type": "filesystem",
+    "root_path": "tests/storage/system_pulser/content"
+  },
+  "pools": [
+    {
+      "type": "FileSystemPool",
+      "name": "system_pulser_pool",
+      "description": "Credential and practice metadata pool for SystemPulser.",
+      "root_path": "tests/storage/system_pulser/agent_pool"
+    }
+  ]
+}

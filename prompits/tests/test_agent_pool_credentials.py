@@ -1102,3 +1102,30 @@ async def test_verify_remote_caller_accepts_direct_shared_token():
 
     assert verified["agent_id"] == "alice-id"
     assert verified["auth_mode"] == "direct"
+
+
+@pytest.mark.asyncio
+async def test_verify_remote_caller_skips_plaza_when_direct_shared_token_is_valid():
+    """
+    Exercise the direct-token-first regression scenario for remote caller
+    verification.
+    """
+    agent = StandbyAgent(
+        name="bob",
+        plaza_url="http://127.0.0.1:8011",
+        agent_card={"name": "bob", "meta": {"direct_auth_token": "shared-secret"}},
+    )
+
+    with patch.object(
+        agent,
+        "_plaza_request_async",
+        side_effect=AssertionError("Plaza auth should not run when direct auth already succeeded"),
+    ):
+        verified = await agent._verify_remote_caller(
+            caller_agent_address={"pit_id": "alice-id", "plazas": ["http://127.0.0.1:8011"]},
+            caller_plaza_token="stale-plaza-token",
+            caller_direct_token="shared-secret",
+        )
+
+    assert verified["agent_id"] == "alice-id"
+    assert verified["auth_mode"] == "direct"

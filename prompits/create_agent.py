@@ -10,6 +10,7 @@ and tests.
 """
 
 import argparse
+import copy
 import sys
 import os
 import socket
@@ -153,6 +154,19 @@ def resolve_practice_params(config, practice_info):
         practice_params.pop("initial_data", None)
 
     return practice_params
+
+
+def _extract_remote_use_practice_settings(raw_config):
+    """Internal helper to extract remote practice policy and audit settings."""
+    if not isinstance(raw_config, dict):
+        return {}
+
+    extracted = {}
+    for key in ("remote_use_practice_policy", "remote_use_practice_audit"):
+        value = raw_config.get(key)
+        if isinstance(value, dict):
+            extracted[key] = copy.deepcopy(value)
+    return extracted
 
 
 def instantiate_practice_from_config(config, practice_info):
@@ -390,6 +404,18 @@ def create_agent_from_config(config):
     """Create the agent from config."""
     raw_config = config.get("raw_config") or {}
     agent_card = dict(raw_config.get("agent_card") or {})
+    agent_card_meta = agent_card.get("meta")
+    if not isinstance(agent_card_meta, dict):
+        agent_card_meta = {}
+    else:
+        agent_card_meta = dict(agent_card_meta)
+
+    for setting_name, setting_value in _extract_remote_use_practice_settings(raw_config).items():
+        agent_card_meta.setdefault(setting_name, setting_value)
+
+    if agent_card_meta:
+        agent_card["meta"] = agent_card_meta
+
     agent_card.update({
         "name": config["name"],
         "role": config["role"],
@@ -438,8 +464,16 @@ def create_agent_from_config(config):
     # Handle specific initialization for Plaza vs Generic Agents
     # Ideally, we'd standardize this, but for now we adapt.
     if "PlazaAgent" in class_name:
-         # Updated PlazaAgent now accepts pool
-         return agent_cls(host=config["host"], port=config["port"], pool=primary_pool)
+         plaza_kwargs = {
+            "host": config["host"],
+            "port": config["port"],
+            "pool": primary_pool,
+         }
+         if supports_config:
+            plaza_kwargs["config"] = config.get("raw_config")
+         if supports_config_path and config.get("config_path"):
+            plaza_kwargs["config_path"] = config["config_path"]
+         return agent_cls(**plaza_kwargs)
     else:
          agent_kwargs = {
             "name": config["name"],

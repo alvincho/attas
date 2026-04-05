@@ -1,5 +1,17 @@
 # Personal Research Workbench
 
+## Translations
+
+- [English](README.md)
+- [繁體中文](README.zh-Hant.md)
+- [简体中文](README.zh-Hans.md)
+- [Español](README.es.md)
+- [Français](README.fr.md)
+- [Italiano](README.it.md)
+- [Deutsch](README.de.md)
+- [日本語](README.ja.md)
+- [한국어](README.ko.md)
+
 `personal-research-workbench` is the visual product demo. It pairs the React/FastAPI workbench with a local Plaza, a local file-storage pulser, an optional YFinance pulser, and an optional technical-analysis pulser so people can explore workspaces, layouts, Plaza browsing, pulser execution, chart rendering, and diagram test runs from one UI.
 
 ## What This Demo Shows
@@ -36,6 +48,49 @@ source .venv/bin/activate
 pip install --upgrade pip
 pip install -r requirements.txt
 ```
+
+## Single-Command Launch
+
+From the repository root:
+
+```bash
+./demos/personal-research-workbench/run-demo.sh
+```
+
+This starts the workbench stack from one terminal, opens a browser guide page, then opens both the main workbench UI and the embedded `MapPhemar` route used in the core walkthrough.
+
+Set `DEMO_OPEN_BROWSER=0` if you want the launcher to stay in the terminal only.
+
+## Platform Quick Start
+
+### macOS And Linux
+
+From the repository root:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt
+./demos/personal-research-workbench/run-demo.sh
+```
+
+### Windows
+
+Use WSL2 with Ubuntu or another Linux distro. From the repository root inside WSL:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt
+./demos/personal-research-workbench/run-demo.sh
+```
+
+If browser tabs do not auto-open from WSL, keep the launcher running and open the printed `guide=` URL in a Windows browser.
+
+Native PowerShell / Command Prompt wrappers are not checked in yet, so WSL2 is the supported Windows path today.
+
 
 ## Quickstart
 

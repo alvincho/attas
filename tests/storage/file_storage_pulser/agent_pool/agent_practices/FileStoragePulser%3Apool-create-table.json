@@ -1,6 +1,6 @@
 {
-  "id": "FileStoragePulser:pool-create-table",
-  "agent_name": "FileStoragePulser",
+  "id": "SystemPulser:pool-create-table",
+  "agent_name": "SystemPulser",
   "practice_id": "pool-create-table",
   "practice_name": "Pool Create Table",
   "practice_description": "Create a table directory in the filesystem pool.",
@@ -43,5 +43,5 @@
     "path": "/pool_create_table"
   },
   "is_deleted": false,
-  "updated_at": "2026-04-03T03:54:34.590229+00:00"
+  "updated_at": "2026-04-04T06:56:56.303820+00:00"
 }

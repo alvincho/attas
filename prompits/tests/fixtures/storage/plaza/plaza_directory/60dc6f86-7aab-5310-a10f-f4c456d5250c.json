@@ -1,0 +1,141 @@
+{
+  "id": "60dc6f86-7aab-5310-a10f-f4c456d5250c",
+  "agent_id": "60dc6f86-7aab-5310-a10f-f4c456d5250c",
+  "name": "submit_team_job",
+  "type": "Pulse",
+  "description": "Submit a job to a teamwork manager for workers to process.",
+  "owner": "Plaza",
+  "address": "",
+  "meta": {
+    "pulse_id": "urn:plaza:pulse:submit.team.job",
+    "pulse_address": "plaza://pulse/submit_team_job",
+    "pulse_definition": {
+      "pds_version": "0.1.0",
+      "resource_type": "pulse_definition",
+      "id": "urn:plaza:pulse:submit.team.job",
+      "version": "1.0.0",
+      "name": "submit_team_job",
+      "title": "Submit Team Job",
+      "description": "Submit a job to a teamwork manager for workers to process.",
+      "pulse_class": "fact",
+      "status": "stable",
+      "concept": {
+        "definition": "Submit a job to a teamwork manager for workers to process."
+      },
+      "interface": {
+        "schema_language": "json-schema-2020-12",
+        "request_schema": {
+          "type": "object",
+          "properties": {
+            "manager_address": {
+              "type": "string"
+            },
+            "required_capability": {
+              "type": "string"
+            },
+            "payload": {
+              "type": "object"
+            },
+            "priority": {
+              "type": "integer"
+            }
+          }
+        },
+        "response_schema": {}
+      }
+    },
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "manager_address": {
+          "type": "string"
+        },
+        "required_capability": {
+          "type": "string"
+        },
+        "payload": {
+          "type": "object"
+        },
+        "priority": {
+          "type": "integer"
+        }
+      }
+    },
+    "output_schema": {},
+    "description": "Submit a job to a teamwork manager for workers to process.",
+    "examples": []
+  },
+  "card": {
+    "name": "submit_team_job",
+    "description": "Submit a job to a teamwork manager for workers to process.",
+    "pit_type": "Pulse",
+    "owner": "Plaza",
+    "tags": [],
+    "meta": {
+      "pulse_id": "urn:plaza:pulse:submit.team.job",
+      "pulse_address": "plaza://pulse/submit_team_job",
+      "pulse_definition": {
+        "pds_version": "0.1.0",
+        "resource_type": "pulse_definition",
+        "id": "urn:plaza:pulse:submit.team.job",
+        "version": "1.0.0",
+        "name": "submit_team_job",
+        "title": "Submit Team Job",
+        "description": "Submit a job to a teamwork manager for workers to process.",
+        "pulse_class": "fact",
+        "status": "stable",
+        "concept": {
+          "definition": "Submit a job to a teamwork manager for workers to process."
+        },
+        "interface": {
+          "schema_language": "json-schema-2020-12",
+          "request_schema": {
+            "type": "object",
+            "properties": {
+              "manager_address": {
+                "type": "string"
+              },
+              "required_capability": {
+                "type": "string"
+              },
+              "payload": {
+                "type": "object"
+              },
+              "priority": {
+                "type": "integer"
+              }
+            }
+          },
+          "response_schema": {}
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "manager_address": {
+            "type": "string"
+          },
+          "required_capability": {
+            "type": "string"
+          },
+          "payload": {
+            "type": "object"
+          },
+          "priority": {
+            "type": "integer"
+          }
+        }
+      },
+      "output_schema": {},
+      "description": "Submit a job to a teamwork manager for workers to process.",
+      "examples": []
+    },
+    "pit_address": {
+      "pit_id": "60dc6f86-7aab-5310-a10f-f4c456d5250c",
+      "plazas": [
+        "http://127.0.0.1:8011"
+      ]
+    }
+  },
+  "updated_at": "2026-04-04T10:28:12.868344+00:00"
+}

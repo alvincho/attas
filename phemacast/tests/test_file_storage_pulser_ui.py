@@ -1,12 +1,12 @@
 """
-Regression tests for File Storage Pulser UI.
+Regression tests for System Pulser UI.
 
 Phemacast assembles pulse inputs, phemas, and castrs into rendered research artifacts
 and interactive tooling. These tests protect the Phemacast pipeline, demo flows, UI
 helpers, and pulser integrations.
 
 The pytest cases in this file document expected behavior through checks such as
-`test_file_storage_pulser_uses_dedicated_storage_editor`, helping guard against
+`test_system_pulser_uses_dedicated_storage_editor`, helping guard against
 regressions as the packages evolve.
 """
 
@@ -21,9 +21,9 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../.
 from prompits.tests.test_support import build_agent_from_config
 
 
-def test_file_storage_pulser_uses_dedicated_storage_editor(tmp_path, monkeypatch):
+def test_system_pulser_uses_dedicated_storage_editor(tmp_path, monkeypatch):
     """
-    Exercise the test_file_storage_pulser_uses_dedicated_storage_editor regression
+    Exercise the test_system_pulser_uses_dedicated_storage_editor regression
     scenario.
     """
     pool_dir = tmp_path / "storage"
@@ -31,8 +31,8 @@ def test_file_storage_pulser_uses_dedicated_storage_editor(tmp_path, monkeypatch
     config_path.write_text(
         json.dumps(
             {
-                "name": "DemoFileStoragePulser",
-                "type": "phemacast.pulsers.file_storage_pulser.FileStoragePulser",
+                "name": "DemoSystemPulser",
+                "type": "phemacast.pulsers.system_pulser.SystemPulser",
                 "host": "127.0.0.1",
                 "port": 8127,
                 "party": "System",
@@ -56,7 +56,7 @@ def test_file_storage_pulser_uses_dedicated_storage_editor(tmp_path, monkeypatch
     )
 
     monkeypatch.setattr(
-        "phemacast.pulsers.file_storage_pulser.boto3.client",
+        "phemacast.pulsers.system_pulser.boto3.client",
         lambda *args, **kwargs: object(),
     )
 
@@ -65,7 +65,7 @@ def test_file_storage_pulser_uses_dedicated_storage_editor(tmp_path, monkeypatch
     with TestClient(agent.app) as client:
         root = client.get("/")
         assert root.status_code == 200
-        assert "DemoFileStoragePulser Storage Console" in root.text
+        assert "DemoSystemPulser Storage Console" in root.text
         assert "Backend Storage" in root.text
         assert "Filesystem Root Path" in root.text
         assert "Backing S3 Bucket" in root.text
@@ -84,11 +84,12 @@ def test_file_storage_pulser_uses_dedicated_storage_editor(tmp_path, monkeypatch
         current = client.get("/api/config")
         assert current.status_code == 200
         payload = current.json()["config"]
-        assert payload["name"] == "DemoFileStoragePulser"
+        bucket_create_pulse = next(pulse for pulse in payload["supported_pulses"] if pulse["name"] == "bucket_create")
+        assert payload["name"] == "DemoSystemPulser"
         assert payload["storage"]["type"] == "filesystem"
         assert payload["storage"]["root_path"] == str(tmp_path / "content")
-        assert payload["supported_pulses"][0]["pulse_definition"]["resource_type"] == "pulse_definition"
-        assert payload["supported_pulses"][0]["test_data"]["bucket_name"] == "demo-assets"
+        assert bucket_create_pulse["pulse_definition"]["resource_type"] == "pulse_definition"
+        assert bucket_create_pulse["test_data"]["bucket_name"] == "demo-assets"
         assert any(pulse["name"] == "list_bucket" for pulse in payload["supported_pulses"])
 
         tested = client.post(

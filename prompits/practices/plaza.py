@@ -1105,14 +1105,68 @@ class PlazaState:
 
     def verify_token(self, creds: HTTPAuthorizationCredentials = Depends(security)):
         """Validate bearer token existence and expiry, returning token payload."""
-        token = creds.credentials
+        token = str(creds.credentials or "")
         with self.lock:
             if token not in self.tokens:
-                raise HTTPException(status_code=401, detail="Invalid token")
+                raise HTTPException(status_code=401, detail=self._auth_error_detail("Invalid token", creds=creds))
             token_data = dict(self.tokens[token])
         if time.time() > token_data["expires_at"]:
-            raise HTTPException(status_code=401, detail="Token expired")
+            expired_by_seconds = max(time.time() - float(token_data.get("expires_at") or 0), 0.0)
+            raise HTTPException(
+                status_code=401,
+                detail=self._auth_error_detail(
+                    "Token expired",
+                    creds=creds,
+                    token_data=token_data,
+                    extra={
+                        "expired_by_seconds": round(expired_by_seconds, 3),
+                    },
+                ),
+            )
         return token_data
+
+    @staticmethod
+    def _auth_request_parameters(
+        creds: Optional[HTTPAuthorizationCredentials] = None,
+        *,
+        token_data: Optional[Dict[str, Any]] = None,
+        extra: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """Build safe, non-secret context for Plaza auth errors."""
+        token = str(getattr(creds, "credentials", "") or "")
+        parameters: Dict[str, Any] = {
+            "auth_scheme": str(getattr(creds, "scheme", "") or "").strip(),
+            "token_provided": bool(token),
+            "token_length": len(token),
+        }
+        if isinstance(token_data, dict):
+            parameters["agent_name"] = str(token_data.get("agent_name") or "")
+            expires_at = float(token_data.get("expires_at") or 0)
+            if expires_at > 0:
+                parameters["expires_at"] = datetime.fromtimestamp(expires_at, tz=timezone.utc).isoformat()
+        if isinstance(extra, dict):
+            for key, value in extra.items():
+                if value not in (None, ""):
+                    parameters[key] = value
+        return parameters
+
+    def _auth_error_detail(
+        self,
+        message: str,
+        *,
+        creds: Optional[HTTPAuthorizationCredentials] = None,
+        token_data: Optional[Dict[str, Any]] = None,
+        extra: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """Return structured error detail for Plaza auth failures."""
+        return {
+            "message": str(message or "").strip(),
+            "parameters": self._auth_request_parameters(
+                creds,
+                token_data=token_data,
+                extra=extra,
+            ),
+        }
 
     @classmethod
     def canonical_pit_type(cls, pit_type: Optional[str], *, default: str = "Agent") -> Optional[str]:
@@ -2499,13 +2553,24 @@ class PlazaRenewPractice(PlazaEndpointPractice):
             """Route handler for POST /renew."""
             if self.state.is_starting:
                 raise HTTPException(status_code=503, detail="Starting")
-            token = creds.credentials
+            token = str(creds.credentials or "")
             with self.state.lock:
                 if token not in self.state.tokens:
-                    raise HTTPException(status_code=401, detail="Invalid token")
+                    raise HTTPException(
+                        status_code=401,
+                        detail=self.state._auth_error_detail("Invalid token", creds=creds),
+                    )
                 token_data = dict(self.state.tokens[token])
                 if token_data["agent_name"] != req.agent_name:
-                    raise HTTPException(status_code=401, detail="Token does not belong to agent")
+                    raise HTTPException(
+                        status_code=401,
+                        detail=self.state._auth_error_detail(
+                            "Token does not belong to agent",
+                            creds=creds,
+                            token_data=token_data,
+                            extra={"requested_agent_name": str(req.agent_name or "")},
+                        ),
+                    )
 
                 del self.state.tokens[token]
                 new_token = str(uuid.uuid4())
@@ -2552,7 +2617,10 @@ class PlazaAuthenticatePractice(PlazaEndpointPractice):
                     "agent_id": auth.get("agent_id")
                 }
 
-            raise HTTPException(status_code=401, detail="Missing authentication credentials")
+            raise HTTPException(
+                status_code=401,
+                detail=self.state._auth_error_detail("Missing authentication credentials"),
+            )
 
         app.include_router(router)
 
@@ -2593,7 +2661,17 @@ class PlazaHeartbeatPractice(PlazaEndpointPractice):
             if not requested_agent_id:
                 raise HTTPException(status_code=400, detail="Missing agent_id in heartbeat")
             if auth_agent_id != requested_agent_id:
-                raise HTTPException(status_code=401, detail="Unauthorized heartbeat mismatch")
+                raise HTTPException(
+                    status_code=401,
+                    detail={
+                        "message": "Unauthorized heartbeat mismatch",
+                        "parameters": {
+                            "authenticated_agent_id": str(auth_agent_id or ""),
+                            "requested_agent_id": str(requested_agent_id or ""),
+                            "agent_name": str(req.agent_name or ""),
+                        },
+                    },
+                )
             with self.state.lock:
                 self.state.last_active[requested_agent_id] = time.time()
             return {

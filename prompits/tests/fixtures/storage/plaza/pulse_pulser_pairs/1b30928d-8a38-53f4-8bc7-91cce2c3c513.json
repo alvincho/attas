@@ -1,0 +1,84 @@
+{
+  "pulse_id": "urn:plaza:pulse:connect.manager",
+  "pulse_name": "connect_manager",
+  "pulse_address": "plaza://pulse/connect_manager",
+  "pulse_definition": {
+    "pds_version": "0.1.0",
+    "resource_type": "pulse_definition",
+    "id": "urn:plaza:pulse:connect.manager",
+    "version": "1.0.0",
+    "name": "connect_manager",
+    "title": "Connect Manager",
+    "description": "Connect one manager environment to an existing team and optionally generate local workers.",
+    "pulse_class": "fact",
+    "status": "stable",
+    "concept": {
+      "definition": "Connect one manager environment to an existing team and optionally generate local workers."
+    },
+    "interface": {
+      "schema_language": "json-schema-2020-12",
+      "request_schema": {
+        "type": "object",
+        "properties": {
+          "team_manifest": {
+            "type": "object"
+          },
+          "manager_name": {
+            "type": "string"
+          },
+          "worker_count": {
+            "type": "integer"
+          },
+          "manager_port": {
+            "type": "integer"
+          }
+        }
+      },
+      "response_schema": {}
+    },
+    "test_data": {
+      "team_manifest": {
+        "team_name": "Map Runner",
+        "team_slug": "map-runner",
+        "party": "Phemacast",
+        "plaza_url": "http://127.0.0.1:8011",
+        "job_capabilities": [
+          {
+            "name": "run map",
+            "type": "phemacast.jobcaps.map_jobcap:RunMapJobCap",
+            "description": "Execute a stored map phema through MapCastr.",
+            "default_priority": 100
+          }
+        ]
+      },
+      "manager_name": "MapRunnerManagerEast",
+      "worker_count": 2,
+      "manager_port": 8270
+    }
+  },
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "team_manifest": {
+        "type": "object"
+      },
+      "manager_name": {
+        "type": "string"
+      },
+      "worker_count": {
+        "type": "integer"
+      },
+      "manager_port": {
+        "type": "integer"
+      }
+    }
+  },
+  "pulser_id": "f3d360fb-7e8e-4e6c-a9fa-ede41d8d6228",
+  "pulser_name": "ManagerPulser",
+  "pulser_address": "f3d360fb-7e8e-4e6c-a9fa-ede41d8d6228",
+  "status": "stable",
+  "pulse_directory_id": "1cb04435-b83e-54bd-ad78-081ad9f4b9b1",
+  "pulser_directory_id": "f3d360fb-7e8e-4e6c-a9fa-ede41d8d6228",
+  "id": "1b30928d-8a38-53f4-8bc7-91cce2c3c513",
+  "updated_at": "2026-04-04T10:28:25.283755+00:00"
+}

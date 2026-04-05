@@ -1,0 +1,40 @@
+{
+  "id": "DemoFinancialBriefingPulser:pool-insert",
+  "agent_name": "DemoFinancialBriefingPulser",
+  "practice_id": "pool-insert",
+  "practice_name": "Pool Insert",
+  "practice_description": "Insert or replace one JSON row in the filesystem pool.",
+  "practice_data": {
+    "name": "Pool Insert",
+    "description": "Insert or replace one JSON row in the filesystem pool.",
+    "id": "pool-insert",
+    "cost": 0,
+    "tags": [
+      "pool",
+      "filesystem",
+      "storage",
+      "insert"
+    ],
+    "examples": [],
+    "inputModes": [
+      "http-post",
+      "json"
+    ],
+    "outputModes": [
+      "json"
+    ],
+    "parameters": {
+      "table_name": {
+        "type": "string",
+        "description": "Logical table name."
+      },
+      "data": {
+        "type": "object",
+        "description": "Row payload to persist."
+      }
+    },
+    "path": "/pool_insert"
+  },
+  "is_deleted": false,
+  "updated_at": "2026-04-04T10:25:09.258079+00:00"
+}

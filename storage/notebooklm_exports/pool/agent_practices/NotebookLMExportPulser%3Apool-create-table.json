@@ -1,0 +1,47 @@
+{
+  "id": "NotebookLMExportPulser:pool-create-table",
+  "agent_name": "NotebookLMExportPulser",
+  "practice_id": "pool-create-table",
+  "practice_name": "Pool Create Table",
+  "practice_description": "Create a table directory in the filesystem pool.",
+  "practice_data": {
+    "name": "Pool Create Table",
+    "description": "Create a table directory in the filesystem pool.",
+    "id": "pool-create-table",
+    "cost": 0,
+    "tags": [
+      "pool",
+      "filesystem",
+      "storage",
+      "create-table"
+    ],
+    "examples": [
+      {
+        "table_name": "agent_practices",
+        "schema": {
+          "name": "agent_practices"
+        }
+      }
+    ],
+    "inputModes": [
+      "http-post",
+      "json"
+    ],
+    "outputModes": [
+      "json"
+    ],
+    "parameters": {
+      "table_name": {
+        "type": "string",
+        "description": "Logical table name."
+      },
+      "schema": {
+        "type": "object",
+        "description": "Table schema definition."
+      }
+    },
+    "path": "/pool_create_table"
+  },
+  "is_deleted": false,
+  "updated_at": "2026-04-04T03:11:52.304652+00:00"
+}

@@ -1,0 +1,141 @@
+{
+  "id": "0e0243c9-87de-5607-80e2-a1fe36da3f52",
+  "agent_id": "0e0243c9-87de-5607-80e2-a1fe36da3f52",
+  "name": "join_team",
+  "type": "Pulse",
+  "description": "Join one BossPulser team manifest and prepare one local manager environment.",
+  "owner": "Plaza",
+  "address": "",
+  "meta": {
+    "pulse_id": "urn:plaza:pulse:join.team",
+    "pulse_address": "plaza://pulse/join_team",
+    "pulse_definition": {
+      "pds_version": "0.1.0",
+      "resource_type": "pulse_definition",
+      "id": "urn:plaza:pulse:join.team",
+      "version": "1.0.0",
+      "name": "join_team",
+      "title": "Join Team",
+      "description": "Join one BossPulser team manifest and prepare one local manager environment.",
+      "pulse_class": "fact",
+      "status": "stable",
+      "concept": {
+        "definition": "Join one BossPulser team manifest and prepare one local manager environment."
+      },
+      "interface": {
+        "schema_language": "json-schema-2020-12",
+        "request_schema": {
+          "type": "object",
+          "properties": {
+            "team_manifest": {
+              "type": "object"
+            },
+            "manager_name": {
+              "type": "string"
+            },
+            "manager_port": {
+              "type": "integer"
+            },
+            "worker_count": {
+              "type": "integer"
+            }
+          }
+        },
+        "response_schema": {}
+      }
+    },
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "team_manifest": {
+          "type": "object"
+        },
+        "manager_name": {
+          "type": "string"
+        },
+        "manager_port": {
+          "type": "integer"
+        },
+        "worker_count": {
+          "type": "integer"
+        }
+      }
+    },
+    "output_schema": {},
+    "description": "Join one BossPulser team manifest and prepare one local manager environment.",
+    "examples": []
+  },
+  "card": {
+    "name": "join_team",
+    "description": "Join one BossPulser team manifest and prepare one local manager environment.",
+    "pit_type": "Pulse",
+    "owner": "Plaza",
+    "tags": [],
+    "meta": {
+      "pulse_id": "urn:plaza:pulse:join.team",
+      "pulse_address": "plaza://pulse/join_team",
+      "pulse_definition": {
+        "pds_version": "0.1.0",
+        "resource_type": "pulse_definition",
+        "id": "urn:plaza:pulse:join.team",
+        "version": "1.0.0",
+        "name": "join_team",
+        "title": "Join Team",
+        "description": "Join one BossPulser team manifest and prepare one local manager environment.",
+        "pulse_class": "fact",
+        "status": "stable",
+        "concept": {
+          "definition": "Join one BossPulser team manifest and prepare one local manager environment."
+        },
+        "interface": {
+          "schema_language": "json-schema-2020-12",
+          "request_schema": {
+            "type": "object",
+            "properties": {
+              "team_manifest": {
+                "type": "object"
+              },
+              "manager_name": {
+                "type": "string"
+              },
+              "manager_port": {
+                "type": "integer"
+              },
+              "worker_count": {
+                "type": "integer"
+              }
+            }
+          },
+          "response_schema": {}
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "team_manifest": {
+            "type": "object"
+          },
+          "manager_name": {
+            "type": "string"
+          },
+          "manager_port": {
+            "type": "integer"
+          },
+          "worker_count": {
+            "type": "integer"
+          }
+        }
+      },
+      "output_schema": {},
+      "description": "Join one BossPulser team manifest and prepare one local manager environment.",
+      "examples": []
+    },
+    "pit_address": {
+      "pit_id": "0e0243c9-87de-5607-80e2-a1fe36da3f52",
+      "plazas": [
+        "http://127.0.0.1:8011"
+      ]
+    }
+  },
+  "updated_at": "2026-04-04T10:28:12.868381+00:00"
+}

@@ -48,7 +48,7 @@ If that Plaza is running, the app can:
 - refresh the Plaza catalog
 - discover pulsers and supported pulses
 - run pane requests through `/api/plaza/panes/run`
-- expose FileStoragePulser options for storage-backed saving
+- expose SystemPulser options for storage-backed saving
 
 If Plaza is not running, the status chip shows `Local Mock Mode` or `Plaza Offline`, and the sample dashboard still renders.
 
@@ -132,7 +132,7 @@ Plaza is the live catalog and execution backend. Personal Agent uses it to:
 - normalize pulser catalogs
 - expose practices and supported pulses
 - execute pane runs
-- discover compatible `FileStoragePulser` agents when you choose that storage backend
+- discover compatible `SystemPulser` agents when you choose that storage backend
 
 ## Common Workflows
 
@@ -283,15 +283,15 @@ If the storage backend is `Local Filesystem`:
 - the default directory is `phemacast/personal_agent/storage/saved_files`
 - you can change the directory in `Settings -> Storage`
 
-If the storage backend is `FileStoragePulser`:
+If the storage backend is `SystemPulser`:
 
 - the app sends JSON through the configured pulser
 - you must first refresh the Plaza catalog
-- then choose a compatible `FileStoragePulser`
+- then choose a compatible `SystemPulser`
 - then provide a bucket name
 - optionally provide an object prefix
 
-The UI currently expects a compatible FileStoragePulser to support both `object_save` and `object_load`.
+The UI currently expects a compatible SystemPulser to support both `object_save` and `object_load`.
 
 ### 8. Configure Settings
 
@@ -322,11 +322,11 @@ Use this tab to:
 Use this tab to choose one of two backends:
 
 - `Local Filesystem`
-- `FileStoragePulser`
+- `SystemPulser`
 
 If you choose `Local Filesystem`, set a local directory.
 
-If you choose `FileStoragePulser`, set:
+If you choose `SystemPulser`, set:
 
 - pulser
 - bucket name
@@ -414,7 +414,7 @@ Currently live when a Plaza is available:
 - catalog refresh
 - pulser and pulse discovery
 - pulser test execution
-- FileStoragePulser-backed saving flows
+- SystemPulser-backed saving flows
 - MapPhemar-backed Phema persistence routes
 
 ## Troubleshooting
@@ -436,10 +436,10 @@ For `Local Filesystem`:
 - confirm the target directory is writable
 - confirm the app process can create files there
 
-For `FileStoragePulser`:
+For `SystemPulser`:
 
 - refresh the Plaza catalog first
-- select a FileStoragePulser
+- select a SystemPulser
 - set a bucket name
 - confirm the pulser supports the required save and load pulses
 

@@ -1,6 +1,6 @@
 {
-  "id": "FileStoragePulser:mailbox",
-  "agent_name": "FileStoragePulser",
+  "id": "SystemPulser:mailbox",
+  "agent_name": "SystemPulser",
   "practice_id": "mailbox",
   "practice_name": "Mailbox",
   "practice_description": "Default inbound message endpoint for generic agent delivery.",
@@ -44,5 +44,5 @@
     "path": "/mailbox"
   },
   "is_deleted": false,
-  "updated_at": "2026-04-03T03:54:34.589176+00:00"
+  "updated_at": "2026-04-04T06:56:56.302940+00:00"
 }

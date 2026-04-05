@@ -1,5 +1,17 @@
 # Data Pipeline
 
+## Translations
+
+- [English](README.md)
+- [繁體中文](README.zh-Hant.md)
+- [简体中文](README.zh-Hans.md)
+- [Español](README.es.md)
+- [Français](README.fr.md)
+- [Italiano](README.it.md)
+- [Deutsch](README.de.md)
+- [日本語](README.ja.md)
+- [한국어](README.ko.md)
+
 `data-pipeline` is the advanced public demo. It runs the ADS stack locally with SQLite and mock collectors, so people can see job orchestration, worker execution, normalized storage, and a pulser on top of the collected tables without provisioning PostgreSQL or any outside APIs.
 
 ## What This Demo Shows
@@ -9,17 +21,18 @@
 - normalized ADS tables stored locally in SQLite
 - a boss UI for issuing and monitoring jobs
 - a pulser that re-exposes collected data
-- a path for swapping mock collectors out for your own source adapters
+- a path for swapping the shipped live collectors out for your own source adapters
 
-## Why This Demo Uses SQLite And Mock Collectors
+## Why This Demo Uses SQLite With Live Collectors
 
-The production-style ADS configs in `ads/configs/` are aimed at a shared PostgreSQL deployment and may call live data sources.
+The production-style ADS configs in `ads/configs/` are aimed at a shared PostgreSQL deployment.
 
-This demo does the opposite on purpose:
+This demo keeps the live collectors but simplifies the storage side:
 
 - SQLite keeps the setup local and simple
-- mock job caps keep the runtime deterministic
+- the worker and dispatcher share one local ADS database file, which keeps the live SEC bulk stage compatible with the same demo store the pulser reads
 - the same architecture is still visible, so builders can graduate to the production configs later
+- some jobs call public internet sources, so first-run timings depend on network conditions and source responsiveness
 
 ## Files In This Folder
 
@@ -32,9 +45,10 @@ This demo does the opposite on purpose:
 - `start-pulser.sh`: launch the pulser
 - `start-boss.sh`: launch the boss UI
 
-Related example source adapters live in:
+Related example source adapters and live-demo helpers live in:
 
 - `ads/examples/custom_sources.py`: importable example job caps for user-defined news and price feeds
+- `ads/examples/live_data_pipeline.py`: demo-oriented wrappers around the live SEC ADS pipeline
 
 All runtime state is written under `demos/data-pipeline/storage/`.
 
@@ -48,6 +62,49 @@ source .venv/bin/activate
 pip install --upgrade pip
 pip install -r requirements.txt
 ```
+
+## Single-Command Launch
+
+From the repository root:
+
+```bash
+./demos/data-pipeline/run-demo.sh
+```
+
+This starts the dispatcher, worker, pulser, and boss UI from one terminal, opens a browser guide page, and opens the boss plus pulser UIs automatically.
+
+Set `DEMO_OPEN_BROWSER=0` if you want the launcher to stay in the terminal only.
+
+## Platform Quick Start
+
+### macOS And Linux
+
+From the repository root:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt
+./demos/data-pipeline/run-demo.sh
+```
+
+### Windows
+
+Use WSL2 with Ubuntu or another Linux distro. From the repository root inside WSL:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt
+./demos/data-pipeline/run-demo.sh
+```
+
+If browser tabs do not auto-open from WSL, keep the launcher running and open the printed `guide=` URL in a Windows browser.
+
+Native PowerShell / Command Prompt wrappers are not checked in yet, so WSL2 is the supported Windows path today.
+
 
 ## Quickstart
 
@@ -100,15 +157,20 @@ Open:
 
 - `http://127.0.0.1:9063/`
 
-In the boss UI, submit these jobs in order for symbol `AAPL`:
+In the boss UI, submit these jobs in order:
 
 1. `security_master`
+   This refreshes the full U.S. listed universe from Nasdaq Trader, so it does not need a symbol payload.
 2. `daily_price`
+   Use the default payload for `AAPL`.
 3. `fundamentals`
+   Use the default payload for `AAPL`.
 4. `financial_statements`
+   Use the default payload for `AAPL`.
 5. `news`
+   Use the default SEC, CFTC, and BLS RSS feed list.
 
-Use the default payload templates when they appear. The worker should claim and complete each job within a few seconds.
+Use the default payload templates when they appear. `security_master`, `daily_price`, and `news` usually finish quickly. The first SEC-backed `fundamentals` or `financial_statements` run may take longer because it refreshes cached SEC archives under `demos/data-pipeline/storage/sec_edgar/` before mapping the requested company.
 
 Then open:
 
@@ -121,7 +183,8 @@ Suggested first pulser checks:
 1. Run `security_master_lookup` with `{"symbol":"AAPL","limit":1}`
 2. Run `daily_price_history` with `{"symbol":"AAPL","limit":5}`
 3. Run `company_profile` with `{"symbol":"AAPL"}`
-4. Run `news_article` with `{"symbol":"AAPL","number_of_articles":3}`
+4. Run `financial_statements` with `{"symbol":"AAPL","statement_type":"income_statement","limit":3}`
+5. Run `news_article` with `{"number_of_articles":3}`
 
 That gives people the whole ADS loop: boss UI issues jobs, worker collects rows, SQLite stores normalized data, and `ADSPulser` exposes the result through queryable pulses.
 
@@ -238,7 +301,7 @@ There are two natural upgrade paths from this demo.
 
 ### Keep The Local Architecture But Swap In Your Own Collectors
 
-Edit `worker.agent` and replace the mock `callable` entries with your own job caps or real ADS job-cap types.
+Edit `worker.agent` and replace the shipped live demo job caps with your own job caps or other ADS job-cap types.
 
 For example:
 
@@ -276,7 +339,7 @@ Make sure the boss config still points at:
 
 - `dispatcher_address = http://127.0.0.1:9060`
 
-### You want a clean run
+### You want a clean run or need to remove old mock rows
 
 Stop the demo processes and remove `demos/data-pipeline/storage/` before starting again.
 

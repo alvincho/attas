@@ -1,0 +1,8 @@
+{
+  "id": "96c633a1-a0a4-400a-8817-09380fa6dde5",
+  "agent_id": "file-storage-id",
+  "agent_name": "SystemPulser",
+  "address": "http://127.0.0.1:8068",
+  "event": "relogin",
+  "timestamp": "2026-04-04T10:28:14.830413+00:00"
+}

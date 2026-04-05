@@ -18,13 +18,15 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
 import json
+import logging
 import pytest
 import httpx
 import time
 from types import SimpleNamespace
 from unittest.mock import patch
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
+from prompits.agents.standby import StandbyAgent
 from prompits.core.pit import PitAddress
 from prompits.core.pool import Pool, PoolCap
 
@@ -715,6 +717,77 @@ def test_plaza_token_persistence_uses_token_column_without_id_field():
     assert len(token_rows) == 1
     assert token_rows[0]["token"] == register.json()["token"]
     assert "id" not in token_rows[0]
+
+
+def test_plaza_authenticate_error_includes_safe_detail_parameters():
+    """
+    Exercise the
+    test_plaza_authenticate_error_includes_safe_detail_parameters regression
+    scenario.
+    """
+    app = FastAPI()
+    practice = PlazaPractice()
+    practice.bind(SimpleNamespace(
+        name="Plaza",
+        agent_card={
+            "name": "Plaza",
+            "role": "coordinator",
+            "tags": ["mediator"],
+            "address": "http://127.0.0.1:8011",
+            "pit_type": "Agent"
+        }
+    ))
+    practice.mount(app)
+    client = TestClient(app)
+
+    response = client.post(
+        "/authenticate",
+        headers={"Authorization": "Bearer not-a-real-token"},
+    )
+
+    assert response.status_code == 401
+    payload = response.json()
+    assert payload["detail"]["message"] == "Invalid token"
+    assert payload["detail"]["parameters"] == {
+        "auth_scheme": "Bearer",
+        "token_provided": True,
+        "token_length": len("not-a-real-token"),
+    }
+
+
+def test_base_agent_request_logging_includes_error_detail_parameters(caplog):
+    """
+    Exercise the
+    test_base_agent_request_logging_includes_error_detail_parameters regression
+    scenario.
+    """
+    agent = StandbyAgent(name="logger-agent")
+
+    @agent.app.get("/boom")
+    async def boom():
+        raise HTTPException(
+            status_code=401,
+            detail={
+                "message": "Invalid token",
+                "parameters": {"auth_scheme": "Bearer", "token_length": 4},
+            },
+        )
+
+    client = TestClient(agent.app)
+
+    with caplog.at_level(logging.INFO, logger="prompits.agents.base"):
+        response = client.get("/boom")
+
+    assert response.status_code == 401
+    completed_logs = [
+        record.getMessage()
+        for record in caplog.records
+        if "Completed request GET /boom" in record.getMessage()
+    ]
+    assert completed_logs
+    assert "detail=Invalid token | parameters=" in completed_logs[-1]
+    assert '"auth_scheme": "Bearer"' in completed_logs[-1]
+    assert '"token_length": 4' in completed_logs[-1]
 
 
 def test_plaza_bootstraps_builtin_schema_pits_on_startup():
@@ -1629,6 +1702,25 @@ def test_plaza_ui_template_switches_auth_card_to_signed_in_state():
     assert "document.getElementById('auth-form-shell').classList.toggle('hidden', hasSession);" in response.text
     assert "document.getElementById('auth-session-actions').classList.toggle('hidden', !hasSession);" in response.text
     assert "const userBadgeLabel = currentUser.display_name || currentUser.username || currentUser.email || currentUser.id || 'Signed In';" in response.text
+
+
+def test_plaza_ui_template_exposes_agent_config_policy_editor():
+    """
+    Exercise the test_plaza_ui_template_exposes_agent_config_policy_editor
+    regression scenario.
+    """
+    pool = InMemoryPool()
+    agent = PlazaAgent(host="127.0.0.1", port=8011, pool=pool)
+    agent.add_practice(PlazaPractice())
+
+    client = TestClient(agent.app)
+    response = client.get("/plazas")
+
+    assert response.status_code == 200
+    assert "Remote UsePractice Policy JSON" in response.text
+    assert "Remote UsePractice Audit JSON" in response.text
+    assert "summarizeAgentConfigAccess" in response.text
+    assert "Edit the stored remote <code>UsePractice(...)</code> access rules and audit settings for this AgentConfig." in response.text
 
 
 def test_plaza_search_matches_ohlc_alias_pulses_against_pair_rows():

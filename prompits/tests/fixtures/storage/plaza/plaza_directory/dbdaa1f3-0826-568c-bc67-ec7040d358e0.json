@@ -1,0 +1,129 @@
+{
+  "id": "dbdaa1f3-0826-568c-bc67-ec7040d358e0",
+  "agent_id": "dbdaa1f3-0826-568c-bc67-ec7040d358e0",
+  "name": "discover_teams",
+  "type": "Pulse",
+  "description": "Discover teamwork managers and associated workers from Plaza.",
+  "owner": "Plaza",
+  "address": "",
+  "meta": {
+    "pulse_id": "urn:plaza:pulse:discover.teams",
+    "pulse_address": "plaza://pulse/discover_teams",
+    "pulse_definition": {
+      "pds_version": "0.1.0",
+      "resource_type": "pulse_definition",
+      "id": "urn:plaza:pulse:discover.teams",
+      "version": "1.0.0",
+      "name": "discover_teams",
+      "title": "Discover Teams",
+      "description": "Discover teamwork managers and associated workers from Plaza.",
+      "pulse_class": "fact",
+      "status": "stable",
+      "concept": {
+        "definition": "Discover teamwork managers and associated workers from Plaza."
+      },
+      "interface": {
+        "schema_language": "json-schema-2020-12",
+        "request_schema": {
+          "type": "object",
+          "properties": {
+            "party": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "include_workers": {
+              "type": "boolean"
+            }
+          }
+        },
+        "response_schema": {}
+      }
+    },
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "party": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "include_workers": {
+          "type": "boolean"
+        }
+      }
+    },
+    "output_schema": {},
+    "description": "Discover teamwork managers and associated workers from Plaza.",
+    "examples": []
+  },
+  "card": {
+    "name": "discover_teams",
+    "description": "Discover teamwork managers and associated workers from Plaza.",
+    "pit_type": "Pulse",
+    "owner": "Plaza",
+    "tags": [],
+    "meta": {
+      "pulse_id": "urn:plaza:pulse:discover.teams",
+      "pulse_address": "plaza://pulse/discover_teams",
+      "pulse_definition": {
+        "pds_version": "0.1.0",
+        "resource_type": "pulse_definition",
+        "id": "urn:plaza:pulse:discover.teams",
+        "version": "1.0.0",
+        "name": "discover_teams",
+        "title": "Discover Teams",
+        "description": "Discover teamwork managers and associated workers from Plaza.",
+        "pulse_class": "fact",
+        "status": "stable",
+        "concept": {
+          "definition": "Discover teamwork managers and associated workers from Plaza."
+        },
+        "interface": {
+          "schema_language": "json-schema-2020-12",
+          "request_schema": {
+            "type": "object",
+            "properties": {
+              "party": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "include_workers": {
+                "type": "boolean"
+              }
+            }
+          },
+          "response_schema": {}
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "party": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "include_workers": {
+            "type": "boolean"
+          }
+        }
+      },
+      "output_schema": {},
+      "description": "Discover teamwork managers and associated workers from Plaza.",
+      "examples": []
+    },
+    "pit_address": {
+      "pit_id": "dbdaa1f3-0826-568c-bc67-ec7040d358e0",
+      "plazas": [
+        "http://127.0.0.1:8011"
+      ]
+    }
+  },
+  "updated_at": "2026-04-04T10:28:12.868305+00:00"
+}

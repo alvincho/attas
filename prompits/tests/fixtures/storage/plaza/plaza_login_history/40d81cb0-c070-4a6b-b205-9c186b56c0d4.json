@@ -1,0 +1,8 @@
+{
+  "id": "40d81cb0-c070-4a6b-b205-9c186b56c0d4",
+  "agent_id": "17dd4908-6a6b-46e1-b4bf-05141ed4de7e",
+  "agent_name": "CollectiblesDispatcher",
+  "address": "http://127.0.0.1:8066",
+  "event": "relogin",
+  "timestamp": "2026-04-04T10:28:07.614251+00:00"
+}

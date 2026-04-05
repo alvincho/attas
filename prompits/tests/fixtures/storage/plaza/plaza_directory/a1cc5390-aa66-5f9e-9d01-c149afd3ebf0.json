@@ -1,0 +1,141 @@
+{
+  "id": "a1cc5390-aa66-5f9e-9d01-c149afd3ebf0",
+  "agent_id": "a1cc5390-aa66-5f9e-9d01-c149afd3ebf0",
+  "name": "create_manager",
+  "type": "Pulse",
+  "description": "Generate a teamwork manager config for one Phemacast team.",
+  "owner": "Plaza",
+  "address": "",
+  "meta": {
+    "pulse_id": "urn:plaza:pulse:create.manager",
+    "pulse_address": "plaza://pulse/create_manager",
+    "pulse_definition": {
+      "pds_version": "0.1.0",
+      "resource_type": "pulse_definition",
+      "id": "urn:plaza:pulse:create.manager",
+      "version": "1.0.0",
+      "name": "create_manager",
+      "title": "Create Manager",
+      "description": "Generate a teamwork manager config for one Phemacast team.",
+      "pulse_class": "fact",
+      "status": "stable",
+      "concept": {
+        "definition": "Generate a teamwork manager config for one Phemacast team."
+      },
+      "interface": {
+        "schema_language": "json-schema-2020-12",
+        "request_schema": {
+          "type": "object",
+          "properties": {
+            "team_name": {
+              "type": "string"
+            },
+            "manager_name": {
+              "type": "string"
+            },
+            "party": {
+              "type": "string"
+            },
+            "job_capabilities": {
+              "type": "array"
+            }
+          }
+        },
+        "response_schema": {}
+      }
+    },
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "team_name": {
+          "type": "string"
+        },
+        "manager_name": {
+          "type": "string"
+        },
+        "party": {
+          "type": "string"
+        },
+        "job_capabilities": {
+          "type": "array"
+        }
+      }
+    },
+    "output_schema": {},
+    "description": "Generate a teamwork manager config for one Phemacast team.",
+    "examples": []
+  },
+  "card": {
+    "name": "create_manager",
+    "description": "Generate a teamwork manager config for one Phemacast team.",
+    "pit_type": "Pulse",
+    "owner": "Plaza",
+    "tags": [],
+    "meta": {
+      "pulse_id": "urn:plaza:pulse:create.manager",
+      "pulse_address": "plaza://pulse/create_manager",
+      "pulse_definition": {
+        "pds_version": "0.1.0",
+        "resource_type": "pulse_definition",
+        "id": "urn:plaza:pulse:create.manager",
+        "version": "1.0.0",
+        "name": "create_manager",
+        "title": "Create Manager",
+        "description": "Generate a teamwork manager config for one Phemacast team.",
+        "pulse_class": "fact",
+        "status": "stable",
+        "concept": {
+          "definition": "Generate a teamwork manager config for one Phemacast team."
+        },
+        "interface": {
+          "schema_language": "json-schema-2020-12",
+          "request_schema": {
+            "type": "object",
+            "properties": {
+              "team_name": {
+                "type": "string"
+              },
+              "manager_name": {
+                "type": "string"
+              },
+              "party": {
+                "type": "string"
+              },
+              "job_capabilities": {
+                "type": "array"
+              }
+            }
+          },
+          "response_schema": {}
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "team_name": {
+            "type": "string"
+          },
+          "manager_name": {
+            "type": "string"
+          },
+          "party": {
+            "type": "string"
+          },
+          "job_capabilities": {
+            "type": "array"
+          }
+        }
+      },
+      "output_schema": {},
+      "description": "Generate a teamwork manager config for one Phemacast team.",
+      "examples": []
+    },
+    "pit_address": {
+      "pit_id": "a1cc5390-aa66-5f9e-9d01-c149afd3ebf0",
+      "plazas": [
+        "http://127.0.0.1:8011"
+      ]
+    }
+  },
+  "updated_at": "2026-04-04T10:28:12.868282+00:00"
+}

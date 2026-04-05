@@ -79,6 +79,7 @@ WORKER_JOB_TIMEOUT_SEC = 180.0
 FAILED_REISSUE_PRIORITY = 1000
 STALE_RECOVERY_INTERVAL_SEC = 30.0
 JOB_CLAIM_CANDIDATE_LIMIT = 200
+_MANAGED_WORK_METADATA_KEY = "managed_work"
 _POSTGRES_ENV_VARS = (
     "POSTGRES_DSN",
     "DATABASE_URL",
@@ -437,6 +438,94 @@ def _merge_unfinished_job_summary(
     merged["unfinished_count"] = len(unfinished_history)
     merged["last_progress"] = unfinished_event["progress"]
     return merged
+
+
+def _managed_work_payload(metadata: Any) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Return the normalized metadata and managed-work payload."""
+    normalized_metadata = coerce_json_object(metadata)
+    managed_work = coerce_json_object(normalized_metadata.get(_MANAGED_WORK_METADATA_KEY))
+    return normalized_metadata, managed_work
+
+
+def _merge_managed_work_state(
+    metadata: Any,
+    *,
+    worker_id: str = "",
+    worker_name: str = "",
+    worker_address: str = "",
+    status: str = "",
+    claimed_at: str = "",
+    completed_at: str = "",
+    updated_at: str = "",
+    attempts: int | None = None,
+    max_attempts: int | None = None,
+    error: str = "",
+    summary: Any = None,
+    target_table: str = "",
+) -> dict[str, Any]:
+    """Merge managed-work execution details into job metadata when present."""
+    normalized_metadata, managed_work = _managed_work_payload(metadata)
+    if not managed_work:
+        return normalized_metadata
+
+    normalized_status = str(status or "").strip().lower()
+    worker_assignment = coerce_json_object(managed_work.get("worker_assignment"))
+    if worker_assignment or worker_id or worker_name or worker_address or claimed_at or completed_at or normalized_status:
+        worker_assignment["worker_id"] = str(worker_id or worker_assignment.get("worker_id") or "").strip()
+        worker_assignment["worker_name"] = str(worker_name or worker_assignment.get("worker_name") or "").strip()
+        worker_assignment["worker_address"] = str(worker_address or worker_assignment.get("worker_address") or "").strip()
+        if claimed_at or worker_assignment.get("assigned_at"):
+            worker_assignment["assigned_at"] = str(
+                worker_assignment.get("assigned_at") or claimed_at or ""
+            ).strip()
+        if claimed_at or worker_assignment.get("claimed_at"):
+            worker_assignment["claimed_at"] = str(
+                claimed_at or worker_assignment.get("claimed_at") or ""
+            ).strip()
+        if completed_at or worker_assignment.get("completed_at"):
+            worker_assignment["completed_at"] = str(
+                completed_at or worker_assignment.get("completed_at") or ""
+            ).strip()
+        worker_assignment["status"] = normalized_status or str(
+            worker_assignment.get("status") or "assigned"
+        ).strip().lower() or "assigned"
+        managed_work["worker_assignment"] = worker_assignment
+
+    execution_state = coerce_json_object(managed_work.get("execution_state"))
+    if execution_state or normalized_status or claimed_at or completed_at or updated_at or error or attempts is not None:
+        execution_state["status"] = normalized_status or str(
+            execution_state.get("status") or "queued"
+        ).strip().lower() or "queued"
+        execution_state["claimed_at"] = str(claimed_at or execution_state.get("claimed_at") or "").strip()
+        execution_state["completed_at"] = str(completed_at or execution_state.get("completed_at") or "").strip()
+        execution_state["updated_at"] = str(
+            updated_at or execution_state.get("updated_at") or claimed_at or completed_at or ""
+        ).strip()
+        execution_state["error"] = str(error or execution_state.get("error") or "").strip()
+        if attempts is not None:
+            execution_state["attempts"] = max(int(attempts), 0)
+        if max_attempts is not None:
+            execution_state["max_attempts"] = max(int(max_attempts), 1)
+        execution_state["attention_required"] = execution_state["status"] in {
+            "failed",
+            "stopped",
+            "cancelled",
+            "deleted",
+        }
+        managed_work["execution_state"] = execution_state
+
+    result_summary = coerce_json_object(managed_work.get("result_summary"))
+    normalized_summary = coerce_json_object(summary)
+    if result_summary or normalized_summary or error or target_table:
+        result_summary.update(normalized_summary)
+        if error:
+            result_summary["last_error"] = str(error).strip()
+        if target_table:
+            result_summary["target_table"] = str(target_table).strip()
+        managed_work["result_summary"] = result_summary
+
+    normalized_metadata[_MANAGED_WORK_METADATA_KEY] = managed_work
+    return normalized_metadata
 
 
 class DispatcherAgent(StandbyAgent):
@@ -982,6 +1071,17 @@ class DispatcherAgent(StandbyAgent):
                 claim_result_summary["unfinished"] = False
                 claim_result_summary["unfinished_recovered_at"] = now
                 claim_result_summary["unfinished_recovered_by"] = str(worker_id or "")
+            claimed_metadata = _merge_managed_work_state(
+                job.metadata,
+                worker_id=str(worker_id or ""),
+                worker_name=str(name or ""),
+                worker_address=str(address or ""),
+                status="claimed",
+                claimed_at=now,
+                updated_at=now,
+                attempts=int(job.attempts or 0) + 1,
+                max_attempts=max(int(job.max_attempts or 1), 1),
+            )
             claimed_job = job.model_copy(
                 update={
                     "status": "claimed",
@@ -991,6 +1091,7 @@ class DispatcherAgent(StandbyAgent):
                     "attempts": int(job.attempts or 0) + 1,
                     "completed_at": "",
                     "error": "",
+                    "metadata": claimed_metadata,
                     "result_summary": claim_result_summary,
                 }
             )
@@ -1081,6 +1182,19 @@ class DispatcherAgent(StandbyAgent):
             worker_id=str(result.worker_id or job.claimed_by or ""),
             recorded_at=now,
         )
+        updated_metadata = _merge_managed_work_state(
+            job.metadata,
+            worker_id=str(result.worker_id or job.claimed_by or ""),
+            status=str(result.status or ""),
+            claimed_at=str(job.claimed_at or ""),
+            completed_at=now if result.status in {"completed", "failed", "stopped"} else "",
+            updated_at=now,
+            attempts=int(job.attempts or 0),
+            max_attempts=max(int(job.max_attempts or 1), 1),
+            error=str(result.error or ""),
+            summary=merged_result_summary,
+            target_table=str(result.target_table or job.target_table or ""),
+        )
         updated_job = job.model_copy(
             update={
                 "status": result.status,
@@ -1088,6 +1202,7 @@ class DispatcherAgent(StandbyAgent):
                 "completed_at": now if result.status in {"completed", "failed", "stopped"} else "",
                 "claimed_by": str(result.worker_id or job.claimed_by or ""),
                 "error": str(result.error or ""),
+                "metadata": updated_metadata,
                 "result_summary": merged_result_summary,
                 "target_table": str(result.target_table or job.target_table or ""),
             }
@@ -1365,8 +1480,20 @@ class DispatcherAgent(StandbyAgent):
                 "claimed_by": claimed_by,
                 "claimed_at": claimed_at,
                 "error": error,
+                "metadata": _merge_managed_work_state(
+                    metadata,
+                    worker_id=str(claimed_by or worker_id or ""),
+                    status=next_status,
+                    claimed_at=claimed_at,
+                    completed_at=completed_at,
+                    updated_at=controls["updated_at"],
+                    attempts=int(job.attempts or 0),
+                    max_attempts=max(int(job.max_attempts or 1), 1),
+                    error=error,
+                    summary=result_summary,
+                    target_table=str(job.target_table or ""),
+                ),
                 "result_summary": result_summary,
-                "metadata": metadata,
             }
         )
         if not self.pool._Insert(TABLE_JOBS, updated_job.to_row()):

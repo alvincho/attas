@@ -12,18 +12,27 @@ used by neighboring modules and tests.
 
 from __future__ import annotations
 
-from urllib.parse import urlsplit, urlunsplit
+from urllib.parse import quote, urlsplit, urlunsplit
 from typing import Any, Dict, List, Optional
 
 import httpx
 
 
-class PlazaProxyError(RuntimeError):
-    """Exception raised for Plaza proxy failures."""
+class RemoteProxyError(RuntimeError):
+    """Exception raised for Personal Agent proxy failures."""
+
     def __init__(self, message: str, status_code: int = 502):
-        """Initialize the Plaza proxy error."""
+        """Initialize the proxy error."""
         super().__init__(message)
         self.status_code = status_code
+
+
+class PlazaProxyError(RemoteProxyError):
+    """Exception raised for Plaza proxy failures."""
+
+
+class BossProxyError(RemoteProxyError):
+    """Exception raised for managed-work and boss proxy failures."""
 
 
 KNOWN_PLAZA_PATH_SUFFIXES = (
@@ -33,23 +42,55 @@ KNOWN_PLAZA_PATH_SUFFIXES = (
     "/health",
     "/search",
 )
+KNOWN_BOSS_PATH_SUFFIXES = (
+    "/api/managed-work/monitor",
+    "/api/managed-work/tickets",
+    "/api/managed-work/schedules",
+    "/api/jobs",
+    "/api/status",
+    "/api/teams",
+    "/health",
+)
+KNOWN_BOSS_PATH_PREFIXES = (
+    "/api/managed-work/tickets/",
+    "/api/managed-work/schedules/",
+    "/api/jobs/",
+)
 
 
-def normalize_plaza_url(plaza_url: str) -> str:
-    """Normalize the Plaza URL."""
-    value = str(plaza_url or "").strip()
+def _normalize_service_url(service_url: str, *, suffixes: tuple[str, ...], prefixes: tuple[str, ...] = ()) -> str:
+    """Normalize a proxied service URL."""
+    value = str(service_url or "").strip()
     if not value:
-        raise ValueError("plaza_url is required.")
+        raise ValueError("service_url is required.")
     if not value.startswith(("http://", "https://")):
         value = f"http://{value}"
     parsed = urlsplit(value)
     path = parsed.path.rstrip("/")
-    for suffix in KNOWN_PLAZA_PATH_SUFFIXES:
+    for suffix in suffixes:
         if path.endswith(suffix):
             path = path[: -len(suffix)]
             break
+    for prefix in prefixes:
+        if path.startswith(prefix):
+            path = ""
+            break
     normalized = urlunsplit((parsed.scheme, parsed.netloc, path.rstrip("/"), "", ""))
     return normalized.rstrip("/")
+
+
+def normalize_plaza_url(plaza_url: str) -> str:
+    """Normalize the Plaza URL."""
+    return _normalize_service_url(plaza_url, suffixes=KNOWN_PLAZA_PATH_SUFFIXES)
+
+
+def normalize_boss_url(boss_url: str) -> str:
+    """Normalize the managed-work boss URL."""
+    return _normalize_service_url(
+        boss_url,
+        suffixes=KNOWN_BOSS_PATH_SUFFIXES,
+        prefixes=KNOWN_BOSS_PATH_PREFIXES,
+    )
 
 
 def _load_json(response: httpx.Response) -> Dict[str, Any]:
@@ -107,6 +148,39 @@ async def _probe_plaza_health(plaza_url: str) -> bool:
         return response.status_code < 500
     except httpx.HTTPError:
         return False
+
+
+async def _request_json(
+    service_url: str,
+    path: str,
+    *,
+    params: Optional[Dict[str, Any]] = None,
+    json_body: Optional[Dict[str, Any]] = None,
+    timeout: float = 30.0,
+    action: str,
+    error_cls: type[RemoteProxyError] = RemoteProxyError,
+) -> Dict[str, Any]:
+    """Request a proxied JSON payload from a remote service."""
+    try:
+        async with _create_http_client() as client:
+            response = await client.request(
+                "POST" if json_body is not None else "GET",
+                f"{service_url}{path}",
+                params=params,
+                json=json_body,
+                timeout=timeout,
+            )
+    except httpx.HTTPError as exc:
+        raise error_cls(_format_request_error(action, service_url, exc)) from exc
+
+    data = _load_json(response)
+    if response.status_code >= 400:
+        detail = data.get("detail") or data.get("message") or f"{action} failed."
+        raise error_cls(detail, status_code=response.status_code)
+    if not data:
+        data = {"status": "success"}
+    data.setdefault("status", "success")
+    return data
 
 
 def _normalize_practice(entry: Any) -> Optional[Dict[str, Any]]:
@@ -208,6 +282,7 @@ def _normalize_pulser(agent: Any, plaza_name: str) -> Optional[Dict[str, Any]]:
         return None
     card = agent.get("card") if isinstance(agent.get("card"), dict) else {}
     meta = agent.get("meta") if isinstance(agent.get("meta"), dict) else {}
+    card_meta = card.get("meta") if isinstance(card.get("meta"), dict) else {}
     pit_type = str(agent.get("pit_type") or card.get("pit_type") or agent.get("type") or card.get("type") or "").strip()
     if pit_type != "Pulser":
         return None
@@ -217,9 +292,12 @@ def _normalize_pulser(agent: Any, plaza_name: str) -> Optional[Dict[str, Any]]:
         for normalized in (_normalize_practice(entry) for entry in (card.get("practices") or []))
         if normalized
     ]
+    supported_pulse_entries = meta.get("supported_pulses") if isinstance(meta.get("supported_pulses"), list) else []
+    if not supported_pulse_entries and isinstance(card_meta.get("supported_pulses"), list):
+        supported_pulse_entries = card_meta.get("supported_pulses") or []
     supported_pulses = [
         normalized
-        for normalized in (_normalize_supported_pulse(entry) for entry in (meta.get("supported_pulses") or []))
+        for normalized in (_normalize_supported_pulse(entry) for entry in supported_pulse_entries)
         if normalized
     ]
     supported_pulses = _dedupe_supported_pulses(supported_pulses)
@@ -230,6 +308,7 @@ def _normalize_pulser(agent: Any, plaza_name: str) -> Optional[Dict[str, Any]]:
         "address": str(card.get("address") or agent.get("address") or "").strip(),
         "description": str(agent.get("description") or card.get("description") or ""),
         "owner": str(agent.get("owner") or card.get("owner") or ""),
+        "party": str(agent.get("party") or card.get("party") or meta.get("party") or card_meta.get("party") or "").strip(),
         "practice_id": _default_practice_id(practices),
         "practices": practices,
         "supported_pulses": supported_pulses,
@@ -391,10 +470,192 @@ async def run_plaza_pulser_test(plaza_url: str, payload: Dict[str, Any]) -> Dict
     return data
 
 
+async def fetch_managed_work_monitor(
+    boss_url: str,
+    *,
+    manager_address: str = "",
+    party: str = "",
+    ticket_limit: int = 20,
+    schedule_limit: int = 20,
+    preview_limit: int = 500,
+) -> Dict[str, Any]:
+    """Fetch the managed-work monitor snapshot from a boss endpoint."""
+    normalized_url = normalize_boss_url(boss_url)
+    params: Dict[str, Any] = {
+        "ticket_limit": max(int(ticket_limit or 20), 1),
+        "schedule_limit": max(int(schedule_limit or 20), 1),
+        "preview_limit": max(int(preview_limit or 500), 1),
+    }
+    if manager_address:
+        params["manager_address"] = str(manager_address).strip()
+    if party:
+        params["party"] = str(party).strip()
+    return await _request_json(
+        normalized_url,
+        "/api/managed-work/monitor",
+        params=params,
+        timeout=30.0,
+        action="Managed-work monitor",
+        error_cls=BossProxyError,
+    )
+
+
+async def fetch_managed_work_tickets(
+    boss_url: str,
+    *,
+    manager_address: str = "",
+    party: str = "",
+    status: str = "",
+    capability: str = "",
+    search: str = "",
+    limit: int = 100,
+    preview_limit: int = 500,
+) -> Dict[str, Any]:
+    """Fetch the managed-work ticket list from a boss endpoint."""
+    normalized_url = normalize_boss_url(boss_url)
+    params: Dict[str, Any] = {
+        "status": str(status).strip(),
+        "capability": str(capability).strip(),
+        "search": str(search).strip(),
+        "limit": max(int(limit or 100), 1),
+        "preview_limit": max(int(preview_limit or 500), 1),
+    }
+    if manager_address:
+        params["manager_address"] = str(manager_address).strip()
+    if party:
+        params["party"] = str(party).strip()
+    return await _request_json(
+        normalized_url,
+        "/api/managed-work/tickets",
+        params=params,
+        timeout=30.0,
+        action="Managed-work ticket list",
+        error_cls=BossProxyError,
+    )
+
+
+async def fetch_managed_work_ticket_detail(
+    boss_url: str,
+    ticket_id: str,
+    *,
+    manager_address: str = "",
+    party: str = "",
+) -> Dict[str, Any]:
+    """Fetch one managed-work ticket detail from a boss endpoint."""
+    normalized_url = normalize_boss_url(boss_url)
+    params: Dict[str, Any] = {}
+    if manager_address:
+        params["manager_address"] = str(manager_address).strip()
+    if party:
+        params["party"] = str(party).strip()
+    return await _request_json(
+        normalized_url,
+        f"/api/managed-work/tickets/{quote(str(ticket_id or '').strip(), safe='')}",
+        params=params,
+        timeout=30.0,
+        action="Managed-work ticket detail",
+        error_cls=BossProxyError,
+    )
+
+
+async def fetch_managed_work_schedules(
+    boss_url: str,
+    *,
+    manager_address: str = "",
+    status: str = "",
+    search: str = "",
+    limit: int = 100,
+) -> Dict[str, Any]:
+    """Fetch the managed-work schedule list from a boss endpoint."""
+    normalized_url = normalize_boss_url(boss_url)
+    params: Dict[str, Any] = {
+        "status": str(status).strip(),
+        "search": str(search).strip(),
+        "limit": max(int(limit or 100), 1),
+    }
+    if manager_address:
+        params["manager_address"] = str(manager_address).strip()
+    return await _request_json(
+        normalized_url,
+        "/api/managed-work/schedules",
+        params=params,
+        timeout=30.0,
+        action="Managed-work schedule list",
+        error_cls=BossProxyError,
+    )
+
+
+async def fetch_managed_work_schedule_history(
+    boss_url: str,
+    schedule_id: str,
+    *,
+    limit: int = 20,
+) -> Dict[str, Any]:
+    """Fetch one managed-work schedule history payload from a boss endpoint."""
+    normalized_url = normalize_boss_url(boss_url)
+    return await _request_json(
+        normalized_url,
+        f"/api/managed-work/schedules/{quote(str(schedule_id or '').strip(), safe='')}/history",
+        params={"limit": max(int(limit or 20), 1)},
+        timeout=30.0,
+        action="Managed-work schedule history",
+        error_cls=BossProxyError,
+    )
+
+
+async def run_managed_work_schedule_control(
+    boss_url: str,
+    schedule_id: str,
+    *,
+    action: str,
+) -> Dict[str, Any]:
+    """Run a managed-work schedule control action through the boss endpoint."""
+    normalized_url = normalize_boss_url(boss_url)
+    return await _request_json(
+        normalized_url,
+        f"/api/managed-work/schedules/{quote(str(schedule_id or '').strip(), safe='')}/control",
+        json_body={"action": str(action or "").strip().lower()},
+        timeout=30.0,
+        action="Managed-work schedule control",
+        error_cls=BossProxyError,
+    )
+
+
+async def fetch_boss_job_detail(
+    boss_url: str,
+    job_id: str,
+    *,
+    dispatcher_address: str = "",
+) -> Dict[str, Any]:
+    """Fetch one dispatcher job detail from a teamwork boss endpoint."""
+    normalized_url = normalize_boss_url(boss_url)
+    params: Dict[str, Any] = {}
+    if dispatcher_address:
+        params["dispatcher_address"] = str(dispatcher_address).strip()
+    return await _request_json(
+        normalized_url,
+        f"/api/jobs/{quote(str(job_id or '').strip(), safe='')}",
+        params=params,
+        timeout=30.0,
+        action="Job detail",
+        error_cls=BossProxyError,
+    )
+
+
 __all__ = [
+    "BossProxyError",
     "PlazaProxyError",
+    "RemoteProxyError",
     "_normalize_catalog",
+    "fetch_boss_job_detail",
+    "fetch_managed_work_monitor",
+    "fetch_managed_work_schedule_history",
+    "fetch_managed_work_schedules",
+    "fetch_managed_work_ticket_detail",
+    "fetch_managed_work_tickets",
     "fetch_plaza_catalog",
+    "normalize_boss_url",
     "normalize_plaza_url",
+    "run_managed_work_schedule_control",
     "run_plaza_pulser_test",
 ]

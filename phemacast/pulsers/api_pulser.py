@@ -149,7 +149,7 @@ class APIsPulser(Pulser):
             response = {
                 "status": "success",
                 "pulse_name": str(pulse_name),
-                "params": params,
+                "params": dict(runner.last_fetch_debug.get("input_data") or params),
                 "result": result,
             }
             if include_debug:
@@ -467,6 +467,21 @@ class APIsPulser(Pulser):
             redacted[str(key)] = "***redacted***" if self._is_sensitive_key(str(key)) else value
         return redacted
 
+    def _redact_mapping(self, value: Any) -> Any:
+        """Internal helper to redact sensitive values in nested mappings."""
+        if isinstance(value, Mapping):
+            redacted: Dict[str, Any] = {}
+            for key, item in value.items():
+                key_name = str(key)
+                if self._is_sensitive_key(key_name):
+                    redacted[key_name] = "***redacted***"
+                else:
+                    redacted[key_name] = self._redact_mapping(item)
+            return redacted
+        if isinstance(value, list):
+            return [self._redact_mapping(item) for item in value]
+        return value
+
     def _redact_url(self, url: str) -> str:
         """Internal helper to return the redact URL."""
         parts = urlsplit(url)
@@ -482,6 +497,41 @@ class APIsPulser(Pulser):
         for key, item in (input_data or {}).items():
             rendered = rendered.replace(f"{{{key}}}", str(item))
         return rendered
+
+    @staticmethod
+    def _coerce_bool(value: Any) -> bool:
+        """Internal helper to coerce common truthy values to bool."""
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, (int, float)):
+            return bool(value)
+        if isinstance(value, str):
+            return value.strip().lower() in {"1", "true", "yes", "y", "on"}
+        return False
+
+    def _extract_request_auth_override(
+        self,
+        input_data: Dict[str, Any],
+        api_config: Mapping[str, Any],
+    ) -> tuple[Dict[str, Any], str | None, bool]:
+        """Return sanitized input plus any request-scoped API key override."""
+        normalized_input = dict(input_data or {})
+        direct_mode = self._coerce_bool(normalized_input.get("direct_mode") or normalized_input.get("directMode"))
+        if not direct_mode:
+            direct_mode = self._coerce_bool(api_config.get("direct_mode") or api_config.get("directMode"))
+        if not direct_mode:
+            return normalized_input, None, False
+
+        request_api_key = None
+        for field_name in ("api_key", "apiKey", "byok_api_key", "key"):
+            if field_name not in normalized_input:
+                continue
+            request_api_key = self._resolve_api_key_value(normalized_input.pop(field_name))
+            break
+
+        normalized_input.pop("direct_mode", None)
+        normalized_input.pop("directMode", None)
+        return normalized_input, request_api_key, True
 
     @staticmethod
     def _join_base_and_path(base_url: str, path: str) -> str:
@@ -544,7 +594,13 @@ class APIsPulser(Pulser):
             merged["api_id"] = str(source_id)
         return merged, str(source_id) if source_id else None, None
 
-    def _resolve_api_key_binding(self, api_config: Dict[str, Any]) -> tuple[str | None, str | None, str | None, str | None]:
+    def _resolve_api_key_binding(
+        self,
+        api_config: Dict[str, Any],
+        *,
+        request_api_key: str | None = None,
+        direct_mode: bool = False,
+    ) -> tuple[str | None, str | None, str | None, str | None, str]:
         """Internal helper to resolve the API key binding."""
         inline_value = api_config.get("api_key")
         if inline_value is None:
@@ -554,22 +610,49 @@ class APIsPulser(Pulser):
         if inline_prefix is None:
             inline_prefix = api_config.get("credential_prefix")
         inline_param = api_config.get("api_key_param") or api_config.get("credential_param")
+        registry_id = api_config.get("api_key_id") or api_config.get("credential_id") or api_config.get("credentials_id")
+        registry_entry = self._lookup_registered_api_key(registry_id)
+        resolved_header = str(
+            inline_header
+            or (registry_entry.get("api_key_header") if registry_entry is not None else None)
+            or (registry_entry.get("header") if registry_entry is not None else None)
+            or "Authorization"
+        )
+        resolved_prefix = inline_prefix
+        if resolved_prefix is None and registry_entry is not None:
+            resolved_prefix = registry_entry.get("api_key_prefix", registry_entry.get("prefix"))
+        resolved_param_value = inline_param
+        if not resolved_param_value and registry_entry is not None:
+            resolved_param_value = registry_entry.get("api_key_param") or registry_entry.get("param")
+        if not resolved_param_value:
+            resolved_param_value = self.config.get("api_key_param")
+        resolved_param = str(resolved_param_value) if resolved_param_value else None
+
+        if direct_mode and request_api_key:
+            return (
+                request_api_key,
+                resolved_header,
+                resolved_prefix,
+                resolved_param,
+                "request",
+            )
+
         if inline_value is not None:
             return (
                 self._resolve_api_key_value(inline_value),
-                str(inline_header) if inline_header else "Authorization",
-                inline_prefix,
-                str(inline_param) if inline_param else None,
+                resolved_header,
+                resolved_prefix,
+                str(inline_param) if inline_param else resolved_param,
+                "inline",
             )
 
-        registry_id = api_config.get("api_key_id") or api_config.get("credential_id") or api_config.get("credentials_id")
-        registry_entry = self._lookup_registered_api_key(registry_id)
         if registry_entry is not None:
             return (
                 self._resolve_api_key_value(registry_entry.get("api_key", registry_entry)),
-                str(inline_header or registry_entry.get("api_key_header") or registry_entry.get("header") or "Authorization"),
-                inline_prefix if inline_prefix is not None else registry_entry.get("api_key_prefix", registry_entry.get("prefix")),
-                str(inline_param or registry_entry.get("api_key_param") or registry_entry.get("param")) if (inline_param or registry_entry.get("api_key_param") or registry_entry.get("param")) else None,
+                resolved_header,
+                resolved_prefix,
+                resolved_param,
+                f"registry:{registry_id}",
             )
 
         return (
@@ -577,6 +660,7 @@ class APIsPulser(Pulser):
             str(inline_header) if inline_header else "Authorization",
             inline_prefix,
             str(inline_param or self.config.get("api_key_param")) if (inline_param or self.config.get("api_key_param")) else None,
+            "config",
         )
 
     @staticmethod
@@ -597,11 +681,12 @@ class APIsPulser(Pulser):
 
     def fetch_pulse_payload(self, pulse_name: str, input_data: Dict[str, Any], pulse_definition: Dict[str, Any]) -> Dict[str, Any]:
         """Fetch payload from an external API defined in pulse_definition."""
+        api_config, api_id, api_error = self._resolve_effective_api_config(pulse_definition)
+        safe_input_data, request_api_key, direct_mode = self._extract_request_auth_override(input_data, api_config)
         self.last_fetch_debug = {
             "pulse_name": pulse_name,
-            "input_data": dict(input_data or {}),
+            "input_data": self._redact_mapping(safe_input_data),
         }
-        api_config, api_id, api_error = self._resolve_effective_api_config(pulse_definition)
         if api_error:
             self.last_fetch_debug["error"] = api_error
             return {"error": api_error}
@@ -611,11 +696,15 @@ class APIsPulser(Pulser):
             return {"error": f"No API URL defined for pulse '{pulse_name}'"}
 
         # Naive template substitution.
-        url = self._apply_input_templates(url_template, input_data)
+        url = self._apply_input_templates(url_template, safe_input_data)
         
         method = api_config.get("method", "GET").upper()
         headers = dict(api_config.get("headers", {}))
-        api_key, api_key_header, api_key_prefix, api_key_param = self._resolve_api_key_binding(api_config)
+        api_key, api_key_header, api_key_prefix, api_key_param, auth_source = self._resolve_api_key_binding(
+            api_config,
+            request_api_key=request_api_key,
+            direct_mode=direct_mode,
+        )
         if not api_key:
             registry_id = api_config.get("api_key_id") or api_config.get("credential_id") or api_config.get("credentials_id")
             if registry_id:
@@ -645,6 +734,8 @@ class APIsPulser(Pulser):
             "headers": self._redact_headers(headers),
             "root_path": api_config.get("root_path"),
             "api_id": api_id,
+            "direct_mode": direct_mode,
+            "auth_source": auth_source,
         }
         
         try:
@@ -665,7 +756,7 @@ class APIsPulser(Pulser):
         # Optional: extract root to avoid dict indexing issues mapping on arrays
         root_path = api_config.get("root_path")
         if root_path:
-            resolved_root_path = self._apply_input_templates(root_path, input_data)
+            resolved_root_path = self._apply_input_templates(root_path, safe_input_data)
             current = _resolve_path(data, resolved_root_path)
             if current is None:
                 self.last_fetch_debug["extracted_payload"] = {"error": f"Could not extract root_path {resolved_root_path} from API response"}
@@ -675,10 +766,10 @@ class APIsPulser(Pulser):
         if isinstance(data, list):
             data = {
                 "items": data,
-                "_input": dict(input_data or {}),
+                "_input": dict(safe_input_data or {}),
             }
         elif isinstance(data, dict):
-            data.setdefault("_input", dict(input_data or {}))
+            data.setdefault("_input", dict(safe_input_data or {}))
         else:
             self.last_fetch_debug["extracted_payload"] = {"error": "API response root is not a dictionary or list, cannot apply mapping rules"}
             return {"error": "API response root is not a dictionary or list, cannot apply mapping rules"}

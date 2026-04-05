@@ -1,0 +1,242 @@
+{
+    "name": "NotionMCPPulser",
+    "type": "phemacast.pulsers.mcp_pulser.MCPPulser",
+    "host": "127.0.0.1",
+    "port": 8035,
+    "plaza_url": "http://127.0.0.1:8011",
+    "role": "pulser",
+    "description": "Config-driven Notion publishing lane built on the generic MCP pulser for search, fetch, create, and update flows.",
+    "tags": [
+        "notion",
+        "publishing",
+        "research",
+        "mcp"
+    ],
+    "supported_pulses": [
+        {
+            "name": "search_pages",
+            "pulse_address": "11b59785-28b0-5f14-8e18-0ef7b9f61a80",
+            "description": "Searches the connected Notion workspace for matching pages.",
+            "tags": [
+                "notion",
+                "search",
+                "pages"
+            ],
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string"
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "default": 5
+                    }
+                },
+                "required": [
+                    "query",
+                    "limit"
+                ]
+            },
+            "mapping": {
+                "query": "_input.query",
+                "limit": "_input.limit",
+                "pages": {
+                    "source": "sources",
+                    "limit_from": "_input.limit",
+                    "items": {
+                        "id": "id",
+                        "title": "title",
+                        "url": "url",
+                        "source_domain": "source_domain",
+                        "snippet": "snippet",
+                        "published_at": "published_at",
+                        "citation.id": "citation.id",
+                        "citation.title": "citation.title",
+                        "citation.url": "citation.url",
+                        "citation.source_domain": "citation.source_domain",
+                        "citation.published_at": "citation.published_at",
+                        "citation.locator": "citation.locator"
+                    }
+                }
+            },
+            "test_data": {
+                "query": "Acme Daily Briefing",
+                "limit": 3
+            },
+            "cost": 0,
+            "party": "attas",
+            "mcp": {
+                "tool": "notion-search",
+                "arguments": {
+                    "query": "{query}"
+                },
+                "response_normalization": {
+                    "kind": "research_sources"
+                }
+            }
+        },
+        {
+            "name": "fetch_page",
+            "pulse_address": "d20a8874-77f1-57e1-bc17-f40b83e5b9f1",
+            "description": "Fetches a Notion page by URL or page id.",
+            "tags": [
+                "notion",
+                "fetch",
+                "pages"
+            ],
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "description": "A Notion page id or page URL."
+                    }
+                },
+                "required": [
+                    "id"
+                ]
+            },
+            "mapping": {
+                "id": "id",
+                "title": "title",
+                "url": "url",
+                "source_domain": "source_domain",
+                "snippet": "snippet",
+                "published_at": "published_at",
+                "text": "text",
+                "citation.id": "citation.id",
+                "citation.title": "citation.title",
+                "citation.url": "citation.url",
+                "citation.source_domain": "citation.source_domain",
+                "citation.published_at": "citation.published_at",
+                "citation.locator": "citation.locator"
+            },
+            "test_data": {
+                "id": "https://www.notion.so/example-page"
+            },
+            "cost": 0,
+            "party": "attas",
+            "mcp": {
+                "tool": "notion-fetch",
+                "arguments": {
+                    "id": "{id}"
+                },
+                "response_normalization": {
+                    "kind": "research_sources"
+                }
+            }
+        },
+        {
+            "name": "create_pages",
+            "pulse_address": "9673d8d3-6fcb-5b28-a2c1-0311c44a46d7",
+            "description": "Creates one or more Notion pages under the specified parent.",
+            "tags": [
+                "notion",
+                "create",
+                "pages"
+            ],
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "parent": {
+                        "type": "object",
+                        "description": "Notion parent descriptor for the new page or pages."
+                    },
+                    "pages": {
+                        "type": "array",
+                        "description": "List of page payloads to create."
+                    }
+                },
+                "required": [
+                    "parent",
+                    "pages"
+                ]
+            },
+            "test_data": {
+                "parent": {
+                    "page_id": "00000000-0000-0000-0000-000000000000"
+                },
+                "pages": [
+                    {
+                        "title": "Daily Briefing",
+                        "content": [
+                            {
+                                "type": "paragraph",
+                                "text": "Placeholder content"
+                            }
+                        ]
+                    }
+                ]
+            },
+            "cost": 0,
+            "party": "attas",
+            "mcp": {
+                "tool": "notion-create-pages",
+                "arguments": {
+                    "parent": "{parent}",
+                    "pages": "{pages}"
+                }
+            }
+        },
+        {
+            "name": "update_page",
+            "pulse_address": "daf06642-8f9f-5e7d-a8ce-7f0d98b4a1ec",
+            "description": "Appends or updates content on an existing Notion page.",
+            "tags": [
+                "notion",
+                "update",
+                "pages"
+            ],
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "page_id": {
+                        "type": "string"
+                    },
+                    "content": {
+                        "type": "array",
+                        "description": "Blocks or content payload to append to the target page."
+                    },
+                    "properties": {
+                        "type": "object",
+                        "description": "Page property updates. Pass an empty object when only appending content."
+                    }
+                },
+                "required": [
+                    "page_id",
+                    "content",
+                    "properties"
+                ]
+            },
+            "test_data": {
+                "page_id": "00000000-0000-0000-0000-000000000000",
+                "content": [
+                    {
+                        "type": "heading_2",
+                        "text": "Briefing Update"
+                    }
+                ],
+                "properties": {}
+            },
+            "cost": 0,
+            "party": "attas",
+            "mcp": {
+                "tool": "notion-update-page",
+                "arguments": {
+                    "page_id": "{page_id}",
+                    "content": "{content}",
+                    "properties": "{properties}"
+                }
+            }
+        }
+    ],
+    "mcp": {
+        "transport": "http",
+        "url": "https://mcp.notion.com/mcp",
+        "headers": {
+            "Authorization": "env:NOTION_MCP_AUTHORIZATION"
+        }
+    }
+}

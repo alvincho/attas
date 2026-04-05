@@ -1,0 +1,141 @@
+{
+  "id": "1cb04435-b83e-54bd-ad78-081ad9f4b9b1",
+  "agent_id": "1cb04435-b83e-54bd-ad78-081ad9f4b9b1",
+  "name": "connect_manager",
+  "type": "Pulse",
+  "description": "Connect one manager environment to an existing team and optionally generate local workers.",
+  "owner": "Plaza",
+  "address": "",
+  "meta": {
+    "pulse_id": "urn:plaza:pulse:connect.manager",
+    "pulse_address": "plaza://pulse/connect_manager",
+    "pulse_definition": {
+      "pds_version": "0.1.0",
+      "resource_type": "pulse_definition",
+      "id": "urn:plaza:pulse:connect.manager",
+      "version": "1.0.0",
+      "name": "connect_manager",
+      "title": "Connect Manager",
+      "description": "Connect one manager environment to an existing team and optionally generate local workers.",
+      "pulse_class": "fact",
+      "status": "stable",
+      "concept": {
+        "definition": "Connect one manager environment to an existing team and optionally generate local workers."
+      },
+      "interface": {
+        "schema_language": "json-schema-2020-12",
+        "request_schema": {
+          "type": "object",
+          "properties": {
+            "team_manifest": {
+              "type": "object"
+            },
+            "manager_name": {
+              "type": "string"
+            },
+            "worker_count": {
+              "type": "integer"
+            },
+            "manager_port": {
+              "type": "integer"
+            }
+          }
+        },
+        "response_schema": {}
+      }
+    },
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "team_manifest": {
+          "type": "object"
+        },
+        "manager_name": {
+          "type": "string"
+        },
+        "worker_count": {
+          "type": "integer"
+        },
+        "manager_port": {
+          "type": "integer"
+        }
+      }
+    },
+    "output_schema": {},
+    "description": "Connect one manager environment to an existing team and optionally generate local workers.",
+    "examples": []
+  },
+  "card": {
+    "name": "connect_manager",
+    "description": "Connect one manager environment to an existing team and optionally generate local workers.",
+    "pit_type": "Pulse",
+    "owner": "Plaza",
+    "tags": [],
+    "meta": {
+      "pulse_id": "urn:plaza:pulse:connect.manager",
+      "pulse_address": "plaza://pulse/connect_manager",
+      "pulse_definition": {
+        "pds_version": "0.1.0",
+        "resource_type": "pulse_definition",
+        "id": "urn:plaza:pulse:connect.manager",
+        "version": "1.0.0",
+        "name": "connect_manager",
+        "title": "Connect Manager",
+        "description": "Connect one manager environment to an existing team and optionally generate local workers.",
+        "pulse_class": "fact",
+        "status": "stable",
+        "concept": {
+          "definition": "Connect one manager environment to an existing team and optionally generate local workers."
+        },
+        "interface": {
+          "schema_language": "json-schema-2020-12",
+          "request_schema": {
+            "type": "object",
+            "properties": {
+              "team_manifest": {
+                "type": "object"
+              },
+              "manager_name": {
+                "type": "string"
+              },
+              "worker_count": {
+                "type": "integer"
+              },
+              "manager_port": {
+                "type": "integer"
+              }
+            }
+          },
+          "response_schema": {}
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "team_manifest": {
+            "type": "object"
+          },
+          "manager_name": {
+            "type": "string"
+          },
+          "worker_count": {
+            "type": "integer"
+          },
+          "manager_port": {
+            "type": "integer"
+          }
+        }
+      },
+      "output_schema": {},
+      "description": "Connect one manager environment to an existing team and optionally generate local workers.",
+      "examples": []
+    },
+    "pit_address": {
+      "pit_id": "1cb04435-b83e-54bd-ad78-081ad9f4b9b1",
+      "plazas": [
+        "http://127.0.0.1:8011"
+      ]
+    }
+  },
+  "updated_at": "2026-04-04T10:28:12.868294+00:00"
+}

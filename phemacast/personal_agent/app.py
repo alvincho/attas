@@ -14,6 +14,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 import sys
+from typing import Any, Dict
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import RedirectResponse
@@ -36,10 +37,61 @@ from phemacast.map_phemar.runtime import (
 from phemacast.personal_agent.data import get_dashboard_snapshot, get_workspace
 from phemacast.personal_agent.doc_pages import DOC_PAGES, load_doc_page
 from phemacast.personal_agent.layout_files import list_layout_files, save_layout_file
-from phemacast.personal_agent.plaza import fetch_plaza_catalog, run_plaza_pulser_test
+from phemacast.personal_agent.plaza import (
+    BossProxyError,
+    fetch_boss_job_detail,
+    fetch_managed_work_monitor,
+    fetch_managed_work_schedule_history,
+    fetch_managed_work_schedules,
+    fetch_managed_work_ticket_detail,
+    fetch_managed_work_tickets,
+    fetch_plaza_catalog,
+    run_managed_work_schedule_control,
+    run_plaza_pulser_test,
+)
+from prompits.channels import build_delivery_snapshot, default_b2b_channels
+from prompits.teamwork.runtime import managed_ticket_from_job_row
 
 
 BASE_DIR = Path(__file__).resolve().parent
+
+
+def _decorate_managed_ticket(ticket: Any) -> Dict[str, Any]:
+    """Attach generic destination status to one managed ticket payload."""
+    normalized = dict(ticket or {}) if isinstance(ticket, dict) else {}
+    work_item = normalized.get("work_item") if isinstance(normalized.get("work_item"), dict) else {}
+    result_summary = normalized.get("result_summary") if isinstance(normalized.get("result_summary"), dict) else {}
+    normalized["destination_status"] = build_delivery_snapshot(
+        result_summary,
+        metadata=work_item.get("metadata"),
+    )
+    return normalized
+
+
+def _decorate_managed_ticket_list(entries: Any) -> list[Dict[str, Any]]:
+    """Attach destination state to each ticket in a list."""
+    return [_decorate_managed_ticket(entry) for entry in (entries or []) if isinstance(entry, dict)]
+
+
+def _channel_catalog_payload() -> Dict[str, Any]:
+    """Return the generic B2B channel lane catalog."""
+    return {"status": "success", "channels": default_b2b_channels()}
+
+
+def _decorate_job_detail(payload: Any, *, manager_address: str = "") -> Dict[str, Any]:
+    """Attach the managed-ticket projection to a raw job detail payload."""
+    normalized = dict(payload or {}) if isinstance(payload, dict) else {}
+    job = normalized.get("job") if isinstance(normalized.get("job"), dict) else {}
+    if job:
+        normalized["managed_ticket"] = _decorate_managed_ticket(
+            managed_ticket_from_job_row(
+                job,
+                manager_address=manager_address,
+            )
+        )
+    normalized["channel_catalog"] = default_b2b_channels()
+    return normalized
+
 
 def get_asset_version() -> str:
     """Return the asset version."""
@@ -109,6 +161,11 @@ def create_app() -> FastAPI:
         """Route handler for GET /api/dashboard."""
         return get_dashboard_snapshot()
 
+    @app.get("/api/channels/catalog")
+    async def channel_catalog():
+        """Route handler for GET /api/channels/catalog."""
+        return _channel_catalog_payload()
+
     @app.get("/api/workspaces/{workspace_id}")
     async def workspace_detail(workspace_id: str):
         """Route handler for GET /api/workspaces/{workspace_id}."""
@@ -116,6 +173,170 @@ def create_app() -> FastAPI:
         if not workspace:
             raise HTTPException(status_code=404, detail=f"Workspace '{workspace_id}' was not found.")
         return workspace
+
+    @app.get("/api/managed-work/monitor")
+    async def managed_work_monitor(
+        boss_url: str = "",
+        manager_address: str = "",
+        party: str = "",
+        ticket_limit: int = 20,
+        schedule_limit: int = 20,
+        preview_limit: int = 500,
+    ):
+        """Route handler for GET /api/managed-work/monitor."""
+        try:
+            payload = await fetch_managed_work_monitor(
+                boss_url,
+                manager_address=manager_address,
+                party=party,
+                ticket_limit=ticket_limit,
+                schedule_limit=schedule_limit,
+                preview_limit=preview_limit,
+            )
+        except BossProxyError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+        payload["tickets"] = _decorate_managed_ticket_list(payload.get("tickets"))
+        payload["channel_catalog"] = default_b2b_channels()
+        return payload
+
+    @app.get("/api/managed-work/tickets")
+    async def managed_work_tickets(
+        boss_url: str = "",
+        manager_address: str = "",
+        party: str = "",
+        status: str = "",
+        capability: str = "",
+        search: str = "",
+        limit: int = 100,
+        preview_limit: int = 500,
+    ):
+        """Route handler for GET /api/managed-work/tickets."""
+        try:
+            payload = await fetch_managed_work_tickets(
+                boss_url,
+                manager_address=manager_address,
+                party=party,
+                status=status,
+                capability=capability,
+                search=search,
+                limit=limit,
+                preview_limit=preview_limit,
+            )
+        except BossProxyError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+        payload["tickets"] = _decorate_managed_ticket_list(payload.get("tickets"))
+        payload["channel_catalog"] = default_b2b_channels()
+        return payload
+
+    @app.get("/api/managed-work/tickets/{ticket_id}")
+    async def managed_work_ticket_detail(
+        ticket_id: str,
+        boss_url: str = "",
+        manager_address: str = "",
+        party: str = "",
+    ):
+        """Route handler for GET /api/managed-work/tickets/{ticket_id}."""
+        try:
+            payload = await fetch_managed_work_ticket_detail(
+                boss_url,
+                ticket_id,
+                manager_address=manager_address,
+                party=party,
+            )
+        except BossProxyError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+        payload["ticket"] = _decorate_managed_ticket(payload.get("ticket"))
+        payload["channel_catalog"] = default_b2b_channels()
+        return payload
+
+    @app.get("/api/managed-work/schedules")
+    async def managed_work_schedules(
+        boss_url: str = "",
+        manager_address: str = "",
+        status: str = "",
+        search: str = "",
+        limit: int = 100,
+    ):
+        """Route handler for GET /api/managed-work/schedules."""
+        try:
+            payload = await fetch_managed_work_schedules(
+                boss_url,
+                manager_address=manager_address,
+                status=status,
+                search=search,
+                limit=limit,
+            )
+        except BossProxyError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+        payload["channel_catalog"] = default_b2b_channels()
+        return payload
+
+    @app.get("/api/managed-work/schedules/{schedule_id}/history")
+    async def managed_work_schedule_history(schedule_id: str, boss_url: str = "", limit: int = 20):
+        """Route handler for GET /api/managed-work/schedules/{schedule_id}/history."""
+        try:
+            payload = await fetch_managed_work_schedule_history(
+                boss_url,
+                schedule_id,
+                limit=limit,
+            )
+        except BossProxyError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+        payload["tickets"] = _decorate_managed_ticket_list(payload.get("tickets"))
+        payload["channel_catalog"] = default_b2b_channels()
+        return payload
+
+    @app.post("/api/managed-work/schedules/{schedule_id}/control")
+    async def managed_work_schedule_control(schedule_id: str, request: Request, boss_url: str = ""):
+        """Route handler for POST /api/managed-work/schedules/{schedule_id}/control."""
+        payload = await request.json()
+        action = str((payload or {}).get("action") or "").strip().lower()
+        try:
+            return await run_managed_work_schedule_control(
+                boss_url,
+                schedule_id,
+                action=action,
+            )
+        except BossProxyError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+
+    @app.get("/api/jobs/{job_id}")
+    async def managed_job_detail(
+        job_id: str,
+        boss_url: str = "",
+        dispatcher_address: str = "",
+        manager_address: str = "",
+        party: str = "",
+    ):
+        """Route handler for GET /api/jobs/{job_id}."""
+        effective_dispatcher_address = dispatcher_address or manager_address
+        try:
+            payload = await fetch_boss_job_detail(
+                boss_url,
+                job_id,
+                dispatcher_address=effective_dispatcher_address,
+            )
+            return _decorate_job_detail(payload, manager_address=effective_dispatcher_address)
+        except BossProxyError as exc:
+            if exc.status_code != 404:
+                raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+        try:
+            fallback = await fetch_managed_work_ticket_detail(
+                boss_url,
+                job_id,
+                manager_address=manager_address,
+                party=party,
+            )
+        except BossProxyError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+        return {
+            "status": "success",
+            "detail_source": "managed_ticket_detail",
+            "managed_ticket": _decorate_managed_ticket(fallback.get("ticket")),
+            "raw_records": fallback.get("raw_records", []),
+            "latest_heartbeat": fallback.get("latest_heartbeat", {}),
+            "channel_catalog": default_b2b_channels(),
+        }
 
     mount_map_phemar_alias_routes(app, get_embedded_map_phemar, route_name_prefix="personal_agent_map_phemas")
     mount_map_phemar_alias_routes(

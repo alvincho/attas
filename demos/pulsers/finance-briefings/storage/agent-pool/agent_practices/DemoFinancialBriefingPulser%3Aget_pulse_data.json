@@ -1,0 +1,103 @@
+{
+  "id": "DemoFinancialBriefingPulser:get_pulse_data",
+  "agent_name": "DemoFinancialBriefingPulser",
+  "practice_id": "get_pulse_data",
+  "practice_name": "Get Pulse Data",
+  "practice_description": "Fetch or transform pulse payloads for the agent's supported pulses.",
+  "practice_data": {
+    "name": "Get Pulse Data",
+    "description": "Fetch or transform pulse payloads for the agent's supported pulses.",
+    "id": "get_pulse_data",
+    "cost": 0,
+    "tags": [
+      "pulser",
+      "pulse",
+      "data"
+    ],
+    "examples": [
+      "POST /get_pulse_data {'pulse_name': 'last_price', 'params': {'symbol': 'AAPL'}}"
+    ],
+    "inputModes": [
+      "http-post",
+      "json"
+    ],
+    "outputModes": [
+      "json"
+    ],
+    "parameters": {
+      "pulse_name": {
+        "type": "string",
+        "description": "Optional pulse identifier. Defaults to the pulser's primary pulse.",
+        "enum": [
+          "prepare_morning_desk_briefing_context",
+          "prepare_watchlist_check_context",
+          "prepare_research_roundup_context",
+          "build_finance_source_bundle",
+          "build_finance_citations",
+          "build_finance_facts",
+          "build_finance_risks",
+          "build_finance_catalysts",
+          "build_finance_conflicting_evidence",
+          "build_finance_takeaways",
+          "build_finance_open_questions",
+          "build_finance_summary",
+          "assemble_finance_briefing_payload",
+          "briefing_to_phema",
+          "notebooklm_export_pack"
+        ]
+      },
+      "pulse_address": {
+        "type": "string",
+        "description": "Optional pulse address override."
+      },
+      "params": {
+        "type": "object",
+        "properties": {
+          "subject": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object"
+              }
+            ]
+          },
+          "search_results": {
+            "type": "object"
+          },
+          "fetched_documents": {
+            "type": "array"
+          },
+          "watchlist": {
+            "type": "array"
+          },
+          "analysis": {
+            "type": "object"
+          },
+          "as_of": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "owner": {
+            "type": "string"
+          },
+          "output_dir": {
+            "type": "string"
+          },
+          "include_pdf": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "subject"
+        ]
+      }
+    },
+    "path": "/get_pulse_data"
+  },
+  "is_deleted": false,
+  "updated_at": "2026-04-04T10:25:09.262406+00:00"
+}

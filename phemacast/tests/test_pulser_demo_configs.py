@@ -20,7 +20,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../.
 
 from attas.pulsers.openai_pulser import OpenAIPulser
 from attas.pulsers.yfinance_pulser import YFinancePulser
-from phemacast.pulsers.file_storage_pulser import FileStoragePulser
+from phemacast.pulsers.system_pulser import SystemPulser
 from phemacast.pulsers.path_pulser import PathPulser
 
 
@@ -57,7 +57,7 @@ def test_standalone_pulser_demo_configs_instantiate_expected_agents():
         config=_load_json(root / "demos" / "pulsers" / "yfinance" / "yfinance.pulser"),
         auto_register=False,
     )
-    file_storage = FileStoragePulser(
+    file_storage = SystemPulser(
         config=_load_json(root / "demos" / "pulsers" / "file-storage" / "file-storage.pulser"),
         auto_register=False,
     )
@@ -86,7 +86,7 @@ def test_standalone_pulser_demo_configs_instantiate_expected_agents():
     assert yfinance.name == "DemoYFinancePulser"
     assert any(pulse["name"] == "ohlc_bar_series" for pulse in yfinance.supported_pulses)
 
-    assert file_storage.name == "DemoFileStoragePulser"
+    assert file_storage.name == "DemoSystemPulser"
     assert {"bucket_create", "list_bucket", "object_save", "object_load"}.issubset(
         {pulse["name"] for pulse in file_storage.supported_pulses}
     )

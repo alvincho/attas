@@ -1,0 +1,73 @@
+{
+  "pulse_id": "urn:plaza:pulse:submit.team.job",
+  "pulse_name": "submit_team_job",
+  "pulse_address": "plaza://pulse/submit_team_job",
+  "pulse_definition": {
+    "pds_version": "0.1.0",
+    "resource_type": "pulse_definition",
+    "id": "urn:plaza:pulse:submit.team.job",
+    "version": "1.0.0",
+    "name": "submit_team_job",
+    "title": "Submit Team Job",
+    "description": "Submit a job to a teamwork manager for workers to process.",
+    "pulse_class": "fact",
+    "status": "stable",
+    "concept": {
+      "definition": "Submit a job to a teamwork manager for workers to process."
+    },
+    "interface": {
+      "schema_language": "json-schema-2020-12",
+      "request_schema": {
+        "type": "object",
+        "properties": {
+          "manager_address": {
+            "type": "string"
+          },
+          "required_capability": {
+            "type": "string"
+          },
+          "payload": {
+            "type": "object"
+          },
+          "priority": {
+            "type": "integer"
+          }
+        }
+      },
+      "response_schema": {}
+    },
+    "test_data": {
+      "manager_address": "http://127.0.0.1:8170",
+      "required_capability": "run map",
+      "payload": {
+        "phema_path": "phemacast/configs/map.phemar"
+      },
+      "priority": 100
+    }
+  },
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "manager_address": {
+        "type": "string"
+      },
+      "required_capability": {
+        "type": "string"
+      },
+      "payload": {
+        "type": "object"
+      },
+      "priority": {
+        "type": "integer"
+      }
+    }
+  },
+  "pulser_id": "f3d360fb-7e8e-4e6c-a9fa-ede41d8d6228",
+  "pulser_name": "ManagerPulser",
+  "pulser_address": "f3d360fb-7e8e-4e6c-a9fa-ede41d8d6228",
+  "status": "stable",
+  "pulse_directory_id": "60dc6f86-7aab-5310-a10f-f4c456d5250c",
+  "pulser_directory_id": "f3d360fb-7e8e-4e6c-a9fa-ede41d8d6228",
+  "id": "13d56330-2fec-5ba3-83e5-e021da0c9e7e",
+  "updated_at": "2026-04-04T10:28:25.283804+00:00"
+}

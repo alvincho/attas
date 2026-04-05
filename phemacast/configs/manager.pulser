@@ -1,0 +1,71 @@
+{
+  "name": "ManagerPulser",
+  "role": "manager_pulser",
+  "host": "127.0.0.1",
+  "port": 8230,
+  "plaza_url": "http://127.0.0.1:8011",
+  "party": "Phemacast",
+  "type": "phemacast.pulsers.manager_pulser.ManagerPulser",
+  "description": "Phemacast manager-local pulser for joining a team, provisioning local workers, and monitoring managed work.",
+  "manager_address": "http://127.0.0.1:8270",
+  "team_manifest": {
+    "api_version": "phemacast.team_manifest.v1",
+    "team_name": "Map Runner",
+    "team_slug": "map-runner",
+    "party": "Phemacast",
+    "plaza_url": "http://127.0.0.1:8011",
+    "job_capabilities": [
+      {
+        "name": "run map",
+        "type": "phemacast.jobcaps.map_jobcap:RunMapJobCap",
+        "description": "Execute a stored map phema through MapCastr.",
+        "default_priority": 100
+      }
+    ],
+    "capabilities": [
+      "run map"
+    ],
+    "boss_defaults": {
+      "name": "MapRunnerBoss",
+      "host": "127.0.0.1",
+      "port": 8175,
+      "type": "prompits.teamwork.boss.TeamBossAgent",
+      "monitor_refresh_sec": 10,
+      "auto_register": true
+    },
+    "manager_defaults": {
+      "name": "MapRunnerManagerEast",
+      "host": "127.0.0.1",
+      "port": 8270,
+      "type": "prompits.teamwork.agents.DispatcherManagerAgent",
+      "auto_register": true
+    },
+    "worker_defaults": {
+      "name_prefix": "MapRunnerWorkerEast",
+      "host": "127.0.0.1",
+      "base_port": 8271,
+      "count": 2,
+      "capabilities": [
+        "run map"
+      ],
+      "job_capabilities": [
+        {
+          "name": "run map",
+          "type": "phemacast.jobcaps.map_jobcap:RunMapJobCap",
+          "description": "Execute a stored map phema through MapCastr.",
+          "default_priority": 100
+        }
+      ],
+      "poll_interval_sec": 10,
+      "auto_register": true
+    }
+  },
+  "pools": [
+    {
+      "type": "SQLitePool",
+      "name": "manager_pulser_pool",
+      "description": "Local cache for ManagerPulser",
+      "db_path": "phemacast/storage/manager_pulser.sqlite"
+    }
+  ]
+}

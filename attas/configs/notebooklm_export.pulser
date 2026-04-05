@@ -1,0 +1,29 @@
+{
+    "name": "NotebookLMExportPulser",
+    "type": "phemacast.pulsers.system_pulser.SystemPulser",
+    "host": "127.0.0.1",
+    "port": 8068,
+    "plaza_url": "http://127.0.0.1:8011",
+    "party": "attas",
+    "role": "pulser",
+    "description": "Filesystem-backed export lane for NotebookLM-ready finance briefing packs. This lane is export-first and keeps direct import automation in beta.",
+    "tags": [
+        "finance",
+        "briefings",
+        "notebooklm",
+        "export",
+        "storage"
+    ],
+    "pools": [
+        {
+            "type": "FileSystemPool",
+            "name": "notebooklm_export_agent_pool",
+            "description": "Credential and practice metadata pool for NotebookLM export storage.",
+            "root_path": "storage/notebooklm_exports/pool"
+        }
+    ],
+    "storage": {
+        "type": "filesystem",
+        "root_path": "storage/notebooklm_exports/content"
+    }
+}

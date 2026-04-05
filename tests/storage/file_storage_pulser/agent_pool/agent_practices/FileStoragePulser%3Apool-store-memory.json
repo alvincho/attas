@@ -1,6 +1,6 @@
 {
-  "id": "FileStoragePulser:pool-store-memory",
-  "agent_name": "FileStoragePulser",
+  "id": "SystemPulser:pool-store-memory",
+  "agent_name": "SystemPulser",
   "practice_id": "pool-store-memory",
   "practice_name": "Pool Store Memory",
   "practice_description": "Store one memory record in the filesystem pool.",
@@ -52,5 +52,5 @@
     "path": "/pool_store_memory"
   },
   "is_deleted": false,
-  "updated_at": "2026-04-03T03:54:34.591296+00:00"
+  "updated_at": "2026-04-04T06:56:56.304772+00:00"
 }

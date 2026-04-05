@@ -1,0 +1,82 @@
+{
+  "pulse_id": "urn:plaza:pulse:create.managed.schedule",
+  "pulse_name": "create_managed_schedule",
+  "pulse_address": "c567a88e-7d30-5951-9197-4929d32bd805",
+  "pulse_definition": {
+    "pds_version": "0.1.0",
+    "resource_type": "pulse_definition",
+    "id": "urn:plaza:pulse:create.managed.schedule",
+    "version": "1.0.0",
+    "name": "create_managed_schedule",
+    "title": "Create Managed Schedule",
+    "description": "Save one managed-work schedule that BossPulser will issue through teamwork when due.",
+    "pulse_class": "fact",
+    "status": "stable",
+    "concept": {
+      "definition": "Save one managed-work schedule that BossPulser will issue through teamwork when due."
+    },
+    "interface": {
+      "schema_language": "json-schema-2020-12",
+      "request_schema": {
+        "type": "object",
+        "properties": {
+          "manager_address": {
+            "type": "string"
+          },
+          "required_capability": {
+            "type": "string"
+          },
+          "scheduled_for": {
+            "type": "string"
+          },
+          "payload": {
+            "type": "object"
+          },
+          "targets": {
+            "type": "array"
+          }
+        }
+      },
+      "response_schema": {}
+    },
+    "test_data": {
+      "manager_address": "http://127.0.0.1:8170",
+      "required_capability": "run map",
+      "scheduled_for": "2026-04-05T08:00:00+00:00",
+      "payload": {
+        "phema_path": "phemacast/configs/map.phemar"
+      },
+      "targets": [
+        "taipei-basemap"
+      ]
+    }
+  },
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "manager_address": {
+        "type": "string"
+      },
+      "required_capability": {
+        "type": "string"
+      },
+      "scheduled_for": {
+        "type": "string"
+      },
+      "payload": {
+        "type": "object"
+      },
+      "targets": {
+        "type": "array"
+      }
+    }
+  },
+  "pulser_id": "5444b86e-e2d4-4e5b-b4c9-139b10b6871b",
+  "pulser_name": "BossPulser",
+  "pulser_address": "5444b86e-e2d4-4e5b-b4c9-139b10b6871b",
+  "status": "stable",
+  "pulse_directory_id": "c567a88e-7d30-5951-9197-4929d32bd805",
+  "pulser_directory_id": "5444b86e-e2d4-4e5b-b4c9-139b10b6871b",
+  "id": "85d8e877-d7ee-5d44-87b4-c327f5ee828a",
+  "updated_at": "2026-04-04T10:28:13.061018+00:00"
+}

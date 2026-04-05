@@ -1,6 +1,20 @@
-# FinMAS
+# Retis Financial Intelligence Workspace
 
-FinMAS is an experimental multi-agent workspace for financial intelligence systems.
+## Translations
+
+- [English](README.md)
+- [繁體中文](README.zh-Hant.md)
+- [简体中文](README.zh-Hans.md)
+- [Español](README.es.md)
+- [Français](README.fr.md)
+- [Italiano](README.it.md)
+- [Deutsch](README.de.md)
+- [日本語](README.ja.md)
+- [한국어](README.ko.md)
+
+This repository is a multi-agent workspace for financial intelligence systems.
+
+Learn more at [retis.ai](https://retis.ai) and see the Attas product page at [retis.ai/products/attas](https://retis.ai/products/attas).
 
 The repository currently combines several related codebases:
 
@@ -15,10 +29,16 @@ This repository is actively developed and still evolving. APIs, config formats, 
 example flows may change as the projects are split, stabilized, or packaged more
 formally.
 
+Two areas are especially early and likely to change quickly while they are under
+active development:
+
+- `prompits.teamwork`
+- `phemacast` `BossPulser`
+
 The public repo is meant for:
 
 - local development
-- experimentation
+- evaluation
 - prototype workflows
 - architecture exploration
 
@@ -69,30 +89,80 @@ outside the repo tree.
 ## Local-First Quickstart
 
 The safest local path today is the Prompits example stack. It does not require
-Supabase or other private infrastructure.
+Supabase or other private infrastructure, and it now has a one-command local
+bootstrap flow for the baseline desk stack:
 
-Terminal 1:
+```bash
+python3 -m prompits.cli up desk
+```
+
+This starts:
+
+- Plaza on `http://127.0.0.1:8211`
+- the baseline worker on `http://127.0.0.1:8212`
+- the browser-facing user UI on `http://127.0.0.1:8214/`
+
+You can also use the wrapper script:
 
 ```bash
 bash run_plaza_local.sh
 ```
 
-Terminal 2:
+Useful follow-up commands:
 
 ```bash
-python3 prompits/create_agent.py --config prompits/examples/worker.agent
+python3 -m prompits.cli status desk
+python3 -m prompits.cli down desk
 ```
 
-Terminal 3:
+If you need the older manual flow for debugging a single service at a time:
 
 ```bash
+python3 prompits/create_agent.py --config prompits/examples/plaza.agent
+python3 prompits/create_agent.py --config prompits/examples/worker.agent
 python3 prompits/create_agent.py --config prompits/examples/user.agent
 ```
 
-Then open `http://127.0.0.1:8214/`.
-
 If you want the older Supabase-backed Plaza setup, point `PROMPITS_AGENT_CONFIG` at
 `attas/configs/plaza.agent` and provide the required environment variables.
+
+## Remote Practice Policy And Audit
+
+Prompits now supports a thin cross-agent policy and audit layer for remote
+`UsePractice(...)` calls. The contract lives in agent config JSON at the top
+level and is consumed inside `prompits` only:
+
+```json
+{
+  "remote_use_practice_policy": {
+    "outbound_default": "allow",
+    "inbound_default": "allow",
+    "outbound": {
+      "deny": [
+        { "practice_id": "get_pulse_data", "target_address": "http://127.0.0.1:9999" }
+      ]
+    },
+    "inbound": {
+      "allow": [
+        { "practice_id": "get_pulse_data", "caller_agent_id": "plaza" }
+      ]
+    }
+  },
+  "remote_use_practice_audit": {
+    "enabled": true,
+    "persist": true,
+    "emit_logs": true,
+    "table_name": "cross_agent_practice_audit"
+  }
+}
+```
+
+Policy notes:
+
+- `outbound` rules match the destination using `practice_id`, `target_agent_id`, `target_name`, `target_address`, `target_role`, and `target_pit_type`.
+- `inbound` rules match the caller using `practice_id`, `caller_agent_id`, `caller_name`, `caller_address`, `auth_mode`, and `plaza_url`.
+- deny rules win first; if an allow list exists, a remote call must match it or it is rejected with `403`.
+- audit rows are logged and, when the agent has a pool, appended to the configured audit table with a shared `request_id` for correlation across request and result events.
 
 ## Repository Layout
 
@@ -119,9 +189,9 @@ tests/       Cross-project tests and fixtures
 
 | Area | Current Public Status | Notes |
 | --- | --- | --- |
-| `prompits` | Best starting point | Local-first examples and core runtime are the easiest public entry point. |
-| `attas` | Experimental | Core concepts and user-agent work are public, but some unfinished components are intentionally hidden from the default flow. |
-| `phemacast` | Experimental | Core pipeline code is public; some reporting/rendering components are still being trimmed and stabilized. |
+| `prompits` | Best starting point | Local-first examples and core runtime are the easiest public entry point. The `prompits.teamwork` package is still early and may change quickly. |
+| `attas` | Early public | Core concepts and user-agent work are public, but some unfinished components are intentionally hidden from the default flow. |
+| `phemacast` | Early public | Core pipeline code is public; some reporting/rendering components are still being trimmed and stabilized. `BossPulser` is still under active development. |
 | `ads` | Advanced | Useful for development and research, but some data workflows require extra setup and are not a first-run path. |
 | `deploy/` | Example-only | Deployment helpers are environment-specific and should not be treated as a polished public deployment story. |
 | `mcp_servers/` | Public source | Local MCP server implementations are part of the public source tree. |
@@ -155,7 +225,7 @@ endpoint-to-`Pulse` mapping for vendors and service providers.
 
 - Secrets are expected to come from environment variables and local config, not committed files.
 - Local databases, browser artifacts, and scratch snapshots are intentionally excluded from version control.
-- The codebase currently targets experimentation, local development, and prototype workflows more than polished end-user packaging.
+- The codebase currently targets local development, evaluation, and prototype workflows more than polished end-user packaging.
 
 ## Contributing
 

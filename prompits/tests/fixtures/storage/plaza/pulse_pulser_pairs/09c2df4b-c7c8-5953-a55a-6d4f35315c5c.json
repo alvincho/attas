@@ -1,0 +1,63 @@
+{
+  "pulse_id": "urn:plaza:pulse:team.status",
+  "pulse_name": "team_status",
+  "pulse_address": "plaza://pulse/team_status",
+  "pulse_definition": {
+    "pds_version": "0.1.0",
+    "resource_type": "pulse_definition",
+    "id": "urn:plaza:pulse:team.status",
+    "version": "1.0.0",
+    "name": "team_status",
+    "title": "Team Status",
+    "description": "Summarize current queue and worker health for one teamwork manager.",
+    "pulse_class": "fact",
+    "status": "stable",
+    "concept": {
+      "definition": "Summarize current queue and worker health for one teamwork manager."
+    },
+    "interface": {
+      "schema_language": "json-schema-2020-12",
+      "request_schema": {
+        "type": "object",
+        "properties": {
+          "manager_address": {
+            "type": "string"
+          },
+          "party": {
+            "type": "string"
+          },
+          "preview_limit": {
+            "type": "integer"
+          }
+        }
+      },
+      "response_schema": {}
+    },
+    "test_data": {
+      "manager_address": "http://127.0.0.1:8170",
+      "preview_limit": 500
+    }
+  },
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "manager_address": {
+        "type": "string"
+      },
+      "party": {
+        "type": "string"
+      },
+      "preview_limit": {
+        "type": "integer"
+      }
+    }
+  },
+  "pulser_id": "f3d360fb-7e8e-4e6c-a9fa-ede41d8d6228",
+  "pulser_name": "ManagerPulser",
+  "pulser_address": "f3d360fb-7e8e-4e6c-a9fa-ede41d8d6228",
+  "status": "stable",
+  "pulse_directory_id": "30e2f689-e3db-5357-bf39-97bcb41487ab",
+  "pulser_directory_id": "f3d360fb-7e8e-4e6c-a9fa-ede41d8d6228",
+  "id": "09c2df4b-c7c8-5953-a55a-6d4f35315c5c",
+  "updated_at": "2026-04-04T10:28:25.283785+00:00"
+}

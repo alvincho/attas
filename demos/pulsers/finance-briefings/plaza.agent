@@ -1,0 +1,22 @@
+{
+  "name": "finance-briefing-demo-plaza",
+  "role": "coordinator",
+  "tags": ["demo", "pulser", "finance", "workflow", "registry"],
+  "host": "127.0.0.1",
+  "port": 8272,
+  "pools": [
+    {
+      "type": "FileSystemPool",
+      "name": "finance_briefing_demo_plaza_pool",
+      "description": "Local Plaza storage for the finance briefing workflow demo.",
+      "root_path": "demos/pulsers/finance-briefings/storage/plaza"
+    }
+  ],
+  "type": "prompits.core.plaza.PlazaAgent",
+  "practices": [
+    {
+      "type": "prompits.practices.plaza.PlazaPractice",
+      "params": {}
+    }
+  ]
+}

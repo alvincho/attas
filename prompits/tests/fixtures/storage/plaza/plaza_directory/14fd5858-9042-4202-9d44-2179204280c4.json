@@ -1,0 +1,647 @@
+{
+  "id": "14fd5858-9042-4202-9d44-2179204280c4",
+  "agent_id": "14fd5858-9042-4202-9d44-2179204280c4",
+  "name": "ADSDispatcher",
+  "type": "Agent",
+  "description": "Queue-based Attas Data Services dispatcher.",
+  "owner": "ADSDispatcher",
+  "address": "http://127.0.0.1:8060",
+  "meta": {
+    "ads_tables": [
+      "ads_jobs",
+      "ads_worker_capabilities",
+      "ads_worker_history",
+      "ads_security_master",
+      "ads_daily_price",
+      "ads_fundamentals",
+      "ads_financial_statements",
+      "ads_news",
+      "ads_raw_data_collected"
+    ],
+    "job_capabilities": [
+      {
+        "name": "US Listed Sec to security master",
+        "description": "Refresh the U.S. listed security master from Nasdaq Trader symbol directories."
+      },
+      {
+        "name": "US Filing Bulk",
+        "description": "Download SEC EDGAR companyfacts.zip and submissions.zip into raw ADS SEC tables."
+      },
+      {
+        "name": "US Filing Mapping",
+        "description": "Map one company's SEC companyfacts and submissions rows into ADS fundamentals and financial statements."
+      },
+      {
+        "name": "YFinance EOD",
+        "description": "Fetch Yahoo Finance end-of-day prices."
+      },
+      {
+        "name": "YFinance US Market EOD",
+        "description": "Queue per-symbol Yahoo Finance end-of-day jobs for active USD securities oldest-first."
+      },
+      {
+        "name": "TWSE Market EOD",
+        "description": "Fetch Taiwan Stock Exchange market-wide end-of-day prices."
+      },
+      {
+        "name": "RSS News",
+        "description": "Fetch SEC, CFTC, and BLS RSS feeds into ads_news."
+      }
+    ],
+    "party": "ADS",
+    "direct_auth_token": "ads-local-direct-token",
+    "accepts_inbound_from_plaza": true,
+    "accepts_direct_call": true,
+    "connectivity_mode": "plaza-forward"
+  },
+  "card": {
+    "name": "ADSDispatcher",
+    "role": "generic",
+    "tags": [
+      "ads",
+      "dispatcher",
+      "data-services"
+    ],
+    "host": "127.0.0.1",
+    "port": 8060,
+    "address": "http://127.0.0.1:8060",
+    "party": "ADS",
+    "description": "Queue-based Attas Data Services dispatcher.",
+    "meta": {
+      "ads_tables": [
+        "ads_jobs",
+        "ads_worker_capabilities",
+        "ads_worker_history",
+        "ads_security_master",
+        "ads_daily_price",
+        "ads_fundamentals",
+        "ads_financial_statements",
+        "ads_news",
+        "ads_raw_data_collected"
+      ],
+      "job_capabilities": [
+        {
+          "name": "US Listed Sec to security master",
+          "description": "Refresh the U.S. listed security master from Nasdaq Trader symbol directories."
+        },
+        {
+          "name": "US Filing Bulk",
+          "description": "Download SEC EDGAR companyfacts.zip and submissions.zip into raw ADS SEC tables."
+        },
+        {
+          "name": "US Filing Mapping",
+          "description": "Map one company's SEC companyfacts and submissions rows into ADS fundamentals and financial statements."
+        },
+        {
+          "name": "YFinance EOD",
+          "description": "Fetch Yahoo Finance end-of-day prices."
+        },
+        {
+          "name": "YFinance US Market EOD",
+          "description": "Queue per-symbol Yahoo Finance end-of-day jobs for active USD securities oldest-first."
+        },
+        {
+          "name": "TWSE Market EOD",
+          "description": "Fetch Taiwan Stock Exchange market-wide end-of-day prices."
+        },
+        {
+          "name": "RSS News",
+          "description": "Fetch SEC, CFTC, and BLS RSS feeds into ads_news."
+        }
+      ],
+      "party": "ADS",
+      "direct_auth_token": "ads-local-direct-token",
+      "accepts_inbound_from_plaza": true,
+      "accepts_direct_call": true,
+      "connectivity_mode": "plaza-forward"
+    },
+    "pit_type": "Agent",
+    "accepts_inbound_from_plaza": true,
+    "accepts_direct_call": true,
+    "connectivity_mode": "plaza-forward",
+    "pit_address": {
+      "pit_id": "14fd5858-9042-4202-9d44-2179204280c4",
+      "plazas": [
+        "http://127.0.0.1:8011"
+      ]
+    },
+    "practices": [
+      {
+        "name": "Pool Disconnect",
+        "description": "Close the PostgreSQL pool connection.",
+        "id": "pool-disconnect",
+        "cost": 0,
+        "tags": [
+          "pool",
+          "postgres",
+          "storage",
+          "disconnect"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {},
+        "path": "/pool_disconnect"
+      },
+      {
+        "name": "Pool Connect",
+        "description": "Connect the PostgreSQL pool to its database.",
+        "id": "pool-connect",
+        "cost": 0,
+        "tags": [
+          "pool",
+          "postgres",
+          "storage",
+          "connect"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {},
+        "path": "/pool_connect"
+      },
+      {
+        "name": "Pool Create Table",
+        "description": "Create a table in the PostgreSQL pool.",
+        "id": "pool-create-table",
+        "cost": 0,
+        "tags": [
+          "pool",
+          "postgres",
+          "storage",
+          "create-table"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {
+          "table_name": {
+            "type": "string",
+            "description": "Logical table name."
+          },
+          "schema": {
+            "type": "object",
+            "description": "Table schema definition."
+          }
+        },
+        "path": "/pool_create_table"
+      },
+      {
+        "name": "Preview ADS DB Table",
+        "description": "Preview rows from one ADS dispatcher table.",
+        "id": "ads-db-preview-table",
+        "cost": 0,
+        "tags": [
+          "ads",
+          "dispatcher",
+          "database",
+          "read"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {},
+        "path": "/ads_db_preview_table"
+      },
+      {
+        "name": "Query ADS DB",
+        "description": "Run a read-only SQL query against the ADS dispatcher database.",
+        "id": "ads-db-query",
+        "cost": 0,
+        "tags": [
+          "ads",
+          "dispatcher",
+          "database",
+          "sql",
+          "read"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {},
+        "path": "/ads_db_query"
+      },
+      {
+        "name": "Pool Query",
+        "description": "Execute a SQL query against the PostgreSQL pool.",
+        "id": "pool-query",
+        "cost": 0,
+        "tags": [
+          "pool",
+          "postgres",
+          "storage",
+          "query"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {
+          "query": {
+            "type": "string",
+            "description": "SQL query string."
+          },
+          "params": {
+            "type": "object",
+            "description": "Optional query parameters."
+          }
+        },
+        "path": "/pool_query"
+      },
+      {
+        "name": "List ADS DB Tables",
+        "description": "List available tables in the ADS dispatcher database.",
+        "id": "ads-db-list-tables",
+        "cost": 0,
+        "tags": [
+          "ads",
+          "dispatcher",
+          "database",
+          "read"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {},
+        "path": "/ads_db_list_tables"
+      },
+      {
+        "name": "Report ADS Job",
+        "description": "Compatibility alias for PostJobResult.",
+        "id": "ads-report-job",
+        "cost": 0,
+        "tags": [
+          "ads",
+          "dispatcher",
+          "results"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {},
+        "path": "/ads_report_job"
+      },
+      {
+        "name": "Control ADS Job",
+        "description": "Pause or delete an ADS job from the dispatcher queue.",
+        "id": "ads-control-job",
+        "cost": 0,
+        "tags": [
+          "ads",
+          "dispatcher",
+          "queue",
+          "control"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {},
+        "path": "/ads_control_job"
+      },
+      {
+        "name": "Pool Table Exists",
+        "description": "Check whether a PostgreSQL table exists.",
+        "id": "pool-table-exists",
+        "cost": 0,
+        "tags": [
+          "pool",
+          "postgres",
+          "storage",
+          "table-exists"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {
+          "table_name": {
+            "type": "string",
+            "description": "Logical table name."
+          }
+        },
+        "path": "/pool_table_exists"
+      },
+      {
+        "name": "Get ADS Job",
+        "description": "Claim the next queued ADS job and return it as a JobDetail payload.",
+        "id": "ads-get-job",
+        "cost": 0,
+        "tags": [
+          "ads",
+          "dispatcher",
+          "queue"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {},
+        "path": "/ads_get_job"
+      },
+      {
+        "name": "Pool Insert",
+        "description": "Insert or upsert one row in the PostgreSQL pool.",
+        "id": "pool-insert",
+        "cost": 0,
+        "tags": [
+          "pool",
+          "postgres",
+          "storage",
+          "insert"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {
+          "table_name": {
+            "type": "string",
+            "description": "Logical table name."
+          },
+          "data": {
+            "type": "object",
+            "description": "Row payload to persist."
+          }
+        },
+        "path": "/pool_insert"
+      },
+      {
+        "name": "Post Job Result",
+        "description": "Accept a JobResult payload, persist outputs, and update the ADS queue.",
+        "id": "ads-post-job-result",
+        "cost": 0,
+        "tags": [
+          "ads",
+          "dispatcher",
+          "results"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {},
+        "path": "/ads_post_job_result"
+      },
+      {
+        "name": "Submit ADS Job",
+        "description": "Queue a collection job for ADS workers.",
+        "id": "ads-submit-job",
+        "cost": 0,
+        "tags": [
+          "ads",
+          "dispatcher",
+          "queue"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {},
+        "path": "/ads_submit_job"
+      },
+      {
+        "name": "Register ADS Worker",
+        "description": "Upsert worker capabilities and heartbeat metadata for the ADS queue.",
+        "id": "ads-register-worker",
+        "cost": 0,
+        "tags": [
+          "ads",
+          "dispatcher",
+          "workers"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {},
+        "path": "/ads_register_worker"
+      },
+      {
+        "name": "Pool Get Table Data",
+        "description": "Read rows from a PostgreSQL table.",
+        "id": "pool-get-table-data",
+        "cost": 0,
+        "tags": [
+          "pool",
+          "postgres",
+          "storage",
+          "read"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {
+          "table_name": {
+            "type": "string",
+            "description": "Logical table name."
+          },
+          "id_or_where": {
+            "type": "object",
+            "description": "Optional id or equality filter."
+          },
+          "table_schema": {
+            "type": "object",
+            "description": "Optional table schema for decoding."
+          }
+        },
+        "path": "/pool_get_table_data"
+      },
+      {
+        "name": "Pool Store Memory",
+        "description": "Store one memory record in the PostgreSQL pool.",
+        "id": "pool-store-memory",
+        "cost": 0,
+        "tags": [
+          "pool",
+          "postgres",
+          "memory",
+          "store"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {
+          "content": {
+            "type": "string",
+            "description": "Memory content."
+          },
+          "memory_id": {
+            "type": "string",
+            "description": "Optional stable memory id."
+          },
+          "metadata": {
+            "type": "object",
+            "description": "Optional metadata payload."
+          },
+          "tags": {
+            "type": "array",
+            "description": "Optional string tags."
+          },
+          "memory_type": {
+            "type": "string",
+            "description": "Memory category."
+          },
+          "table_name": {
+            "type": "string",
+            "description": "Optional override table name."
+          }
+        },
+        "path": "/pool_store_memory"
+      },
+      {
+        "name": "Pool Search Memory",
+        "description": "Search stored memory records in the PostgreSQL pool.",
+        "id": "pool-search-memory",
+        "cost": 0,
+        "tags": [
+          "pool",
+          "postgres",
+          "memory",
+          "search"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {
+          "query": {
+            "type": "string",
+            "description": "Case-insensitive search text."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum number of matches."
+          },
+          "table_name": {
+            "type": "string",
+            "description": "Optional override table name."
+          }
+        },
+        "path": "/pool_search_memory"
+      },
+      {
+        "name": "Mailbox",
+        "description": "Default inbound message endpoint for generic agent delivery.",
+        "id": "mailbox",
+        "cost": 0,
+        "tags": [
+          "message",
+          "mailbox"
+        ],
+        "examples": [
+          "POST /mailbox {'sender':'alice','content':'hello','msg_type':'message'}"
+        ],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {
+          "sender": {
+            "type": "string",
+            "description": "Sending agent name or id."
+          },
+          "receiver": {
+            "type": "string",
+            "description": "Target agent name or id."
+          },
+          "content": {
+            "type": "object",
+            "description": "Message payload."
+          },
+          "msg_type": {
+            "type": "string",
+            "description": "Message routing key."
+          }
+        },
+        "path": "/mailbox"
+      }
+    ],
+    "agent_id": "14fd5858-9042-4202-9d44-2179204280c4"
+  },
+  "updated_at": "2026-04-04T10:28:07.844029+00:00"
+}

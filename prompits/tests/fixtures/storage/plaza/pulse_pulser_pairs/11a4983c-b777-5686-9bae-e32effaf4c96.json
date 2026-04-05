@@ -1,0 +1,82 @@
+{
+  "pulse_id": "urn:plaza:pulse:create.managed.ticket",
+  "pulse_name": "create_managed_ticket",
+  "pulse_address": "82195e23-73f8-51c4-979b-ff571f13dc2e",
+  "pulse_definition": {
+    "pds_version": "0.1.0",
+    "resource_type": "pulse_definition",
+    "id": "urn:plaza:pulse:create.managed.ticket",
+    "version": "1.0.0",
+    "name": "create_managed_ticket",
+    "title": "Create Managed Ticket",
+    "description": "Create one manual managed-work ticket through BossPulser and teamwork.",
+    "pulse_class": "fact",
+    "status": "stable",
+    "concept": {
+      "definition": "Create one manual managed-work ticket through BossPulser and teamwork."
+    },
+    "interface": {
+      "schema_language": "json-schema-2020-12",
+      "request_schema": {
+        "type": "object",
+        "properties": {
+          "manager_address": {
+            "type": "string"
+          },
+          "required_capability": {
+            "type": "string"
+          },
+          "payload": {
+            "type": "object"
+          },
+          "targets": {
+            "type": "array"
+          },
+          "priority": {
+            "type": "integer"
+          }
+        }
+      },
+      "response_schema": {}
+    },
+    "test_data": {
+      "manager_address": "http://127.0.0.1:8170",
+      "required_capability": "run map",
+      "payload": {
+        "phema_path": "phemacast/configs/map.phemar"
+      },
+      "targets": [
+        "taipei-basemap"
+      ],
+      "priority": 100
+    }
+  },
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "manager_address": {
+        "type": "string"
+      },
+      "required_capability": {
+        "type": "string"
+      },
+      "payload": {
+        "type": "object"
+      },
+      "targets": {
+        "type": "array"
+      },
+      "priority": {
+        "type": "integer"
+      }
+    }
+  },
+  "pulser_id": "5444b86e-e2d4-4e5b-b4c9-139b10b6871b",
+  "pulser_name": "BossPulser",
+  "pulser_address": "5444b86e-e2d4-4e5b-b4c9-139b10b6871b",
+  "status": "stable",
+  "pulse_directory_id": "82195e23-73f8-51c4-979b-ff571f13dc2e",
+  "pulser_directory_id": "5444b86e-e2d4-4e5b-b4c9-139b10b6871b",
+  "id": "11a4983c-b777-5686-9bae-e32effaf4c96",
+  "updated_at": "2026-04-04T10:28:13.061008+00:00"
+}

@@ -918,7 +918,7 @@
                         <div class="field-grid">
                             <div class="field">
                                 <label for="pulser-name">Pulser Name</label>
-                                <input id="pulser-name" type="text" placeholder="FileStoragePulser">
+                                <input id="pulser-name" type="text" placeholder="SystemPulser">
                             </div>
                             <div class="field">
                                 <label for="pulser-party">Party</label>
@@ -966,7 +966,7 @@
                             <div class="field-grid">
                                 <div class="field full">
                                     <label for="filesystem-root-path">Filesystem Root Path</label>
-                                    <input id="filesystem-root-path" type="text" placeholder="tests/storage/file_storage_pulser/content">
+                                    <input id="filesystem-root-path" type="text" placeholder="tests/storage/system_pulser/content">
                                 </div>
                             </div>
                         </div>
@@ -1255,7 +1255,7 @@
                 storage.aws_session_token = storage.aws_session_token || '';
             } else {
                 storage.type = 'filesystem';
-                storage.root_path = storage.root_path || storage.path || 'storage/file_storage_pulser';
+                storage.root_path = storage.root_path || storage.path || 'storage/system_pulser';
             }
             next.storage = storage;
             return next;
@@ -1303,7 +1303,7 @@
                     if (value !== '') storage[key] = value;
                 });
             } else {
-                storage.root_path = parseLooseValue(document.getElementById('filesystem-root-path').value) || 'storage/file_storage_pulser';
+                storage.root_path = parseLooseValue(document.getElementById('filesystem-root-path').value) || 'storage/system_pulser';
             }
             next.storage = storage;
             state.config = next;
@@ -1742,7 +1742,7 @@
             syncStateFromInputs();
             const pulse = getSelectedPulse();
             const pulseName = pulse?.name || `pulse_${state.selectedPulseIndex + 1}`;
-            const pulserName = state.config?.name || 'FileStoragePulser';
+            const pulserName = state.config?.name || 'SystemPulser';
             const testTitle = pulse ? `${pulseName} | ${pulserName}` : `Test Runner | ${pulserName}`;
 
             root.innerHTML = `
@@ -1957,7 +1957,7 @@
                             status_text: response.statusText,
                             body: data || rawBody,
                         },
-                        hint: response.status === 404 ? 'The running FileStoragePulser may need to be restarted so /api/test-pulse is available.' : undefined,
+                        hint: response.status === 404 ? 'The running SystemPulser may need to be restarted so /api/test-pulse is available.' : undefined,
                     });
                     draft.statusMessage = detail;
                     draft.statusTone = 'error';

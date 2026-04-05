@@ -1,0 +1,141 @@
+{
+  "id": "bdce1be5-5bbf-5011-97b2-510e6d993361",
+  "agent_id": "bdce1be5-5bbf-5011-97b2-510e6d993361",
+  "name": "create_worker",
+  "type": "Pulse",
+  "description": "Generate a teamwork worker config aimed at one manager.",
+  "owner": "Plaza",
+  "address": "",
+  "meta": {
+    "pulse_id": "urn:plaza:pulse:create.worker",
+    "pulse_address": "plaza://pulse/create_worker",
+    "pulse_definition": {
+      "pds_version": "0.1.0",
+      "resource_type": "pulse_definition",
+      "id": "urn:plaza:pulse:create.worker",
+      "version": "1.0.0",
+      "name": "create_worker",
+      "title": "Create Worker",
+      "description": "Generate a teamwork worker config aimed at one manager.",
+      "pulse_class": "fact",
+      "status": "stable",
+      "concept": {
+        "definition": "Generate a teamwork worker config aimed at one manager."
+      },
+      "interface": {
+        "schema_language": "json-schema-2020-12",
+        "request_schema": {
+          "type": "object",
+          "properties": {
+            "team_name": {
+              "type": "string"
+            },
+            "worker_name": {
+              "type": "string"
+            },
+            "manager_address": {
+              "type": "string"
+            },
+            "job_capabilities": {
+              "type": "array"
+            }
+          }
+        },
+        "response_schema": {}
+      }
+    },
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "team_name": {
+          "type": "string"
+        },
+        "worker_name": {
+          "type": "string"
+        },
+        "manager_address": {
+          "type": "string"
+        },
+        "job_capabilities": {
+          "type": "array"
+        }
+      }
+    },
+    "output_schema": {},
+    "description": "Generate a teamwork worker config aimed at one manager.",
+    "examples": []
+  },
+  "card": {
+    "name": "create_worker",
+    "description": "Generate a teamwork worker config aimed at one manager.",
+    "pit_type": "Pulse",
+    "owner": "Plaza",
+    "tags": [],
+    "meta": {
+      "pulse_id": "urn:plaza:pulse:create.worker",
+      "pulse_address": "plaza://pulse/create_worker",
+      "pulse_definition": {
+        "pds_version": "0.1.0",
+        "resource_type": "pulse_definition",
+        "id": "urn:plaza:pulse:create.worker",
+        "version": "1.0.0",
+        "name": "create_worker",
+        "title": "Create Worker",
+        "description": "Generate a teamwork worker config aimed at one manager.",
+        "pulse_class": "fact",
+        "status": "stable",
+        "concept": {
+          "definition": "Generate a teamwork worker config aimed at one manager."
+        },
+        "interface": {
+          "schema_language": "json-schema-2020-12",
+          "request_schema": {
+            "type": "object",
+            "properties": {
+              "team_name": {
+                "type": "string"
+              },
+              "worker_name": {
+                "type": "string"
+              },
+              "manager_address": {
+                "type": "string"
+              },
+              "job_capabilities": {
+                "type": "array"
+              }
+            }
+          },
+          "response_schema": {}
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "team_name": {
+            "type": "string"
+          },
+          "worker_name": {
+            "type": "string"
+          },
+          "manager_address": {
+            "type": "string"
+          },
+          "job_capabilities": {
+            "type": "array"
+          }
+        }
+      },
+      "output_schema": {},
+      "description": "Generate a teamwork worker config aimed at one manager.",
+      "examples": []
+    },
+    "pit_address": {
+      "pit_id": "bdce1be5-5bbf-5011-97b2-510e6d993361",
+      "plazas": [
+        "http://127.0.0.1:8011"
+      ]
+    }
+  },
+  "updated_at": "2026-04-04T10:28:12.868267+00:00"
+}

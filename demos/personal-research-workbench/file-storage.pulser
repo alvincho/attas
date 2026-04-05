@@ -1,6 +1,6 @@
 {
-  "name": "DemoFileStoragePulser",
-  "type": "phemacast.pulsers.file_storage_pulser.FileStoragePulser",
+  "name": "DemoSystemPulser",
+  "type": "phemacast.pulsers.system_pulser.SystemPulser",
   "host": "127.0.0.1",
   "port": 8242,
   "plaza_url": "http://127.0.0.1:8241",

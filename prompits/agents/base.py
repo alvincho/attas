@@ -11,6 +11,7 @@ the main behavior or state managed by this module.
 
 import logging
 import asyncio
+import fnmatch
 import inspect
 import json
 import os
@@ -18,16 +19,18 @@ import requests
 import httpx
 import uvicorn
 import time
+import uuid
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
-from starlette.concurrency import run_in_threadpool
+from starlette.concurrency import iterate_in_threadpool, run_in_threadpool
 from prompits.core.message import Message
 from prompits.core.init_schema import agent_practices_table_schema
 from prompits.core.pit import Pit, PitAddress
 from prompits.core.practice import Practice
+from prompits.core.schema import TableSchema
 from prompits.practices.plaza import PlazaCredentialStore
 import threading
 import time
@@ -45,7 +48,10 @@ class PracticeInvocationRequest(BaseModel):
     receiver: str
     content: Any = None
     msg_type: str
+    request_id: Optional[str] = None
     caller_agent_address: Optional[Dict[str, Any]] = None
+    caller_agent_name: Optional[str] = None
+    caller_agent_url: Optional[str] = None
     caller_plaza_token: Optional[str] = None
     caller_direct_token: Optional[str] = None
 
@@ -70,6 +76,7 @@ class BaseAgent(Pit, ABC):
     PLAZA_CONNECTION_ACTIVE_WINDOW_SEC = 60
     MAILBOX_PRACTICE_ID = "mailbox"
     LEGACY_REMOVED_PRACTICE_IDS = ("chat-practice", "llm")
+    REMOTE_PRACTICE_AUDIT_TABLE = "cross_agent_practice_audit"
 
     @staticmethod
     def _normalize_url(value: Any) -> str:
@@ -92,6 +99,169 @@ class BaseAgent(Pit, ABC):
             return True
         if lowered in {"0", "false", "no", "n", "off"}:
             return False
+        return None
+
+    @staticmethod
+    def _normalize_policy_action(value: Any, *, default: str = "allow") -> str:
+        """Internal helper to normalize a remote-practice policy action."""
+        lowered = str(value or "").strip().lower()
+        if lowered in {"deny", "blocked", "block", "forbid", "forbidden"}:
+            return "deny"
+        if lowered in {"allow", "allowed", "permit", "permitted"}:
+            return "allow"
+        return default
+
+    @staticmethod
+    def _policy_string(value: Any) -> str:
+        """Internal helper to normalize policy string matching values."""
+        return str(value or "").strip()
+
+    @classmethod
+    def _policy_value_matches(cls, rule_value: Any, context_value: Any) -> bool:
+        """Return whether one policy field matches the provided context value."""
+        if isinstance(rule_value, (list, tuple, set)):
+            return any(cls._policy_value_matches(candidate, context_value) for candidate in rule_value)
+
+        if isinstance(context_value, (list, tuple, set)):
+            return any(cls._policy_value_matches(rule_value, candidate) for candidate in context_value)
+
+        if isinstance(rule_value, bool):
+            return bool(context_value) is rule_value
+
+        rule_text = cls._policy_string(rule_value)
+        context_text = cls._policy_string(context_value)
+        if not rule_text:
+            return False
+        if not context_text:
+            return False
+        if any(token in rule_text for token in ("*", "?", "[")):
+            return fnmatch.fnmatch(context_text.lower(), rule_text.lower())
+        return context_text.lower() == rule_text.lower()
+
+    @classmethod
+    def _normalize_remote_policy_rule(cls, direction: str, rule: Any) -> Dict[str, Any]:
+        """Normalize one inbound/outbound remote practice policy rule."""
+        if isinstance(rule, str):
+            normalized_text = cls._policy_string(rule)
+            return {"practice_id": normalized_text} if normalized_text else {}
+        if not isinstance(rule, dict):
+            return {}
+
+        if direction == "outbound":
+            aliases = {
+                "practice": "practice_id",
+                "agent_id": "target_agent_id",
+                "agent_name": "target_name",
+                "name": "target_name",
+                "address": "target_address",
+                "url": "target_address",
+                "target": "target_address",
+                "target_url": "target_address",
+                "destination": "target_address",
+                "destination_address": "target_address",
+                "role": "target_role",
+                "pit_type": "target_pit_type",
+                "type": "target_pit_type",
+            }
+            allowed_fields = {
+                "practice_id",
+                "target_agent_id",
+                "target_name",
+                "target_address",
+                "target_role",
+                "target_pit_type",
+                "plaza_url",
+            }
+        else:
+            aliases = {
+                "practice": "practice_id",
+                "agent_id": "caller_agent_id",
+                "agent_name": "caller_name",
+                "name": "caller_name",
+                "address": "caller_address",
+                "url": "caller_address",
+                "caller_url": "caller_address",
+            }
+            allowed_fields = {
+                "practice_id",
+                "caller_agent_id",
+                "caller_name",
+                "caller_address",
+                "auth_mode",
+                "plaza_url",
+            }
+
+        normalized: Dict[str, Any] = {}
+        for raw_key, raw_value in rule.items():
+            canonical_key = aliases.get(str(raw_key or "").strip(), str(raw_key or "").strip())
+            if canonical_key not in allowed_fields:
+                continue
+            if raw_value in (None, "", [], {}, ()):
+                continue
+            normalized[canonical_key] = raw_value
+        return normalized
+
+    @classmethod
+    def _normalize_remote_use_practice_policy(cls, value: Any) -> Dict[str, Any]:
+        """Normalize remote `UsePractice` policy configuration."""
+        if not isinstance(value, dict):
+            value = {}
+
+        outbound_block = value.get("outbound") if isinstance(value.get("outbound"), dict) else {}
+        inbound_block = value.get("inbound") if isinstance(value.get("inbound"), dict) else {}
+
+        def normalize_rules(direction: str, entries: Any) -> List[Dict[str, Any]]:
+            if isinstance(entries, dict):
+                entries = [entries]
+            if not isinstance(entries, list):
+                return []
+            normalized_rules: List[Dict[str, Any]] = []
+            for entry in entries:
+                normalized_rule = cls._normalize_remote_policy_rule(direction, entry)
+                if normalized_rule:
+                    normalized_rules.append(normalized_rule)
+            return normalized_rules
+
+        default_action = cls._normalize_policy_action(value.get("default"), default="allow")
+        outbound_default = cls._normalize_policy_action(
+            value.get("outbound_default", outbound_block.get("default")),
+            default=default_action,
+        )
+        inbound_default = cls._normalize_policy_action(
+            value.get("inbound_default", inbound_block.get("default")),
+            default=default_action,
+        )
+
+        return {
+            "enabled": cls._coerce_optional_bool(value.get("enabled")) is not False,
+            "outbound_default": outbound_default,
+            "inbound_default": inbound_default,
+            "outbound_allow": normalize_rules("outbound", value.get("outbound_allow", outbound_block.get("allow"))),
+            "outbound_deny": normalize_rules("outbound", value.get("outbound_deny", outbound_block.get("deny"))),
+            "inbound_allow": normalize_rules("inbound", value.get("inbound_allow", inbound_block.get("allow"))),
+            "inbound_deny": normalize_rules("inbound", value.get("inbound_deny", inbound_block.get("deny"))),
+        }
+
+    @classmethod
+    def _normalize_remote_use_practice_audit(cls, value: Any) -> Dict[str, Any]:
+        """Normalize remote `UsePractice` audit configuration."""
+        if not isinstance(value, dict):
+            value = {}
+        table_name = cls._policy_string(value.get("table_name") or cls.REMOTE_PRACTICE_AUDIT_TABLE)
+        return {
+            "enabled": cls._coerce_optional_bool(value.get("enabled")) is not False,
+            "emit_logs": cls._coerce_optional_bool(value.get("emit_logs")) is not False,
+            "persist": cls._coerce_optional_bool(value.get("persist")) is not False,
+            "table_name": table_name or cls.REMOTE_PRACTICE_AUDIT_TABLE,
+        }
+
+    def _consume_runtime_setting(self, key: str) -> Any:
+        """Consume one runtime-only setting passed through the agent card."""
+        if key in self.agent_card:
+            return self.agent_card.pop(key, None)
+        meta = self.agent_card.get("meta")
+        if isinstance(meta, dict) and key in meta:
+            return meta.pop(key, None)
         return None
 
     def __init__(self, name: str, host: str = "127.0.0.1", port: int = 8000, plaza_url: Optional[str] = None, agent_card: Dict[str, Any] = None, pool: Optional[Pool] = None):
@@ -117,12 +287,16 @@ class BaseAgent(Pit, ABC):
         self.plaza_credential_store = PlazaCredentialStore(pool=pool)
         self.agent_id: Optional[str] = self.agent_card.get("agent_id")
         self.api_key: Optional[str] = self.agent_card.get("api_key")
+        raw_remote_policy = self._consume_runtime_setting("remote_use_practice_policy")
+        raw_remote_audit = self._consume_runtime_setting("remote_use_practice_audit")
         configured_direct_token = (
             self.agent_card.get("meta", {}).get("direct_auth_token")
             or os.getenv("PROMPITS_DIRECT_TOKEN")
             or ""
         )
         self.direct_auth_token: Optional[str] = str(configured_direct_token).strip() or None
+        self.remote_use_practice_policy = self._normalize_remote_use_practice_policy(raw_remote_policy)
+        self.remote_use_practice_audit = self._normalize_remote_use_practice_audit(raw_remote_audit)
         self._sync_connectivity_metadata()
         self.pit_address: PitAddress = self.address
         self._refresh_pit_address()
@@ -143,6 +317,7 @@ class BaseAgent(Pit, ABC):
             self.agent_card["practices"] = []
         self._practice_persistence_batch_depth = 0
         self._pending_practice_rows: Dict[str, Dict[str, Any]] = {}
+        self._remote_practice_audit_table_ensured = False
 
         self._ensure_agent_practices_table()
         self._load_practices_info_from_pool()
@@ -201,11 +376,110 @@ class BaseAgent(Pit, ABC):
                 raise
 
             elapsed_ms = (time.perf_counter() - started_at) * 1000
+            error_detail = ""
+            if int(getattr(response, "status_code", 0) or 0) >= 400:
+                buffered_body: Optional[bytes] = getattr(response, "body", None)
+                if buffered_body is None and hasattr(response, "body_iterator"):
+                    chunks = []
+                    async for chunk in response.body_iterator:
+                        if isinstance(chunk, (bytes, bytearray)):
+                            chunks.append(bytes(chunk))
+                        else:
+                            chunks.append(str(chunk).encode("utf-8", errors="replace"))
+                    buffered_body = b"".join(chunks)
+                    response.body_iterator = iterate_in_threadpool([buffered_body])
+                error_detail = self._extract_error_detail_from_response(response, body=buffered_body)
+            detail_suffix = f" detail={error_detail}" if error_detail else ""
             self.logger.info(
                 f"Completed request {request.method} {path} from {client_host}:{client_port} "
-                f"with {response.status_code} in {elapsed_ms:.1f}ms"
+                f"with {response.status_code} in {elapsed_ms:.1f}ms{detail_suffix}"
             )
             return response
+
+    @staticmethod
+    def _format_error_detail_for_log(value: Any) -> str:
+        """Convert structured error payloads into concise log text."""
+        if value in (None, ""):
+            return ""
+        if isinstance(value, str):
+            return value.strip()
+        if isinstance(value, list):
+            parts = [BaseAgent._format_error_detail_for_log(item) for item in value]
+            return " | ".join(part for part in parts if part)
+        if isinstance(value, dict):
+            message = str(
+                value.get("message")
+                or value.get("detail")
+                or value.get("error")
+                or value.get("reason")
+                or ""
+            ).strip()
+            parameters = value.get("parameters")
+            if parameters is None:
+                parameters = value.get("params")
+            if parameters not in (None, "", {}, []):
+                try:
+                    parameters_text = json.dumps(parameters, sort_keys=True, default=str)
+                except Exception:
+                    parameters_text = str(parameters)
+                return f"{message} | parameters={parameters_text}" if message else f"parameters={parameters_text}"
+            reasons = value.get("reasons")
+            if isinstance(reasons, list) and reasons:
+                reasons_text = " | ".join(str(reason).strip() for reason in reasons if str(reason).strip())
+                return f"{message} | reasons={reasons_text}" if message else reasons_text
+            if value.get("loc") and value.get("msg"):
+                location = value.get("loc")
+                if isinstance(location, list):
+                    location = ".".join(str(part) for part in location if part != "body")
+                location_text = str(location or "").strip()
+                message_text = str(value.get("msg") or "").strip()
+                if location_text and message_text:
+                    return f"{location_text}: {message_text}"
+                return message_text or location_text
+            if message:
+                return message
+            try:
+                return json.dumps(value, sort_keys=True, default=str)
+            except Exception:
+                return str(value)
+        return str(value)
+
+    @classmethod
+    def _extract_error_detail_from_response(cls, response: Any, *, body: Optional[bytes] = None) -> str:
+        """Return a readable error detail string from a response object."""
+        body = body if body is not None else getattr(response, "body", None)
+        content_type = str(getattr(response, "headers", {}).get("content-type") or "").lower()
+
+        parsed: Any = None
+        if isinstance(body, (bytes, bytearray)) and body:
+            text = body.decode("utf-8", errors="replace").strip()
+            if text:
+                if "application/json" in content_type:
+                    try:
+                        parsed = json.loads(text)
+                    except Exception:
+                        parsed = text
+                else:
+                    parsed = text
+        elif hasattr(response, "json") and hasattr(response, "content"):
+            try:
+                if getattr(response, "content", None):
+                    parsed = response.json()
+            except Exception:
+                parsed = getattr(response, "text", "")
+
+        if isinstance(parsed, dict):
+            detail_value = parsed.get("detail")
+            if detail_value in (None, ""):
+                detail_value = parsed.get("message")
+            if detail_value in (None, ""):
+                detail_value = parsed
+            return cls._format_error_detail_for_log(detail_value)
+        if isinstance(parsed, list):
+            return cls._format_error_detail_for_log(parsed)
+
+        text_value = str(parsed or getattr(response, "text", "") or "").strip()
+        return cls._format_error_detail_for_log(text_value)
 
     @classmethod
     def _heartbeat_is_active(cls, last_active: Any) -> bool:
@@ -839,6 +1113,217 @@ class BaseAgent(Pit, ABC):
         """Delete the practice endpoint."""
         return self.delete_practice(practice_id)
 
+    def _remote_practice_audit_table_schema(self) -> TableSchema:
+        """Return the schema used for remote `UsePractice` audit rows."""
+        return TableSchema(
+            {
+                "name": self.remote_use_practice_audit.get("table_name") or self.REMOTE_PRACTICE_AUDIT_TABLE,
+                "description": "Audit rows for cross-agent remote UsePractice attempts and outcomes.",
+                "primary_key": ["id"],
+                "rowSchema": {
+                    "id": {"type": "string"},
+                    "request_id": {"type": "string"},
+                    "timestamp": {"type": "datetime"},
+                    "direction": {"type": "string"},
+                    "event": {"type": "string"},
+                    "local_agent_name": {"type": "string"},
+                    "local_agent_id": {"type": "string"},
+                    "peer_agent_id": {"type": "string"},
+                    "peer_name": {"type": "string"},
+                    "peer_address": {"type": "string"},
+                    "practice_id": {"type": "string"},
+                    "plaza_url": {"type": "string"},
+                    "auth_mode": {"type": "string"},
+                    "policy_allowed": {"type": "boolean"},
+                    "policy_reason": {"type": "string"},
+                    "outcome": {"type": "string"},
+                    "status_code": {"type": "integer"},
+                    "error": {"type": "string"},
+                    "metadata": {"type": "json"},
+                },
+            }
+        )
+
+    def _ensure_remote_practice_audit_table(self):
+        """Ensure the remote practice audit table exists when persistence is enabled."""
+        if not self.pool:
+            return
+        if not self.remote_use_practice_audit.get("persist"):
+            return
+        if self._remote_practice_audit_table_ensured:
+            return
+        table_name = self.remote_use_practice_audit.get("table_name") or self.REMOTE_PRACTICE_AUDIT_TABLE
+        if self.pool._TableExists(table_name):
+            self._remote_practice_audit_table_ensured = True
+            return
+        self.pool._CreateTable(table_name, self._remote_practice_audit_table_schema())
+        self._remote_practice_audit_table_ensured = True
+
+    def _record_remote_practice_audit(
+        self,
+        *,
+        request_id: str,
+        direction: str,
+        event: str,
+        practice_id: str,
+        peer_agent_id: str = "",
+        peer_name: str = "",
+        peer_address: str = "",
+        plaza_url: str = "",
+        auth_mode: str = "",
+        policy_allowed: Optional[bool] = None,
+        policy_reason: str = "",
+        outcome: str = "",
+        status_code: Optional[int] = None,
+        error: str = "",
+        metadata: Optional[Dict[str, Any]] = None,
+    ):
+        """Emit one remote practice audit row to logs and, when available, the pool."""
+        audit_enabled = self.remote_use_practice_audit.get("enabled")
+        if audit_enabled is False:
+            return
+
+        row = {
+            "id": str(uuid.uuid4()),
+            "request_id": str(request_id or ""),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "direction": str(direction or ""),
+            "event": str(event or ""),
+            "local_agent_name": self.name,
+            "local_agent_id": str(self.agent_id or ""),
+            "peer_agent_id": str(peer_agent_id or ""),
+            "peer_name": str(peer_name or ""),
+            "peer_address": self._normalize_url(peer_address),
+            "practice_id": str(practice_id or ""),
+            "plaza_url": self._normalize_url(plaza_url),
+            "auth_mode": str(auth_mode or ""),
+            "policy_allowed": None if policy_allowed is None else bool(policy_allowed),
+            "policy_reason": str(policy_reason or ""),
+            "outcome": str(outcome or ""),
+            "status_code": int(status_code) if status_code is not None else None,
+            "error": str(error or ""),
+            "metadata": dict(metadata or {}),
+        }
+
+        if self.remote_use_practice_audit.get("emit_logs"):
+            self.logger.info(
+                "Remote UsePractice audit request_id=%s direction=%s event=%s practice=%s peer=%s outcome=%s allowed=%s reason=%s",
+                row["request_id"],
+                row["direction"],
+                row["event"],
+                row["practice_id"],
+                row["peer_agent_id"] or row["peer_name"] or row["peer_address"],
+                row["outcome"],
+                row["policy_allowed"],
+                row["policy_reason"],
+            )
+
+        if not self.pool or not self.remote_use_practice_audit.get("persist"):
+            return
+        try:
+            self._ensure_remote_practice_audit_table()
+            self.pool._Insert(self.remote_use_practice_audit.get("table_name") or self.REMOTE_PRACTICE_AUDIT_TABLE, row)
+        except Exception as exc:
+            self.logger.warning(f"Failed persisting remote UsePractice audit row: {exc}")
+
+    @staticmethod
+    def _match_remote_policy_rule(rule: Dict[str, Any], context: Dict[str, Any]) -> bool:
+        """Return whether a normalized policy rule matches the given context."""
+        if not isinstance(rule, dict) or not rule:
+            return False
+        for key, rule_value in rule.items():
+            if key not in context:
+                return False
+            if not BaseAgent._policy_value_matches(rule_value, context.get(key)):
+                return False
+        return True
+
+    def _evaluate_remote_use_practice_policy(
+        self,
+        *,
+        direction: str,
+        practice_id: str,
+        context: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """Evaluate inbound/outbound remote `UsePractice` policy for one request."""
+        policy = self.remote_use_practice_policy
+        if policy.get("enabled") is False:
+            return {
+                "allowed": True,
+                "reason": "policy disabled",
+                "matched_rule": None,
+                "mode": "disabled",
+            }
+
+        direction = "inbound" if direction == "inbound" else "outbound"
+        deny_rules = policy.get(f"{direction}_deny") or []
+        allow_rules = policy.get(f"{direction}_allow") or []
+        default_action = self._normalize_policy_action(policy.get(f"{direction}_default"), default="allow")
+
+        for rule in deny_rules:
+            if self._match_remote_policy_rule(rule, context):
+                return {
+                    "allowed": False,
+                    "reason": f"{direction} policy deny rule matched",
+                    "matched_rule": dict(rule),
+                    "mode": "deny",
+                }
+
+        if allow_rules:
+            for rule in allow_rules:
+                if self._match_remote_policy_rule(rule, context):
+                    return {
+                        "allowed": True,
+                        "reason": f"{direction} allow rule matched",
+                        "matched_rule": dict(rule),
+                        "mode": "allow",
+                    }
+            return {
+                "allowed": False,
+                "reason": f"{direction} allowlist requires a matching rule",
+                "matched_rule": None,
+                "mode": "allowlist",
+            }
+
+        return {
+            "allowed": default_action == "allow",
+            "reason": f"{direction} default is {default_action}",
+            "matched_rule": None,
+            "mode": "default",
+        }
+
+    def _build_outbound_policy_context(self, practice_id: str, target: Dict[str, Any]) -> Dict[str, Any]:
+        """Build policy and audit context for one outbound remote practice call."""
+        target_card = target.get("card") if isinstance(target.get("card"), dict) else {}
+        return {
+            "practice_id": str(practice_id or ""),
+            "target_agent_id": str(target.get("agent_id") or target_card.get("agent_id") or ""),
+            "target_name": str(target_card.get("name") or ""),
+            "target_address": self._normalize_url(target.get("url") or target_card.get("address") or ""),
+            "target_role": str(target_card.get("role") or ""),
+            "target_pit_type": str(target_card.get("pit_type") or target_card.get("type") or ""),
+            "plaza_url": self._normalize_url(self.plaza_url),
+        }
+
+    def _build_inbound_policy_context(
+        self,
+        *,
+        practice_id: str,
+        request: PracticeInvocationRequest,
+        verified: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """Build policy and audit context for one inbound remote practice call."""
+        caller_pit_address = self._coerce_pit_address(request.caller_agent_address)
+        verified_payload = verified or {}
+        return {
+            "practice_id": str(practice_id or ""),
+            "caller_agent_id": str(verified_payload.get("agent_id") or caller_pit_address.pit_id or ""),
+            "caller_name": str(verified_payload.get("agent_name") or request.caller_agent_name or request.sender or ""),
+            "caller_address": self._normalize_url(request.caller_agent_url),
+            "auth_mode": str(verified_payload.get("auth_mode") or ""),
+            "plaza_url": self._normalize_url(verified_payload.get("plaza_url")),
+        }
+
     def setup_routes(self):
         """Set up the routes."""
         @self.app.get("/health")
@@ -872,17 +1357,88 @@ class BaseAgent(Pit, ABC):
         @self.app.post("/use_practice/{practice_id}")
         async def use_practice(practice_id: str, request: PracticeInvocationRequest):
             """Route handler for POST /use_practice/{practice_id}."""
+            request_id = str(request.request_id or uuid.uuid4())
             self.logger.debug(
                 f"Received remote UsePractice request for '{practice_id}' "
                 f"from '{request.sender}' to '{request.receiver}'"
             )
-            verified = await self._verify_remote_caller(
-                caller_agent_address=request.caller_agent_address,
-                caller_plaza_token=request.caller_plaza_token,
-                caller_direct_token=request.caller_direct_token,
+            try:
+                verified = await self._verify_remote_caller(
+                    caller_agent_address=request.caller_agent_address,
+                    caller_plaza_token=request.caller_plaza_token,
+                    caller_direct_token=request.caller_direct_token,
+                )
+            except HTTPException as exc:
+                inbound_context = self._build_inbound_policy_context(
+                    practice_id=practice_id,
+                    request=request,
+                    verified=None,
+                )
+                self._record_remote_practice_audit(
+                    request_id=request_id,
+                    direction="inbound",
+                    event="request",
+                    practice_id=practice_id,
+                    peer_agent_id=inbound_context.get("caller_agent_id", ""),
+                    peer_name=inbound_context.get("caller_name", ""),
+                    peer_address=inbound_context.get("caller_address", ""),
+                    plaza_url=inbound_context.get("plaza_url", ""),
+                    auth_mode=inbound_context.get("auth_mode", ""),
+                    policy_allowed=False,
+                    policy_reason="caller verification failed",
+                    outcome="verification_failed",
+                    status_code=exc.status_code,
+                    error=str(exc.detail or ""),
+                )
+                raise
+
+            inbound_context = self._build_inbound_policy_context(
+                practice_id=practice_id,
+                request=request,
+                verified=verified,
             )
+            policy_decision = self._evaluate_remote_use_practice_policy(
+                direction="inbound",
+                practice_id=practice_id,
+                context=inbound_context,
+            )
+            self._record_remote_practice_audit(
+                request_id=request_id,
+                direction="inbound",
+                event="request",
+                practice_id=practice_id,
+                peer_agent_id=inbound_context.get("caller_agent_id", ""),
+                peer_name=inbound_context.get("caller_name", ""),
+                peer_address=inbound_context.get("caller_address", ""),
+                plaza_url=inbound_context.get("plaza_url", ""),
+                auth_mode=inbound_context.get("auth_mode", ""),
+                policy_allowed=policy_decision.get("allowed"),
+                policy_reason=policy_decision.get("reason", ""),
+                outcome="allowed" if policy_decision.get("allowed") else "denied",
+                status_code=200 if policy_decision.get("allowed") else 403,
+                metadata={"matched_rule": policy_decision.get("matched_rule"), "policy_mode": policy_decision.get("mode")},
+            )
+            if not policy_decision.get("allowed"):
+                raise HTTPException(status_code=403, detail=policy_decision.get("reason") or "Inbound remote practice denied by policy")
+
             local_practice = next((p for p in self.practices if p.id == practice_id), None)
             if not local_practice:
+                self._record_remote_practice_audit(
+                    request_id=request_id,
+                    direction="inbound",
+                    event="result",
+                    practice_id=practice_id,
+                    peer_agent_id=inbound_context.get("caller_agent_id", ""),
+                    peer_name=inbound_context.get("caller_name", ""),
+                    peer_address=inbound_context.get("caller_address", ""),
+                    plaza_url=inbound_context.get("plaza_url", ""),
+                    auth_mode=inbound_context.get("auth_mode", ""),
+                    policy_allowed=True,
+                    policy_reason=policy_decision.get("reason", ""),
+                    outcome="failed",
+                    status_code=404,
+                    error=f"Practice '{practice_id}' not found",
+                )
                 raise HTTPException(status_code=404, detail=f"Practice '{practice_id}' not found")
 
             try:
@@ -893,12 +1449,59 @@ class BaseAgent(Pit, ABC):
                     verified=verified,
                 )
                 result = await self._execute_local_practice_async(local_practice, execution_content)
-            except HTTPException:
+            except HTTPException as exc:
+                self._record_remote_practice_audit(
+                    request_id=request_id,
+                    direction="inbound",
+                    event="result",
+                    practice_id=practice_id,
+                    peer_agent_id=inbound_context.get("caller_agent_id", ""),
+                    peer_name=inbound_context.get("caller_name", ""),
+                    peer_address=inbound_context.get("caller_address", ""),
+                    plaza_url=inbound_context.get("plaza_url", ""),
+                    auth_mode=inbound_context.get("auth_mode", ""),
+                    policy_allowed=True,
+                    policy_reason=policy_decision.get("reason", ""),
+                    outcome="failed",
+                    status_code=exc.status_code,
+                    error=str(exc.detail or ""),
+                )
                 raise
             except Exception as exc:
                 self.logger.exception(f"Remote UsePractice '{practice_id}' failed: {exc}")
+                self._record_remote_practice_audit(
+                    request_id=request_id,
+                    direction="inbound",
+                    event="result",
+                    practice_id=practice_id,
+                    peer_agent_id=inbound_context.get("caller_agent_id", ""),
+                    peer_name=inbound_context.get("caller_name", ""),
+                    peer_address=inbound_context.get("caller_address", ""),
+                    plaza_url=inbound_context.get("plaza_url", ""),
+                    auth_mode=inbound_context.get("auth_mode", ""),
+                    policy_allowed=True,
+                    policy_reason=policy_decision.get("reason", ""),
+                    outcome="failed",
+                    status_code=500,
+                    error=str(exc),
+                )
                 raise HTTPException(status_code=500, detail=str(exc)) from exc
 
+            self._record_remote_practice_audit(
+                request_id=request_id,
+                direction="inbound",
+                event="result",
+                practice_id=practice_id,
+                peer_agent_id=inbound_context.get("caller_agent_id", ""),
+                peer_name=inbound_context.get("caller_name", ""),
+                peer_address=inbound_context.get("caller_address", ""),
+                plaza_url=inbound_context.get("plaza_url", ""),
+                auth_mode=inbound_context.get("auth_mode", ""),
+                policy_allowed=True,
+                policy_reason=policy_decision.get("reason", ""),
+                outcome="succeeded",
+                status_code=200,
+            )
             self.logger.debug(
                 f"Completed remote UsePractice '{practice_id}' for "
                 f"verified caller '{verified.get('agent_id')}'"
@@ -1373,7 +1976,10 @@ class BaseAgent(Pit, ABC):
             receiver=str(target.get("agent_id") or ""),
             content=content,
             msg_type=practice_id,
+            request_id=str(uuid.uuid4()),
             caller_agent_address=self.pit_address.to_dict(),
+            caller_agent_name=self.name,
+            caller_agent_url=self._normalize_url(self.agent_card.get("address")),
             caller_plaza_token=caller_token,
             caller_direct_token=caller_direct_token,
         )
@@ -1435,6 +2041,19 @@ class BaseAgent(Pit, ABC):
         if not caller_pit_address or not caller_pit_address.pit_id:
             logger.warning(f"[{self.name}] Rejecting remote UsePractice request without caller PitAddress.")
             raise HTTPException(status_code=401, detail="Caller agent address is required")
+
+        if self.direct_auth_token and caller_direct_token == self.direct_auth_token:
+            logger.debug(
+                f"[{self.name}] Verified remote caller '{caller_pit_address.pit_id}' "
+                "through direct shared token."
+            )
+            return {
+                "agent_id": str(caller_pit_address.pit_id),
+                "agent_name": None,
+                "plaza_url": None,
+                "auth_mode": "direct",
+            }
+
         if caller_plaza_token:
             plazas: List[str] = []
             for plaza in caller_pit_address.plazas:
@@ -1488,17 +2107,6 @@ class BaseAgent(Pit, ABC):
                 }
 
         if self.direct_auth_token:
-            if caller_direct_token == self.direct_auth_token:
-                logger.debug(
-                    f"[{self.name}] Verified remote caller '{caller_pit_address.pit_id}' "
-                    "through direct shared token."
-                )
-                return {
-                    "agent_id": str(caller_pit_address.pit_id),
-                    "agent_name": None,
-                    "plaza_url": None,
-                    "auth_mode": "direct",
-                }
             logger.warning(
                 f"[{self.name}] Rejecting remote UsePractice request from '{caller_pit_address.pit_id}' "
                 "because direct shared token verification failed."
@@ -1524,13 +2132,83 @@ class BaseAgent(Pit, ABC):
         if not target:
             raise ValueError(f"Unable to resolve remote target from pit_address: {pit_address}")
         payload = self._build_remote_practice_payload(practice_id=practice_id, content=content, target=target)
+        request_id = str(payload.get("request_id") or uuid.uuid4())
+        outbound_context = self._build_outbound_policy_context(practice_id=practice_id, target=target)
+        policy_decision = self._evaluate_remote_use_practice_policy(
+            direction="outbound",
+            practice_id=practice_id,
+            context=outbound_context,
+        )
+        self._record_remote_practice_audit(
+            request_id=request_id,
+            direction="outbound",
+            event="request",
+            practice_id=practice_id,
+            peer_agent_id=outbound_context.get("target_agent_id", ""),
+            peer_name=outbound_context.get("target_name", ""),
+            peer_address=outbound_context.get("target_address", ""),
+            plaza_url=outbound_context.get("plaza_url", ""),
+            policy_allowed=policy_decision.get("allowed"),
+            policy_reason=policy_decision.get("reason", ""),
+            outcome="allowed" if policy_decision.get("allowed") else "denied",
+            status_code=200 if policy_decision.get("allowed") else 403,
+            metadata={"matched_rule": policy_decision.get("matched_rule"), "policy_mode": policy_decision.get("mode")},
+        )
+        if not policy_decision.get("allowed"):
+            raise HTTPException(status_code=403, detail=policy_decision.get("reason") or "Outbound remote practice denied by policy")
         logger.debug(
             f"[{self.name}] Invoking remote practice '{practice_id}' on '{target['agent_id']}' "
             f"via {target['url']}/use_practice/{practice_id}"
         )
-        response = requests.post(f"{target['url']}/use_practice/{practice_id}", json=payload, timeout=timeout)
+        try:
+            response = requests.post(f"{target['url']}/use_practice/{practice_id}", json=payload, timeout=timeout)
+        except Exception as exc:
+            self._record_remote_practice_audit(
+                request_id=request_id,
+                direction="outbound",
+                event="result",
+                practice_id=practice_id,
+                peer_agent_id=outbound_context.get("target_agent_id", ""),
+                peer_name=outbound_context.get("target_name", ""),
+                peer_address=outbound_context.get("target_address", ""),
+                plaza_url=outbound_context.get("plaza_url", ""),
+                policy_allowed=True,
+                policy_reason=policy_decision.get("reason", ""),
+                outcome="failed",
+                error=str(exc),
+            )
+            raise
         if response.status_code != 200:
+            self._record_remote_practice_audit(
+                request_id=request_id,
+                direction="outbound",
+                event="result",
+                practice_id=practice_id,
+                peer_agent_id=outbound_context.get("target_agent_id", ""),
+                peer_name=outbound_context.get("target_name", ""),
+                peer_address=outbound_context.get("target_address", ""),
+                plaza_url=outbound_context.get("plaza_url", ""),
+                policy_allowed=True,
+                policy_reason=policy_decision.get("reason", ""),
+                outcome="failed",
+                status_code=response.status_code,
+                error=response.text,
+            )
             raise HTTPException(status_code=response.status_code, detail=response.text)
+        self._record_remote_practice_audit(
+            request_id=request_id,
+            direction="outbound",
+            event="result",
+            practice_id=practice_id,
+            peer_agent_id=outbound_context.get("target_agent_id", ""),
+            peer_name=outbound_context.get("target_name", ""),
+            peer_address=outbound_context.get("target_address", ""),
+            plaza_url=outbound_context.get("plaza_url", ""),
+            policy_allowed=True,
+            policy_reason=policy_decision.get("reason", ""),
+            outcome="succeeded",
+            status_code=response.status_code,
+        )
         try:
             return self._unwrap_remote_practice_response(response.json())
         except Exception:
@@ -1549,13 +2227,84 @@ class BaseAgent(Pit, ABC):
             content=content,
             target=target,
         )
+        request_id = str(payload.get("request_id") or uuid.uuid4())
+        outbound_context = self._build_outbound_policy_context(practice_id=practice_id, target=target)
+        policy_decision = self._evaluate_remote_use_practice_policy(
+            direction="outbound",
+            practice_id=practice_id,
+            context=outbound_context,
+        )
+        self._record_remote_practice_audit(
+            request_id=request_id,
+            direction="outbound",
+            event="request",
+            practice_id=practice_id,
+            peer_agent_id=outbound_context.get("target_agent_id", ""),
+            peer_name=outbound_context.get("target_name", ""),
+            peer_address=outbound_context.get("target_address", ""),
+            plaza_url=outbound_context.get("plaza_url", ""),
+            policy_allowed=policy_decision.get("allowed"),
+            policy_reason=policy_decision.get("reason", ""),
+            outcome="allowed" if policy_decision.get("allowed") else "denied",
+            status_code=200 if policy_decision.get("allowed") else 403,
+            metadata={"matched_rule": policy_decision.get("matched_rule"), "policy_mode": policy_decision.get("mode")},
+        )
+        if not policy_decision.get("allowed"):
+            raise HTTPException(status_code=403, detail=policy_decision.get("reason") or "Outbound remote practice denied by policy")
         logger.debug(
             f"[{self.name}] Invoking remote async practice '{practice_id}' on '{target['agent_id']}' "
             f"via {target['url']}/use_practice/{practice_id}"
         )
         async with httpx.AsyncClient() as client:
-            response = await client.post(f"{target['url']}/use_practice/{practice_id}", json=payload, timeout=timeout)
+            try:
+                response = await client.post(f"{target['url']}/use_practice/{practice_id}", json=payload, timeout=timeout)
+            except Exception as exc:
+                self._record_remote_practice_audit(
+                    request_id=request_id,
+                    direction="outbound",
+                    event="result",
+                    practice_id=practice_id,
+                    peer_agent_id=outbound_context.get("target_agent_id", ""),
+                    peer_name=outbound_context.get("target_name", ""),
+                    peer_address=outbound_context.get("target_address", ""),
+                    plaza_url=outbound_context.get("plaza_url", ""),
+                    policy_allowed=True,
+                    policy_reason=policy_decision.get("reason", ""),
+                    outcome="failed",
+                    error=str(exc),
+                )
+                raise
+            if response.status_code >= 400:
+                self._record_remote_practice_audit(
+                    request_id=request_id,
+                    direction="outbound",
+                    event="result",
+                    practice_id=practice_id,
+                    peer_agent_id=outbound_context.get("target_agent_id", ""),
+                    peer_name=outbound_context.get("target_name", ""),
+                    peer_address=outbound_context.get("target_address", ""),
+                    plaza_url=outbound_context.get("plaza_url", ""),
+                    policy_allowed=True,
+                    policy_reason=policy_decision.get("reason", ""),
+                    outcome="failed",
+                    status_code=response.status_code,
+                    error=response.text,
+                )
             response.raise_for_status()
+            self._record_remote_practice_audit(
+                request_id=request_id,
+                direction="outbound",
+                event="result",
+                practice_id=practice_id,
+                peer_agent_id=outbound_context.get("target_agent_id", ""),
+                peer_name=outbound_context.get("target_name", ""),
+                peer_address=outbound_context.get("target_address", ""),
+                plaza_url=outbound_context.get("plaza_url", ""),
+                policy_allowed=True,
+                policy_reason=policy_decision.get("reason", ""),
+                outcome="succeeded",
+                status_code=response.status_code,
+            )
             if not response.content:
                 return {}
             return self._unwrap_remote_practice_response(response.json())

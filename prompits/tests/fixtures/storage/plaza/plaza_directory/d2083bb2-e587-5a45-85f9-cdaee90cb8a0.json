@@ -1,0 +1,129 @@
+{
+  "id": "d2083bb2-e587-5a45-85f9-cdaee90cb8a0",
+  "agent_id": "d2083bb2-e587-5a45-85f9-cdaee90cb8a0",
+  "name": "team_history",
+  "type": "Pulse",
+  "description": "Return recent job and worker history from one teamwork manager.",
+  "owner": "Plaza",
+  "address": "",
+  "meta": {
+    "pulse_id": "urn:plaza:pulse:team.history",
+    "pulse_address": "plaza://pulse/team_history",
+    "pulse_definition": {
+      "pds_version": "0.1.0",
+      "resource_type": "pulse_definition",
+      "id": "urn:plaza:pulse:team.history",
+      "version": "1.0.0",
+      "name": "team_history",
+      "title": "Team History",
+      "description": "Return recent job and worker history from one teamwork manager.",
+      "pulse_class": "fact",
+      "status": "stable",
+      "concept": {
+        "definition": "Return recent job and worker history from one teamwork manager."
+      },
+      "interface": {
+        "schema_language": "json-schema-2020-12",
+        "request_schema": {
+          "type": "object",
+          "properties": {
+            "manager_address": {
+              "type": "string"
+            },
+            "party": {
+              "type": "string"
+            },
+            "limit": {
+              "type": "integer"
+            }
+          }
+        },
+        "response_schema": {}
+      }
+    },
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "manager_address": {
+          "type": "string"
+        },
+        "party": {
+          "type": "string"
+        },
+        "limit": {
+          "type": "integer"
+        }
+      }
+    },
+    "output_schema": {},
+    "description": "Return recent job and worker history from one teamwork manager.",
+    "examples": []
+  },
+  "card": {
+    "name": "team_history",
+    "description": "Return recent job and worker history from one teamwork manager.",
+    "pit_type": "Pulse",
+    "owner": "Plaza",
+    "tags": [],
+    "meta": {
+      "pulse_id": "urn:plaza:pulse:team.history",
+      "pulse_address": "plaza://pulse/team_history",
+      "pulse_definition": {
+        "pds_version": "0.1.0",
+        "resource_type": "pulse_definition",
+        "id": "urn:plaza:pulse:team.history",
+        "version": "1.0.0",
+        "name": "team_history",
+        "title": "Team History",
+        "description": "Return recent job and worker history from one teamwork manager.",
+        "pulse_class": "fact",
+        "status": "stable",
+        "concept": {
+          "definition": "Return recent job and worker history from one teamwork manager."
+        },
+        "interface": {
+          "schema_language": "json-schema-2020-12",
+          "request_schema": {
+            "type": "object",
+            "properties": {
+              "manager_address": {
+                "type": "string"
+              },
+              "party": {
+                "type": "string"
+              },
+              "limit": {
+                "type": "integer"
+              }
+            }
+          },
+          "response_schema": {}
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "manager_address": {
+            "type": "string"
+          },
+          "party": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "integer"
+          }
+        }
+      },
+      "output_schema": {},
+      "description": "Return recent job and worker history from one teamwork manager.",
+      "examples": []
+    },
+    "pit_address": {
+      "pit_id": "d2083bb2-e587-5a45-85f9-cdaee90cb8a0",
+      "plazas": [
+        "http://127.0.0.1:8011"
+      ]
+    }
+  },
+  "updated_at": "2026-04-04T10:28:12.868335+00:00"
+}

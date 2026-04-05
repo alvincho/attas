@@ -1,5 +1,17 @@
 # Public Demo Guides
 
+## Translations
+
+- [English](README.md)
+- [繁體中文](README.zh-Hant.md)
+- [简体中文](README.zh-Hans.md)
+- [Español](README.es.md)
+- [Français](README.fr.md)
+- [Italiano](README.it.md)
+- [Deutsch](README.de.md)
+- [日本語](README.ja.md)
+- [한국어](README.ko.md)
+
 This folder packages public-facing demos for the FinMAS workspace. Each demo is local-first, documented step by step, and organized so a new builder can copy the config files, run the stack, and turn it into their own instance.
 
 ## Start Here
@@ -10,6 +22,43 @@ If you are choosing one demo to try first, use them in this order:
 2. [`pulsers`](./pulsers/README.md): focused demos for file storage, YFinance, LLM, and ADS pulsers.
 3. [`personal-research-workbench`](./personal-research-workbench/README.md): the most visual product walkthrough.
 4. [`data-pipeline`](./data-pipeline/README.md): a local SQLite-backed ADS pipeline with boss UI and pulser.
+
+## Single-Command Launchers
+
+Each runnable demo folder now includes a `run-demo.sh` wrapper that starts the required services from one terminal, opens a browser guide page with language selection, and opens the main demo UI pages automatically.
+
+Set `DEMO_OPEN_BROWSER=0` if you want the wrapper to stay in the terminal without opening browser tabs.
+
+## Platform Quick Start
+
+### macOS And Linux
+
+From the repository root, create the virtual environment once, install requirements, then run any demo wrapper such as `./demos/hello-plaza/run-demo.sh`:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt
+./demos/hello-plaza/run-demo.sh
+```
+
+### Windows
+
+Use WSL2 with Ubuntu or another Linux distro. From the repository root inside WSL, run the same commands:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt
+./demos/hello-plaza/run-demo.sh
+```
+
+If browser tabs do not auto-open from WSL, keep the launcher running and open the printed `guide=` URL in a Windows browser.
+
+Native PowerShell / Command Prompt wrappers are not checked in yet, so WSL2 is the supported Windows path today.
+
 
 ## Shared Setup
 

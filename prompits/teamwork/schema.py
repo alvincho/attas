@@ -5,6 +5,9 @@ Prompits provides the core HTTP-native agent runtime, Plaza coordination layer, 
 pool/practice infrastructure for FinMAS. Within Prompits, the teamwork package models
 cooperative agent workflows and their supporting runtime pieces.
 
+Experimental notice: the teamwork package is still under active development, so
+schema usage patterns may shift as the higher-level workflow stabilizes.
+
 The file is intentionally lightweight, but its placement in the package makes it part of
 the documented module surface.
 """

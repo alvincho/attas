@@ -1,0 +1,90 @@
+{
+  "pulse_id": "urn:plaza:pulse:bucket.browse",
+  "pulse_name": "bucket_browse",
+  "pulse_address": "5db986be-43ee-5699-90f9-b20cb461a254",
+  "pulse_definition": {
+    "pds_version": "0.1.0",
+    "resource_type": "pulse_definition",
+    "id": "urn:plaza:pulse:bucket.browse",
+    "version": "1.0.0",
+    "name": "bucket_browse",
+    "title": "Bucket Browse",
+    "description": "List stored objects in a logical bucket.",
+    "pulse_class": "fact",
+    "status": "stable",
+    "concept": {
+      "definition": "List stored objects in a logical bucket."
+    },
+    "interface": {
+      "schema_language": "json-schema-2020-12",
+      "request_schema": {
+        "type": "object",
+        "properties": {
+          "bucket_name": {
+            "type": "string"
+          },
+          "prefix": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "integer",
+            "default": 200
+          }
+        },
+        "required": [
+          "bucket_name"
+        ]
+      },
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "bucket_name": {
+            "type": "string"
+          },
+          "visibility": {
+            "type": "string"
+          },
+          "returned_count": {
+            "type": "integer"
+          },
+          "objects": {
+            "type": "array"
+          }
+        },
+        "required": [
+          "bucket_name",
+          "objects"
+        ]
+      }
+    },
+    "test_data": {
+      "bucket_name": "demo-assets"
+    }
+  },
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "bucket_name": {
+        "type": "string"
+      },
+      "prefix": {
+        "type": "string"
+      },
+      "limit": {
+        "type": "integer",
+        "default": 200
+      }
+    },
+    "required": [
+      "bucket_name"
+    ]
+  },
+  "pulser_id": "file-storage-id",
+  "pulser_name": "SystemPulser",
+  "pulser_address": "file-storage-id",
+  "status": "stable",
+  "pulse_directory_id": "5db986be-43ee-5699-90f9-b20cb461a254",
+  "pulser_directory_id": "file-storage-id",
+  "id": "6cd6e919-8774-56e8-9e42-727f9da94609",
+  "updated_at": "2026-04-04T10:28:14.831185+00:00"
+}

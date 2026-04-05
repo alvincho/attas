@@ -1,0 +1,257 @@
+{
+  "id": "84d5c848-7a15-5675-87fb-059f23522e97",
+  "agent_id": "84d5c848-7a15-5675-87fb-059f23522e97",
+  "name": "bucket_create",
+  "type": "Pulse",
+  "description": "Create a logical bucket with private or public visibility.",
+  "owner": "Plaza",
+  "address": "",
+  "meta": {
+    "pulse_id": "urn:plaza:pulse:bucket.create",
+    "pulse_address": "84d5c848-7a15-5675-87fb-059f23522e97",
+    "pulse_definition": {
+      "pds_version": "0.1.0",
+      "resource_type": "pulse_definition",
+      "id": "urn:plaza:pulse:bucket.create",
+      "version": "1.0.0",
+      "name": "bucket_create",
+      "title": "Bucket Create",
+      "description": "Create a logical bucket with private or public visibility.",
+      "pulse_class": "fact",
+      "status": "stable",
+      "concept": {
+        "definition": "Create a logical bucket with private or public visibility."
+      },
+      "interface": {
+        "schema_language": "json-schema-2020-12",
+        "request_schema": {
+          "type": "object",
+          "properties": {
+            "bucket_name": {
+              "type": "string"
+            },
+            "visibility": {
+              "type": "string",
+              "enum": [
+                "private",
+                "public"
+              ],
+              "default": "private"
+            }
+          },
+          "required": [
+            "bucket_name"
+          ]
+        },
+        "response_schema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string"
+            },
+            "bucket_name": {
+              "type": "string"
+            },
+            "visibility": {
+              "type": "string"
+            },
+            "owner_agent_id": {
+              "type": "string"
+            },
+            "owner_agent_name": {
+              "type": "string"
+            },
+            "created_at": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "status",
+            "bucket_name",
+            "visibility"
+          ]
+        }
+      }
+    },
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "bucket_name": {
+          "type": "string"
+        },
+        "visibility": {
+          "type": "string",
+          "enum": [
+            "private",
+            "public"
+          ],
+          "default": "private"
+        }
+      },
+      "required": [
+        "bucket_name"
+      ]
+    },
+    "output_schema": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string"
+        },
+        "bucket_name": {
+          "type": "string"
+        },
+        "visibility": {
+          "type": "string"
+        },
+        "owner_agent_id": {
+          "type": "string"
+        },
+        "owner_agent_name": {
+          "type": "string"
+        },
+        "created_at": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "bucket_name",
+        "visibility"
+      ]
+    },
+    "description": "Create a logical bucket with private or public visibility.",
+    "examples": []
+  },
+  "card": {
+    "name": "bucket_create",
+    "description": "Create a logical bucket with private or public visibility.",
+    "pit_type": "Pulse",
+    "owner": "Plaza",
+    "tags": [],
+    "meta": {
+      "pulse_id": "urn:plaza:pulse:bucket.create",
+      "pulse_address": "84d5c848-7a15-5675-87fb-059f23522e97",
+      "pulse_definition": {
+        "pds_version": "0.1.0",
+        "resource_type": "pulse_definition",
+        "id": "urn:plaza:pulse:bucket.create",
+        "version": "1.0.0",
+        "name": "bucket_create",
+        "title": "Bucket Create",
+        "description": "Create a logical bucket with private or public visibility.",
+        "pulse_class": "fact",
+        "status": "stable",
+        "concept": {
+          "definition": "Create a logical bucket with private or public visibility."
+        },
+        "interface": {
+          "schema_language": "json-schema-2020-12",
+          "request_schema": {
+            "type": "object",
+            "properties": {
+              "bucket_name": {
+                "type": "string"
+              },
+              "visibility": {
+                "type": "string",
+                "enum": [
+                  "private",
+                  "public"
+                ],
+                "default": "private"
+              }
+            },
+            "required": [
+              "bucket_name"
+            ]
+          },
+          "response_schema": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string"
+              },
+              "bucket_name": {
+                "type": "string"
+              },
+              "visibility": {
+                "type": "string"
+              },
+              "owner_agent_id": {
+                "type": "string"
+              },
+              "owner_agent_name": {
+                "type": "string"
+              },
+              "created_at": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "status",
+              "bucket_name",
+              "visibility"
+            ]
+          }
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "bucket_name": {
+            "type": "string"
+          },
+          "visibility": {
+            "type": "string",
+            "enum": [
+              "private",
+              "public"
+            ],
+            "default": "private"
+          }
+        },
+        "required": [
+          "bucket_name"
+        ]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "bucket_name": {
+            "type": "string"
+          },
+          "visibility": {
+            "type": "string"
+          },
+          "owner_agent_id": {
+            "type": "string"
+          },
+          "owner_agent_name": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "bucket_name",
+          "visibility"
+        ]
+      },
+      "description": "Create a logical bucket with private or public visibility.",
+      "examples": []
+    },
+    "pit_address": {
+      "pit_id": "84d5c848-7a15-5675-87fb-059f23522e97",
+      "plazas": [
+        "http://127.0.0.1:8011"
+      ]
+    }
+  },
+  "updated_at": "2026-04-04T10:28:14.839101+00:00"
+}

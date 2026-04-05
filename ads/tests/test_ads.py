@@ -30,6 +30,7 @@ from fastapi.testclient import TestClient
 from yfinance.exceptions import YFPricesMissingError
 
 from ads.agents import ADSDispatcherAgent, ADSWorkerAgent
+from ads.examples.live_data_pipeline import LiveSECFinancialStatementsJobCap, LiveSECFundamentalsJobCap
 from ads.iex import IEXEODJobCap
 from ads.jobcap import JobCap, build_job_cap, build_job_cap_map, resolve_daily_price_start_date, subtract_years
 from ads.models import JobDetail, JobResult
@@ -139,6 +140,21 @@ class RecordingJobCap(JobCap):
             status="completed",
             result_summary={"executed": True},
         )
+
+
+class StaticJobCap(JobCap):
+    """Job capability implementation for static result workflows."""
+
+    def __init__(self, name: str, result: JobResult):
+        """Initialize the static job cap."""
+        super().__init__(name=name)
+        self.result = result
+        self.calls = 0
+
+    def finish(self, job: JobDetail) -> JobResult:
+        """Return the configured static result."""
+        self.calls += 1
+        return self.result.model_copy(update={"job_id": job.id})
 
 
 class FailingJobCap(JobCap):
@@ -1540,6 +1556,48 @@ def test_ads_pulser_maps_news_article_from_ads_news_rows(tmp_path):
     }
 
 
+def test_ads_pulser_maps_news_article_without_symbol_filter(tmp_path):
+    """
+    Exercise the test_ads_pulser_maps_news_article_without_symbol_filter regression
+    scenario.
+    """
+    pool = SQLitePool("ads_pulser", "ADS pulser test pool", str(tmp_path / "ads.sqlite"))
+    ensure_ads_tables(pool)
+    assert pool._Insert(
+        TABLE_NEWS,
+        {
+            "id": "ads-news:rss:1",
+            "headline": "SEC updates disclosure guidance",
+            "summary": "The SEC published a live regulatory update.",
+            "url": "https://example.com/sec-guidance",
+            "source": "SEC",
+            "source_url": "https://www.sec.gov/news/pressreleases.rss",
+            "published_at": "2026-03-28T09:30:00+00:00",
+        },
+    )
+
+    pulser = ADSPulser(pool=pool, auto_register=False)
+
+    news_article = pulser.get_pulse_data(
+        {"number_of_articles": 1},
+        pulse_name="news_article",
+    )
+
+    assert news_article == {
+        "number_of_articles": 1,
+        "articles": [
+            {
+                "headline": "SEC updates disclosure guidance",
+                "published_at": "2026-03-28T09:30:00+00:00",
+                "publisher": "SEC",
+                "summary": "The SEC published a live regulatory update.",
+                "url": "https://example.com/sec-guidance",
+            }
+        ],
+        "source": "ads",
+    }
+
+
 def test_ads_pulser_maps_sec_companyfact_from_symbol_lookup(tmp_path):
     """
     Exercise the test_ads_pulser_maps_sec_companyfact_from_symbol_lookup regression
@@ -2928,6 +2986,132 @@ def test_ads_example_configs_keep_job_caps_in_sync():
     assert worker_job_caps.issuperset(boss_job_caps)
 
 
+def test_data_pipeline_demo_uses_live_job_caps():
+    """
+    Exercise the test_data_pipeline_demo_uses_live_job_caps regression scenario.
+    """
+    demo_dir = Path(__file__).resolve().parents[2] / "demos" / "data-pipeline"
+    boss_config = read_ads_config(demo_dir / "boss.agent")
+    dispatcher_config = read_ads_config(demo_dir / "dispatcher.agent")
+    worker_config = read_ads_config(demo_dir / "worker.agent")
+
+    demo_job_caps = {
+        "security_master",
+        "daily_price",
+        "fundamentals",
+        "financial_statements",
+        "news",
+    }
+    boss_job_caps = {
+        str(entry.get("name") or "").strip().lower()
+        for entry in (boss_config.get("ads") or {}).get("job_capabilities") or []
+        if isinstance(entry, dict) and str(entry.get("name") or "").strip()
+    }
+    dispatcher_job_caps = {
+        str(entry.get("name") or "").strip().lower()
+        for entry in (dispatcher_config.get("ads") or {}).get("job_capabilities") or []
+        if isinstance(entry, dict) and str(entry.get("name") or "").strip()
+    }
+    worker_job_caps = build_job_cap_map((worker_config.get("ads") or {}).get("job_capabilities") or [])
+
+    assert boss_job_caps == demo_job_caps
+    assert dispatcher_job_caps == demo_job_caps
+    assert worker_config["pools"][0]["db_path"] == "demos/data-pipeline/storage/ads_dispatcher.sqlite"
+    assert isinstance(worker_job_caps["security_master"], USListedSecJobCap)
+    assert isinstance(worker_job_caps["daily_price"], YFinanceEODJobCap)
+    assert isinstance(worker_job_caps["fundamentals"], LiveSECFundamentalsJobCap)
+    assert isinstance(worker_job_caps["financial_statements"], LiveSECFinancialStatementsJobCap)
+    assert isinstance(worker_job_caps["news"], RSSNewsJobCap)
+
+
+def test_live_sec_financial_statements_demo_job_cap_promotes_statement_rows():
+    """
+    Exercise the
+    test_live_sec_financial_statements_demo_job_cap_promotes_statement_rows
+    regression scenario.
+    """
+    bulk_cap = StaticJobCap(
+        "bulk",
+        JobResult(
+            status="completed",
+            raw_payload={"dataset": "sec_bulk"},
+            result_summary={"cache": {"companyfacts": {"cache_status": "hit"}}},
+        ),
+    )
+    mapping_cap = StaticJobCap(
+        "mapping",
+        JobResult(
+            status="completed",
+            target_table=TABLE_FUNDAMENTALS,
+            collected_rows=[
+                {
+                    "symbol": "AAPL",
+                    "as_of_date": "2026-03-28",
+                    "provider": "sec_edgar",
+                }
+            ],
+            additional_targets=[
+                {
+                    "table_name": TABLE_FINANCIAL_STATEMENTS,
+                    "rows": [
+                        {
+                            "symbol": "AAPL",
+                            "statement_type": "income_statement",
+                            "period_end": "2025-12-31",
+                            "provider": "sec_edgar",
+                        }
+                    ],
+                }
+            ],
+            raw_payload={"dataset": "sec_mapping"},
+            result_summary={"rows": 2},
+        ),
+    )
+    capability = LiveSECFinancialStatementsJobCap(
+        bulk_job_cap=bulk_cap,
+        mapping_job_cap=mapping_cap,
+    )
+
+    result = capability.finish(
+        JobDetail(
+            id="ads-job:test-financial-statements",
+            payload={"symbol": "AAPL"},
+        )
+    )
+
+    assert bulk_cap.calls == 1
+    assert mapping_cap.calls == 1
+    assert result.target_table == TABLE_FINANCIAL_STATEMENTS
+    assert result.collected_rows == [
+        {
+            "symbol": "AAPL",
+            "statement_type": "income_statement",
+            "period_end": "2025-12-31",
+            "provider": "sec_edgar",
+        }
+    ]
+    assert result.additional_targets == [
+        {
+            "table_name": TABLE_FUNDAMENTALS,
+            "rows": [
+                {
+                    "symbol": "AAPL",
+                    "as_of_date": "2026-03-28",
+                    "provider": "sec_edgar",
+                }
+            ],
+        }
+    ]
+    assert result.raw_payload == {
+        "bulk_refresh": {"dataset": "sec_bulk"},
+        "mapping": {"dataset": "sec_mapping"},
+    }
+    assert result.result_summary == {
+        "rows": 2,
+        "bulk_refresh": {"cache": {"companyfacts": {"cache_status": "hit"}}},
+    }
+
+
 def test_build_job_cap_can_instantiate_job_cap_type():
     """
     Exercise the test_build_job_cap_can_instantiate_job_cap_type regression
@@ -2981,6 +3165,31 @@ def test_build_job_cap_can_instantiate_yfinance_job_cap_type():
 
     assert isinstance(capability, YFinanceEODJobCap)
     assert capability.name == "yfinance eod"
+
+
+def test_build_job_cap_can_instantiate_live_demo_sec_job_cap_types():
+    """
+    Exercise the
+    test_build_job_cap_can_instantiate_live_demo_sec_job_cap_types regression
+    scenario.
+    """
+    fundamentals_cap = build_job_cap(
+        {
+            "name": "fundamentals",
+            "type": "ads.examples.live_data_pipeline:LiveSECFundamentalsJobCap",
+        }
+    )
+    statements_cap = build_job_cap(
+        {
+            "name": "financial_statements",
+            "type": "ads.examples.live_data_pipeline:LiveSECFinancialStatementsJobCap",
+        }
+    )
+
+    assert isinstance(fundamentals_cap, LiveSECFundamentalsJobCap)
+    assert isinstance(statements_cap, LiveSECFinancialStatementsJobCap)
+    assert fundamentals_cap.name == "fundamentals"
+    assert statements_cap.name == "financial_statements"
 
 
 def test_build_job_cap_map_skips_yfinance_job_cap_when_module_is_missing():

@@ -1,0 +1,2907 @@
+{
+  "id": "5444b86e-e2d4-4e5b-b4c9-139b10b6871b",
+  "agent_id": "5444b86e-e2d4-4e5b-b4c9-139b10b6871b",
+  "name": "BossPulser",
+  "type": "Pulser",
+  "description": "Independent Phemacast boss pulser for team provisioning, capability discovery, live status, and job control.",
+  "owner": "BossPulser",
+  "address": "http://127.0.0.1:8220",
+  "meta": {
+    "accepts_inbound_from_plaza": true,
+    "accepts_direct_call": true,
+    "connectivity_mode": "plaza-forward",
+    "pulse_address": "ac4b2d37-15e9-551a-b4a2-f2cdcb0b0581",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "team_name": {
+          "type": "string"
+        },
+        "party": {
+          "type": "string"
+        },
+        "plaza_url": {
+          "type": "string"
+        },
+        "worker_count": {
+          "type": "integer"
+        },
+        "job_capabilities": {
+          "type": "array"
+        }
+      }
+    },
+    "supported_pulses": [
+      {
+        "name": "create_team",
+        "pulse_address": "ac4b2d37-15e9-551a-b4a2-f2cdcb0b0581",
+        "description": "Generate boss, manager, and worker teamwork configs for a new Phemacast team.",
+        "input_schema": {
+          "type": "object",
+          "properties": {
+            "team_name": {
+              "type": "string"
+            },
+            "party": {
+              "type": "string"
+            },
+            "plaza_url": {
+              "type": "string"
+            },
+            "worker_count": {
+              "type": "integer"
+            },
+            "job_capabilities": {
+              "type": "array"
+            }
+          }
+        },
+        "test_data": {
+          "team_name": "Map Runner",
+          "party": "Phemacast",
+          "plaza_url": "http://127.0.0.1:8011",
+          "worker_count": 2,
+          "job_capabilities": [
+            {
+              "name": "run map",
+              "type": "phemacast.jobcaps.map_jobcap:RunMapJobCap",
+              "description": "Execute a stored map phema through MapCastr.",
+              "default_priority": 100
+            }
+          ]
+        },
+        "pulse_definition": {
+          "pds_version": "0.1.0",
+          "resource_type": "pulse_definition",
+          "id": "urn:plaza:pulse:create.team",
+          "version": "1.0.0",
+          "name": "create_team",
+          "title": "Create Team",
+          "description": "Generate boss, manager, and worker teamwork configs for a new Phemacast team.",
+          "pulse_class": "fact",
+          "status": "stable",
+          "concept": {
+            "definition": "Generate boss, manager, and worker teamwork configs for a new Phemacast team."
+          },
+          "interface": {
+            "schema_language": "json-schema-2020-12",
+            "request_schema": {
+              "type": "object",
+              "properties": {
+                "team_name": {
+                  "type": "string"
+                },
+                "party": {
+                  "type": "string"
+                },
+                "plaza_url": {
+                  "type": "string"
+                },
+                "worker_count": {
+                  "type": "integer"
+                },
+                "job_capabilities": {
+                  "type": "array"
+                }
+              }
+            },
+            "response_schema": {}
+          }
+        },
+        "pulse_id": "urn:plaza:pulse:create.team",
+        "pulse_name": "create_team",
+        "title": "Create Team",
+        "output_schema": {},
+        "interface": {
+          "schema_language": "json-schema-2020-12",
+          "request_schema": {
+            "type": "object",
+            "properties": {
+              "team_name": {
+                "type": "string"
+              },
+              "party": {
+                "type": "string"
+              },
+              "plaza_url": {
+                "type": "string"
+              },
+              "worker_count": {
+                "type": "integer"
+              },
+              "job_capabilities": {
+                "type": "array"
+              }
+            }
+          },
+          "response_schema": {}
+        },
+        "concept": {
+          "definition": "Generate boss, manager, and worker teamwork configs for a new Phemacast team."
+        },
+        "resource_type": "pulse_definition",
+        "pds_version": "0.1.0",
+        "status": "stable",
+        "pulse_class": "fact",
+        "mapping": {},
+        "tags": [],
+        "cost": 0
+      },
+      {
+        "name": "create_worker",
+        "pulse_address": "bdce1be5-5bbf-5011-97b2-510e6d993361",
+        "description": "Generate a teamwork worker config aimed at one manager.",
+        "input_schema": {
+          "type": "object",
+          "properties": {
+            "team_name": {
+              "type": "string"
+            },
+            "worker_name": {
+              "type": "string"
+            },
+            "manager_address": {
+              "type": "string"
+            },
+            "job_capabilities": {
+              "type": "array"
+            }
+          }
+        },
+        "test_data": {
+          "team_name": "Map Runner",
+          "worker_name": "MapRunnerWorkerA",
+          "manager_address": "http://127.0.0.1:8170",
+          "job_capabilities": [
+            {
+              "name": "run map",
+              "type": "phemacast.jobcaps.map_jobcap:RunMapJobCap"
+            }
+          ]
+        },
+        "pulse_definition": {
+          "pds_version": "0.1.0",
+          "resource_type": "pulse_definition",
+          "id": "urn:plaza:pulse:create.worker",
+          "version": "1.0.0",
+          "name": "create_worker",
+          "title": "Create Worker",
+          "description": "Generate a teamwork worker config aimed at one manager.",
+          "pulse_class": "fact",
+          "status": "stable",
+          "concept": {
+            "definition": "Generate a teamwork worker config aimed at one manager."
+          },
+          "interface": {
+            "schema_language": "json-schema-2020-12",
+            "request_schema": {
+              "type": "object",
+              "properties": {
+                "team_name": {
+                  "type": "string"
+                },
+                "worker_name": {
+                  "type": "string"
+                },
+                "manager_address": {
+                  "type": "string"
+                },
+                "job_capabilities": {
+                  "type": "array"
+                }
+              }
+            },
+            "response_schema": {}
+          }
+        },
+        "pulse_id": "urn:plaza:pulse:create.worker",
+        "pulse_name": "create_worker",
+        "title": "Create Worker",
+        "output_schema": {},
+        "interface": {
+          "schema_language": "json-schema-2020-12",
+          "request_schema": {
+            "type": "object",
+            "properties": {
+              "team_name": {
+                "type": "string"
+              },
+              "worker_name": {
+                "type": "string"
+              },
+              "manager_address": {
+                "type": "string"
+              },
+              "job_capabilities": {
+                "type": "array"
+              }
+            }
+          },
+          "response_schema": {}
+        },
+        "concept": {
+          "definition": "Generate a teamwork worker config aimed at one manager."
+        },
+        "resource_type": "pulse_definition",
+        "pds_version": "0.1.0",
+        "status": "stable",
+        "pulse_class": "fact",
+        "mapping": {},
+        "tags": [],
+        "cost": 0
+      },
+      {
+        "name": "create_manager",
+        "pulse_address": "a1cc5390-aa66-5f9e-9d01-c149afd3ebf0",
+        "description": "Generate a teamwork manager config for one Phemacast team.",
+        "input_schema": {
+          "type": "object",
+          "properties": {
+            "team_name": {
+              "type": "string"
+            },
+            "manager_name": {
+              "type": "string"
+            },
+            "party": {
+              "type": "string"
+            },
+            "job_capabilities": {
+              "type": "array"
+            }
+          }
+        },
+        "test_data": {
+          "team_name": "Map Runner",
+          "manager_name": "MapRunnerManager",
+          "party": "Phemacast",
+          "job_capabilities": [
+            {
+              "name": "run map",
+              "type": "phemacast.jobcaps.map_jobcap:RunMapJobCap",
+              "description": "Execute a stored map phema through MapCastr.",
+              "default_priority": 100
+            }
+          ]
+        },
+        "pulse_definition": {
+          "pds_version": "0.1.0",
+          "resource_type": "pulse_definition",
+          "id": "urn:plaza:pulse:create.manager",
+          "version": "1.0.0",
+          "name": "create_manager",
+          "title": "Create Manager",
+          "description": "Generate a teamwork manager config for one Phemacast team.",
+          "pulse_class": "fact",
+          "status": "stable",
+          "concept": {
+            "definition": "Generate a teamwork manager config for one Phemacast team."
+          },
+          "interface": {
+            "schema_language": "json-schema-2020-12",
+            "request_schema": {
+              "type": "object",
+              "properties": {
+                "team_name": {
+                  "type": "string"
+                },
+                "manager_name": {
+                  "type": "string"
+                },
+                "party": {
+                  "type": "string"
+                },
+                "job_capabilities": {
+                  "type": "array"
+                }
+              }
+            },
+            "response_schema": {}
+          }
+        },
+        "pulse_id": "urn:plaza:pulse:create.manager",
+        "pulse_name": "create_manager",
+        "title": "Create Manager",
+        "output_schema": {},
+        "interface": {
+          "schema_language": "json-schema-2020-12",
+          "request_schema": {
+            "type": "object",
+            "properties": {
+              "team_name": {
+                "type": "string"
+              },
+              "manager_name": {
+                "type": "string"
+              },
+              "party": {
+                "type": "string"
+              },
+              "job_capabilities": {
+                "type": "array"
+              }
+            }
+          },
+          "response_schema": {}
+        },
+        "concept": {
+          "definition": "Generate a teamwork manager config for one Phemacast team."
+        },
+        "resource_type": "pulse_definition",
+        "pds_version": "0.1.0",
+        "status": "stable",
+        "pulse_class": "fact",
+        "mapping": {},
+        "tags": [],
+        "cost": 0
+      },
+      {
+        "name": "connect_manager",
+        "pulse_address": "1cb04435-b83e-54bd-ad78-081ad9f4b9b1",
+        "description": "Connect one manager environment to an existing team and optionally generate local workers.",
+        "input_schema": {
+          "type": "object",
+          "properties": {
+            "team_manifest": {
+              "type": "object"
+            },
+            "manager_name": {
+              "type": "string"
+            },
+            "worker_count": {
+              "type": "integer"
+            },
+            "manager_port": {
+              "type": "integer"
+            }
+          }
+        },
+        "test_data": {
+          "team_manifest": {
+            "team_name": "Map Runner",
+            "team_slug": "map-runner",
+            "party": "Phemacast",
+            "plaza_url": "http://127.0.0.1:8011",
+            "job_capabilities": [
+              {
+                "name": "run map",
+                "type": "phemacast.jobcaps.map_jobcap:RunMapJobCap",
+                "description": "Execute a stored map phema through MapCastr.",
+                "default_priority": 100
+              }
+            ]
+          },
+          "manager_name": "MapRunnerManagerEast",
+          "worker_count": 2,
+          "manager_port": 8270
+        },
+        "pulse_definition": {
+          "pds_version": "0.1.0",
+          "resource_type": "pulse_definition",
+          "id": "urn:plaza:pulse:connect.manager",
+          "version": "1.0.0",
+          "name": "connect_manager",
+          "title": "Connect Manager",
+          "description": "Connect one manager environment to an existing team and optionally generate local workers.",
+          "pulse_class": "fact",
+          "status": "stable",
+          "concept": {
+            "definition": "Connect one manager environment to an existing team and optionally generate local workers."
+          },
+          "interface": {
+            "schema_language": "json-schema-2020-12",
+            "request_schema": {
+              "type": "object",
+              "properties": {
+                "team_manifest": {
+                  "type": "object"
+                },
+                "manager_name": {
+                  "type": "string"
+                },
+                "worker_count": {
+                  "type": "integer"
+                },
+                "manager_port": {
+                  "type": "integer"
+                }
+              }
+            },
+            "response_schema": {}
+          }
+        },
+        "pulse_id": "urn:plaza:pulse:connect.manager",
+        "pulse_name": "connect_manager",
+        "title": "Connect Manager",
+        "output_schema": {},
+        "interface": {
+          "schema_language": "json-schema-2020-12",
+          "request_schema": {
+            "type": "object",
+            "properties": {
+              "team_manifest": {
+                "type": "object"
+              },
+              "manager_name": {
+                "type": "string"
+              },
+              "worker_count": {
+                "type": "integer"
+              },
+              "manager_port": {
+                "type": "integer"
+              }
+            }
+          },
+          "response_schema": {}
+        },
+        "concept": {
+          "definition": "Connect one manager environment to an existing team and optionally generate local workers."
+        },
+        "resource_type": "pulse_definition",
+        "pds_version": "0.1.0",
+        "status": "stable",
+        "pulse_class": "fact",
+        "mapping": {},
+        "tags": [],
+        "cost": 0
+      },
+      {
+        "name": "discover_teams",
+        "pulse_address": "dbdaa1f3-0826-568c-bc67-ec7040d358e0",
+        "description": "Discover teamwork managers and associated workers from Plaza.",
+        "input_schema": {
+          "type": "object",
+          "properties": {
+            "party": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "include_workers": {
+              "type": "boolean"
+            }
+          }
+        },
+        "test_data": {
+          "party": "Phemacast",
+          "include_workers": true
+        },
+        "pulse_definition": {
+          "pds_version": "0.1.0",
+          "resource_type": "pulse_definition",
+          "id": "urn:plaza:pulse:discover.teams",
+          "version": "1.0.0",
+          "name": "discover_teams",
+          "title": "Discover Teams",
+          "description": "Discover teamwork managers and associated workers from Plaza.",
+          "pulse_class": "fact",
+          "status": "stable",
+          "concept": {
+            "definition": "Discover teamwork managers and associated workers from Plaza."
+          },
+          "interface": {
+            "schema_language": "json-schema-2020-12",
+            "request_schema": {
+              "type": "object",
+              "properties": {
+                "party": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "include_workers": {
+                  "type": "boolean"
+                }
+              }
+            },
+            "response_schema": {}
+          }
+        },
+        "pulse_id": "urn:plaza:pulse:discover.teams",
+        "pulse_name": "discover_teams",
+        "title": "Discover Teams",
+        "output_schema": {},
+        "interface": {
+          "schema_language": "json-schema-2020-12",
+          "request_schema": {
+            "type": "object",
+            "properties": {
+              "party": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "include_workers": {
+                "type": "boolean"
+              }
+            }
+          },
+          "response_schema": {}
+        },
+        "concept": {
+          "definition": "Discover teamwork managers and associated workers from Plaza."
+        },
+        "resource_type": "pulse_definition",
+        "pds_version": "0.1.0",
+        "status": "stable",
+        "pulse_class": "fact",
+        "mapping": {},
+        "tags": [],
+        "cost": 0
+      },
+      {
+        "name": "supported_jobcaps",
+        "pulse_address": "f43a84ae-1bab-52b3-a4d9-587d42ec99ba",
+        "description": "Aggregate supported job capabilities from teamwork managers and workers.",
+        "input_schema": {
+          "type": "object",
+          "properties": {
+            "party": {
+              "type": "string"
+            },
+            "manager_address": {
+              "type": "string"
+            }
+          }
+        },
+        "test_data": {
+          "party": "Phemacast"
+        },
+        "pulse_definition": {
+          "pds_version": "0.1.0",
+          "resource_type": "pulse_definition",
+          "id": "urn:plaza:pulse:supported.jobcaps",
+          "version": "1.0.0",
+          "name": "supported_jobcaps",
+          "title": "Supported Jobcaps",
+          "description": "Aggregate supported job capabilities from teamwork managers and workers.",
+          "pulse_class": "fact",
+          "status": "stable",
+          "concept": {
+            "definition": "Aggregate supported job capabilities from teamwork managers and workers."
+          },
+          "interface": {
+            "schema_language": "json-schema-2020-12",
+            "request_schema": {
+              "type": "object",
+              "properties": {
+                "party": {
+                  "type": "string"
+                },
+                "manager_address": {
+                  "type": "string"
+                }
+              }
+            },
+            "response_schema": {}
+          }
+        },
+        "pulse_id": "urn:plaza:pulse:supported.jobcaps",
+        "pulse_name": "supported_jobcaps",
+        "title": "Supported Jobcaps",
+        "output_schema": {},
+        "interface": {
+          "schema_language": "json-schema-2020-12",
+          "request_schema": {
+            "type": "object",
+            "properties": {
+              "party": {
+                "type": "string"
+              },
+              "manager_address": {
+                "type": "string"
+              }
+            }
+          },
+          "response_schema": {}
+        },
+        "concept": {
+          "definition": "Aggregate supported job capabilities from teamwork managers and workers."
+        },
+        "resource_type": "pulse_definition",
+        "pds_version": "0.1.0",
+        "status": "stable",
+        "pulse_class": "fact",
+        "mapping": {},
+        "tags": [],
+        "cost": 0
+      },
+      {
+        "name": "team_status",
+        "pulse_address": "30e2f689-e3db-5357-bf39-97bcb41487ab",
+        "description": "Summarize current queue and worker health for one teamwork manager.",
+        "input_schema": {
+          "type": "object",
+          "properties": {
+            "manager_address": {
+              "type": "string"
+            },
+            "party": {
+              "type": "string"
+            },
+            "preview_limit": {
+              "type": "integer"
+            }
+          }
+        },
+        "test_data": {
+          "manager_address": "http://127.0.0.1:8170",
+          "preview_limit": 500
+        },
+        "pulse_definition": {
+          "pds_version": "0.1.0",
+          "resource_type": "pulse_definition",
+          "id": "urn:plaza:pulse:team.status",
+          "version": "1.0.0",
+          "name": "team_status",
+          "title": "Team Status",
+          "description": "Summarize current queue and worker health for one teamwork manager.",
+          "pulse_class": "fact",
+          "status": "stable",
+          "concept": {
+            "definition": "Summarize current queue and worker health for one teamwork manager."
+          },
+          "interface": {
+            "schema_language": "json-schema-2020-12",
+            "request_schema": {
+              "type": "object",
+              "properties": {
+                "manager_address": {
+                  "type": "string"
+                },
+                "party": {
+                  "type": "string"
+                },
+                "preview_limit": {
+                  "type": "integer"
+                }
+              }
+            },
+            "response_schema": {}
+          }
+        },
+        "pulse_id": "urn:plaza:pulse:team.status",
+        "pulse_name": "team_status",
+        "title": "Team Status",
+        "output_schema": {},
+        "interface": {
+          "schema_language": "json-schema-2020-12",
+          "request_schema": {
+            "type": "object",
+            "properties": {
+              "manager_address": {
+                "type": "string"
+              },
+              "party": {
+                "type": "string"
+              },
+              "preview_limit": {
+                "type": "integer"
+              }
+            }
+          },
+          "response_schema": {}
+        },
+        "concept": {
+          "definition": "Summarize current queue and worker health for one teamwork manager."
+        },
+        "resource_type": "pulse_definition",
+        "pds_version": "0.1.0",
+        "status": "stable",
+        "pulse_class": "fact",
+        "mapping": {},
+        "tags": [],
+        "cost": 0
+      },
+      {
+        "name": "team_history",
+        "pulse_address": "d2083bb2-e587-5a45-85f9-cdaee90cb8a0",
+        "description": "Return recent job and worker history from one teamwork manager.",
+        "input_schema": {
+          "type": "object",
+          "properties": {
+            "manager_address": {
+              "type": "string"
+            },
+            "party": {
+              "type": "string"
+            },
+            "limit": {
+              "type": "integer"
+            }
+          }
+        },
+        "test_data": {
+          "manager_address": "http://127.0.0.1:8170",
+          "limit": 20
+        },
+        "pulse_definition": {
+          "pds_version": "0.1.0",
+          "resource_type": "pulse_definition",
+          "id": "urn:plaza:pulse:team.history",
+          "version": "1.0.0",
+          "name": "team_history",
+          "title": "Team History",
+          "description": "Return recent job and worker history from one teamwork manager.",
+          "pulse_class": "fact",
+          "status": "stable",
+          "concept": {
+            "definition": "Return recent job and worker history from one teamwork manager."
+          },
+          "interface": {
+            "schema_language": "json-schema-2020-12",
+            "request_schema": {
+              "type": "object",
+              "properties": {
+                "manager_address": {
+                  "type": "string"
+                },
+                "party": {
+                  "type": "string"
+                },
+                "limit": {
+                  "type": "integer"
+                }
+              }
+            },
+            "response_schema": {}
+          }
+        },
+        "pulse_id": "urn:plaza:pulse:team.history",
+        "pulse_name": "team_history",
+        "title": "Team History",
+        "output_schema": {},
+        "interface": {
+          "schema_language": "json-schema-2020-12",
+          "request_schema": {
+            "type": "object",
+            "properties": {
+              "manager_address": {
+                "type": "string"
+              },
+              "party": {
+                "type": "string"
+              },
+              "limit": {
+                "type": "integer"
+              }
+            }
+          },
+          "response_schema": {}
+        },
+        "concept": {
+          "definition": "Return recent job and worker history from one teamwork manager."
+        },
+        "resource_type": "pulse_definition",
+        "pds_version": "0.1.0",
+        "status": "stable",
+        "pulse_class": "fact",
+        "mapping": {},
+        "tags": [],
+        "cost": 0
+      },
+      {
+        "name": "submit_team_job",
+        "pulse_address": "60dc6f86-7aab-5310-a10f-f4c456d5250c",
+        "description": "Submit a job to a teamwork manager for workers to process.",
+        "input_schema": {
+          "type": "object",
+          "properties": {
+            "manager_address": {
+              "type": "string"
+            },
+            "required_capability": {
+              "type": "string"
+            },
+            "payload": {
+              "type": "object"
+            },
+            "priority": {
+              "type": "integer"
+            }
+          }
+        },
+        "test_data": {
+          "manager_address": "http://127.0.0.1:8170",
+          "required_capability": "run map",
+          "payload": {
+            "phema_path": "phemacast/configs/map.phemar"
+          },
+          "priority": 100
+        },
+        "pulse_definition": {
+          "pds_version": "0.1.0",
+          "resource_type": "pulse_definition",
+          "id": "urn:plaza:pulse:submit.team.job",
+          "version": "1.0.0",
+          "name": "submit_team_job",
+          "title": "Submit Team Job",
+          "description": "Submit a job to a teamwork manager for workers to process.",
+          "pulse_class": "fact",
+          "status": "stable",
+          "concept": {
+            "definition": "Submit a job to a teamwork manager for workers to process."
+          },
+          "interface": {
+            "schema_language": "json-schema-2020-12",
+            "request_schema": {
+              "type": "object",
+              "properties": {
+                "manager_address": {
+                  "type": "string"
+                },
+                "required_capability": {
+                  "type": "string"
+                },
+                "payload": {
+                  "type": "object"
+                },
+                "priority": {
+                  "type": "integer"
+                }
+              }
+            },
+            "response_schema": {}
+          }
+        },
+        "pulse_id": "urn:plaza:pulse:submit.team.job",
+        "pulse_name": "submit_team_job",
+        "title": "Submit Team Job",
+        "output_schema": {},
+        "interface": {
+          "schema_language": "json-schema-2020-12",
+          "request_schema": {
+            "type": "object",
+            "properties": {
+              "manager_address": {
+                "type": "string"
+              },
+              "required_capability": {
+                "type": "string"
+              },
+              "payload": {
+                "type": "object"
+              },
+              "priority": {
+                "type": "integer"
+              }
+            }
+          },
+          "response_schema": {}
+        },
+        "concept": {
+          "definition": "Submit a job to a teamwork manager for workers to process."
+        },
+        "resource_type": "pulse_definition",
+        "pds_version": "0.1.0",
+        "status": "stable",
+        "pulse_class": "fact",
+        "mapping": {},
+        "tags": [],
+        "cost": 0
+      },
+      {
+        "name": "create_managed_ticket",
+        "pulse_address": "82195e23-73f8-51c4-979b-ff571f13dc2e",
+        "description": "Create one manual managed-work ticket through BossPulser and teamwork.",
+        "input_schema": {
+          "type": "object",
+          "properties": {
+            "manager_address": {
+              "type": "string"
+            },
+            "required_capability": {
+              "type": "string"
+            },
+            "payload": {
+              "type": "object"
+            },
+            "targets": {
+              "type": "array"
+            },
+            "priority": {
+              "type": "integer"
+            }
+          }
+        },
+        "test_data": {
+          "manager_address": "http://127.0.0.1:8170",
+          "required_capability": "run map",
+          "payload": {
+            "phema_path": "phemacast/configs/map.phemar"
+          },
+          "targets": [
+            "taipei-basemap"
+          ],
+          "priority": 100
+        },
+        "pulse_definition": {
+          "pds_version": "0.1.0",
+          "resource_type": "pulse_definition",
+          "id": "urn:plaza:pulse:create.managed.ticket",
+          "version": "1.0.0",
+          "name": "create_managed_ticket",
+          "title": "Create Managed Ticket",
+          "description": "Create one manual managed-work ticket through BossPulser and teamwork.",
+          "pulse_class": "fact",
+          "status": "stable",
+          "concept": {
+            "definition": "Create one manual managed-work ticket through BossPulser and teamwork."
+          },
+          "interface": {
+            "schema_language": "json-schema-2020-12",
+            "request_schema": {
+              "type": "object",
+              "properties": {
+                "manager_address": {
+                  "type": "string"
+                },
+                "required_capability": {
+                  "type": "string"
+                },
+                "payload": {
+                  "type": "object"
+                },
+                "targets": {
+                  "type": "array"
+                },
+                "priority": {
+                  "type": "integer"
+                }
+              }
+            },
+            "response_schema": {}
+          }
+        },
+        "pulse_id": "urn:plaza:pulse:create.managed.ticket",
+        "pulse_name": "create_managed_ticket",
+        "title": "Create Managed Ticket",
+        "output_schema": {},
+        "interface": {
+          "schema_language": "json-schema-2020-12",
+          "request_schema": {
+            "type": "object",
+            "properties": {
+              "manager_address": {
+                "type": "string"
+              },
+              "required_capability": {
+                "type": "string"
+              },
+              "payload": {
+                "type": "object"
+              },
+              "targets": {
+                "type": "array"
+              },
+              "priority": {
+                "type": "integer"
+              }
+            }
+          },
+          "response_schema": {}
+        },
+        "concept": {
+          "definition": "Create one manual managed-work ticket through BossPulser and teamwork."
+        },
+        "resource_type": "pulse_definition",
+        "pds_version": "0.1.0",
+        "status": "stable",
+        "pulse_class": "fact",
+        "mapping": {},
+        "tags": [],
+        "cost": 0
+      },
+      {
+        "name": "create_managed_schedule",
+        "pulse_address": "c567a88e-7d30-5951-9197-4929d32bd805",
+        "description": "Save one managed-work schedule that BossPulser will issue through teamwork when due.",
+        "input_schema": {
+          "type": "object",
+          "properties": {
+            "manager_address": {
+              "type": "string"
+            },
+            "required_capability": {
+              "type": "string"
+            },
+            "scheduled_for": {
+              "type": "string"
+            },
+            "payload": {
+              "type": "object"
+            },
+            "targets": {
+              "type": "array"
+            }
+          }
+        },
+        "test_data": {
+          "manager_address": "http://127.0.0.1:8170",
+          "required_capability": "run map",
+          "scheduled_for": "2026-04-05T08:00:00+00:00",
+          "payload": {
+            "phema_path": "phemacast/configs/map.phemar"
+          },
+          "targets": [
+            "taipei-basemap"
+          ]
+        },
+        "pulse_definition": {
+          "pds_version": "0.1.0",
+          "resource_type": "pulse_definition",
+          "id": "urn:plaza:pulse:create.managed.schedule",
+          "version": "1.0.0",
+          "name": "create_managed_schedule",
+          "title": "Create Managed Schedule",
+          "description": "Save one managed-work schedule that BossPulser will issue through teamwork when due.",
+          "pulse_class": "fact",
+          "status": "stable",
+          "concept": {
+            "definition": "Save one managed-work schedule that BossPulser will issue through teamwork when due."
+          },
+          "interface": {
+            "schema_language": "json-schema-2020-12",
+            "request_schema": {
+              "type": "object",
+              "properties": {
+                "manager_address": {
+                  "type": "string"
+                },
+                "required_capability": {
+                  "type": "string"
+                },
+                "scheduled_for": {
+                  "type": "string"
+                },
+                "payload": {
+                  "type": "object"
+                },
+                "targets": {
+                  "type": "array"
+                }
+              }
+            },
+            "response_schema": {}
+          }
+        },
+        "pulse_id": "urn:plaza:pulse:create.managed.schedule",
+        "pulse_name": "create_managed_schedule",
+        "title": "Create Managed Schedule",
+        "output_schema": {},
+        "interface": {
+          "schema_language": "json-schema-2020-12",
+          "request_schema": {
+            "type": "object",
+            "properties": {
+              "manager_address": {
+                "type": "string"
+              },
+              "required_capability": {
+                "type": "string"
+              },
+              "scheduled_for": {
+                "type": "string"
+              },
+              "payload": {
+                "type": "object"
+              },
+              "targets": {
+                "type": "array"
+              }
+            }
+          },
+          "response_schema": {}
+        },
+        "concept": {
+          "definition": "Save one managed-work schedule that BossPulser will issue through teamwork when due."
+        },
+        "resource_type": "pulse_definition",
+        "pds_version": "0.1.0",
+        "status": "stable",
+        "pulse_class": "fact",
+        "mapping": {},
+        "tags": [],
+        "cost": 0
+      },
+      {
+        "name": "monitor_managed_work",
+        "pulse_address": "b230c27a-2101-5043-8603-153c3fbd58a4",
+        "description": "Return the BossPulser managed-work monitor payload for one teamwork manager.",
+        "input_schema": {
+          "type": "object",
+          "properties": {
+            "manager_address": {
+              "type": "string"
+            },
+            "party": {
+              "type": "string"
+            }
+          }
+        },
+        "test_data": {
+          "manager_address": "http://127.0.0.1:8170",
+          "party": "Phemacast"
+        },
+        "pulse_definition": {
+          "pds_version": "0.1.0",
+          "resource_type": "pulse_definition",
+          "id": "urn:plaza:pulse:monitor.managed.work",
+          "version": "1.0.0",
+          "name": "monitor_managed_work",
+          "title": "Monitor Managed Work",
+          "description": "Return the BossPulser managed-work monitor payload for one teamwork manager.",
+          "pulse_class": "fact",
+          "status": "stable",
+          "concept": {
+            "definition": "Return the BossPulser managed-work monitor payload for one teamwork manager."
+          },
+          "interface": {
+            "schema_language": "json-schema-2020-12",
+            "request_schema": {
+              "type": "object",
+              "properties": {
+                "manager_address": {
+                  "type": "string"
+                },
+                "party": {
+                  "type": "string"
+                }
+              }
+            },
+            "response_schema": {}
+          }
+        },
+        "pulse_id": "urn:plaza:pulse:monitor.managed.work",
+        "pulse_name": "monitor_managed_work",
+        "title": "Monitor Managed Work",
+        "output_schema": {},
+        "interface": {
+          "schema_language": "json-schema-2020-12",
+          "request_schema": {
+            "type": "object",
+            "properties": {
+              "manager_address": {
+                "type": "string"
+              },
+              "party": {
+                "type": "string"
+              }
+            }
+          },
+          "response_schema": {}
+        },
+        "concept": {
+          "definition": "Return the BossPulser managed-work monitor payload for one teamwork manager."
+        },
+        "resource_type": "pulse_definition",
+        "pds_version": "0.1.0",
+        "status": "stable",
+        "pulse_class": "fact",
+        "mapping": {},
+        "tags": [],
+        "cost": 0
+      }
+    ],
+    "pulse_id": "urn:plaza:pulse:create.team",
+    "pulse_definition": {
+      "pds_version": "0.1.0",
+      "resource_type": "pulse_definition",
+      "id": "urn:plaza:pulse:create.team",
+      "version": "1.0.0",
+      "name": "create_team",
+      "title": "Create Team",
+      "description": "Generate boss, manager, and worker teamwork configs for a new Phemacast team.",
+      "pulse_class": "fact",
+      "status": "stable",
+      "concept": {
+        "definition": "Generate boss, manager, and worker teamwork configs for a new Phemacast team."
+      },
+      "interface": {
+        "schema_language": "json-schema-2020-12",
+        "request_schema": {
+          "type": "object",
+          "properties": {
+            "team_name": {
+              "type": "string"
+            },
+            "party": {
+              "type": "string"
+            },
+            "plaza_url": {
+              "type": "string"
+            },
+            "worker_count": {
+              "type": "integer"
+            },
+            "job_capabilities": {
+              "type": "array"
+            }
+          }
+        },
+        "response_schema": {}
+      }
+    }
+  },
+  "card": {
+    "name": "BossPulser",
+    "role": "boss",
+    "tags": [
+      "phemacast",
+      "teamwork",
+      "boss",
+      "pulser",
+      "pulse"
+    ],
+    "host": "127.0.0.1",
+    "port": 8220,
+    "address": "http://127.0.0.1:8220",
+    "party": "Phemacast",
+    "description": "Independent Phemacast boss pulser for team provisioning, capability discovery, live status, and job control.",
+    "pit_type": "Pulser",
+    "meta": {
+      "accepts_inbound_from_plaza": true,
+      "accepts_direct_call": true,
+      "connectivity_mode": "plaza-forward",
+      "pulse_address": "ac4b2d37-15e9-551a-b4a2-f2cdcb0b0581",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "team_name": {
+            "type": "string"
+          },
+          "party": {
+            "type": "string"
+          },
+          "plaza_url": {
+            "type": "string"
+          },
+          "worker_count": {
+            "type": "integer"
+          },
+          "job_capabilities": {
+            "type": "array"
+          }
+        }
+      },
+      "supported_pulses": [
+        {
+          "name": "create_team",
+          "pulse_address": "ac4b2d37-15e9-551a-b4a2-f2cdcb0b0581",
+          "description": "Generate boss, manager, and worker teamwork configs for a new Phemacast team.",
+          "input_schema": {
+            "type": "object",
+            "properties": {
+              "team_name": {
+                "type": "string"
+              },
+              "party": {
+                "type": "string"
+              },
+              "plaza_url": {
+                "type": "string"
+              },
+              "worker_count": {
+                "type": "integer"
+              },
+              "job_capabilities": {
+                "type": "array"
+              }
+            }
+          },
+          "test_data": {
+            "team_name": "Map Runner",
+            "party": "Phemacast",
+            "plaza_url": "http://127.0.0.1:8011",
+            "worker_count": 2,
+            "job_capabilities": [
+              {
+                "name": "run map",
+                "type": "phemacast.jobcaps.map_jobcap:RunMapJobCap",
+                "description": "Execute a stored map phema through MapCastr.",
+                "default_priority": 100
+              }
+            ]
+          },
+          "pulse_definition": {
+            "pds_version": "0.1.0",
+            "resource_type": "pulse_definition",
+            "id": "urn:plaza:pulse:create.team",
+            "version": "1.0.0",
+            "name": "create_team",
+            "title": "Create Team",
+            "description": "Generate boss, manager, and worker teamwork configs for a new Phemacast team.",
+            "pulse_class": "fact",
+            "status": "stable",
+            "concept": {
+              "definition": "Generate boss, manager, and worker teamwork configs for a new Phemacast team."
+            },
+            "interface": {
+              "schema_language": "json-schema-2020-12",
+              "request_schema": {
+                "type": "object",
+                "properties": {
+                  "team_name": {
+                    "type": "string"
+                  },
+                  "party": {
+                    "type": "string"
+                  },
+                  "plaza_url": {
+                    "type": "string"
+                  },
+                  "worker_count": {
+                    "type": "integer"
+                  },
+                  "job_capabilities": {
+                    "type": "array"
+                  }
+                }
+              },
+              "response_schema": {}
+            }
+          },
+          "pulse_id": "urn:plaza:pulse:create.team",
+          "pulse_name": "create_team",
+          "title": "Create Team",
+          "output_schema": {},
+          "interface": {
+            "schema_language": "json-schema-2020-12",
+            "request_schema": {
+              "type": "object",
+              "properties": {
+                "team_name": {
+                  "type": "string"
+                },
+                "party": {
+                  "type": "string"
+                },
+                "plaza_url": {
+                  "type": "string"
+                },
+                "worker_count": {
+                  "type": "integer"
+                },
+                "job_capabilities": {
+                  "type": "array"
+                }
+              }
+            },
+            "response_schema": {}
+          },
+          "concept": {
+            "definition": "Generate boss, manager, and worker teamwork configs for a new Phemacast team."
+          },
+          "resource_type": "pulse_definition",
+          "pds_version": "0.1.0",
+          "status": "stable",
+          "pulse_class": "fact",
+          "mapping": {},
+          "tags": [],
+          "cost": 0
+        },
+        {
+          "name": "create_worker",
+          "pulse_address": "bdce1be5-5bbf-5011-97b2-510e6d993361",
+          "description": "Generate a teamwork worker config aimed at one manager.",
+          "input_schema": {
+            "type": "object",
+            "properties": {
+              "team_name": {
+                "type": "string"
+              },
+              "worker_name": {
+                "type": "string"
+              },
+              "manager_address": {
+                "type": "string"
+              },
+              "job_capabilities": {
+                "type": "array"
+              }
+            }
+          },
+          "test_data": {
+            "team_name": "Map Runner",
+            "worker_name": "MapRunnerWorkerA",
+            "manager_address": "http://127.0.0.1:8170",
+            "job_capabilities": [
+              {
+                "name": "run map",
+                "type": "phemacast.jobcaps.map_jobcap:RunMapJobCap"
+              }
+            ]
+          },
+          "pulse_definition": {
+            "pds_version": "0.1.0",
+            "resource_type": "pulse_definition",
+            "id": "urn:plaza:pulse:create.worker",
+            "version": "1.0.0",
+            "name": "create_worker",
+            "title": "Create Worker",
+            "description": "Generate a teamwork worker config aimed at one manager.",
+            "pulse_class": "fact",
+            "status": "stable",
+            "concept": {
+              "definition": "Generate a teamwork worker config aimed at one manager."
+            },
+            "interface": {
+              "schema_language": "json-schema-2020-12",
+              "request_schema": {
+                "type": "object",
+                "properties": {
+                  "team_name": {
+                    "type": "string"
+                  },
+                  "worker_name": {
+                    "type": "string"
+                  },
+                  "manager_address": {
+                    "type": "string"
+                  },
+                  "job_capabilities": {
+                    "type": "array"
+                  }
+                }
+              },
+              "response_schema": {}
+            }
+          },
+          "pulse_id": "urn:plaza:pulse:create.worker",
+          "pulse_name": "create_worker",
+          "title": "Create Worker",
+          "output_schema": {},
+          "interface": {
+            "schema_language": "json-schema-2020-12",
+            "request_schema": {
+              "type": "object",
+              "properties": {
+                "team_name": {
+                  "type": "string"
+                },
+                "worker_name": {
+                  "type": "string"
+                },
+                "manager_address": {
+                  "type": "string"
+                },
+                "job_capabilities": {
+                  "type": "array"
+                }
+              }
+            },
+            "response_schema": {}
+          },
+          "concept": {
+            "definition": "Generate a teamwork worker config aimed at one manager."
+          },
+          "resource_type": "pulse_definition",
+          "pds_version": "0.1.0",
+          "status": "stable",
+          "pulse_class": "fact",
+          "mapping": {},
+          "tags": [],
+          "cost": 0
+        },
+        {
+          "name": "create_manager",
+          "pulse_address": "a1cc5390-aa66-5f9e-9d01-c149afd3ebf0",
+          "description": "Generate a teamwork manager config for one Phemacast team.",
+          "input_schema": {
+            "type": "object",
+            "properties": {
+              "team_name": {
+                "type": "string"
+              },
+              "manager_name": {
+                "type": "string"
+              },
+              "party": {
+                "type": "string"
+              },
+              "job_capabilities": {
+                "type": "array"
+              }
+            }
+          },
+          "test_data": {
+            "team_name": "Map Runner",
+            "manager_name": "MapRunnerManager",
+            "party": "Phemacast",
+            "job_capabilities": [
+              {
+                "name": "run map",
+                "type": "phemacast.jobcaps.map_jobcap:RunMapJobCap",
+                "description": "Execute a stored map phema through MapCastr.",
+                "default_priority": 100
+              }
+            ]
+          },
+          "pulse_definition": {
+            "pds_version": "0.1.0",
+            "resource_type": "pulse_definition",
+            "id": "urn:plaza:pulse:create.manager",
+            "version": "1.0.0",
+            "name": "create_manager",
+            "title": "Create Manager",
+            "description": "Generate a teamwork manager config for one Phemacast team.",
+            "pulse_class": "fact",
+            "status": "stable",
+            "concept": {
+              "definition": "Generate a teamwork manager config for one Phemacast team."
+            },
+            "interface": {
+              "schema_language": "json-schema-2020-12",
+              "request_schema": {
+                "type": "object",
+                "properties": {
+                  "team_name": {
+                    "type": "string"
+                  },
+                  "manager_name": {
+                    "type": "string"
+                  },
+                  "party": {
+                    "type": "string"
+                  },
+                  "job_capabilities": {
+                    "type": "array"
+                  }
+                }
+              },
+              "response_schema": {}
+            }
+          },
+          "pulse_id": "urn:plaza:pulse:create.manager",
+          "pulse_name": "create_manager",
+          "title": "Create Manager",
+          "output_schema": {},
+          "interface": {
+            "schema_language": "json-schema-2020-12",
+            "request_schema": {
+              "type": "object",
+              "properties": {
+                "team_name": {
+                  "type": "string"
+                },
+                "manager_name": {
+                  "type": "string"
+                },
+                "party": {
+                  "type": "string"
+                },
+                "job_capabilities": {
+                  "type": "array"
+                }
+              }
+            },
+            "response_schema": {}
+          },
+          "concept": {
+            "definition": "Generate a teamwork manager config for one Phemacast team."
+          },
+          "resource_type": "pulse_definition",
+          "pds_version": "0.1.0",
+          "status": "stable",
+          "pulse_class": "fact",
+          "mapping": {},
+          "tags": [],
+          "cost": 0
+        },
+        {
+          "name": "connect_manager",
+          "pulse_address": "1cb04435-b83e-54bd-ad78-081ad9f4b9b1",
+          "description": "Connect one manager environment to an existing team and optionally generate local workers.",
+          "input_schema": {
+            "type": "object",
+            "properties": {
+              "team_manifest": {
+                "type": "object"
+              },
+              "manager_name": {
+                "type": "string"
+              },
+              "worker_count": {
+                "type": "integer"
+              },
+              "manager_port": {
+                "type": "integer"
+              }
+            }
+          },
+          "test_data": {
+            "team_manifest": {
+              "team_name": "Map Runner",
+              "team_slug": "map-runner",
+              "party": "Phemacast",
+              "plaza_url": "http://127.0.0.1:8011",
+              "job_capabilities": [
+                {
+                  "name": "run map",
+                  "type": "phemacast.jobcaps.map_jobcap:RunMapJobCap",
+                  "description": "Execute a stored map phema through MapCastr.",
+                  "default_priority": 100
+                }
+              ]
+            },
+            "manager_name": "MapRunnerManagerEast",
+            "worker_count": 2,
+            "manager_port": 8270
+          },
+          "pulse_definition": {
+            "pds_version": "0.1.0",
+            "resource_type": "pulse_definition",
+            "id": "urn:plaza:pulse:connect.manager",
+            "version": "1.0.0",
+            "name": "connect_manager",
+            "title": "Connect Manager",
+            "description": "Connect one manager environment to an existing team and optionally generate local workers.",
+            "pulse_class": "fact",
+            "status": "stable",
+            "concept": {
+              "definition": "Connect one manager environment to an existing team and optionally generate local workers."
+            },
+            "interface": {
+              "schema_language": "json-schema-2020-12",
+              "request_schema": {
+                "type": "object",
+                "properties": {
+                  "team_manifest": {
+                    "type": "object"
+                  },
+                  "manager_name": {
+                    "type": "string"
+                  },
+                  "worker_count": {
+                    "type": "integer"
+                  },
+                  "manager_port": {
+                    "type": "integer"
+                  }
+                }
+              },
+              "response_schema": {}
+            }
+          },
+          "pulse_id": "urn:plaza:pulse:connect.manager",
+          "pulse_name": "connect_manager",
+          "title": "Connect Manager",
+          "output_schema": {},
+          "interface": {
+            "schema_language": "json-schema-2020-12",
+            "request_schema": {
+              "type": "object",
+              "properties": {
+                "team_manifest": {
+                  "type": "object"
+                },
+                "manager_name": {
+                  "type": "string"
+                },
+                "worker_count": {
+                  "type": "integer"
+                },
+                "manager_port": {
+                  "type": "integer"
+                }
+              }
+            },
+            "response_schema": {}
+          },
+          "concept": {
+            "definition": "Connect one manager environment to an existing team and optionally generate local workers."
+          },
+          "resource_type": "pulse_definition",
+          "pds_version": "0.1.0",
+          "status": "stable",
+          "pulse_class": "fact",
+          "mapping": {},
+          "tags": [],
+          "cost": 0
+        },
+        {
+          "name": "discover_teams",
+          "pulse_address": "dbdaa1f3-0826-568c-bc67-ec7040d358e0",
+          "description": "Discover teamwork managers and associated workers from Plaza.",
+          "input_schema": {
+            "type": "object",
+            "properties": {
+              "party": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "include_workers": {
+                "type": "boolean"
+              }
+            }
+          },
+          "test_data": {
+            "party": "Phemacast",
+            "include_workers": true
+          },
+          "pulse_definition": {
+            "pds_version": "0.1.0",
+            "resource_type": "pulse_definition",
+            "id": "urn:plaza:pulse:discover.teams",
+            "version": "1.0.0",
+            "name": "discover_teams",
+            "title": "Discover Teams",
+            "description": "Discover teamwork managers and associated workers from Plaza.",
+            "pulse_class": "fact",
+            "status": "stable",
+            "concept": {
+              "definition": "Discover teamwork managers and associated workers from Plaza."
+            },
+            "interface": {
+              "schema_language": "json-schema-2020-12",
+              "request_schema": {
+                "type": "object",
+                "properties": {
+                  "party": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "include_workers": {
+                    "type": "boolean"
+                  }
+                }
+              },
+              "response_schema": {}
+            }
+          },
+          "pulse_id": "urn:plaza:pulse:discover.teams",
+          "pulse_name": "discover_teams",
+          "title": "Discover Teams",
+          "output_schema": {},
+          "interface": {
+            "schema_language": "json-schema-2020-12",
+            "request_schema": {
+              "type": "object",
+              "properties": {
+                "party": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "include_workers": {
+                  "type": "boolean"
+                }
+              }
+            },
+            "response_schema": {}
+          },
+          "concept": {
+            "definition": "Discover teamwork managers and associated workers from Plaza."
+          },
+          "resource_type": "pulse_definition",
+          "pds_version": "0.1.0",
+          "status": "stable",
+          "pulse_class": "fact",
+          "mapping": {},
+          "tags": [],
+          "cost": 0
+        },
+        {
+          "name": "supported_jobcaps",
+          "pulse_address": "f43a84ae-1bab-52b3-a4d9-587d42ec99ba",
+          "description": "Aggregate supported job capabilities from teamwork managers and workers.",
+          "input_schema": {
+            "type": "object",
+            "properties": {
+              "party": {
+                "type": "string"
+              },
+              "manager_address": {
+                "type": "string"
+              }
+            }
+          },
+          "test_data": {
+            "party": "Phemacast"
+          },
+          "pulse_definition": {
+            "pds_version": "0.1.0",
+            "resource_type": "pulse_definition",
+            "id": "urn:plaza:pulse:supported.jobcaps",
+            "version": "1.0.0",
+            "name": "supported_jobcaps",
+            "title": "Supported Jobcaps",
+            "description": "Aggregate supported job capabilities from teamwork managers and workers.",
+            "pulse_class": "fact",
+            "status": "stable",
+            "concept": {
+              "definition": "Aggregate supported job capabilities from teamwork managers and workers."
+            },
+            "interface": {
+              "schema_language": "json-schema-2020-12",
+              "request_schema": {
+                "type": "object",
+                "properties": {
+                  "party": {
+                    "type": "string"
+                  },
+                  "manager_address": {
+                    "type": "string"
+                  }
+                }
+              },
+              "response_schema": {}
+            }
+          },
+          "pulse_id": "urn:plaza:pulse:supported.jobcaps",
+          "pulse_name": "supported_jobcaps",
+          "title": "Supported Jobcaps",
+          "output_schema": {},
+          "interface": {
+            "schema_language": "json-schema-2020-12",
+            "request_schema": {
+              "type": "object",
+              "properties": {
+                "party": {
+                  "type": "string"
+                },
+                "manager_address": {
+                  "type": "string"
+                }
+              }
+            },
+            "response_schema": {}
+          },
+          "concept": {
+            "definition": "Aggregate supported job capabilities from teamwork managers and workers."
+          },
+          "resource_type": "pulse_definition",
+          "pds_version": "0.1.0",
+          "status": "stable",
+          "pulse_class": "fact",
+          "mapping": {},
+          "tags": [],
+          "cost": 0
+        },
+        {
+          "name": "team_status",
+          "pulse_address": "30e2f689-e3db-5357-bf39-97bcb41487ab",
+          "description": "Summarize current queue and worker health for one teamwork manager.",
+          "input_schema": {
+            "type": "object",
+            "properties": {
+              "manager_address": {
+                "type": "string"
+              },
+              "party": {
+                "type": "string"
+              },
+              "preview_limit": {
+                "type": "integer"
+              }
+            }
+          },
+          "test_data": {
+            "manager_address": "http://127.0.0.1:8170",
+            "preview_limit": 500
+          },
+          "pulse_definition": {
+            "pds_version": "0.1.0",
+            "resource_type": "pulse_definition",
+            "id": "urn:plaza:pulse:team.status",
+            "version": "1.0.0",
+            "name": "team_status",
+            "title": "Team Status",
+            "description": "Summarize current queue and worker health for one teamwork manager.",
+            "pulse_class": "fact",
+            "status": "stable",
+            "concept": {
+              "definition": "Summarize current queue and worker health for one teamwork manager."
+            },
+            "interface": {
+              "schema_language": "json-schema-2020-12",
+              "request_schema": {
+                "type": "object",
+                "properties": {
+                  "manager_address": {
+                    "type": "string"
+                  },
+                  "party": {
+                    "type": "string"
+                  },
+                  "preview_limit": {
+                    "type": "integer"
+                  }
+                }
+              },
+              "response_schema": {}
+            }
+          },
+          "pulse_id": "urn:plaza:pulse:team.status",
+          "pulse_name": "team_status",
+          "title": "Team Status",
+          "output_schema": {},
+          "interface": {
+            "schema_language": "json-schema-2020-12",
+            "request_schema": {
+              "type": "object",
+              "properties": {
+                "manager_address": {
+                  "type": "string"
+                },
+                "party": {
+                  "type": "string"
+                },
+                "preview_limit": {
+                  "type": "integer"
+                }
+              }
+            },
+            "response_schema": {}
+          },
+          "concept": {
+            "definition": "Summarize current queue and worker health for one teamwork manager."
+          },
+          "resource_type": "pulse_definition",
+          "pds_version": "0.1.0",
+          "status": "stable",
+          "pulse_class": "fact",
+          "mapping": {},
+          "tags": [],
+          "cost": 0
+        },
+        {
+          "name": "team_history",
+          "pulse_address": "d2083bb2-e587-5a45-85f9-cdaee90cb8a0",
+          "description": "Return recent job and worker history from one teamwork manager.",
+          "input_schema": {
+            "type": "object",
+            "properties": {
+              "manager_address": {
+                "type": "string"
+              },
+              "party": {
+                "type": "string"
+              },
+              "limit": {
+                "type": "integer"
+              }
+            }
+          },
+          "test_data": {
+            "manager_address": "http://127.0.0.1:8170",
+            "limit": 20
+          },
+          "pulse_definition": {
+            "pds_version": "0.1.0",
+            "resource_type": "pulse_definition",
+            "id": "urn:plaza:pulse:team.history",
+            "version": "1.0.0",
+            "name": "team_history",
+            "title": "Team History",
+            "description": "Return recent job and worker history from one teamwork manager.",
+            "pulse_class": "fact",
+            "status": "stable",
+            "concept": {
+              "definition": "Return recent job and worker history from one teamwork manager."
+            },
+            "interface": {
+              "schema_language": "json-schema-2020-12",
+              "request_schema": {
+                "type": "object",
+                "properties": {
+                  "manager_address": {
+                    "type": "string"
+                  },
+                  "party": {
+                    "type": "string"
+                  },
+                  "limit": {
+                    "type": "integer"
+                  }
+                }
+              },
+              "response_schema": {}
+            }
+          },
+          "pulse_id": "urn:plaza:pulse:team.history",
+          "pulse_name": "team_history",
+          "title": "Team History",
+          "output_schema": {},
+          "interface": {
+            "schema_language": "json-schema-2020-12",
+            "request_schema": {
+              "type": "object",
+              "properties": {
+                "manager_address": {
+                  "type": "string"
+                },
+                "party": {
+                  "type": "string"
+                },
+                "limit": {
+                  "type": "integer"
+                }
+              }
+            },
+            "response_schema": {}
+          },
+          "concept": {
+            "definition": "Return recent job and worker history from one teamwork manager."
+          },
+          "resource_type": "pulse_definition",
+          "pds_version": "0.1.0",
+          "status": "stable",
+          "pulse_class": "fact",
+          "mapping": {},
+          "tags": [],
+          "cost": 0
+        },
+        {
+          "name": "submit_team_job",
+          "pulse_address": "60dc6f86-7aab-5310-a10f-f4c456d5250c",
+          "description": "Submit a job to a teamwork manager for workers to process.",
+          "input_schema": {
+            "type": "object",
+            "properties": {
+              "manager_address": {
+                "type": "string"
+              },
+              "required_capability": {
+                "type": "string"
+              },
+              "payload": {
+                "type": "object"
+              },
+              "priority": {
+                "type": "integer"
+              }
+            }
+          },
+          "test_data": {
+            "manager_address": "http://127.0.0.1:8170",
+            "required_capability": "run map",
+            "payload": {
+              "phema_path": "phemacast/configs/map.phemar"
+            },
+            "priority": 100
+          },
+          "pulse_definition": {
+            "pds_version": "0.1.0",
+            "resource_type": "pulse_definition",
+            "id": "urn:plaza:pulse:submit.team.job",
+            "version": "1.0.0",
+            "name": "submit_team_job",
+            "title": "Submit Team Job",
+            "description": "Submit a job to a teamwork manager for workers to process.",
+            "pulse_class": "fact",
+            "status": "stable",
+            "concept": {
+              "definition": "Submit a job to a teamwork manager for workers to process."
+            },
+            "interface": {
+              "schema_language": "json-schema-2020-12",
+              "request_schema": {
+                "type": "object",
+                "properties": {
+                  "manager_address": {
+                    "type": "string"
+                  },
+                  "required_capability": {
+                    "type": "string"
+                  },
+                  "payload": {
+                    "type": "object"
+                  },
+                  "priority": {
+                    "type": "integer"
+                  }
+                }
+              },
+              "response_schema": {}
+            }
+          },
+          "pulse_id": "urn:plaza:pulse:submit.team.job",
+          "pulse_name": "submit_team_job",
+          "title": "Submit Team Job",
+          "output_schema": {},
+          "interface": {
+            "schema_language": "json-schema-2020-12",
+            "request_schema": {
+              "type": "object",
+              "properties": {
+                "manager_address": {
+                  "type": "string"
+                },
+                "required_capability": {
+                  "type": "string"
+                },
+                "payload": {
+                  "type": "object"
+                },
+                "priority": {
+                  "type": "integer"
+                }
+              }
+            },
+            "response_schema": {}
+          },
+          "concept": {
+            "definition": "Submit a job to a teamwork manager for workers to process."
+          },
+          "resource_type": "pulse_definition",
+          "pds_version": "0.1.0",
+          "status": "stable",
+          "pulse_class": "fact",
+          "mapping": {},
+          "tags": [],
+          "cost": 0
+        },
+        {
+          "name": "create_managed_ticket",
+          "pulse_address": "82195e23-73f8-51c4-979b-ff571f13dc2e",
+          "description": "Create one manual managed-work ticket through BossPulser and teamwork.",
+          "input_schema": {
+            "type": "object",
+            "properties": {
+              "manager_address": {
+                "type": "string"
+              },
+              "required_capability": {
+                "type": "string"
+              },
+              "payload": {
+                "type": "object"
+              },
+              "targets": {
+                "type": "array"
+              },
+              "priority": {
+                "type": "integer"
+              }
+            }
+          },
+          "test_data": {
+            "manager_address": "http://127.0.0.1:8170",
+            "required_capability": "run map",
+            "payload": {
+              "phema_path": "phemacast/configs/map.phemar"
+            },
+            "targets": [
+              "taipei-basemap"
+            ],
+            "priority": 100
+          },
+          "pulse_definition": {
+            "pds_version": "0.1.0",
+            "resource_type": "pulse_definition",
+            "id": "urn:plaza:pulse:create.managed.ticket",
+            "version": "1.0.0",
+            "name": "create_managed_ticket",
+            "title": "Create Managed Ticket",
+            "description": "Create one manual managed-work ticket through BossPulser and teamwork.",
+            "pulse_class": "fact",
+            "status": "stable",
+            "concept": {
+              "definition": "Create one manual managed-work ticket through BossPulser and teamwork."
+            },
+            "interface": {
+              "schema_language": "json-schema-2020-12",
+              "request_schema": {
+                "type": "object",
+                "properties": {
+                  "manager_address": {
+                    "type": "string"
+                  },
+                  "required_capability": {
+                    "type": "string"
+                  },
+                  "payload": {
+                    "type": "object"
+                  },
+                  "targets": {
+                    "type": "array"
+                  },
+                  "priority": {
+                    "type": "integer"
+                  }
+                }
+              },
+              "response_schema": {}
+            }
+          },
+          "pulse_id": "urn:plaza:pulse:create.managed.ticket",
+          "pulse_name": "create_managed_ticket",
+          "title": "Create Managed Ticket",
+          "output_schema": {},
+          "interface": {
+            "schema_language": "json-schema-2020-12",
+            "request_schema": {
+              "type": "object",
+              "properties": {
+                "manager_address": {
+                  "type": "string"
+                },
+                "required_capability": {
+                  "type": "string"
+                },
+                "payload": {
+                  "type": "object"
+                },
+                "targets": {
+                  "type": "array"
+                },
+                "priority": {
+                  "type": "integer"
+                }
+              }
+            },
+            "response_schema": {}
+          },
+          "concept": {
+            "definition": "Create one manual managed-work ticket through BossPulser and teamwork."
+          },
+          "resource_type": "pulse_definition",
+          "pds_version": "0.1.0",
+          "status": "stable",
+          "pulse_class": "fact",
+          "mapping": {},
+          "tags": [],
+          "cost": 0
+        },
+        {
+          "name": "create_managed_schedule",
+          "pulse_address": "c567a88e-7d30-5951-9197-4929d32bd805",
+          "description": "Save one managed-work schedule that BossPulser will issue through teamwork when due.",
+          "input_schema": {
+            "type": "object",
+            "properties": {
+              "manager_address": {
+                "type": "string"
+              },
+              "required_capability": {
+                "type": "string"
+              },
+              "scheduled_for": {
+                "type": "string"
+              },
+              "payload": {
+                "type": "object"
+              },
+              "targets": {
+                "type": "array"
+              }
+            }
+          },
+          "test_data": {
+            "manager_address": "http://127.0.0.1:8170",
+            "required_capability": "run map",
+            "scheduled_for": "2026-04-05T08:00:00+00:00",
+            "payload": {
+              "phema_path": "phemacast/configs/map.phemar"
+            },
+            "targets": [
+              "taipei-basemap"
+            ]
+          },
+          "pulse_definition": {
+            "pds_version": "0.1.0",
+            "resource_type": "pulse_definition",
+            "id": "urn:plaza:pulse:create.managed.schedule",
+            "version": "1.0.0",
+            "name": "create_managed_schedule",
+            "title": "Create Managed Schedule",
+            "description": "Save one managed-work schedule that BossPulser will issue through teamwork when due.",
+            "pulse_class": "fact",
+            "status": "stable",
+            "concept": {
+              "definition": "Save one managed-work schedule that BossPulser will issue through teamwork when due."
+            },
+            "interface": {
+              "schema_language": "json-schema-2020-12",
+              "request_schema": {
+                "type": "object",
+                "properties": {
+                  "manager_address": {
+                    "type": "string"
+                  },
+                  "required_capability": {
+                    "type": "string"
+                  },
+                  "scheduled_for": {
+                    "type": "string"
+                  },
+                  "payload": {
+                    "type": "object"
+                  },
+                  "targets": {
+                    "type": "array"
+                  }
+                }
+              },
+              "response_schema": {}
+            }
+          },
+          "pulse_id": "urn:plaza:pulse:create.managed.schedule",
+          "pulse_name": "create_managed_schedule",
+          "title": "Create Managed Schedule",
+          "output_schema": {},
+          "interface": {
+            "schema_language": "json-schema-2020-12",
+            "request_schema": {
+              "type": "object",
+              "properties": {
+                "manager_address": {
+                  "type": "string"
+                },
+                "required_capability": {
+                  "type": "string"
+                },
+                "scheduled_for": {
+                  "type": "string"
+                },
+                "payload": {
+                  "type": "object"
+                },
+                "targets": {
+                  "type": "array"
+                }
+              }
+            },
+            "response_schema": {}
+          },
+          "concept": {
+            "definition": "Save one managed-work schedule that BossPulser will issue through teamwork when due."
+          },
+          "resource_type": "pulse_definition",
+          "pds_version": "0.1.0",
+          "status": "stable",
+          "pulse_class": "fact",
+          "mapping": {},
+          "tags": [],
+          "cost": 0
+        },
+        {
+          "name": "monitor_managed_work",
+          "pulse_address": "b230c27a-2101-5043-8603-153c3fbd58a4",
+          "description": "Return the BossPulser managed-work monitor payload for one teamwork manager.",
+          "input_schema": {
+            "type": "object",
+            "properties": {
+              "manager_address": {
+                "type": "string"
+              },
+              "party": {
+                "type": "string"
+              }
+            }
+          },
+          "test_data": {
+            "manager_address": "http://127.0.0.1:8170",
+            "party": "Phemacast"
+          },
+          "pulse_definition": {
+            "pds_version": "0.1.0",
+            "resource_type": "pulse_definition",
+            "id": "urn:plaza:pulse:monitor.managed.work",
+            "version": "1.0.0",
+            "name": "monitor_managed_work",
+            "title": "Monitor Managed Work",
+            "description": "Return the BossPulser managed-work monitor payload for one teamwork manager.",
+            "pulse_class": "fact",
+            "status": "stable",
+            "concept": {
+              "definition": "Return the BossPulser managed-work monitor payload for one teamwork manager."
+            },
+            "interface": {
+              "schema_language": "json-schema-2020-12",
+              "request_schema": {
+                "type": "object",
+                "properties": {
+                  "manager_address": {
+                    "type": "string"
+                  },
+                  "party": {
+                    "type": "string"
+                  }
+                }
+              },
+              "response_schema": {}
+            }
+          },
+          "pulse_id": "urn:plaza:pulse:monitor.managed.work",
+          "pulse_name": "monitor_managed_work",
+          "title": "Monitor Managed Work",
+          "output_schema": {},
+          "interface": {
+            "schema_language": "json-schema-2020-12",
+            "request_schema": {
+              "type": "object",
+              "properties": {
+                "manager_address": {
+                  "type": "string"
+                },
+                "party": {
+                  "type": "string"
+                }
+              }
+            },
+            "response_schema": {}
+          },
+          "concept": {
+            "definition": "Return the BossPulser managed-work monitor payload for one teamwork manager."
+          },
+          "resource_type": "pulse_definition",
+          "pds_version": "0.1.0",
+          "status": "stable",
+          "pulse_class": "fact",
+          "mapping": {},
+          "tags": [],
+          "cost": 0
+        }
+      ],
+      "pulse_id": "urn:plaza:pulse:create.team",
+      "pulse_definition": {
+        "pds_version": "0.1.0",
+        "resource_type": "pulse_definition",
+        "id": "urn:plaza:pulse:create.team",
+        "version": "1.0.0",
+        "name": "create_team",
+        "title": "Create Team",
+        "description": "Generate boss, manager, and worker teamwork configs for a new Phemacast team.",
+        "pulse_class": "fact",
+        "status": "stable",
+        "concept": {
+          "definition": "Generate boss, manager, and worker teamwork configs for a new Phemacast team."
+        },
+        "interface": {
+          "schema_language": "json-schema-2020-12",
+          "request_schema": {
+            "type": "object",
+            "properties": {
+              "team_name": {
+                "type": "string"
+              },
+              "party": {
+                "type": "string"
+              },
+              "plaza_url": {
+                "type": "string"
+              },
+              "worker_count": {
+                "type": "integer"
+              },
+              "job_capabilities": {
+                "type": "array"
+              }
+            }
+          },
+          "response_schema": {}
+        }
+      }
+    },
+    "accepts_inbound_from_plaza": true,
+    "accepts_direct_call": true,
+    "connectivity_mode": "plaza-forward",
+    "pit_address": {
+      "pit_id": "5444b86e-e2d4-4e5b-b4c9-139b10b6871b",
+      "plazas": [
+        "http://127.0.0.1:8011"
+      ]
+    },
+    "practices": [
+      {
+        "name": "Pool Connect",
+        "description": "Connect the SQLite pool to its database file.",
+        "id": "pool-connect",
+        "cost": 0,
+        "tags": [
+          "pool",
+          "sqlite",
+          "storage",
+          "connect"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {},
+        "path": "/pool_connect"
+      },
+      {
+        "name": "Pool Disconnect",
+        "description": "Close the SQLite pool database connection.",
+        "id": "pool-disconnect",
+        "cost": 0,
+        "tags": [
+          "pool",
+          "sqlite",
+          "storage",
+          "disconnect"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {},
+        "path": "/pool_disconnect"
+      },
+      {
+        "name": "Pool Create Table",
+        "description": "Create a table in the SQLite pool.",
+        "id": "pool-create-table",
+        "cost": 0,
+        "tags": [
+          "pool",
+          "sqlite",
+          "storage",
+          "create-table"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {
+          "table_name": {
+            "type": "string",
+            "description": "Logical table name."
+          },
+          "schema": {
+            "type": "object",
+            "description": "Table schema definition."
+          }
+        },
+        "path": "/pool_create_table"
+      },
+      {
+        "name": "Pool Table Exists",
+        "description": "Check whether a SQLite table exists.",
+        "id": "pool-table-exists",
+        "cost": 0,
+        "tags": [
+          "pool",
+          "sqlite",
+          "storage",
+          "table-exists"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {
+          "table_name": {
+            "type": "string",
+            "description": "Logical table name."
+          }
+        },
+        "path": "/pool_table_exists"
+      },
+      {
+        "name": "Pool Insert",
+        "description": "Insert or replace one row in the SQLite pool.",
+        "id": "pool-insert",
+        "cost": 0,
+        "tags": [
+          "pool",
+          "sqlite",
+          "storage",
+          "insert"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {
+          "table_name": {
+            "type": "string",
+            "description": "Logical table name."
+          },
+          "data": {
+            "type": "object",
+            "description": "Row payload to persist."
+          }
+        },
+        "path": "/pool_insert"
+      },
+      {
+        "name": "Pool Query",
+        "description": "Execute a SQL query against the SQLite pool.",
+        "id": "pool-query",
+        "cost": 0,
+        "tags": [
+          "pool",
+          "sqlite",
+          "storage",
+          "query"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {
+          "query": {
+            "type": "string",
+            "description": "SQL query string."
+          },
+          "params": {
+            "type": "object",
+            "description": "Optional query parameters."
+          }
+        },
+        "path": "/pool_query"
+      },
+      {
+        "name": "Pool Get Table Data",
+        "description": "Read rows from a SQLite table.",
+        "id": "pool-get-table-data",
+        "cost": 0,
+        "tags": [
+          "pool",
+          "sqlite",
+          "storage",
+          "read"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {
+          "table_name": {
+            "type": "string",
+            "description": "Logical table name."
+          },
+          "id_or_where": {
+            "type": "object",
+            "description": "Optional id or equality filter."
+          },
+          "table_schema": {
+            "type": "object",
+            "description": "Optional table schema for decoding."
+          }
+        },
+        "path": "/pool_get_table_data"
+      },
+      {
+        "name": "Pool Store Memory",
+        "description": "Store one memory record in the SQLite pool.",
+        "id": "pool-store-memory",
+        "cost": 0,
+        "tags": [
+          "pool",
+          "sqlite",
+          "memory",
+          "store"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {
+          "content": {
+            "type": "string",
+            "description": "Memory content."
+          },
+          "memory_id": {
+            "type": "string",
+            "description": "Optional stable memory id."
+          },
+          "metadata": {
+            "type": "object",
+            "description": "Optional metadata payload."
+          },
+          "tags": {
+            "type": "array",
+            "description": "Optional string tags."
+          },
+          "memory_type": {
+            "type": "string",
+            "description": "Memory category."
+          },
+          "table_name": {
+            "type": "string",
+            "description": "Optional override table name."
+          }
+        },
+        "path": "/pool_store_memory"
+      },
+      {
+        "name": "Pool Search Memory",
+        "description": "Search stored memory records in the SQLite pool.",
+        "id": "pool-search-memory",
+        "cost": 0,
+        "tags": [
+          "pool",
+          "sqlite",
+          "memory",
+          "search"
+        ],
+        "examples": [],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {
+          "query": {
+            "type": "string",
+            "description": "Case-insensitive search text."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum number of matches."
+          },
+          "table_name": {
+            "type": "string",
+            "description": "Optional override table name."
+          }
+        },
+        "path": "/pool_search_memory"
+      },
+      {
+        "name": "Get Pulse Data",
+        "description": "Fetch or transform pulse payloads for the agent's supported pulses.",
+        "id": "get_pulse_data",
+        "cost": 0,
+        "tags": [
+          "pulser",
+          "pulse",
+          "data"
+        ],
+        "examples": [
+          "POST /get_pulse_data {'pulse_name': 'last_price', 'params': {'symbol': 'AAPL'}}"
+        ],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {
+          "pulse_name": {
+            "type": "string",
+            "description": "Optional pulse identifier. Defaults to the pulser's primary pulse.",
+            "enum": [
+              "create_team",
+              "create_worker",
+              "create_manager",
+              "connect_manager",
+              "discover_teams",
+              "supported_jobcaps",
+              "team_status",
+              "team_history",
+              "submit_team_job",
+              "create_managed_ticket",
+              "create_managed_schedule",
+              "monitor_managed_work"
+            ]
+          },
+          "pulse_address": {
+            "type": "string",
+            "description": "Optional pulse address override."
+          },
+          "params": {
+            "type": "object",
+            "properties": {
+              "team_name": {
+                "type": "string"
+              },
+              "party": {
+                "type": "string"
+              },
+              "plaza_url": {
+                "type": "string"
+              },
+              "worker_count": {
+                "type": "integer"
+              },
+              "job_capabilities": {
+                "type": "array"
+              }
+            }
+          }
+        },
+        "path": "/get_pulse_data"
+      },
+      {
+        "name": "Mailbox",
+        "description": "Default inbound message endpoint for generic agent delivery.",
+        "id": "mailbox",
+        "cost": 0,
+        "tags": [
+          "message",
+          "mailbox"
+        ],
+        "examples": [
+          "POST /mailbox {'sender':'alice','content':'hello','msg_type':'message'}"
+        ],
+        "inputModes": [
+          "http-post",
+          "json"
+        ],
+        "outputModes": [
+          "json"
+        ],
+        "parameters": {
+          "sender": {
+            "type": "string",
+            "description": "Sending agent name or id."
+          },
+          "receiver": {
+            "type": "string",
+            "description": "Target agent name or id."
+          },
+          "content": {
+            "type": "object",
+            "description": "Message payload."
+          },
+          "msg_type": {
+            "type": "string",
+            "description": "Message routing key."
+          }
+        },
+        "path": "/mailbox"
+      }
+    ],
+    "agent_id": "5444b86e-e2d4-4e5b-b4c9-139b10b6871b"
+  },
+  "updated_at": "2026-04-04T10:28:13.060169+00:00"
+}

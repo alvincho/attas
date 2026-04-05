@@ -1,0 +1,63 @@
+{
+  "pulse_id": "urn:plaza:pulse:team.history",
+  "pulse_name": "team_history",
+  "pulse_address": "plaza://pulse/team_history",
+  "pulse_definition": {
+    "pds_version": "0.1.0",
+    "resource_type": "pulse_definition",
+    "id": "urn:plaza:pulse:team.history",
+    "version": "1.0.0",
+    "name": "team_history",
+    "title": "Team History",
+    "description": "Return recent job and worker history from one teamwork manager.",
+    "pulse_class": "fact",
+    "status": "stable",
+    "concept": {
+      "definition": "Return recent job and worker history from one teamwork manager."
+    },
+    "interface": {
+      "schema_language": "json-schema-2020-12",
+      "request_schema": {
+        "type": "object",
+        "properties": {
+          "manager_address": {
+            "type": "string"
+          },
+          "party": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "integer"
+          }
+        }
+      },
+      "response_schema": {}
+    },
+    "test_data": {
+      "manager_address": "http://127.0.0.1:8170",
+      "limit": 20
+    }
+  },
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "manager_address": {
+        "type": "string"
+      },
+      "party": {
+        "type": "string"
+      },
+      "limit": {
+        "type": "integer"
+      }
+    }
+  },
+  "pulser_id": "f3d360fb-7e8e-4e6c-a9fa-ede41d8d6228",
+  "pulser_name": "ManagerPulser",
+  "pulser_address": "f3d360fb-7e8e-4e6c-a9fa-ede41d8d6228",
+  "status": "stable",
+  "pulse_directory_id": "d2083bb2-e587-5a45-85f9-cdaee90cb8a0",
+  "pulser_directory_id": "f3d360fb-7e8e-4e6c-a9fa-ede41d8d6228",
+  "id": "2ea1588a-052d-5c0c-8a64-7469c6c40eaf",
+  "updated_at": "2026-04-04T10:28:25.283794+00:00"
+}

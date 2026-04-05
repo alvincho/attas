@@ -1,6 +1,6 @@
 {
-  "id": "FileStoragePulser:chat-practice",
-  "agent_name": "FileStoragePulser",
+  "id": "SystemPulser:chat-practice",
+  "agent_name": "SystemPulser",
   "practice_id": "chat-practice",
   "practice_name": "ChatPractice",
   "practice_description": "Enables LLM interaction via ollama.",

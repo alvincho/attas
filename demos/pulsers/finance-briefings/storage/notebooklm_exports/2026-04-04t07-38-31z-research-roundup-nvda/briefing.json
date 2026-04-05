@@ -1,0 +1,39 @@
+{
+  "payload_type": "attas.finance_briefing",
+  "payload_version": 1,
+  "workflow": "research_roundup",
+  "workflow_label": "Research Roundup",
+  "title": "Research Roundup | NVDA",
+  "owner": "attas.workflows.briefings",
+  "as_of": "2026-04-04T07:38:31Z",
+  "subject": {
+    "label": "NVDA",
+    "symbols": []
+  },
+  "watchlist": [],
+  "summary": {
+    "stance": "balanced",
+    "headline": "NVDA research roundup: balanced tone",
+    "channel_text": "NVDA research roundup: balanced tone"
+  },
+  "facts": [],
+  "inferred_takeaways": [],
+  "risks": [],
+  "catalysts": [],
+  "conflicting_evidence": [],
+  "open_questions": [],
+  "citations": [],
+  "sources": [],
+  "meta": {
+    "generated_at": "2026-04-04T07:38:31Z",
+    "source_count": 0,
+    "citation_count": 0,
+    "watchlist_count": 0,
+    "notebooklm_import_mode": "beta_export_only"
+  },
+  "publication": {
+    "notion_title": "Research Roundup | NVDA",
+    "notion_markdown": "# Research Roundup | NVDA\n\n_Research Roundup_\n\nAs of 2026-04-04T07:38:31Z\n\n## Roundup Summary\n\nNVDA research roundup: balanced tone\n\nNVDA research roundup: balanced tone\n\n## Facts\n\n- None identified.\n\n## Inferred Takeaways\n\n- None identified.\n\n## Risks\n\n- None identified.\n\n## Catalysts\n\n- None identified.\n\n## Conflicting Evidence\n\n- None identified.\n\n## Open Questions\n\n- None identified.\n\n## Citations\n\n- None identified.\n",
+    "channel_text": "NVDA research roundup: balanced tone"
+  }
+}

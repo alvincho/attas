@@ -8,7 +8,7 @@
     {
       "type": "FileSystemPool",
       "name": "file_storage_demo_plaza_pool",
-      "description": "Local Plaza storage for the file storage pulser demo.",
+      "description": "Local Plaza storage for the system pulser demo.",
       "root_path": "demos/pulsers/file-storage/storage/plaza"
     }
   ],
