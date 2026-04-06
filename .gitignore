@@ -47,6 +47,8 @@ private/
 /phemacast/storage/
 /prompits/dispatcher/storage/
 /ads/storage/
+/storage/castr_work_storage/
+/storage/notebooklm_exports/
 /pypi-starters/
 /output
 /TODO.md

@@ -300,7 +300,7 @@ def test_build_agent_from_config_loads_castr_work_pulser(tmp_path):
       "type": "FileSystemPool",
       "name": "castr_work_pool",
       "description": "Local artifact storage for CastrWorkPulser outputs.",
-      "root_path": "castr_work_storage"
+      "root_path": "storage/castr_work_storage"
     }
   ]
 }""",
