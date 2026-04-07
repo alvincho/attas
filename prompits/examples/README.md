@@ -12,8 +12,6 @@
 - [日本語](README.ja.md)
 - [한국어](README.ko.md)
 
-These files are minimal local examples for the current Prompits runtime. They are meant for open source documentation, demos, and first-run onboarding.
-
 ## Files
 
 - `plaza.agent`: Plaza with a local `FileSystemPool`

@@ -31,9 +31,7 @@
 
 ### Windows
 
-對於配對的 demo 啟動器，請使用帶有 Ubuntu 或其他 Linux 發行版的 WSL2。在堆疊運行後，如果分頁沒有自動打開，請在 Windows 瀏覽器中打開列印出的 `guide=` URL。
-
-原生 PowerShell / 命令提示字元封裝器尚未提交，因此目前支援的 Windows 路徑是 WSL2。
+請為配對的 demo 啟動器使用原生 Windows Python 環境，例如 `py -3 -m scripts.demo_launcher analyst-insights` 與 `py -3 -m scripts.demo_launcher finance-briefings`。在堆疊運行後，如果分頁沒有自動開啟，請在 Windows 瀏覽器中開啟列印出的 `guide=` URL。
 
 ## 此資料夾包含什麼
 

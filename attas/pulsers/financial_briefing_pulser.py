@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from pathlib import Path
+import tempfile
 from typing import Any
 
 from attas.pds import derive_pulse_id
@@ -36,6 +37,7 @@ _STRING_FIELD = {"type": "string"}
 _BOOLEAN_FIELD = {"type": "boolean"}
 _OBJECT_FIELD = {"type": "object"}
 _ARRAY_FIELD = {"type": "array"}
+_DEFAULT_NOTEBOOKLM_OUTPUT_DIR = str(Path(tempfile.gettempdir()) / "notebooklm-pack")
 _SUBJECT_FIELD = {
     "anyOf": [
         {"type": "string"},
@@ -289,7 +291,7 @@ def _sample_workflow_input() -> dict[str, Any]:
         ],
         "analysis": {},
         "as_of": "2026-04-04T08:00:00Z",
-        "output_dir": "/tmp/notebooklm-pack",
+        "output_dir": _DEFAULT_NOTEBOOKLM_OUTPUT_DIR,
         "include_pdf": False,
     }
 
@@ -524,7 +526,11 @@ def _default_supported_pulses() -> list[dict[str, Any]]:
             ),
             output_schema=_notebooklm_pack_schema(),
             tags=["publication", "notebooklm", "export"],
-            test_data={"briefing_payload": briefing_payload, "output_dir": "/tmp/notebooklm-pack", "include_pdf": False},
+            test_data={
+                "briefing_payload": briefing_payload,
+                "output_dir": _DEFAULT_NOTEBOOKLM_OUTPUT_DIR,
+                "include_pdf": False,
+            },
         ),
     ]
 

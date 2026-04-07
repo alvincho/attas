@@ -26,6 +26,8 @@ from typing import Any, Dict, List, Optional
 
 import requests
 
+from prompits.core.process_utils import background_popen_kwargs, terminate_process
+
 from prompits.core.init_schema import plaza_directory_table_schema
 from prompits.core.pool import Pool
 
@@ -708,7 +710,7 @@ class AgentLaunchManager:
                 cwd=str(self.workspace_root),
                 stdout=log_handle,
                 stderr=subprocess.STDOUT,
-                start_new_session=True,
+                **background_popen_kwargs(),
             )
         finally:
             log_handle.close()
@@ -717,11 +719,7 @@ class AgentLaunchManager:
         healthy = self._wait_for_health(f"{address}/health", timeout_sec=wait_for_health_sec)
         if not healthy:
             if process and process.poll() is None:
-                process.terminate()
-                try:
-                    process.wait(timeout=2)
-                except subprocess.TimeoutExpired:
-                    process.kill()
+                terminate_process(process, timeout_sec=2.0)
             log_tail = self._tail_log(log_path)
             raise RuntimeError(
                 "Launched agent did not become healthy in time."

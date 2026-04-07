@@ -31,9 +31,7 @@ Sie können auch starten:
 
 ### Windows
 
-Verwenden Sie WSL2 mit Ubuntu oder einer anderen Linux-Distro für die gekoppelten Demo-Launcher. Wenn der Stack läuft, öffnen Sie die gedruckte `guide=` URL in einem Windows-Browser, falls die Tabs nicht automatisch geöffnet werden.
-
-Native PowerShell / Command Prompt-Wrapper sind noch nicht eingecheckt, daher ist WSL2 heute der unterstützte Windows-Pfad.
+Verwenden Sie eine native Windows-Python-Umgebung für die paarweisen Demo-Launcher, zum Beispiel `py -3 -m scripts.demo_launcher analyst-insights` und `py -3 -m scripts.demo_launcher finance-briefings`. Wenn der Stack läuft, öffnen Sie die gedruckte `guide=` URL in einem Windows-Browser, falls die Tabs nicht automatisch geöffnet werden.
 
 ## Was befindet sich in diesem Ordner
 

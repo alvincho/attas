@@ -42,18 +42,17 @@ pip install -r requirements.txt
 
 ### Windows
 
-请搭配 Ubuntu 或其他 Linux 发行版使用 WSL2。在 WSL 内的仓库根目录下，运行相同的命令：
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install --upgrade pip
-pip install -r requirements.txt
-./demos/hello-plaza/run-demo.sh
+请使用原生 Windows Python 环境。在 PowerShell 中进入仓库根目录后执行：
+```powershell
+py -3 -m venv .venv
+.venv\Scripts\python.exe -m pip install --upgrade pip
+.venv\Scripts\python.exe -m pip install -r requirements.txt
+.venv\Scripts\python.exe -m scripts.demo_launcher hello-plaza
 ```
 
-如果浏览器标签页无法从 WSL 自动打开，请保持启动器运行，并在 Windows 浏览器中打开打印出的 `guide=` URL。
+如果浏览器标签页没有自动打开，请保持启动器运行，并在 Windows 浏览器中打开打印出的 `guide=` URL。
 
-原生 PowerShell / Command Prompt 封装器尚未提交，因此目前支持的 Windows 路径是 WSL2。
+在 macOS 和 Linux 上，已提交的 `run-demo.sh` 封装器仍可作为相同 Python 启动器的便利封装器使用。
 
 ## 公用设置
 
@@ -71,12 +70,12 @@ pip install -r requirements.txt
 
 ## Demo 目录
 
-### [`hello-plaza`](./hello-cap/README.md)
+### [`hello-plaza`](./hello-plaza/README.md)
 
 - 目标对象：初次开发者
-- 运行环境：Plaza + worker + 面向浏览器的 用户代理
+- 运行环境：Plaza + worker + 浏览器端用户代理
 - 外部服务：无
-- 证明内容：agent 注册、发现以及简单的浏览器 UI
+- 证明内容：代理注册、发现以及简单的浏览器 UI
 
 ### [`pulsers`](./pulsers/README.md)
 

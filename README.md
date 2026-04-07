@@ -12,17 +12,6 @@
 - [日本語](README.ja.md)
 - [한국어](README.ko.md)
 
-This repository is a multi-agent workspace for financial intelligence systems.
-
-Learn more at [retis.ai](https://retis.ai) and see the Attas product page at [retis.ai/products/attas](https://retis.ai/products/attas).
-
-The repository currently combines several related codebases:
-
-- `prompits`: Python infrastructure for HTTP-native agents, Plaza discovery, pools, and remote practice execution
-- `phemacast`: a collaborative content pipeline built on Prompits
-- `attas`: higher-level finance-oriented agent patterns and pulse definitions
-- `ads`: data-service and collection components that feed normalized finance datasets into the wider system
-
 ## Status
 
 This repository is actively developed and still evolving. APIs, config formats, and
@@ -90,7 +79,8 @@ outside the repo tree.
 
 The safest local path today is the Prompits example stack. It does not require
 Supabase or other private infrastructure, and it now has a one-command local
-bootstrap flow for the baseline desk stack:
+bootstrap flow for the baseline desk stack. The Python launcher works natively on
+Windows, Linux, and macOS. Use `python3` on macOS/Linux and `py -3` on Windows:
 
 ```bash
 python3 -m prompits.cli up desk
@@ -118,9 +108,9 @@ python3 -m prompits.cli down desk
 If you need the older manual flow for debugging a single service at a time:
 
 ```bash
-python3 prompits/create_agent.py --config prompits/examples/plaza.agent
-python3 prompits/create_agent.py --config prompits/examples/worker.agent
-python3 prompits/create_agent.py --config prompits/examples/user.agent
+python3 -m prompits.create_agent --config prompits/examples/plaza.agent
+python3 -m prompits.create_agent --config prompits/examples/worker.agent
+python3 -m prompits.create_agent --config prompits/examples/user.agent
 ```
 
 If you want the older Supabase-backed Plaza setup, point `PROMPITS_AGENT_CONFIG` at

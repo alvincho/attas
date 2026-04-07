@@ -53,18 +53,15 @@ pip install -r requirements.txt
 
 ### Windows
 
-请搭配 Ubuntu 或其他 Linux 发行版使用 WSL2。在 WSL 内的仓库根目录下执行：
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install --upgrade pip
-pip install -r requirements.txt
-./demos/pulsers/ads/run-demo.sh
+请使用原生 Windows Python 环境。在 PowerShell 中进入仓库根目录：
+```powershell
+py -3 -m venv .venv
+.venv\Scripts\python.exe -m pip install --upgrade pip
+.venv\Scripts\python.exe -m pip install -r requirements.txt
+.venv\Scripts\python.exe -m scripts.demo_launcher ads
 ```
 
-如果浏览器标签页无法从 WSL 自动打开，请保持启动器运行，并在 Windows 浏览器中打开打印出的 `guide=` URL。
-
-原生 PowerShell / 命令提示符封装器尚未提交，因此目前支持的 Windows 路径是 WSL2。
+如果浏览器标签页没有自动打开，请保持启动器运行，并在 Windows 浏览器中打开打印出的 `guide=` URL。
 
 ## 初步 Pulser 检查
 

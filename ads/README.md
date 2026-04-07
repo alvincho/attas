@@ -12,13 +12,6 @@
 - [日本語](README.ja.md)
 - [한국어](README.ko.md)
 
-Attas Data Services (`ads`) is a lightweight data-services backend for the existing `prompits` and `phemacast` runtimes. It now includes three concrete building blocks:
-
-- `ADSDispatcherAgent`: queue-backed dispatcher for collection jobs
-- `ADSWorkerAgent`: collector worker that polls for matching jobs and reports results
-- `ADSPulser`: pulser that serves normalized ADS tables as Plaza pulses
-- `ADSBossAgent`: operator UI that issues jobs to the dispatcher
-
 ## Coverage
 
 The current normalized dataset tables are:

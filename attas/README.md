@@ -12,12 +12,6 @@
 - [日本語](README.ja.md)
 - [한국어](README.ko.md)
 
-**attas** stands for **Autonomous Trading and Treasury Agents System**.
-
-attas is a collaborative, AI-native network for financial intelligence. It is designed to help the financial industry move from disconnected tools and siloed workflows to a system where data vendors, service providers, analysts, traders, investors, and institutions can contribute through their own agents and work together in one intelligent ecosystem.
-
-In the AI era, finance does not only need better models. It needs a better way to connect data, analytics, expert judgment, research, and client context. attas is built for that shift.
-
 ## Why attas
 
 Finance already has intelligence everywhere, but that intelligence is fragmented.

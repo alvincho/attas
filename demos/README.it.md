@@ -42,18 +42,17 @@ pip install -r requirements.txt
 
 ### Windows
 
-Utilizza WSL2 con Ubuntu o un'altra distribuzione Linux. Dalla radice del repository all'interno di WSL, esegui gli stessi comandi:
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install --upgrade pip
-pip install -r requirements.txt
-./demos/hello-plaza/run-demo.sh
+Utilizza un ambiente Python nativo per Windows. Dalla radice del repository in PowerShell:
+```powershell
+py -3 -m venv .venv
+.venv\Scripts\python.exe -m pip install --upgrade pip
+.venv\Scripts\python.exe -m pip install -r requirements.txt
+.venv\Scripts\python.exe -m scripts.demo_launcher hello-plaza
 ```
 
-Se le schede del browser non si aprono automaticamente da WSL, mantieni il launcher in esecuzione e apri l'URL `guide=` stampata in un browser Windows.
+Se le schede del browser non si aprono automaticamente, mantieni il launcher in esecuzione e apri l'URL `guide=` stampata in un browser Windows.
 
-I wrapper nativi per PowerShell / Command Prompt non sono ancora stati inclusi, quindi oggi la strada Windows supportata è WSL2.
+Su macOS e Linux, i wrapper `run-demo.sh` inclusi funzionano ancora come wrapper di comodità attorno allo stesso launcher Python.
 
 ## Configurazione condivisa
 

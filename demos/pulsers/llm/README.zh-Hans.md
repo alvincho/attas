@@ -15,12 +15,12 @@
 ## 此文件夹中的文件
 
 - `plaza.agent`: 用于两种 LLM pulser 变体的本地 Plaza
-- `openai.pulser`: OpenAI 支援的 pulser 配置
+- `openai.pulser`: OpenAI 支持的 pulser 配置
 - `ollama.pulser`: 以 Ollama 为后端的 pulser 配置
 - `start-plaza.sh`: 启动 Plaza
 - `start-openai-pulser.sh`: 启动 OpenAI demo pulser
 - `start-ollama-pulser.sh`: 启动 Ollama demo pulser
-- `run-demo.sh`: 从一个终端机启动完整演示，并打开浏览器指南以及所选的 pulser UI
+- `run-demo.sh`: 从一个终端启动完整演示，并打开浏览器指南以及所选的 pulser UI
 
 ## 单一命令启动
 
@@ -54,18 +54,15 @@ pip install -r requirements.txt
 
 ### Windows
 
-请搭配 Ubuntu 或其他 Linux 发行版使用 WSL2。在 WSL 内的仓库根目录下执行：
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install --upgrade pip
-pip install -r requirements.txt
-./demos/pulsers/llm/run-demo.sh
+使用原生 Windows Python 环境。在 PowerShell 中从仓库根目录执行：
+```powershell
+py -3 -m venv .venv
+.venv\Scripts\python.exe -m pip install --upgrade pip
+.venv\Scripts\python.exe -m pip install -r requirements.txt
+.venv\Scripts\python.exe -m scripts.demo_launcher llm
 ```
 
-如果浏览器标签页无法从 WSL 自动打开，请保持启动器运行，并在 Windows 浏览器中打开打印出的 `guide=` URL。
-
-原生 PowerShell / Command Prompt 封装器尚未提交，因此目前支持的 Windows 路径是 WSL2。
+如果浏览器标签页没有自动打开，请保持启动器运行，并在 Windows 浏览器中打开打印出的 `guide=` URL。
 
 ## 快速入门
 
@@ -164,5 +161,5 @@ curl -sS http://127.0.0.1:8263/api/test-pulse \
 若要自定义此示例：
 
 1. 复制 `openai.pulser` 或 `ollama.pulser`
-2. 修改 `model`、`base_url`、端口以及儲存路徑
+2. 修改 `model`、`base_url`、端口以及存储路径
 3. 如果其他工具或 UI 依赖它，请保持 `llm_chat` pulse 稳定

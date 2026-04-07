@@ -31,9 +31,7 @@ También puede iniciar:
 
 ### Windows
 
-Utilice WSL2 con Ubuntu u otra distribución de Linux para los lanzadores de demostración emparejados. Una vez que el stack esté en funcionamiento, abra la URL `guide=` impresa en un navegador de Windows si las pestañas no se abren automáticamente.
-
-Los wrappers nativos de PowerShell / Command Prompt aún no se han incluido, por lo que WSL2 es la ruta de Windows compatible hoy en día.
+Utilice un entorno de Python nativo de Windows para los lanzadores de demo emparejados, por ejemplo `py -3 -m scripts.demo_launcher analyst-insights` y `py -3 -m scripts.demo_launcher finance-briefings`. Una vez que el stack esté en funcionamiento, abra la URL `guide=` impresa en un navegador de Windows si las pestañas no se abren automáticamente.
 
 ## Qué hay en esta carpeta
 

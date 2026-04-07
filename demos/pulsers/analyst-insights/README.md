@@ -12,11 +12,6 @@
 - [日本語](README.ja.md)
 - [한국어](README.ko.md)
 
-`analyst-insights` now contains two related demos:
-
-- a simple analyst-owned pulser that publishes a fixed research view as reusable structured pulses
-- an advanced analyst-owned pulser that uses the analyst's own prompt pack plus Ollama to turn raw news from another agent into audience-specific insight pulses
-
 ## What This Demo Shows
 
 - one analyst-owned pulser with multiple structured insight pulses
@@ -83,25 +78,23 @@ DEMO_ANALYST_MODE=advanced ./demos/pulsers/analyst-insights/run-demo.sh
 
 ### Windows
 
-Use WSL2 with Ubuntu or another Linux distro. From the repository root inside WSL:
+Use a native Windows Python environment. From the repository root in PowerShell:
 
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install --upgrade pip
-pip install -r requirements.txt
-./demos/pulsers/analyst-insights/run-demo.sh
+```powershell
+py -3 -m venv .venv
+.venv\Scripts\python.exe -m pip install --upgrade pip
+.venv\Scripts\python.exe -m pip install -r requirements.txt
+.venv\Scripts\python.exe -m scripts.demo_launcher analyst-insights
 ```
 
-For the advanced path inside WSL:
+For the advanced path:
 
-```bash
-DEMO_ANALYST_MODE=advanced ./demos/pulsers/analyst-insights/run-demo.sh
+```powershell
+$env:DEMO_ANALYST_MODE = "advanced"
+.venv\Scripts\python.exe -m scripts.demo_launcher analyst-insights
 ```
 
-If browser tabs do not auto-open from WSL, keep the launcher running and open the printed `guide=` URL in a Windows browser.
-
-Native PowerShell / Command Prompt wrappers are not checked in yet, so WSL2 is the supported Windows path today.
+If browser tabs do not auto-open, keep the launcher running and open the printed `guide=` URL in a Windows browser.
 
 
 ## Demo 1: Structured Analyst Views

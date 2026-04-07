@@ -31,9 +31,7 @@ Vous pouvez également lancer :
 
 ### Windows
 
-Utilisez WSL2 avec Ubuntu ou une autre distribution Linux pour les lanceurs de démo appairés. Une fois la pile (stack) en cours d'exécution, ouvrez l'URL `guide=` imprimée dans un navigateur Windows si les onglets ne s'ouvrent pas automatiquement.
-
-Les wrappers natifs PowerShell / Command Prompt ne sont pas encore intégrés, WSL2 est donc la méthode Windows prise en charge aujourd'hui.
+Utilisez un environnement Python natif Windows pour les lanceurs de démo appairés, par exemple `py -3 -m scripts.demo_launcher analyst-insights` et `py -3 -m scripts.demo_launcher finance-briefings`. Une fois la pile lancée, ouvrez l'URL `guide=` imprimée dans un navigateur Windows si les onglets ne s'ouvrent pas automatiquement.
 
 ## Que contient ce dossier
 

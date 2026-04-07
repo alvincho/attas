@@ -23,10 +23,10 @@
 
 - `plaza.agent`: Plaza 配置示例
 - `worker.agent`: worker 配置示例
-- `user.agent`: 用户代理 配置示例
+- `user.agent`: 用户代理配置示例
 - `start-plaza.sh`: 启动 Plaza
 - `start-worker.sh`: 启动 worker
-- `start-user.sh`: 启动面向浏览器的 用户代理
+- `start-user.sh`: 启动浏览器端用户代理
 
 所有运行时状态均写入 `demos/hello-plaza/storage/`。
 
@@ -66,18 +66,15 @@ pip install -r requirements.txt
 
 ### Windows
 
-请搭配 Ubuntu 或其他 Linux 发行版使用 WSL2。在 WSL 内的仓库根目录下：
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install --upgrade pip
-pip install -r requirements.txt
-./demos/hello-plaza/run-demo.sh
+请使用原生 Windows Python 环境。在 PowerShell 中从仓库根目录执行：
+```powershell
+py -3 -m venv .venv
+.venv\Scripts\python.exe -m pip install --upgrade pip
+.venv\Scripts\python.exe -m pip install -r requirements.txt
+.venv\Scripts\python.exe -m scripts.demo_launcher hello-plaza
 ```
 
-如果浏览器标签页无法从 WSL 自动打开，请保持启动器运行，并在 Windows 浏览器中打开打印出的 `guide=` URL。
-
-原生 PowerShell / Command Prompt 封装器尚未提交，因此目前支持的 Windows 路径是 WSL2。
+如果浏览器标签页没有自动打开，请保持启动器运行，并在 Windows 浏览器中打开打印出的 `guide=` URL。
 
 ## 快速入门
 
@@ -93,7 +90,7 @@ pip install -r requirements.txt
 - Plaza 启动于 `http://127.0.0.1:8211`
 - `http://127.0.0.1:8211/health` 返回健康状态
 
-### 终端机 2：启动 worker
+### 终端 2：启动 worker
 ```bash
 ./demos/hello-plaza/start-worker.sh
 ```
@@ -101,9 +98,9 @@ pip install -r requirements.txt
 预期结果：
 
 - worker 启动于 `127.0.0.1:8212`
-- it 会自动向 Terminal 1 的 Plaza 进行注册
+- 它会自动向终端 1 中的 Plaza 注册
 
-### 终端机 3：启动用户 UI
+### 终端 3：启动用户 UI
 
 ```bash
 ./demos/hello-plaza/start-user.sh
@@ -111,7 +108,7 @@ pip install -r requirements.txt
 
 预期结果：
 
-- 面向浏览器的用户代理程序启动于 `http://127.0.0.1:8214/`
+- 浏览器端用户代理启动于 `http://127.0.0.1:8214/`
 
 ## 验证堆栈
 

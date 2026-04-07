@@ -16,23 +16,34 @@ if str(REPO_ROOT) not in sys.path:
 from scripts import demo_launcher
 
 
-def test_available_demo_ids_match_expected_wrappers():
-    """Every supported launcher ID should map to a checked-in wrapper script."""
+def test_available_demo_ids_match_expected_launch_commands():
+    """Every supported launcher ID should expose a direct Python launch command."""
+    python_label = Path(sys.executable).name or "python"
     expected = {
-        "hello-plaza": REPO_ROOT / "demos" / "hello-plaza" / "run-demo.sh",
-        "data-pipeline": REPO_ROOT / "demos" / "data-pipeline" / "run-demo.sh",
-        "personal-research-workbench": REPO_ROOT / "demos" / "personal-research-workbench" / "run-demo.sh",
-        "file-storage": REPO_ROOT / "demos" / "pulsers" / "file-storage" / "run-demo.sh",
-        "yfinance": REPO_ROOT / "demos" / "pulsers" / "yfinance" / "run-demo.sh",
-        "llm": REPO_ROOT / "demos" / "pulsers" / "llm" / "run-demo.sh",
-        "analyst-insights": REPO_ROOT / "demos" / "pulsers" / "analyst-insights" / "run-demo.sh",
-        "finance-briefings": REPO_ROOT / "demos" / "pulsers" / "finance-briefings" / "run-demo.sh",
-        "ads": REPO_ROOT / "demos" / "pulsers" / "ads" / "run-demo.sh",
+        "hello-plaza": f"{python_label} -m scripts.demo_launcher hello-plaza",
+        "data-pipeline": f"{python_label} -m scripts.demo_launcher data-pipeline",
+        "personal-research-workbench": f"{python_label} -m scripts.demo_launcher personal-research-workbench",
+        "file-storage": f"{python_label} -m scripts.demo_launcher file-storage",
+        "yfinance": f"{python_label} -m scripts.demo_launcher yfinance",
+        "llm": f"{python_label} -m scripts.demo_launcher llm",
+        "analyst-insights": f"{python_label} -m scripts.demo_launcher analyst-insights",
+        "finance-briefings": f"{python_label} -m scripts.demo_launcher finance-briefings",
+        "ads": f"{python_label} -m scripts.demo_launcher ads",
     }
 
     assert set(demo_launcher.available_demo_ids()) == set(expected)
-    for path in expected.values():
-        assert path.exists(), f"Missing launcher wrapper: {path}"
+    for demo_id, command in expected.items():
+        spec = demo_launcher.resolve_demo_spec(demo_id, {})
+        assert spec.run_script_path == command
+
+
+def test_service_commands_are_direct_python_invocations():
+    """Managed demo services should launch directly via Python instead of shell wrappers."""
+    for demo_id in demo_launcher.available_demo_ids():
+        spec = demo_launcher.resolve_demo_spec(demo_id, {})
+        for service in spec.services:
+            assert service.command[0] == sys.executable
+            assert "/bin/sh" not in service.command
 
 
 def test_llm_demo_defaults_to_openai_when_api_key_exists():

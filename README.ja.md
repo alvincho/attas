@@ -12,22 +12,11 @@
 - [日本語](README.ja.md)
 - [한국어](README.ko.md)
 
-このリポジトリは、金融インテリジェンスシステム向けのマルチエージェント・ワークスペースです。
-
-詳しくは [retis.ai](https://retis.ai) をご覧ください。Attas の製品ページは [retis.ai/products/attas](https://retis.ai/products/attas) です。
-
-このリポジトリは現在、相互に関連する複数のコードベースをまとめています：
-
-- `prompits`: HTTP ネイティブなエージェント、Plaza の探索、プール、遠隔 practice 実行のための Python インフラ
-- `phemacast`: Prompits 上に構築された協調型コンテンツ・パイプライン
-- `attas`: より高水準の金融指向エージェントパターンと Pulse 定義
-- `ads`: 正規化された金融データセットをより広いシステムに供給するデータサービスおよび収集コンポーネント
-
 ## ステータス
 
-このリポジトリは活発に開発されており、現在も進化を続けています。プロジェクトの分割、安定化、またはより正式なパッケージ化に伴い、API、設定形式、および例のフローが変更される可能性があります。
+このリポジトリは積極的に開発されており、現在も進化を続けています。プロジェクトの分割、安定化、またはより正式なパッケージ化に伴い、API、設定フォーマット、およびサンプルフローが変更される可能性があります。
 
-以下の2つの領域は特に初期段階にあり、活発に開発されている間は急速に変わる可能性があります：
+以下の2つの領域は特に初期段階にあり、活発な開発中には急速に変化する可能性があります：
 
 - `prompits.teamwork`
 - `phemacast` `BossPulser`
@@ -75,7 +64,7 @@ bash "$(git rev-parse --show-toplevel)/attas_smoke"
 
 ## ローカルファースト・クイックスタート
 
-現在、最も安全なローカルパスは Prompits の例スタックです。Supabase やその他のプライベートなインフラストラクチャを必要とせず、ベースラインのデスクトップスタック向けに、単一コマンドでのローカルブートストラップフローが利用可能になりました：
+現在、最も安全なローカルパスは Prompits のエキサンプルスタックです。Supabase やその他のプライベートなインフラストラクチャを必要とせず、ベースラインのデスクトップスタック向けに、単一コマンドでのローカルブートストラップフローが利用可能になりました。Python ランチャーは Windows、Linux、macOS でネイティブに動作します。macOS/Linux では `python3` を、Windows では `py -3` を使用してください：
 ```bash
 python3 -m prompits.cli up desk
 ```
@@ -99,9 +88,9 @@ python3 -m prompits.cli down desk
 
 一度に1つのサービスをデバッグするための古い手動フローが必要な場合は、以下を使用してください：
 ```bash
-python3 prompits/create_agent.py --config prompits/examples/plaza.agent
-python3 prompits/create_agent.py --config prompits/examples/worker.agent
-python3 prompits/create_agent.py --config prompits/examples/user.agent
+python3 -m prompits.create_agent --config prompits/examples/plaza.agent
+python3 -m prompits.create_agent --config prompits/examples/worker.agent
+python3 -m prompits.create_agent --config prompits/examples/user.agent
 ```
 
 以前の Supabase バックエンドの Plaza 設定を使用する場合は、`PROMPITS_AGENT_CONFIG` を
@@ -168,8 +157,8 @@ tests/       Cross-project tests and fixtures
 | --- | --- | --- |
 | `prompits` | 最良の開始点 | Local-firstな例とコアランタイムが、最も簡単な公開エントリーポイントです。`prompits.teamwork` パッケージはまだ初期段階であり、急速に変更される可能性があります。 |
 | `attas` | 初期公開 | コアコンセプトとユーザーエージェントの作業は公開されていますが、未完成のコンポーネントの一部は、デフォルトのフローから意図的に隠されています。 |
-| `phemacast` | 初期公開 | コアパイプラインのコードは公開されています。一部のレポート/レンダリングコンポーネントは、現在整理および安定化の最中です。`BossPulser` は現在も活発に開発されています。 |
-| `ads` | 上級向け | 開発や研究に有用ですが、一部のデータワークフローには追加の設定が必要であり、初回実行時のパスには含まれません。 |
+| `phemacast` | 初期公開 | コアパイプラインのコードは公開されています。一部のレポート/レンダリングコンポーネントは、現在整理および安定化の最中です。`BossPulser` はまだ活発に開発中です。 |
+| `ads` | 上級向け | 開発や研究には有用ですが、一部のデータワークフローには追加の設定が必要であり、初回実行時のパスには含まれません。 |
 | `deploy/` | 例示のみ | デプロイヘルパーは環境に依存するため、洗練された公開デプロイメントストーリーとして扱うべきではありません。 |
 | `mcp_servers/` | 公開ソース | ローカルのMCPサーバー実装は、公開ソースツリーの一部です。 |
 
@@ -194,7 +183,7 @@ tests/       Cross-project tests and fixtures
 
 - シークレットは、コミットされたファイルではなく、環境変数やローカル設定から取得されることを想定しています。
 - ローカルデータベース、ブラウザのアーティファクト、および一時的なスナップショットは、意図的にバージョン管理から除外されています。
-- 現在のコードベースは、洗練されたエンドユーザー向けパッケージングよりも、評価、ローカル開発、およびプロトタイプ・ワークフローを主な対象としています。
+- 現在のコードベースは、洗練されたエンドユーザー向けパッケージングよりも、ローカルの開発、評価、およびプロトタイプ作成のワークフローを主な対象としています。
 
 ## 貢献について
 

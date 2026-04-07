@@ -45,8 +45,8 @@ MapPhemar 通过调用 pulsers 和 pulses 来运行图表。finance briefing 工
 
 ## 运行时假设
 
-- Plaza 位在 `http://127.0.0.1:8272`
-- `DemoFinancialBriefingPulser` 位在 `http://127.0.0.1:8271`
+- Plaza 位于 `http://127.0.0.1:8272`
+- `DemoFinancialBriefingPulser` 位于 `http://127.0.0.1:8271`
 
 ## 单一命令启动
 
@@ -55,9 +55,9 @@ MapPhemar 通过调用 pulsers 和 pulses 来运行图表。finance briefing 工
 ./demos/pulsers/finance-briefings/run-demo.sh
 ```
 
-这将从单个终端机启动本地 Plaza 以及金融简报 pulser，打开浏览器指南页面，并自动打开 pulser UI。
+这将从单个终端启动本地 Plaza 以及金融简报 pulser，打开浏览器指南页面，并自动打开 pulser UI。
 
-如果您希望启动器仅保留在终端机中，请设置 `DEMO_OPEN_BROWSER=0`。
+如果您希望启动器仅保留在终端中，请设置 `DEMO_OPEN_BROWSER=0`。
 
 ## 平台快速入门
 
@@ -74,18 +74,15 @@ pip install -r requirements.txt
 
 ### Windows
 
-请搭配 Ubuntu 或其他 Linux 发行版使用 WSL2。在 WSL 内的仓库根目录下执行：
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install --upgrade pip
-pip install -r requirements.txt
-./demos/pulsers/finance-briefings/run-demo.sh
+请使用原生 Windows Python 环境。在 PowerShell 中进入仓库根目录：
+```powershell
+py -3 -m venv .venv
+.venv\Scripts\python.exe -m pip install --upgrade pip
+.venv\Scripts\python.exe -m pip install -r requirements.txt
+.venv\Scripts\python.exe -m scripts.demo_launcher finance-briefings
 ```
 
-如果浏览器标签页无法从 WSL 自动打开，请保持启动器运行，并在 Windows 浏览器中打开打印出的 `guide=` URL。
-
-原生 PowerShell / 命令提示符封装器尚未提交，因此目前支持的 Windows 路径是 WSL2。
+如果浏览器标签页没有自动打开，请保持启动器正在运行，并在 Windows 浏览器中打开打印出的 `guide=` URL。
 
 ## 手动启动
 

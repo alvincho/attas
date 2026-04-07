@@ -12,10 +12,6 @@
 - [日本語](README.ja.md)
 - [한국어](README.ko.md)
 
-`demos/files/diagrams` contains reusable `MapPhemar` diagram-backed Phemas for financial analytics and LLM-assisted research workflows.
-
-These files are meant to be easy to copy into another MapPhemar pool, load into the diagram editor, or use as reference payloads when building your own flows.
-
 ## Platform Notes
 
 This folder ships JSON assets, not a standalone launcher.
@@ -37,9 +33,7 @@ You can also launch:
 
 ### Windows
 
-Use WSL2 with Ubuntu or another Linux distro for the paired demo launchers. After the stack is running, open the printed `guide=` URL in a Windows browser if tabs do not open automatically.
-
-Native PowerShell / Command Prompt wrappers are not checked in yet, so WSL2 is the supported Windows path today.
+Use a native Windows Python environment for the paired demo launchers, for example `py -3 -m scripts.demo_launcher analyst-insights` and `py -3 -m scripts.demo_launcher finance-briefings`. After the stack is running, open the printed `guide=` URL in a Windows browser if tabs do not open automatically.
 
 
 ## What Is In This Folder

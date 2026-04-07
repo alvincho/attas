@@ -31,9 +31,7 @@
 
 ### Windows
 
-ペアとなるデモランチャーには、Ubuntuまたはその他のLinuxディストリビューションを備えたWSL2を使用してください。スタックの実行後、タブが自動的に開かない場合は、表示された `guide=` URLをWindowsのブラウザで開いてください。
-
-ネイティブのPowerShell / コマンドプロンプト用ラッパーはまだチェックインされていないため、現在のWindowsでのサポート対象はWSL2です。
+ペアとなる demo ランチャーには、ネイティブの Windows Python 環境を使用してください。例：`py -3 -m scripts.demo_launcher analyst-insights` および `py -3 -m scripts.demo_launcher finance-briefings`。スタックの実行後、タブが自動的に開かない場合は、表示された `guide=` URL を Windows ブラウザで開いてください。
 
 ## このフォルダの内容
 

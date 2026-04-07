@@ -74,23 +74,21 @@ DEMO_ANALYST_MODE=advanced ./demos/pulsers/analyst-insights/run-demo.sh
 
 ### Windows
 
-请搭配 Ubuntu 或其他 Linux 发行版使用 WSL2。在 WSL 内的仓库根目录下：
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install --upgrade pip
-pip install -r requirements.txt
-./demos/pulsers/analyst-insights/run-demo.sh
+请使用原生 Windows Python 环境。在 PowerShell 中进入仓库根目录：
+```powershell
+py -3 -m venv .venv
+.venv\Scripts\python.exe -m pip install --upgrade pip
+.venv\Scripts\python.exe -m pip install -r requirements.txt
+.venv\Scripts\python.exe -m scripts.demo_launcher analyst-insights
 ```
 
-对于 WSL 内的高阶路径：
-```bash
-DEMO_ANALYST_MODE=advanced ./demos/pulsers/analyst-insights/run-demo.sh
+针对进阶路径：
+```powershell
+$env:DEMO_ANALYST_MODE = "advanced"
+.venv\Scripts\python.exe -m scripts.demo_launcher analyst-insights
 ```
 
-如果浏览器标签页无法从 WSL 自动打开，请保持启动器运行，并在 Windows 浏览器中打开打印出的 `guide=` URL。
-
-原生 PowerShell / Command Prompt 封装器尚未提交，因此目前支持的 Windows 路径是 WSL2。
+如果浏览器标签页没有自动打开，请保持启动器运行，并在 Windows 浏览器中打开打印出的 `guide=` URL。
 
 ## 演示 1：结构化分析师观点
 
@@ -260,7 +258,7 @@ ollama pull qwen3:8b
 - news pulser 会在 `http://127.0.0.1:8268` 启动
 - 它会向 `http://127.0.0.1:8266` 的 Plaza 进行注册
 
-### 终端机 3：启动 Ollama pulser
+### 终端 3：启动 Ollama pulser
 ```bash
 ./demos/pulsers/analyst-insights/start-ollama-pulser.sh
 ```
@@ -270,7 +268,7 @@ ollama pull qwen3:8b
 - Ollama pulser 启动于 `http://127.0.0.1:8269`
 - 它会在 `http://127.0.0.1:8266` 向 Plaza 进行注册
 
-### 终端机 4：启动 prompted analyst pulser
+### 终端 4：启动 prompted analyst pulser
 
 请在新闻与 Ollama agents 已经运行后再启动此项，因为 pulser 会在启动期间验证其样本链。
 ```bash
@@ -279,10 +277,10 @@ ollama pull qwen3:8b
 
 预期结果：
 
-- 提示的分析师 pulser 启动于 `http://12:0.0.1:8270`
+- 提示的分析师 pulser 启动于 `http://127.0.0.1:8270`
 - 它会在 `http://127.0.0.1:8266` 向 Plaza 进行注册
 
-### 终端机 5：启动个人代理
+### 终端 5：启动个人代理
 ```bash
 ./demos/pulsers/analyst-insights/start-personal-agent.sh
 ```

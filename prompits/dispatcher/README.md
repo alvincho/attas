@@ -12,10 +12,6 @@
 - [日本語](README.ja.md)
 - [한국어](README.ko.md)
 
-`prompits.dispatcher` is the generalized queue-and-worker layer extracted from an older domain-specific service.
-It keeps the reusable orchestration pieces and removes the old domain loaders,
-schemas, and naming.
-
 ## Included pieces
 
 - `DispatcherAgent`: queue-backed job dispatcher

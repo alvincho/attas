@@ -74,23 +74,21 @@ DEMO_ANALYST_MODE=advanced ./demos/pulsers/analyst-insights/run-demo.sh
 
 ### Windows
 
-Ubuntu 또는 다른 Linux 배포판과 함께 WSL2를 사용하세요. WSL 내부의 저장소 루트에서:
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install --upgrade pip
-pip install -r requirements.txt
-./demos/pulsers/analyst-insights/run-demo.sh
+네이티브 Windows Python 환경을 사용하십시오. PowerShell에서 리포지토리 루트로 이동하여 다음을 실행하십시오:
+```powershell
+py -3 -m venv .venv
+.venv\Scripts\python.exe -m pip install --upgrade pip
+.venv\Scripts\python.exe -m pip install -r requirements.txt
+.venv\Scripts\python.exe -m scripts.demo_launcher analyst-insights
 ```
 
-WSL 내부의 고급 경로의 경우:
-```bash
-DEMO_ANALYST_MODE=advanced ./demos/pulsers/analyst-insights/run-demo.sh
+고급 경로의 경우:
+```powershell
+$env:DEMO_ANALYST_MODE = "advanced"
+.venv\Scripts\python.exe -m scripts.demo_launcher analyst-insights
 ```
 
-브라우저 탭이 WSL에서 자동으로 열리지 않는 경우, 런처를 계속 실행 상태로 두고 출력된 `guide=` URL을 Windows 브라우저에서 여십시오.
-
-네이티브 PowerShell / Command Prompt 래퍼는 아직 포함되지 않았으므로, 현재 지원되는 Windows 경로는 WSL2입니다.
+브라우저 탭이 자동으로 열리지 않으면 런처를 계속 실행 상태로 두고 출력된 `guide=` URL을 Windows 브라우저에서 여십시오.
 
 ## 데모 1: 구조화된 분석가 뷰
 

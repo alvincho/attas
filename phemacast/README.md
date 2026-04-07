@@ -12,8 +12,6 @@
 - [日本語](README.ja.md)
 - [한국어](README.ko.md)
 
-Phemacast is a Prompits-based collaborative pipeline where multiple agents create and render dynamic content.
-
 ## Agent Flow
 
 1. `CreatorAgent` creates a `Phema` (content structure + bindings).

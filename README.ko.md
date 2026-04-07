@@ -12,24 +12,13 @@
 - [日本語](README.ja.md)
 - [한국어](README.ko.md)
 
-이 저장소는 금융 인텔리전스 시스템을 위한 멀티 에이전트 워크스페이스입니다.
-
-자세한 내용은 [retis.ai](https://retis.ai)에서 확인할 수 있으며, Attas 제품 페이지는 [retis.ai/products/attas](https://retis.ai/products/attas)입니다.
-
-이 저장소는 현재 서로 관련된 여러 코드베이스를 함께 담고 있습니다:
-
-- `prompits`: HTTP 네이티브 에이전트, Plaza 탐색, 풀, 원격 practice 실행을 위한 Python 인프라
-- `phemacast`: Prompits 위에 구축된 협업형 콘텐츠 파이프라인
-- `attas`: 더 상위 수준의 금융 지향 에이전트 패턴과 Pulse 정의
-- `ads`: 정규화된 금융 데이터셋을 더 넓은 시스템에 공급하는 데이터 서비스 및 수집 구성 요소
-
 ## 상태
 
-이 저장소는 활발히 개발 중이며 계속해서 진화하고 있습니다. 프로젝트가 분할, 안정화 또는 더 공식적으로 패키징됨에 따라 API, 구성 형식 및 예시 흐름이 변경될 수 있습니다.
+이 저장소는 활발히 개발 중이며 계속해서 진화하고 있습니다. 프로젝트가 분할, 안정화 또는 더 공식적으로 패키징됨에 따라 API, 구성 형식 및 예제 흐름이 변경될 수 있습니다.
 
-두 영역은 특히 이른 단계에 있으며, 활발히 개발되는 동안 빠르게 바뀔 수 있습니다:
+다음 두 영역은 특히 초기 단계에 있으며, 활발한 개발이 진행되는 동안 빠르게 변경될 가능성이 높습니다:
 
-- `prompits.teamwork`
+- `prompiits.teamwork`
 - `phemacast` `BossPulser`
 
 공개 저장소의 용도는 다음과 같습니다:
@@ -71,11 +60,11 @@ bash attas_smoke
 bash "$(git rev-parse --show-toplevel)/attas_smoke"
 ```
 
-이 런처는 리포지토리 루트를 찾아 동일한 스모크 테스트 흐름을 시작합니다. `attas_smoke`를 `PATH`에 있는 디렉토리에 심볼릭 링크로 연결하면, 어디에서나 재사용 가능한 명령으로 호출할 수 있으며, 리포지토리 트리 외부에서 작업할 때 선택적으로 `FINMAS_REPO_ROOT`를 설정할 수 있습니다.
+이 런처는 리포지토리 루트를 찾아 동일한 스모크 테스트 흐름을 시작합니다. `attas_smoke`를 `PATH`에 있는 디렉토리에 심볼릭 링크로 연결하면, 어디에서나 재사용 가능한 명령으로 호출할 수 있으며, 리포지토리 트리 외부에서 작업할 때 선택적으로 `FINMA_REPO_ROOT`를 설정할 수 있습니다.
 
 ## 로컬 퍼스트 퀵스타트
 
-오늘날 가장 안전한 로컬 경로는 Prompits 예제 스택입니다. Supabase 또는 기타 프라이빗 인프라가 필요하지 않으며, 이제 기본 데스크톱 스택을 위한 단일 명령 로컬 부트스트랩 흐름을 제공합니다:
+오늘날 가장 안전한 로컬 경로는 Prompits 예제 스택입니다. Supabase 또는 기타 프라이빗 인프라가 필요하지 않으며, 이제 기본 데스크톱 스택을 위한 단일 명령 로컬 부트스트랩 흐름을 제공합니다. Python 런처는 Windows, Linux 및 macOS에서 네이티브로 작동합니다. macOS/Linux에서는 `python3`를, Windows에서는 `py -3`를 사용하세요:
 ```bash
 python3 -m prompits.cli up desk
 ```
@@ -99,9 +88,9 @@ python3 -m prompits.cli down desk
 
 한 번에 하나의 서비스만 디버깅하기 위해 이전의 수동 흐름이 필요한 경우:
 ```bash
-python3 prompits/create_agent.py --config prompits/examples/plaza.agent
-python3 prompits/create_agent.py --config prompits/examples/worker.agent
-python3 prompits/create_agent.py --config prompits/examples/user.agent
+python3 -m prompits.create_agent --config prompits/examples/plaza.agent
+python3 -m prompits.create_agent --config prompits/examples/worker.agent
+python3 -m prompits.create_agent --config prompits/examples/user.agent
 ```
 
 이전의 Supabase 기반 Plaza 설정을 사용하려면 `PROMPITS_AGENT_CONFIG`를
@@ -157,7 +146,7 @@ tests/       Cross-project tests and fixtures
 
 ## 오리엔테이션
 
-- 핵심 런타임 모델은 `prompits/README.md`부터 시작하세요.
+- 핵심 런타임 모델은 `prompts/README.md`부터 시작하세요.
 - 콘텐츠 파이프라인 레이어는 `phemacast/README.md`를 읽어보세요.
 - 금융 네트워크 프레임워크 및 상위 수준 개념은 `attas/README.md`를 읽어보세요.
 - 데이터 서비스 구성 요소는 `ads/README.md`를 읽어보세요.
@@ -167,10 +156,10 @@ tests/       Cross-project tests and fixtures
 | 영역 | 현재 공개 상태 | 비고 |
 | --- | --- | --- |
 | `prompits` | 가장 좋은 시작점 | Local-first 예제와 핵심 런타임이 가장 쉬운 공개 진입점입니다. `prompits.teamwork` 패키지는 아직 초기 단계이며 빠르게 변경될 수 있습니다. |
-| `attas` | 초기 공개 | 핵심 개념과 사용자 에이전트 작업은 공개되어 있지만, 일부 미완성된 컴포넌트는 기본 흐름에서 의도적으로 숨겨져 있습니다. |
-| `phemacast` | 초기 공개 | 핵심 파이프라인 코드는 공개되어 있습니다. 일부 보고/렌더링 컴포넌트는 아직 정리 및 안정화 작업 중입니다. `BossPulser`는 현재도 활발히 개발 중입니다. |
-| `ads` | 고급 | 개발 및 연구에 유용하지만, 일부 데이터 워크플로는 추가 설정이 필요하며 첫 실행 경로가 아닙니다. |
-| `deploy/` | 예제 전용 | 배포 도우미는 환경에 따라 다르며, 완성된 공개 배포 솔루션으로 취급해서는 안 됩니다. |
+| `attas` | 초기 공개 | 핵심 개념과 user-agent 작업은 공개되어 있지만, 일부 미완성된 컴포넌트는 기본 흐름에서 의도적으로 숨겨져 있습니다. |
+| `phemacast` | 초기 공개 | 핵심 파이프라인 코드는 공개되어 있습니다. 일부 보고/렌더링 컴포넌트는 아직 정리 및 안정화 작업 중입니다. `BossPulser`는 아직 활발히 개발 중입니다. |
+| `ads` | 고급 | 개발 및 연구에 유용하지만, 일부 데이터 워크플로우는 추가 설정이 필요하며 첫 실행 경로가 아닙니다. |
+| `deploy/` | 예시 전용 | 배포 도우미는 환경에 따라 다르며, 완성된 공개 배포 방식으로 취급되어서는 안 됩니다. |
 | `mcp_servers/` | 공개 소스 | 로컬 MCP 서버 구현은 공개 소스 트리의 일부입니다. |
 
 ## 알려진 제한 사항
@@ -194,7 +183,7 @@ tests/       Cross-project tests and fixtures
 
 - 비밀 정보는 커밋된 파일이 아닌 환경 변수 및 로컬 설정을 통해 제공되어야 합니다.
 - 로컬 데이터베이스, 브라우저 아티팩트 및 임시 스냅샷은 의도적으로 버전 관리에서 제외되었습니다.
-- 현재 코드베이스는 정교한 최종 사용자용 패키징보다는 평가, 로컬 개발 및 프로토타입 워크플로우를 대상으로 합니다.
+- 현재 코드베이스는 정교한 최종 사용자용 패키징보다는 로컬 개발, 평가 및 프로토타입 워크플로우를 대상으로 합니다.
 
 ## 기여하기
 

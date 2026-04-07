@@ -1,4 +1,4 @@
-# Workspace Retis per l'intelligenza finanziaria
+# Retis Financial Intelligence Workspace
 
 ## Traduzioni
 
@@ -12,22 +12,11 @@
 - [日本語](README.ja.md)
 - [한국어](README.ko.md)
 
-Questo repository è un workspace multi-agente per sistemi di intelligenza finanziaria.
-
-Per saperne di più visita [retis.ai](https://retis.ai) e la pagina prodotto di Attas su [retis.ai/products/attas](https://retis.ai/products/attas).
-
-Il repository riunisce attualmente diverse codebase correlate:
-
-- `prompits`: infrastruttura Python per agenti nativi HTTP, discovery di Plaza, pool ed esecuzione remota di practices
-- `phemacast`: una pipeline collaborativa di contenuti costruita su Prompits
-- `attas`: pattern di agenti orientati alla finanza e definizioni di Pulse di livello superiore
-- `ads`: componenti di servizio e raccolta dati che alimentano dataset finanziari normalizzati nel sistema più ampio
-
 ## Stato
 
 Questo repository è in fase di attivo sviluppo e in continua evoluzione. Le API, i formati di configurazione e i flussi di esempio possono cambiare man mano che i progetti vengono suddivisi, stabilizzati o confezionati in modo più formale.
 
-Due aree sono in una fase particolarmente iniziale e probabilmente cambieranno rapidamente durante lo sviluppo attivo:
+Due aree sono in una fase particolarmente iniziale e sono probabili cambiamenti rapidi durante lo sviluppo attivo:
 
 - `prompits.teamwork`
 - `phemacast` `BossPulser`
@@ -39,7 +28,7 @@ Il repository pubblico è destinato a:
 - flussi di lavoro prototipali
 - esplorazione dell'architettura
 
-Non è ancora un prodotto rifinito pronto all'uso o un deployment di produzione con un singolo comando.
+Non è ancora un prodotto finito pronto all'uso o un deployment di produzione con un singolo comando.
 
 ## Avvio rapido di un nuovo clone
 
@@ -75,7 +64,7 @@ Quel launcher trova la radice del repository e avvia lo stesso flusso di smoke t
 
 ## Avvio rapido Local-First
 
-La strada locale più sicura oggi è lo stack di esempio Prompits. Non richiede Supabase o altre infrastrutture private, e ora dispone di un flusso di bootstrap locale con un singolo comando per lo stack desktop di base:
+La strada locale più sicura oggi è lo stack di esempio Prompits. Non richiede Supabase o altre infrastrutture private e ora dispone di un flusso di bootstrap locale con un singolo comando per lo stack desktop di base. Il launcher Python funziona nativamente su Windows, Linux e macOS. Usa `python3` su macOS/Linux e `py -3` su Windows:
 ```bash
 python3 -m prompits.cli up desk
 ```
@@ -99,9 +88,9 @@ python3 -m prompits.cli down desk
 
 Se hai bisogno del vecchio flusso manuale per il debug di un singolo servizio alla volta:
 ```bash
-python3 prompits/create_agent.py --config prompits/examples/plaza.agent
-python3 prompits/create_agent.py --config prompits/examples/worker.agent
-python3 prompits/create_agent.py --config prompits/examples/user.agent
+python3 -m prompits.create_agent --config prompits/examples/plaza.agent
+python3 -m prompits.create_agent --config prompits/examples/worker.agent
+python3 -m prompits.create_agent --config prompits/examples/user.agent
 ```
 
 Se desideri la vecchia configurazione di Plaza basata su Supabase, punta `PROMPITS_AGENT_CONFIG` a
@@ -157,7 +146,7 @@ tests/       Cross-project tests and fixtures
 
 ## Orientamento
 
-- Inizia con `prompits/README.md` per il modello di runtime principale.
+- Inizia con `prompts/README.md` per il modello di runtime principale.
 - Leggi `phemacast/README.md` per lo strato della pipeline dei contenuti.
 - Leggi `attas/README.md` per l'inquadramento della rete finanziaria e i concetti di alto livello.
 - Leggi `ads/README.md` per i componenti del servizio dati.
@@ -166,9 +155,9 @@ tests/       Cross-project tests and fixtures
 
 | Area | Stato Pubblico Attuale | Note |
 | --- | --- | --- |
-| `prompits` | Miglior punto di partenza | Gli esempi "local-first" e il runtime principale sono il punto di ingresso pubblico più semplice. Il pacchetto `prompits.teamwork` è ancora in una fase iniziale e potrebbe cambiare rapidamente. |
-| `attas` | Pubblico iniziale | I concetti fondamentali e il lavoro sull'agente utente sono pubblici, ma alcuni componenti non terminati sono intenzionalmente nascosti dal flusso predefinito. |
-| `phemacast` | Pubblico iniziale | Il codice della pipeline principale è pubblico; alcuni componenti di reporting/rendering sono ancora in fase di rifinitura e stabilizzazione. `BossPulser` è ancora in fase di attivo sviluppo. |
+| `prompits` | Miglior punto di partenza | Gli esempi "local-first" e il runtime principale sono il punto di ingresso pubblico più semplice. Il pacchetto `prompits.teamwork` è ancora nelle fasi iniziali e potrebbe cambiare rapidamente. |
+| `attas` | Pubblico precoce | I concetti fondamentali e il lavoro sull'user-agent sono pubblici, ma alcuni componenti non terminati sono intenzionalmente nascosti dal flusso predefinito. |
+| `phemacast` | Pubblico precoce | Il codice della pipeline principale è pubblico; alcuni componenti di reporting/rendering sono ancora in fase di rifinitura e stabilizzazione. `BossPulser` è ancora in fase di attivo sviluppo. |
 | `ads` | Avanzato | Utile per lo sviluppo e la ricerca, ma alcuni workflow di dati richiedono una configurazione extra e non sono un percorso di prima esecuzione. |
 | `deploy/` | Solo esempi | Gli helper di deployment sono specifici dell'ambiente e non devono essere considerati come una soluzione di deployment pubblico rifinita. |
 | `mcp_servers/` | Codice sorgente pubblico | Le implementazioni locali dei server MCP fanno parte dell'albero del codice sorgente pubblico. |
@@ -194,11 +183,11 @@ Le funzionalità pianificate di `attas` includono workflow di investimento e tes
 
 - Si prevede che i segreti provengano da variabili d'ambiente e configurazioni locali, non da file commitati.
 - Database locali, artefatti del browser e snapshot temporanei sono intenzionalmente esclusi dal controllo di versione.
-- Il codebase attualmente punta alla valutazione, allo sviluppo locale e ai flussi di lavoro di prototipazione, più che a un packaging rifinito per l'utente finale.
+- Il codebase attualmente punta più ai flussi di lavoro di sviluppo locale, valutazione e prototipazione che a un packaging rifinito per l'utente finale.
 
 ## Contribuire
 
-Questo è attualmente un repository pubblico con un unico manutentore principale. Issue e pull request sono benvenuti, ma la roadmap e le decisioni di merge rimangono guidate dal manutentore per ora. Consulta `CONTRIBUTING.md` per l'attuale workflow.
+Questo è attualmente un repository pubblico con un unico manutentore principale. Issue e pull request sono benvenuti, ma la roadmap e le decisioni di merge rimangono guidate dal manutentore per ora. Consulta `CONTITRIBUTING.md` per l'attuale workflow.
 
 ## Licenza
 

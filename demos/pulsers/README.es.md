@@ -44,18 +44,15 @@ pip install -r requirements.txt
 
 ### Windows
 
-Utilice WSL2 con Ubuntu u otra distribución de Linux. Desde la raíz del repositorio dentro de WSL, ejecute los mismos comandos:
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install --upgrade pip
-pip install -r requirements.txt
-./demos/pulsers/file-storage/run-demo.sh
+Utilice un entorno de Python nativo de Windows. Desde la raíz del repositorio en PowerShell:
+```powershell
+py -3 -m venv .venv
+.venv\Scripts\python.exe -m pip install --upgrade pip
+.venv\Scripts\python.exe -m pip install -r requirements.txt
+.venv\Scripts\python.exe -m scripts.demo_launcher file-storage
 ```
 
-Si las pestañas del navegador no se abren automáticamente desde WSL, mantén el lanzador ejecutándose y abre la URL `guide=` impresa en un navegador de Windows.
-
-Los wrappers nativos de PowerShell / Command Prompt aún no se han incluido, por lo que hoy en día la ruta de Windows compatible es WSL2.
+Si las pestañas del navegador no se abren automáticamente, mantenga el lanzador ejecutándose y abra la URL `guide=` impresa en un navegador de Windows.
 
 ## Qué cubre este conjunto de demostraciones
 

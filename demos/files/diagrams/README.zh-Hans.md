@@ -31,9 +31,7 @@
 
 ### Windows
 
-对于配对的 demo 启动器，请使用带有 Ubuntu 或其他 Linux 发行版的 WSL2。在堆栈运行后，如果标签页没有自动打开，请在 Windows 浏览器中打开打印出的 `guide=` URL。
-
-原生 PowerShell / 命令提示符封装器尚未提交，因此目前支持的 Windows 路径是 WSL2。
+请为配对的 demo 启动器使用原生 Windows Python 环境，例如 `py -3 -m scripts.demo_launcher analyst-insights` 与 `py -3 -m scripts.demo_launcher finance-briefings`。在堆栈运行后，如果标签页没有自动打开，请在 Windows 浏览器中打开打印出的 `guide=` URL。
 
 ## 此文件夹包含什么
 

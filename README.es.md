@@ -1,4 +1,4 @@
-# Espacio de trabajo de inteligencia financiera de Retis
+# Retis Financial Intelligence Workspace
 
 ## Traducciones
 
@@ -12,22 +12,11 @@
 - [日本語](README.ja.md)
 - [한국어](README.ko.md)
 
-Este repositorio es un espacio de trabajo multiagente para sistemas de inteligencia financiera.
-
-Más información en [retis.ai](https://retis.ai) y la página del producto Attas en [retis.ai/products/attas](https://retis.ai/products/attas).
-
-Actualmente, este repositorio reúne varios codebases relacionados:
-
-- `prompits`: infraestructura en Python para agentes nativos de HTTP, descubrimiento de Plaza, pools y ejecución remota de practices
-- `phemacast`: un pipeline colaborativo de contenido construido sobre Prompits
-- `attas`: patrones de agentes orientados a finanzas y definiciones de Pulse de nivel superior
-- `ads`: componentes de servicio y recolección de datos que alimentan conjuntos de datos financieros normalizados al sistema más amplio
-
 ## Estado
 
 Este repositorio se está desarrollando activamente y sigue evolucionando. Las APIs, los formatos de configuración y los flujos de ejemplo pueden cambiar a medida que los proyectos se dividan, se estabilicen o se empaqueten de forma más formal.
 
-Dos áreas están especialmente en una fase temprana y es probable que cambien con rapidez mientras siguen en desarrollo activo:
+Dos áreas se encuentran especialmente en una fase temprana y es probable que cambien rápidamente mientras están bajo desarrollo activo:
 
 - `prompits.teamwork`
 - `phemacast` `BossPulser`
@@ -39,7 +28,7 @@ El repositorio público está destinado a:
 - flujos de trabajo de prototipos
 - exploración de arquitectura
 
-Aún no es un producto terminado listo para usar ni un despliegue de producción con un solo comando.
+Aún no es un producto terminado listo para usar ni una implementación de producción con un solo comando.
 
 ## Inicio rápido de un nuevo clon
 
@@ -75,7 +64,7 @@ Ese lanzador encuentra la raíz del repositorio e inicia el mismo flujo de smoke
 
 ## Inicio rápido local-first
 
-La ruta local más segura hoy en día es el stack de ejemplo de Prompits. No requiere Supabase u otra infraestructura privada, y ahora cuenta con un flujo de arranque local de un solo comando para el stack de escritorio base:
+La ruta local más segura hoy en día es el stack de ejemplo de Prompits. No requiere Supabase u otra infraestructura privada, y ahora cuenta con un flujo de arranque local de un solo comando para el stack de escritorio base. El lanzador de Python funciona de forma nativa en Windows, Linux y macOS. Use `python3` en macOS/Linux y `py -3` en Windows:
 ```bash
 python3 -m prompits.cli up desk
 ```
@@ -99,9 +88,9 @@ python3 -m prompits.cli down desk
 
 Si necesita el flujo manual antiguo para depurar un solo servicio a la vez:
 ```bash
-python3 prompits/create_agent.py --config prompits/examples/plaza.agent
-python3 prompits/create_agent.py --config prompits/examples/worker.agent
-python3 prompits/create_agent.py --config prompits/examples/user.agent
+python3 -m prompits.create_agent --config prompits/examples/plaza.agent
+python3 -m prompits.create_agent --config prompits/examples/worker.agent
+python3 -m prompits.create_agent --config prompits/examples/user.agent
 ```
 
 Si desea la configuración antigua de Plaza con respaldo de Supabase, apunte `PROMPITS_AGENT_CONFIG` a
@@ -157,7 +146,7 @@ tests/       Cross-project tests and fixtures
 
 ## Orientación
 
-- Comience con `prompits/README.md` para el modelo de tiempo de ejecución principal.
+- Comience con `prompts/README.md` para el modelo de tiempo de ejecución principal.
 - Lea `phemacast/README.md` para la capa de canalización de contenido.
 - Lea `attas/README.md` para el marco de la red financiera y conceptos de alto nivel.
 - Lea `ads/README.md` para los componentes del servicio de datos.
@@ -166,9 +155,9 @@ tests/       Cross-project tests and fixtures
 
 | Área | Estado Público Actual | Notas |
 | --- | --- | --- |
-| `prompits` | Mejor punto de partida | Los ejemplos con enfoque local-first y el runtime principal son el punto de entrada público más sencillo. El paquete `prompits.teamwork` sigue en una fase temprana y puede cambiar rápidamente. |
-| `attas` | Público temprano | Los conceptos principales y el trabajo del agente de usuario son públicos, pero algunos componentes inacabados están ocultos intencionadamente del flujo predeterminado. |
-| `phemacast` | Público temprano | El código del pipeline principal es público; algunos componentes de reporte/renderizado aún se están depurando y estabilizando. `BossPulser` sigue en desarrollo activo. |
+| `prompits` | Mejor punto de partida | Los ejemplos con enfoque local-first y el runtime principal son el punto de entrada público más sencillo. El paquete `prompits.teamwork` aún está en una fase temprana y puede cambiar rápidamente. |
+| `attas` | Público temprano | Los conceptos principales y el trabajo de user-agent son públicos, pero algunos componentes inacabados están ocultos intencionadamente del flujo predeterminado. |
+| `phemacast` | Público temprano | El código del pipeline principal es público; algunos componentes de reporte/renderizado aún se están depurando y estabilizando. `BossPulser` todavía está en desarrollo activo. |
 | `ads` | Avanzado | Útil para desarrollo e investigación, pero algunos flujos de trabajo de datos requieren una configuración adicional y no son una ruta de primera ejecución. |
 | `deploy/` | Solo ejemplos | Los ayudantes de despliegue dependen del entorno y no deben considerarse como una solución de despliegue público pulida. |
 | `mcp_servers/` | Código fuente público | Las implementaciones locales de servidores MCP forman parte del árbol de código fuente público. |
@@ -194,7 +183,7 @@ Las capacidades planificadas de `attas` incluyen flujos de trabajo de inversión
 
 - Se espera que los secretos provengan de variables de entorno y configuraciones locales, no de archivos confirmados.
 - Las bases de datos locales, los artefactos del navegador y las instantáneas temporales se excluyen intencionadamente del control de versiones.
-- El código fuente actualmente está orientado a la evaluación, el desarrollo local y los flujos de trabajo de prototipos, más que a un empaquetado pulido para el usuario final.
+- El código fuente actualmente se orienta más a flujos de trabajo de desarrollo local, evaluación y prototipado que a un empaquetado pulido para el usuario final.
 
 ## Contribuir
 

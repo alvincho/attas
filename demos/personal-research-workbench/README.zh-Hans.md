@@ -72,24 +72,21 @@ pip install -r requirements.txt
 
 ### Windows
 
-请搭配 Ubuntu 或其他 Linux 发行版使用 WSL2。在 WSL 内的仓库根目录下：
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install --upgrade pip
-pip install -r requirements.txt
-./demos/personal-research-workbench/run-demo.sh
+使用原生 Windows Python 环境。在 PowerShell 中从仓库根目录执行：
+```powershell
+py -3 -m venv .venv
+.venv\Scripts\python.exe -m pip install --upgrade pip
+.venv\Scripts\python.exe -m pip install -r requirements.txt
+.venv\Scripts\python.exe -m scripts.demo_launcher personal-research-workbench
 ```
 
-如果浏览器标签页无法从 WSL 自动打开，请保持启动器运行，并在 Windows 浏览器中打开打印出的 `guide=` URL。
-
-原生 PowerShell / 命令提示符封装器尚未提交，因此目前支持的 Windows 路径是 WSL2。
+如果浏览器标签页没有自动打开，请保持启动器运行，并在 Windows 浏览器中打开打印出的 `guide=` URL。
 
 ## 快速入门
 
-如果您想要完整的演示（包括 YFinance 图表流程和图表测试运行流程），请从仓库根目录开启五个终端机。
+如果您想要完整的演示（包括 YFinance 图表流程和图表测试运行流程），请从仓库根目录打开五个终端。
 
-### 终端机 1：启动本地 Plaza
+### 终端 1：启动本地 Plaza
 
 ```bash
 ./demos/personal-research-workbench/start-plaza.sh
@@ -99,7 +96,7 @@ pip install -r requirements.txt
 
 - Plaza 启动于 `http://127.0.0.1:8241`
 
-### 终端机 2：启动本地文件存储 pulser
+### 终端 2：启动本地文件存储 pulser
 ```bash
 ./demos/personal-research-workbench/start-file-storage-pulser.sh
 ```
@@ -107,9 +104,9 @@ pip install -r requirements.txt
 预期结果：
 
 - pulser 会在 `http://127.0.0.1:8242` 启动
-- 它会向 Terminal 1 的 Plaza 进行注册
+- 它会向终端 1 中的 Plaza 注册
 
-### Terminal 3：启动 YFinance pulser
+### 终端 3：启动 YFinance pulser
 ```bash
 ./demos/personal-research-workbench/start-yfinance-pulser.sh
 ```
@@ -117,14 +114,14 @@ pip install -r requirements.txt
 预期结果：
 
 - pulser 会在 `http://127.0.0.1:8243` 启动
-- 它会向 Terminal 1 的 Plaza 进行注册
+- 它会向终端 1 中的 Plaza 注册
 
 注意：
 
 - 此步骤需要外部网络访问权限，因为 pulser 会通过 `yfinance` 模块从 Yahoo Finance 获取实时数据
 - Yahoo 可能会偶尔对请求进行速率限制，因此此流程最好被视为实时演示，而非严格的固定流程
 
-### Terminal 4：启动技术分析 pulser
+### 终端 4：启动技术分析 pulser
 ```bash
 ./demos/personal-research-workbench/start-technical-analysis-pulser.sh
 ```
@@ -132,11 +129,11 @@ pip install -r requirements.txt
 预期结果：
 
 - pulser 在 `http://127.0.0.1:8244` 启动
-- 它会向 Terminal 1 的 Plaza 进行注册
+- 它会向终端 1 中的 Plaza 注册
 
 此 pulser 会从传入的 `ohlc_series` 计算 `rsi`；或者当您仅提供 symbol、interval 和 date range 时，从 demo YFinance pulser 获取 OHLC bars。
 
-### Terminal 5：启动工作台
+### 终端 5：启动工作台
 ```bash
 ./demos/personal-research-workbench/start-workbench.sh
 ```

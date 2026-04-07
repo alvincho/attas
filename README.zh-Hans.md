@@ -1,4 +1,4 @@
-# Retis 金融智能工作区
+# Retis 金融智能工作空间
 
 ## 翻译版本
 
@@ -12,22 +12,11 @@
 - [日本語](README.ja.md)
 - [한국어](README.ko.md)
 
-此仓库是一个用于金融智能系统的多代理工作区。
-
-更多信息请见 [retis.ai](https://retis.ai)，Attas 产品页面请见 [retis.ai/products/attas](https://retis.ai/products/attas)。
-
-此仓库目前结合了数个彼此相关的代码库：
-
-- `prompits`: 用于 HTTP 原生代理、Plaza 发现、数据池与远程 practice 执行的 Python 基础设施
-- `phemacast`: 建立在 Prompits 之上的协作内容流水线
-- `attas`: 更高层的金融导向代理模式与 Pulse 定义
-- `ads`: 将规范化金融数据集输入更广泛系统的数据服务与采集组件
-
 ## 状态
 
-此仓库正在积极开发中，且仍在不断演进。随着项目进行拆分、稳定化或更正式的封装，API、配置格式和示例流程可能会发生变化。
+此仓库正在积极开发中，且仍在不断演进。随着项目的拆分、稳定化或更正式的封装，API、配置格式和示例流程可能会发生变化。
 
-有两个领域目前仍处于非常早期的阶段，在积极开发期间很可能会快速变化：
+以下两个领域目前处于非常早期的阶段，且在积极开发期间可能会快速变化：
 
 - `prompits.teamwork`
 - `phemacast` `BossPulser`
@@ -75,16 +64,16 @@ bash "$(git rev-parse --show-toplevel)/attas_smoke"
 
 ## 本地优先快速入门
 
-目前最安全的本地路径是 Prompits 示例堆栈。它不需要 Supabase 或其他私有基础设施，并且现在针对基准桌面堆栈（baseline desk stack）具备了单条命令的本地引导流程：
+目前最稳妥的本地使用路径是 Prompits 示例堆栈。它不需要 Supabase 或其他私有基础设施，并且现在为基础桌面堆栈提供了单命令的本地引导流程。Python 启动器可在 Windows、Linux 和 macOS 上原生运行。在 macOS/Linux 上请使用 `python3`，在 Windows 上请使用 `py -3`：
 ```bash
 python3 -m prompits.cli up desk
 ```
 
 这会启动：
 
-- Plaza 位在 `http://127.0.0.1:8211`
-- 基线 worker 位在 `http://127.0.0.1:8212`
-- 面向浏览器的用户 UI 位在 `http://127.0.0.1:8214/`
+- Plaza 位于 `http://127.0.0.1:8211`
+- 基础 worker 位于 `http://127.0.0.1:8212`
+- 浏览器端用户 UI 位于 `http://127.0.0.1:8214/`
 
 您也可以使用封装脚本：
 ```bash
@@ -99,9 +88,9 @@ python3 -m prompits.cli down desk
 
 如果您需要使用旧的手动流程来一次调试单个服务：
 ```bash
-python3 prompits/create_agent.py --config prompits/examples/plaza.agent
-python3 prompits/create_agent.py --config prompits/examples/worker.agent
-python3 prompits/create_agent.py --config prompits/examples/user.agent
+python3 -m prompits.create_agent --config prompits/examples/plaza.agent
+python3 -m prompits.create_agent --config prompits/examples/worker.agent
+python3 -m prompits.create_agent --config prompits/examples/user.agent
 ```
 
 如果您想要使用较旧的以 Supabase 为后端的 Plaza 设置，请将 `PROMPITS_AGENT_CONFIG` 指向
@@ -167,9 +156,9 @@ tests/       Cross-project tests and fixtures
 
 | 区域 | 当前公开状态 | 备注 |
 | --- | --- | --- |
-| `prompits` | 最佳起点 | 以本地优先的示例和核心运行时是最容易的公开切入点。`prompits.teamwork` 包仍处于早期阶段，且可能会快速变动。 |
-| `attas` | 早期公开 | 核心概念和用户代理工作已公开，但某些未完成的组件为了避免干扰默认流程而刻意隐藏。 |
-| `phemacast` | 早期公开 | 核心流水线代码已公开；部分报告/渲染组件仍在进行精简与稳定化。`BossPulser` 仍在积极开发中。 |
+| `prompits` | 最佳起点 | 以本地优先的示例和核心运行时是最容易的公开切入点。`prompits.teamwork` 包仍处于早期阶段，可能会快速变动。 |
+| `attas` | 早期公开 | 核心概念和 用户代理 工作已公开，但某些未完成的组件为了避免干扰默认流程而刻意隐藏。 |
+| `phemacast` | 早期公开 | 核心流水线代码已公开；部分报告/渲染组件仍在进行精简与稳定化。`BossPulser` 仍处于积极开发中。 |
 | `ads` | 进阶 | 对于开发和研究非常有用，但某些数据工作流需要额外设置，并非首次运行的路径。 |
 | `deploy/` | 仅限示例 | 部署助手与环境相关，不应被视为成熟的公开部署方案。 |
 | `mcp_servers/` | 公开源码 | 本地 MCP 服务器实现是公开源码树的一部分。 |
@@ -195,7 +184,7 @@ tests/       Cross-project tests and fixtures
 
 - 预期机密信息应来自环境变量和本地配置，而非提交的文件。
 - 本地数据库、浏览器产物以及暂存快照均刻意排除在版本控制之外。
-- 目前的代码库主要针对评估、本地开发和原型工作流程，而非精细的最终用户封装。
+- 目前的代码库主要针对本地开发、评估与原型工作流程，而非精细的最终用户封装。
 
 ## 参与贡献
 

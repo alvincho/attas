@@ -31,9 +31,7 @@
 
 ### Windows
 
-페어링된 데모 런처를 사용하려면 Ubuntu 또는 다른 Linux 배포판이 포함된 WSL2를 사용하십시오. 스택이 실행된 후 탭이 자동으로 열리지 않으면 출력된 `guide=` URL을 Windows 브라우저에서 여십시오.
-
-네이티브 PowerShell / 명령 프롬프트 래퍼는 아직 체크인되지 않았으므로, 현재 지원되는 Windows 경로는 WSL2입니다.
+쌍으로 된 demo 런처에 대해 네이티브 Windows Python 환경을 사용하세요. 예: `py -3 -m scripts.demo_launcher analyst-insights` 및 `py -3 -m scripts.demo_launcher finance-briefings`. 스택이 실행된 후 탭이 자동으로 열리지 않으면 출력된 `guide=` URL을 Windows 브라우저에서 여십시오.
 
 ## 이 폴더에 포함된 내용
 

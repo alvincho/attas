@@ -1,4 +1,4 @@
-# Espace de travail Retis pour l'intelligence financière
+# Retis Financial Intelligence Workspace
 
 ## Traductions
 
@@ -12,22 +12,11 @@
 - [日本語](README.ja.md)
 - [한국어](README.ko.md)
 
-Ce dépôt est un espace de travail multi-agent pour les systèmes d'intelligence financière.
-
-Pour en savoir plus, consultez [retis.ai](https://retis.ai) et la page produit Attas sur [retis.ai/products/attas](https://retis.ai/products/attas).
-
-Ce dépôt réunit actuellement plusieurs bases de code liées entre elles :
-
-- `prompits` : infrastructure Python pour les agents natifs HTTP, la découverte Plaza, les pools et l'exécution distante de practices
-- `phemacast` : un pipeline de contenu collaboratif construit sur Prompits
-- `attas` : des modèles d'agents orientés finance et des définitions de Pulse de niveau supérieur
-- `ads` : des composants de service et de collecte de données qui alimentent le système plus large en jeux de données financiers normalisés
-
 ## État
 
 Ce dépôt est en cours de développement actif et continue d'évoluer. Les API, les formats de configuration et les flux d'exemples peuvent changer à mesure que les projets sont divisés, stabilisés ou emballés de manière plus formelle.
 
-Deux domaines sont particulièrement précoces et sont susceptibles d'évoluer rapidement tant qu'ils restent en développement actif :
+Deux domaines sont particulièrement précoces et susceptibles de changer rapidement pendant leur développement actif :
 
 - `prompits.teamwork`
 - `phemacast` `BossPulser`
@@ -39,7 +28,7 @@ Le dépôt public est destiné à :
 - les flux de travail de prototype
 - l'exploration de l'architecture
 
-Il ne s'agit pas encore d'un produit fini prêt à l'emploi ou d'un déploiancement de production en une seule commande.
+Il ne s'agit pas encore d'un produit fini prêt à l'emploi ou d'un déploiement de production en une seule commande.
 
 ## Démarrage rapide d'un nouveau clone
 
@@ -75,7 +64,7 @@ Ce lanceur trouve la racine du dépôt et démarre le même flux de smoke test. 
 
 ## Démarrage rapide Local-First
 
-Le chemin local le plus sûr aujourd'hui est la pile d'exemple Prompits. Elle ne nécessite pas Supabase ou d'autres infrastructures privées, et dispose désormais d'un flux de bootstrap local en une seule commande pour la pile de bureau de base :
+Le chemin local le plus sûr aujourd'hui est la pile d'exemple Prompits. Elle ne nécessite pas Supabase ou d'autres infrastructures privées, et dispose désormais d'un flux de bootstrap local en une seule commande pour la pile de bureau de base. Le lanceur Python fonctionne nativement sur Windows, Linux et macOS. Utilisez `python3` sur macOS/Linux et `py -3` sur Windows :
 ```bash
 python3 -m prompits.cli up desk
 ```
@@ -99,9 +88,9 @@ python3 -m prompits.cli down desk
 
 Si vous avez besoin de l'ancien flux manuel pour déboguer un seul service à la fois :
 ```bash
-python3 prompits/create_agent.py --config prompits/examples/plaza.agent
-python3 prompits/create_agent.py --config prompits/examples/worker.agent
-python3 prompits/create_agent.py --config prompits/examples/user.agent
+python3 -m prompits.create_agent --config prompits/examples/plaza.agent
+python3 -m prompits.create_agent --config prompits/examples/worker.agent
+python3 -m prompits.create_agent --config prompits/examples/user.agent
 ```
 
 Si vous souhaitez l'ancienne configuration Plaza basée sur Supabase, pointez `PROMPIT_AGENT_CONFIG` vers
@@ -157,7 +146,7 @@ tests/       Cross-project tests and fixtures
 
 ## Orientation
 
-- Commencez par `prompits/README.md` pour le modèle d'exécution principal.
+- Commencez par `prompts/README.md` pour le modèle d'exécution principal.
 - Lisez `phemacast/README.md` pour la couche de pipeline de contenu.
 - Lisez `attas/README.md` pour le cadrage du réseau financier et les concepts de haut niveau.
 - Lisez `ads/README.md` pour les composants du service de données.
@@ -166,9 +155,9 @@ tests/       Cross-project tests and fixtures
 
 | Zone | État Public Actuel | Notes |
 | --- | --- | --- |
-| `prompits` | Meilleur point de départ | Les exemples "local-first" et le runtime principal constituent le point d'entrée public le plus simple. Le package `prompits.teamwork` reste à un stade précoce et peut évoluer rapidement. |
-| `attas` | Public initial | Les concepts de base et le travail sur l'agent utilisateur sont publics, mais certains composants inachevés sont intentionnellement masqués du flux par défaut. |
-| `phemacast` | Public initial | Le code du pipeline principal est public ; certains composants de reporting/rendu sont encore en cours d'ajustement et de stabilisation. `BossPulser` reste en développement actif. |
+| `prompits` | Meilleur point de départ | Les exemples "local-first" et le runtime de base sont le point d'entrée public le plus simple. Le package `prompits.teamwork` est encore en phase précoce et peut changer rapidement. |
+| `attas` | Public précoce | Les concepts de base et le travail sur l'user-agent sont publics, mais certains composants inachevés sont intentionnellement cachés du flux par défaut. |
+| `phemacast` | Public précoce | Le code du pipeline principal est public ; certains composants de reporting/rendu sont encore en cours d'ajustement et de stabilisation. `BossPulser` est toujours en développement actif. |
 | `ads` | Avancé | Utile pour le développement et la recherche, mais certains flux de données nécessitent une configuration supplémentaire et ne constituent pas un chemin de premier lancement. |
 | `deploy/` | Exemple uniquement | Les assistants de déploiement sont spécifiques à l'environnement et ne doivent pas être considérés comme une solution de déploiement public aboutie. |
 | `mcp_servers/` | Source publique | Les implémentations locales de serveurs MCP font partie de l'arborescence du code source public. |
@@ -194,7 +183,7 @@ Les capacités prévues de `attas` incluent des flux de travail d'investissement
 
 - Les secrets doivent provenir des variables d'environnement et de la configuration locale, et non de fichiers commités.
 - Les bases de données locales, les artefacts du navigateur et les instantanés temporaires sont intentionnellement exclus du contrôle de version.
-- La base de code cible actuellement l'évaluation, le développement local et les flux de travail de prototypage, plutôt qu'un packaging fini pour l'utilisateur final.
+- La base de code cible actuellement davantage les flux de travail de développement local, d'évaluation et de prototypage que l'empaquetage fini pour l'utilisateur final.
 
 ## Contribuer
 

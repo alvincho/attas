@@ -11,7 +11,6 @@ import argparse
 import hashlib
 import json
 import os
-import signal
 import subprocess
 import sys
 import tempfile
@@ -21,6 +20,8 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 import requests
+
+from prompits.core.process_utils import background_popen_kwargs, pid_is_running, terminate_pid
 
 
 WORKSPACE_ROOT = Path(__file__).resolve().parents[1]
@@ -101,13 +102,7 @@ class LocalStackManager:
     @staticmethod
     def _pid_is_running(pid: int) -> bool:
         """Return whether a process ID is still alive."""
-        if pid <= 0:
-            return False
-        try:
-            os.kill(pid, 0)
-        except OSError:
-            return False
-        return True
+        return pid_is_running(pid)
 
     @staticmethod
     def _now() -> str:
@@ -153,21 +148,7 @@ class LocalStackManager:
 
     def _stop_pid(self, pid: int):
         """Stop one managed process."""
-        if pid <= 0 or not self._pid_is_running(pid):
-            return
-        try:
-            os.kill(pid, signal.SIGTERM)
-        except OSError:
-            return
-        deadline = time.time() + 5.0
-        while time.time() < deadline:
-            if not self._pid_is_running(pid):
-                return
-            time.sleep(0.2)
-        try:
-            os.kill(pid, signal.SIGKILL)
-        except OSError:
-            return
+        terminate_pid(pid, timeout_sec=5.0)
 
     def _service_log_path(self, service_name: str) -> Path:
         """Return the managed log path for one service."""
@@ -214,7 +195,7 @@ class LocalStackManager:
                 cwd=str(WORKSPACE_ROOT),
                 stdout=handle,
                 stderr=subprocess.STDOUT,
-                start_new_session=True,
+                **background_popen_kwargs(),
             )
         probe = self._wait_for_service(spec)
         if not (probe.get("healthy") and probe.get("matches_expected_agent")):

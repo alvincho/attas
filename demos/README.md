@@ -12,8 +12,6 @@
 - [日本語](README.ja.md)
 - [한국어](README.ko.md)
 
-This folder packages public-facing demos for the FinMAS workspace. Each demo is local-first, documented step by step, and organized so a new builder can copy the config files, run the stack, and turn it into their own instance.
-
 ## Start Here
 
 If you are choosing one demo to try first, use them in this order:
@@ -45,19 +43,18 @@ pip install -r requirements.txt
 
 ### Windows
 
-Use WSL2 with Ubuntu or another Linux distro. From the repository root inside WSL, run the same commands:
+Use a native Windows Python environment. From the repository root in PowerShell:
 
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install --upgrade pip
-pip install -r requirements.txt
-./demos/hello-plaza/run-demo.sh
+```powershell
+py -3 -m venv .venv
+.venv\Scripts\python.exe -m pip install --upgrade pip
+.venv\Scripts\python.exe -m pip install -r requirements.txt
+.venv\Scripts\python.exe -m scripts.demo_launcher hello-plaza
 ```
 
-If browser tabs do not auto-open from WSL, keep the launcher running and open the printed `guide=` URL in a Windows browser.
+If browser tabs do not auto-open, keep the launcher running and open the printed `guide=` URL in a Windows browser.
 
-Native PowerShell / Command Prompt wrappers are not checked in yet, so WSL2 is the supported Windows path today.
+On macOS and Linux, the checked-in `run-demo.sh` wrappers still work as convenience wrappers around the same Python launcher.
 
 
 ## Shared Setup

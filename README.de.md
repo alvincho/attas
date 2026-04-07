@@ -1,4 +1,4 @@
-# Retis-Workspace für Finanzintelligenz
+# Retis Financial Intelligence Workspace
 
 ## Uebersetzungen
 
@@ -12,22 +12,11 @@
 - [日本語](README.ja.md)
 - [한국어](README.ko.md)
 
-Dieses Repository ist ein Multi-Agenten-Workspace für Finanzintelligenzsysteme.
-
-Mehr dazu auf [retis.ai](https://retis.ai) und auf der Attas-Produktseite unter [retis.ai/products/attas](https://retis.ai/products/attas).
-
-Das Repository vereint derzeit mehrere zusammengehörige Codebases:
-
-- `prompits`: Python-Infrastruktur für HTTP-native Agenten, Plaza-Erkennung, Pools und entfernte Practice-Ausführung
-- `phemacast`: eine kollaborative Content-Pipeline auf Basis von Prompits
-- `attas`: höherwertige finanzorientierte Agentenmuster und Pulse-Definitionen
-- `ads`: Datenservice- und Erfassungskomponenten, die normalisierte Finanzdatensätze in das größere System einspeisen
-
 ## Status
 
-Dieses Repository wird aktiv entwickelt und befindet sich noch in der Entwicklung. APIs, Konfigurationsformate und Beispielabläufe können sich ändern, wenn die Projekte aufgeteilt, stabilisiert oder förmlicher verpackt werden.
+Dieses Repository wird aktiv entwickelt und befindet sich noch in der Entwicklung. APIs, Konfigurationsformate und Beispielabläufe können sich ändern, wenn die Projekte aufgeteilt, stabilisiert oder formeller verpackt werden.
 
-Zwei Bereiche sind noch sehr früh und werden sich unter aktiver Entwicklung wahrscheinlich schnell ändern:
+Zwei Bereiche befinden sich in einem besonders frühen Stadium und werden sich während der aktiven Entwicklung wahrscheinlich schnell ändern:
 
 - `prompits.teamwork`
 - `phemacast` `BossPulser`
@@ -75,7 +64,7 @@ Dieser Launcher findet die Root des Repositories und startet denselben Smoke-Tes
 
 ## Local-First Quickstart
 
-Der sicherste lokale Pfad heute ist der Prompits-Beispiel-Stack. Er erfordert kein Supabase oder andere private Infrastruktur und verfügt nun über einen Ein-Befehl-Local-Bootstrap-Flow für den Baseline-Desk-Stack:
+Der sicherste lokale Pfad ist heute der Prompits-Beispiel-Stack. Er erfordert kein Supabase oder andere private Infrastruktur und verfügt nun über einen Ein-Befehl-Local-Bootstrap-Flow für den Baseline-Desk-Stack. Der Python-Launcher funktioniert nativ auf Windows, Linux und macOS. Verwenden Sie `python3` auf macOS/Linux und `py -3` auf Windows:
 ```bash
 python3 -m prompits.cli up desk
 ```
@@ -99,9 +88,9 @@ python3 -m prompits.cli down desk
 
 Wenn Sie den älteren manuellen Ablauf benötigen, um jeweils einen einzelnen Dienst zu debuggen:
 ```bash
-python3 prompits/create_agent.py --config prompits/examples/plaza.agent
-python3 prompits/create_agent.py --config prompits/examples/worker.agent
-python3 prompits/create_agent.py --config prompits/examples/user.agent
+python3 -m prompits.create_agent --config prompits/examples/plaza.agent
+python3 -m prompits.create_agent --config prompits/examples/worker.agent
+python3 -m prompits.create_agent --config prompits/examples/user.agent
 ```
 
 Wenn Sie das ältere, auf Supabase basierende Plaza-Setup verwenden möchten, zeigen Sie `PROMPITS_AGENT_CONFIG` auf
@@ -157,7 +146,7 @@ tests/       Cross-project tests and fixtures
 
 ## Orientierung
 
-- Beginnen Sie mit `prompits/README.md` für das Kern-Runtime-Modell.
+- Beginnen Sie mit `prompts/README.md` für das Kern-Runtime-Modell.
 - Lesen Sie `phemacast/README.md` für die Content-Pipeline-Ebene.
 - Lesen Sie `attas/README.md` für das Finance-Network-Framing und übergeordnete Konzepte.
 - Lesen Sie `ads/README.md` für die Data-Service-Komponenten.
@@ -166,10 +155,10 @@ tests/       Cross-project tests and fixtures
 
 | Bereich | Aktueller öffentlicher Status | Hinweise |
 | --- | --- | --- |
-| `prompits` | Bester Startpunkt | Local-first-Beispiele und die Core-Runtime sind der einfachste öffentliche Einstiegspunkt. Das Paket `prompits.teamwork` ist noch in einer frühen Phase und kann sich schnell ändern. |
-| `attas` | Frühe öffentliche Version | Kernkonzepte und Arbeiten am User-Agent sind öffentlich, aber einige unfertige Komponenten sind im Standard-Flow absichtlich verborgen. |
-| `phemacast` | Frühe öffentliche Version | Der Kern-Pipeline-Code ist öffentlich; einige Reporting-/Rendering-Komponenten werden noch bereinigt und stabilisiert. `BossPulser` befindet sich weiterhin in aktiver Entwicklung. |
-| `ads` | Fortgeschritten | Nützlich für Entwicklung und Forschung, aber einige Daten-Workflows erfordern ein zusätzliches Setup und sind kein Pfad für die Erstausführung. |
+| `prompits` | Bester Startpunkt | Local-first-Beispiele und die Core-Runtime sind der einfachste öffentliche Einstiegspunkt. Das Paket `prompits.teamwork` befindet sich noch in einem frühen Stadium und kann sich schnell ändern. |
+| `attas` | Frühe Veröffentlichung | Kernkonzepte und User-Agent-Arbeiten sind öffentlich, aber einige unfertige Komponenten werden im Standard-Workflow absichtlich ausgeblendet. |
+| `phemacast` | Frühe Veröffentlichung | Der Kern-Pipeline-Code ist öffentlich; einige Reporting-/Rendering-Komponenten werden noch bereinigt und stabilisiert. `BossPulser` befindet sich noch in aktiver Entwicklung. |
+| `ads` | Fortgeschritten | Nützlich für Entwicklung und Forschung, aber einige Daten-Workflows erfordern eine zusätzliche Einrichtung und sind kein Pfad für die Erstausführung. |
 | `deploy/` | Nur Beispiele | Deployment-Helfer sind umgebungsspezifisch und sollten nicht als ausgereifte öffentliche Deployment-Lösung betrachtet werden. |
 | `mcp_servers/` | Öffentlicher Quellcode | Lokale MCP-Server-Implementierungen sind Teil des öffentlichen Quellcode-Baums. |
 
@@ -196,7 +185,7 @@ umfassen kollaborativere Investment- und Treasury-Workflows, auf Finanzexperten 
 
 - Geheimnisse sollten aus Umgebungsvariablen und lokalen Konfigurationen stammen, nicht aus committeten Dateien.
 - Lokale Datenbanken, Browser-Artefakte und temporäre Snapshots sind absichtlich vom Versionskontrollsystem ausgeschlossen.
-- Die Codebase ist derzeit eher auf Evaluierung, lokale Entwicklung und Prototyping-Workflows ausgerichtet als auf ein poliertes Endbenutzer-Packaging.
+- Der Codebase zielt derzeit eher auf lokale Entwicklungs-, Evaluierungs- und Prototyping-Workflows ab als auf eine polierte Auslieferung für Endbenutzer.
 
 ## Mitwirken
 

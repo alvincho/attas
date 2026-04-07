@@ -1,7 +1,7 @@
 boto3
 fastapi
 fpdf2
-gunicorn
+gunicorn; platform_system != "Windows"
 httpx
 jinja2
 jsonschema

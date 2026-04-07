@@ -31,9 +31,7 @@ Avvia prima uno dei demo accoppiati, quindi carica questi file in MapPhemar o Pe
 
 ### Windows
 
-Utilizzare WSL2 con Ubuntu o un'altra distribuzione Linux per i launcher demo accoppiati. Dopo l'avvio dello stack, aprire l'URL `guide=` stampata in un browser Windows se le schede non si aprono automaticamente.
-
-I wrapper nativi per PowerShell / Command Prompt non sono ancora stati inclusi, quindi oggi la strada supportata su Windows è WSL2.
+Utilizzare un ambiente Python nativo di Windows per i launcher demo accoppiati, ad esempio `py -3 -m scripts.demo_launcher analyst-insights` e `py -3 -m scripts.demo_launcher finance-briefings`. Dopo l'avvio dello stack, aprire l'URL `guide=` stampata in un browser Windows se le schede non si aprono automaticamente.
 
 ## Cosa c'è in questa cartella
 

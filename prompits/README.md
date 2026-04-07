@@ -12,10 +12,6 @@
 - [日本語](README.ja.md)
 - [한국어](README.ko.md)
 
-Prompits is a Python infrastructure layer for building networked, multi-agent systems. It gives each agent a FastAPI runtime, a pool-backed local memory, a registry/discovery service called Plaza, and a practice model for mounting capabilities that can be called locally or across agents.
-
-The older public [`alvincho/prompits`](https://github.com/alvincho/prompits) repository introduced the decentralized multi-agent vision. The implementation in this workspace keeps that direction, but the current code is much more concrete: HTTP-native agents, Plaza-issued identities and tokens, persisted credentials, searchable agent cards, remote `UsePractice` calls, and optional UI surfaces for monitoring and interaction.
-
 ## Status
 
 Prompits is still an experimental framework. It is appropriate for local development, demos, research prototypes, and internal infrastructure exploration. Treat APIs, config shapes, and built-in practices as evolving until a standalone packaging and release flow is finalized.

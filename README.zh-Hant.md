@@ -1,4 +1,4 @@
-# Retis 金融智能工作區
+# Retis 金融智能工作空間
 
 ## 翻譯版本
 
@@ -12,22 +12,11 @@
 - [日本語](README.ja.md)
 - [한국어](README.ko.md)
 
-此儲存庫是一個用於金融智能系統的多代理工作區。
-
-更多資訊請見 [retis.ai](https://retis.ai)，Attas 產品頁面請見 [retis.ai/products/attas](https://retis.ai/products/attas)。
-
-此儲存庫目前結合了數個彼此相關的程式碼庫：
-
-- `prompits`: 用於 HTTP 原生代理、Plaza 探索、資料池與遠端 practice 執行的 Python 基礎設施
-- `phemacast`: 建立在 Prompits 之上的協作內容流水線
-- `attas`: 更高層的金融導向代理模式與 Pulse 定義
-- `ads`: 將正規化金融資料集輸入更廣泛系統的資料服務與收集元件
-
 ## 狀態
 
 此儲存庫正在積極開發中，且仍在不斷演進。隨著專案進行拆分、穩定化或更正式的封裝，API、配置格式和範例流程可能會發生變化。
 
-有兩個領域目前仍處於非常早期的階段，在積極開發期間很可能會快速變動：
+以下兩個領域目前處於非常早期的階段，且在積極開發期間可能會快速變化：
 
 - `prompits.teamwork`
 - `phemacast` `BossPulser`
@@ -75,7 +64,7 @@ bash "$(git rev-parse --show-toplevel)/attas_smoke"
 
 ## 本地優先快速入門
 
-目前最安全的本地路徑是 Prompits 範例堆疊。它不需要 Supabase 或其他私有基礎設施，且現在針對基準桌面堆疊（baseline desk stack）具備了單一指令的本地引導流程：
+目前最安全的本地路徑是 Prompits 範例堆疊。它不需要 Supabase 或其他私有基礎設施，且現在針對基準桌面堆疊（baseline desk stack）具備了單一指令的本地引導流程。Python 啟動器可原生運行於 Windows、Linux 和 macOS。在 macOS/Linux 上請使用 `python3`，在 Windows 上請使用 `py -3`：
 ```bash
 python3 -m prompits.cli up desk
 ```
@@ -99,9 +88,9 @@ python3 -m prompits.cli down desk
 
 如果您需要使用舊的手動流程來一次除錯單個服務：
 ```bash
-python3 prompits/create_agent.py --config prompits/examples/plaza.agent
-python3 prompits/create_agent.py --config prompits/examples/worker.agent
-python3 prompits/create_agent.py --config prompits/examples/user.agent
+python3 -m prompits.create_agent --config prompits/examples/plaza.agent
+python3 -m prompits.create_agent --config prompits/examples/worker.agent
+python3 -m prompits.create_agent --config prompits/examples/user.agent
 ```
 
 如果您想要使用較舊的以 Supabase 為後端的 Plaza 設定，請將 `PROMPITS_AGENT_CONFIG` 指向
@@ -166,12 +155,12 @@ tests/       Cross-project tests and fixtures
 
 | 區域 | 目前公開狀態 | 備註 |
 | --- | --- | --- |
-| `prompits` | 最佳起點 | 以本地優先的範例和核心運行時是最容易的公開進入點。`prompits.teamwork` 套件仍處於早期階段，且可能會快速變動。 |
-| `attas` | 早期公開 | 核心概念和用戶代理工作已公開，但某些未完成的組件為了避免干擾預設流程而刻意隱藏。 |
-| `phemacast` | 早期公開 | 核心流水線代碼已公開；部分報告/渲染組件仍在進行精簡與穩定化。`BossPulser` 仍在積極開發中。 |
+| `prompits` | 最佳起點 | 以本地優先的範例和核心運行時是最容易的公開進入點。`prompits.teamwork` 套件仍處於早期階段，可能會快速變動。 |
+| `attas` | 早期公開 | 核心概念和 用戶代理 工作已公開，但某些未完成的組件為了避免干擾預設流程而刻意隱藏。 |
+| `phemacast` | 早期公開 | 核心流水線代碼已公開；部分報告/渲染組件仍在進行精簡與穩定化。`BossPulser` 仍處於積極開發中。 |
 | `ads` | 進階 | 對於開發和研究非常有用，但某些數據工作流需要額外設置，並非首次運行的路徑。 |
 | `deploy/` | 僅限範例 | 部署助手與環境相關，不應被視為成熟的公開部署方案。 |
-| `mcp_servers/` | 公開原始碼 | 本地 MCP 伺服器實作是公開原始碼樹的一部分。 |
+| `mcp_servers/` | 公開源碼 | 本地 MCP 伺服器實作是公開源碼樹的一部分。 |
 
 ## 已知限制
 
@@ -194,7 +183,7 @@ tests/       Cross-project tests and fixtures
 
 - 預期機密資訊應來自環境變數與本地配置，而非提交的檔案。
 - 本地資料庫、瀏覽器產生的產物以及暫存快照皆刻意排除在版本控制之外。
-- 目前的程式碼庫主要針對評估、本地開發與原型工作流程，而非精緻的最終用戶封裝。
+- 目前的程式碼庫主要針對本地開發、評估與原型工作流程，而非精緻的最終用戶封裝。
 
 ## 參與貢獻
 

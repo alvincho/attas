@@ -74,18 +74,15 @@ pip install -r requirements.txt
 
 ### Windows
 
-請搭配 Ubuntu 或其他 Linux 發行版使用 WSL2。在 WSL 內的儲存庫根目錄下執行：
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install --upgrade pip
-pip install -r requirements.txt
-./demos/pulsers/finance-briefings/run-demo.sh
+請使用原生 Windows Python 環境。在 PowerShell 中進入儲存庫根目錄：
+```powershell
+py -3 -m venv .venv
+.venv\Scripts\python.exe -m pip install --upgrade pip
+.venv\Scripts\python.exe -m pip install -r requirements.txt
+.venv\Scripts\python.exe -m scripts.demo_launcher finance-briefings
 ```
 
-如果瀏覽器分頁無法從 WSL 自動開啟，請保持啟動器運行，並在 Windows 瀏覽器中開啟列印出的 `guide=` URL。
-
-原生 PowerShell / 命令提示字元封裝器尚未提交，因此目前支援的 Windows 路徑是 WSL2。
+如果瀏覽器分頁沒有自動開啟，請保持啟動器正在運行，並在 Windows 瀏覽器中開啟列印出的 `guide=` URL。
 
 ## 手動啟動
 

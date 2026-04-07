@@ -76,19 +76,16 @@ pip install -r requirements.txt
 
 ### Windows
 
-Use WSL2 with Ubuntu or another Linux distro. From the repository root inside WSL:
+Use a native Windows Python environment. From the repository root in PowerShell:
 
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install --upgrade pip
-pip install -r requirements.txt
-./demos/pulsers/finance-briefings/run-demo.sh
+```powershell
+py -3 -m venv .venv
+.venv\Scripts\python.exe -m pip install --upgrade pip
+.venv\Scripts\python.exe -m pip install -r requirements.txt
+.venv\Scripts\python.exe -m scripts.demo_launcher finance-briefings
 ```
 
-If browser tabs do not auto-open from WSL, keep the launcher running and open the printed `guide=` URL in a Windows browser.
-
-Native PowerShell / Command Prompt wrappers are not checked in yet, so WSL2 is the supported Windows path today.
+If browser tabs do not auto-open, keep the launcher running and open the printed `guide=` URL in a Windows browser.
 
 
 ## Manual Launch

@@ -12,8 +12,6 @@
 - [日本語](README.ja.md)
 - [한국어](README.ko.md)
 
-`phemacast/personal_agent` is the standalone Phemacast personal research workbench.
-
 ## Documentation
 
 - [Detailed User Guide](./docs/user_guide.md)

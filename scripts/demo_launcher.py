@@ -14,7 +14,6 @@ import argparse
 import contextlib
 import json
 import os
-import signal
 import socket
 import subprocess
 import sys
@@ -36,6 +35,8 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from prompits.core.process_utils import background_popen_kwargs, terminate_process
+
 try:
     from phemacast.personal_agent.doc_pages import render_markdown
 except Exception:  # pragma: no cover - fallback for minimal environments
@@ -55,6 +56,7 @@ LANGUAGE_OPTIONS: list[tuple[str, str]] = [
 ]
 
 LANGUAGE_CODES = [code for code, _ in LANGUAGE_OPTIONS]
+PYTHON_LABEL = Path(sys.executable).name or "python"
 
 
 def localized(
@@ -622,9 +624,68 @@ class LauncherState:
             }
 
 
-def _script_command(relative_path: str) -> tuple[str, ...]:
-    """Return the shell command tuple for one launcher-managed script."""
-    return ("/bin/sh", str(REPO_ROOT / relative_path))
+def _python_module_command(module: str, *args: str) -> tuple[str, ...]:
+    """Return a Python module command that works across supported platforms."""
+    return (sys.executable, "-m", module, *(str(arg) for arg in args))
+
+
+def _python_module_label(module: str, *args: str) -> str:
+    """Return a readable cross-platform command label."""
+    suffix = " ".join(str(arg) for arg in args if str(arg).strip())
+    return f"{PYTHON_LABEL} -m {module}" + (f" {suffix}" if suffix else "")
+
+
+def _demo_run_command(demo_id: str) -> str:
+    """Return the preferred cross-platform demo launch command."""
+    return _python_module_label("scripts.demo_launcher", demo_id)
+
+
+def _agent_command(relative_config_path: str) -> tuple[str, ...]:
+    """Return a direct agent launcher command for one config file."""
+    return _python_module_command("prompits.create_agent", "--config", relative_config_path)
+
+
+def _agent_command_label(relative_config_path: str) -> str:
+    """Return a readable direct agent launcher command label."""
+    return _python_module_label("prompits.create_agent", "--config", relative_config_path)
+
+
+def _uvicorn_command(app_path: str, *, host: str, port: str, reload_enabled: bool = False) -> tuple[str, ...]:
+    """Return a direct uvicorn command for one ASGI app."""
+    command = list(_python_module_command("uvicorn", app_path, "--host", host, "--port", str(port)))
+    if reload_enabled:
+        command.append("--reload")
+    return tuple(command)
+
+
+def _uvicorn_command_label(app_path: str, *, host: str, port: str, reload_enabled: bool = False) -> str:
+    """Return a readable uvicorn command label."""
+    parts = [app_path, "--host", host, "--port", str(port)]
+    if reload_enabled:
+        parts.append("--reload")
+    return _python_module_label("uvicorn", *parts)
+
+
+def _env_value(env: dict[str, str], key: str, default: str) -> str:
+    """Return an environment override or a default value."""
+    value = str(env.get(key) or "").strip()
+    return value or default
+
+
+def _env_flag(env: dict[str, str], key: str, default: bool = False) -> bool:
+    """Return a boolean environment flag."""
+    value = str(env.get(key) or "").strip().lower()
+    if not value:
+        return default
+    return value in {"1", "true", "yes", "on"}
+
+
+def _browser_host(host: str) -> str:
+    """Normalize wildcard bind hosts into a browser-friendly loopback address."""
+    normalized = str(host or "").strip()
+    if normalized in {"0.0.0.0", "::", "[::]"}:
+        return "127.0.0.1"
+    return normalized or "127.0.0.1"
 
 
 def _summary(text: dict[str, str], fallback: str = "") -> dict[str, str]:
@@ -645,7 +706,7 @@ def _hello_plaza_spec() -> DemoSpec:
     return DemoSpec(
         demo_id="hello-plaza",
         title="Hello Plaza",
-        run_script_path="./demos/hello-plaza/run-demo.sh",
+        run_script_path=_demo_run_command("hello-plaza"),
         readme_path=str(REPO_ROOT / "demos" / "hello-plaza" / "README.md"),
         summary=_summary(
             localized(
@@ -665,8 +726,8 @@ def _hello_plaza_spec() -> DemoSpec:
             ServiceSpec(
                 name="demo-plaza",
                 kind="registry",
-                command=_script_command("demos/hello-plaza/start-plaza.sh"),
-                command_label="./demos/hello-plaza/start-plaza.sh",
+                command=_agent_command("demos/hello-plaza/plaza.agent"),
+                command_label=_agent_command_label("demos/hello-plaza/plaza.agent"),
                 health_url="http://127.0.0.1:8211/health",
                 expected_agent="Plaza",
                 description="Local Plaza registry for the smallest public demo.",
@@ -674,8 +735,8 @@ def _hello_plaza_spec() -> DemoSpec:
             ServiceSpec(
                 name="demo-worker",
                 kind="worker",
-                command=_script_command("demos/hello-plaza/start-worker.sh"),
-                command_label="./demos/hello-plaza/start-worker.sh",
+                command=_agent_command("demos/hello-plaza/worker.agent"),
+                command_label=_agent_command_label("demos/hello-plaza/worker.agent"),
                 health_url="http://127.0.0.1:8212/health",
                 expected_agent="demo-worker",
                 description="Minimal worker that auto-registers with Plaza.",
@@ -683,8 +744,8 @@ def _hello_plaza_spec() -> DemoSpec:
             ServiceSpec(
                 name="demo-user-ui",
                 kind="ui",
-                command=_script_command("demos/hello-plaza/start-user.sh"),
-                command_label="./demos/hello-plaza/start-user.sh",
+                command=_agent_command("demos/hello-plaza/user.agent"),
+                command_label=_agent_command_label("demos/hello-plaza/user.agent"),
                 health_url="http://127.0.0.1:8214/health",
                 expected_agent="demo-user-ui",
                 ui_url="http://127.0.0.1:8214/",
@@ -705,8 +766,8 @@ def _data_pipeline_services() -> tuple[ServiceSpec, ...]:
         ServiceSpec(
             name="SQLiteADSDispatcher",
             kind="dispatcher",
-            command=_script_command("demos/data-pipeline/start-dispatcher.sh"),
-            command_label="./demos/data-pipeline/start-dispatcher.sh",
+            command=_agent_command("demos/data-pipeline/dispatcher.agent"),
+            command_label=_agent_command_label("demos/data-pipeline/dispatcher.agent"),
             health_url="http://127.0.0.1:9060/health",
             expected_agent="SQLiteADSDispatcher",
             description="SQLite-backed dispatcher queue for the demo ADS stack.",
@@ -714,8 +775,8 @@ def _data_pipeline_services() -> tuple[ServiceSpec, ...]:
         ServiceSpec(
             name="SQLiteADSWorker",
             kind="worker",
-            command=_script_command("demos/data-pipeline/start-worker.sh"),
-            command_label="./demos/data-pipeline/start-worker.sh",
+            command=_agent_command("demos/data-pipeline/worker.agent"),
+            command_label=_agent_command_label("demos/data-pipeline/worker.agent"),
             health_url="http://127.0.0.1:9061/health",
             expected_agent="SQLiteADSWorker",
             description="Mock-cap worker that polls the dispatcher and writes normalized rows.",
@@ -723,8 +784,8 @@ def _data_pipeline_services() -> tuple[ServiceSpec, ...]:
         ServiceSpec(
             name="SQLiteADSPulser",
             kind="pulser",
-            command=_script_command("demos/data-pipeline/start-pulser.sh"),
-            command_label="./demos/data-pipeline/start-pulser.sh",
+            command=_agent_command("demos/data-pipeline/pulser.agent"),
+            command_label=_agent_command_label("demos/data-pipeline/pulser.agent"),
             health_url="http://127.0.0.1:9062/health",
             expected_agent="SQLiteADSPulser",
             ui_url="http://127.0.0.1:9062/",
@@ -733,8 +794,8 @@ def _data_pipeline_services() -> tuple[ServiceSpec, ...]:
         ServiceSpec(
             name="SQLiteADSBoss",
             kind="boss",
-            command=_script_command("demos/data-pipeline/start-boss.sh"),
-            command_label="./demos/data-pipeline/start-boss.sh",
+            command=_agent_command("demos/data-pipeline/boss.agent"),
+            command_label=_agent_command_label("demos/data-pipeline/boss.agent"),
             health_url="http://127.0.0.1:9063/health",
             expected_agent="SQLiteADSBoss",
             ui_url="http://127.0.0.1:9063/",
@@ -748,7 +809,7 @@ def _data_pipeline_spec() -> DemoSpec:
     return DemoSpec(
         demo_id="data-pipeline",
         title="Data Pipeline",
-        run_script_path="./demos/data-pipeline/run-demo.sh",
+        run_script_path=_demo_run_command("data-pipeline"),
         readme_path=str(REPO_ROOT / "demos" / "data-pipeline" / "README.md"),
         summary=_summary(
             localized(
@@ -779,7 +840,7 @@ def _ads_pulser_spec() -> DemoSpec:
     return DemoSpec(
         demo_id="ads",
         title="ADS Pulser Demo",
-        run_script_path="./demos/pulsers/ads/run-demo.sh",
+        run_script_path=_demo_run_command("ads"),
         readme_path=str(REPO_ROOT / "demos" / "pulsers" / "ads" / "README.md"),
         summary=_summary(
             localized(
@@ -817,12 +878,28 @@ def _ads_pulser_spec() -> DemoSpec:
     )
 
 
-def _personal_research_spec() -> DemoSpec:
+def _personal_research_spec(env: dict[str, str]) -> DemoSpec:
     """Resolve the personal-research-workbench manifest."""
+    workbench_host = _env_value(env, "PHEMACAST_PERSONAL_AGENT_HOST", "127.0.0.1")
+    workbench_port = _env_value(env, "PHEMACAST_PERSONAL_AGENT_PORT", "8041")
+    workbench_browser_host = _browser_host(workbench_host)
+    workbench_reload = _env_flag(env, "PHEMACAST_PERSONAL_AGENT_RELOAD")
+    workbench_env = {
+        "PHEMACAST_MAP_PHEMAR_CONFIG_PATH": _env_value(
+            env,
+            "PHEMACAST_MAP_PHEMAR_CONFIG_PATH",
+            str(REPO_ROOT / "demos" / "personal-research-workbench" / "map_phemar.phemar"),
+        ),
+        "PHEMACAST_MAP_PHEMAR_POOL_PATH": _env_value(
+            env,
+            "PHEMACAST_MAP_PHEMAR_POOL_PATH",
+            str(REPO_ROOT / "demos" / "personal-research-workbench" / "map_phemar_pool"),
+        ),
+    }
     return DemoSpec(
         demo_id="personal-research-workbench",
         title="Personal Research Workbench",
-        run_script_path="./demos/personal-research-workbench/run-demo.sh",
+        run_script_path=_demo_run_command("personal-research-workbench"),
         readme_path=str(REPO_ROOT / "demos" / "personal-research-workbench" / "README.md"),
         summary=_summary(
             localized(
@@ -854,8 +931,8 @@ def _personal_research_spec() -> DemoSpec:
             ServiceSpec(
                 name="workbench-plaza",
                 kind="registry",
-                command=_script_command("demos/personal-research-workbench/start-plaza.sh"),
-                command_label="./demos/personal-research-workbench/start-plaza.sh",
+                command=_agent_command("demos/personal-research-workbench/plaza.agent"),
+                command_label=_agent_command_label("demos/personal-research-workbench/plaza.agent"),
                 health_url="http://127.0.0.1:8241/health",
                 expected_agent="Plaza",
                 description="Local Plaza dedicated to the workbench demo.",
@@ -863,8 +940,8 @@ def _personal_research_spec() -> DemoSpec:
             ServiceSpec(
                 name="DemoSystemPulser",
                 kind="pulser",
-                command=_script_command("demos/personal-research-workbench/start-file-storage-pulser.sh"),
-                command_label="./demos/personal-research-workbench/start-file-storage-pulser.sh",
+                command=_agent_command("demos/personal-research-workbench/file-storage.pulser"),
+                command_label=_agent_command_label("demos/personal-research-workbench/file-storage.pulser"),
                 health_url="http://127.0.0.1:8242/health",
                 expected_agent="DemoSystemPulser",
                 ui_url="http://127.0.0.1:8242/",
@@ -873,8 +950,8 @@ def _personal_research_spec() -> DemoSpec:
             ServiceSpec(
                 name="DemoYFinancePulser",
                 kind="pulser",
-                command=_script_command("demos/personal-research-workbench/start-yfinance-pulser.sh"),
-                command_label="./demos/personal-research-workbench/start-yfinance-pulser.sh",
+                command=_agent_command("demos/personal-research-workbench/yfinance.pulser"),
+                command_label=_agent_command_label("demos/personal-research-workbench/yfinance.pulser"),
                 health_url="http://127.0.0.1:8243/health",
                 expected_agent="DemoYFinancePulser",
                 ui_url="http://127.0.0.1:8243/",
@@ -883,8 +960,8 @@ def _personal_research_spec() -> DemoSpec:
             ServiceSpec(
                 name="DemoTechnicalAnalysisPulser",
                 kind="pulser",
-                command=_script_command("demos/personal-research-workbench/start-technical-analysis-pulser.sh"),
-                command_label="./demos/personal-research-workbench/start-technical-analysis-pulser.sh",
+                command=_agent_command("demos/personal-research-workbench/technical-analysis.pulser"),
+                command_label=_agent_command_label("demos/personal-research-workbench/technical-analysis.pulser"),
                 health_url="http://127.0.0.1:8244/health",
                 expected_agent="DemoTechnicalAnalysisPulser",
                 ui_url="http://127.0.0.1:8244/",
@@ -893,16 +970,35 @@ def _personal_research_spec() -> DemoSpec:
             ServiceSpec(
                 name="Phemacast Personal Agent",
                 kind="ui",
-                command=_script_command("demos/personal-research-workbench/start-workbench.sh"),
-                command_label="./demos/personal-research-workbench/start-workbench.sh",
-                health_url="http://127.0.0.1:8041/health",
-                ui_url="http://127.0.0.1:8041/",
+                command=_uvicorn_command(
+                    "phemacast.personal_agent.app:app",
+                    host=workbench_host,
+                    port=workbench_port,
+                    reload_enabled=workbench_reload,
+                ),
+                command_label=_uvicorn_command_label(
+                    "phemacast.personal_agent.app:app",
+                    host=workbench_host,
+                    port=workbench_port,
+                    reload_enabled=workbench_reload,
+                ),
+                health_url=f"http://{workbench_browser_host}:{workbench_port}/health",
+                ui_url=f"http://{workbench_browser_host}:{workbench_port}/",
                 description="Main workbench UI with the embedded MapPhemar route.",
+                env=workbench_env,
             ),
         ),
         browser_pages=(
-            BrowserPage(label="Workbench", url="http://127.0.0.1:8041/", description="Primary visual workspace."),
-            BrowserPage(label="MapPhemar", url="http://127.0.0.1:8041/map-phemar/", description="Diagram editor route."),
+            BrowserPage(
+                label="Workbench",
+                url=f"http://{workbench_browser_host}:{workbench_port}/",
+                description="Primary visual workspace.",
+            ),
+            BrowserPage(
+                label="MapPhemar",
+                url=f"http://{workbench_browser_host}:{workbench_port}/map-phemar/",
+                description="Diagram editor route.",
+            ),
         ),
         env_options=(OPEN_BROWSER_ENV,),
         context_badges=("visual-demo", "workbench", "diagram-flow"),
@@ -914,7 +1010,7 @@ def _file_storage_spec() -> DemoSpec:
     return DemoSpec(
         demo_id="file-storage",
         title="System Pulser Demo",
-        run_script_path="./demos/pulsers/file-storage/run-demo.sh",
+        run_script_path=_demo_run_command("file-storage"),
         readme_path=str(REPO_ROOT / "demos" / "pulsers" / "file-storage" / "README.md"),
         summary=_summary(
             localized(
@@ -934,8 +1030,8 @@ def _file_storage_spec() -> DemoSpec:
             ServiceSpec(
                 name="file-storage-demo-plaza",
                 kind="registry",
-                command=_script_command("demos/pulsers/file-storage/start-plaza.sh"),
-                command_label="./demos/pulsers/file-storage/start-plaza.sh",
+                command=_agent_command("demos/pulsers/file-storage/plaza.agent"),
+                command_label=_agent_command_label("demos/pulsers/file-storage/plaza.agent"),
                 health_url="http://127.0.0.1:8256/health",
                 expected_agent="Plaza",
                 description="Local Plaza for the system pulser demo.",
@@ -943,8 +1039,8 @@ def _file_storage_spec() -> DemoSpec:
             ServiceSpec(
                 name="DemoSystemPulser",
                 kind="pulser",
-                command=_script_command("demos/pulsers/file-storage/start-pulser.sh"),
-                command_label="./demos/pulsers/file-storage/start-pulser.sh",
+                command=_agent_command("demos/pulsers/file-storage/file-storage.pulser"),
+                command_label=_agent_command_label("demos/pulsers/file-storage/file-storage.pulser"),
                 health_url="http://127.0.0.1:8257/health",
                 expected_agent="DemoSystemPulser",
                 ui_url="http://127.0.0.1:8257/",
@@ -964,7 +1060,7 @@ def _yfinance_spec() -> DemoSpec:
     return DemoSpec(
         demo_id="yfinance",
         title="YFinance Pulser Demo",
-        run_script_path="./demos/pulsers/yfinance/run-demo.sh",
+        run_script_path=_demo_run_command("yfinance"),
         readme_path=str(REPO_ROOT / "demos" / "pulsers" / "yfinance" / "README.md"),
         summary=_summary(
             localized(
@@ -996,8 +1092,8 @@ def _yfinance_spec() -> DemoSpec:
             ServiceSpec(
                 name="yfinance-demo-plaza",
                 kind="registry",
-                command=_script_command("demos/pulsers/yfinance/start-plaza.sh"),
-                command_label="./demos/pulsers/yfinance/start-plaza.sh",
+                command=_agent_command("demos/pulsers/yfinance/plaza.agent"),
+                command_label=_agent_command_label("demos/pulsers/yfinance/plaza.agent"),
                 health_url="http://127.0.0.1:8251/health",
                 expected_agent="Plaza",
                 description="Local Plaza for the YFinance pulser demo.",
@@ -1005,8 +1101,8 @@ def _yfinance_spec() -> DemoSpec:
             ServiceSpec(
                 name="DemoYFinancePulser",
                 kind="pulser",
-                command=_script_command("demos/pulsers/yfinance/start-pulser.sh"),
-                command_label="./demos/pulsers/yfinance/start-pulser.sh",
+                command=_agent_command("demos/pulsers/yfinance/yfinance.pulser"),
+                command_label=_agent_command_label("demos/pulsers/yfinance/yfinance.pulser"),
                 health_url="http://127.0.0.1:8252/health",
                 expected_agent="DemoYFinancePulser",
                 ui_url="http://127.0.0.1:8252/",
@@ -1031,8 +1127,8 @@ def _llm_spec(env: dict[str, str]) -> DemoSpec:
         pulser = ServiceSpec(
             name="DemoOpenAIPulser",
             kind="pulser",
-            command=_script_command("demos/pulsers/llm/start-openai-pulser.sh"),
-            command_label="./demos/pulsers/llm/start-openai-pulser.sh",
+            command=_agent_command("demos/pulsers/llm/openai.pulser"),
+            command_label=_agent_command_label("demos/pulsers/llm/openai.pulser"),
             health_url="http://127.0.0.1:8262/health",
             expected_agent="DemoOpenAIPulser",
             ui_url="http://127.0.0.1:8262/",
@@ -1044,8 +1140,8 @@ def _llm_spec(env: dict[str, str]) -> DemoSpec:
         pulser = ServiceSpec(
             name="DemoOllamaPulser",
             kind="pulser",
-            command=_script_command("demos/pulsers/llm/start-ollama-pulser.sh"),
-            command_label="./demos/pulsers/llm/start-ollama-pulser.sh",
+            command=_agent_command("demos/pulsers/llm/ollama.pulser"),
+            command_label=_agent_command_label("demos/pulsers/llm/ollama.pulser"),
             health_url="http://127.0.0.1:8263/health",
             expected_agent="DemoOllamaPulser",
             ui_url="http://127.0.0.1:8263/",
@@ -1057,7 +1153,7 @@ def _llm_spec(env: dict[str, str]) -> DemoSpec:
     return DemoSpec(
         demo_id="llm",
         title="LLM Pulser Demo",
-        run_script_path="./demos/pulsers/llm/run-demo.sh",
+        run_script_path=_demo_run_command("llm"),
         readme_path=str(REPO_ROOT / "demos" / "pulsers" / "llm" / "README.md"),
         summary=_summary(
             localized(
@@ -1089,8 +1185,8 @@ def _llm_spec(env: dict[str, str]) -> DemoSpec:
             ServiceSpec(
                 name="llm-demo-plaza",
                 kind="registry",
-                command=_script_command("demos/pulsers/llm/start-plaza.sh"),
-                command_label="./demos/pulsers/llm/start-plaza.sh",
+                command=_agent_command("demos/pulsers/llm/plaza.agent"),
+                command_label=_agent_command_label("demos/pulsers/llm/plaza.agent"),
                 health_url="http://127.0.0.1:8261/health",
                 expected_agent="Plaza",
                 description="Local Plaza for the LLM pulser demo.",
@@ -1108,13 +1204,17 @@ def _analyst_spec(env: dict[str, str]) -> DemoSpec:
     mode = str(env.get("DEMO_ANALYST_MODE") or "structured").strip().lower()
     if mode not in {"structured", "advanced"}:
         mode = "structured"
+    personal_agent_host = _env_value(env, "PHEMACAST_PERSONAL_AGENT_HOST", "127.0.0.1")
+    personal_agent_port = _env_value(env, "PHEMACAST_PERSONAL_AGENT_PORT", "8061")
+    personal_agent_browser_host = _browser_host(personal_agent_host)
+    personal_agent_reload = _env_flag(env, "PHEMACAST_PERSONAL_AGENT_RELOAD")
 
     services: list[ServiceSpec] = [
         ServiceSpec(
             name="analyst-insight-demo-plaza",
             kind="registry",
-            command=_script_command("demos/pulsers/analyst-insights/start-plaza.sh"),
-            command_label="./demos/pulsers/analyst-insights/start-plaza.sh",
+            command=_agent_command("demos/pulsers/analyst-insights/plaza.agent"),
+            command_label=_agent_command_label("demos/pulsers/analyst-insights/plaza.agent"),
             health_url="http://127.0.0.1:8266/health",
             expected_agent="Plaza",
             description="Local Plaza for the analyst pulser demos.",
@@ -1122,8 +1222,8 @@ def _analyst_spec(env: dict[str, str]) -> DemoSpec:
         ServiceSpec(
             name="DemoAnalystInsightPulser",
             kind="pulser",
-            command=_script_command("demos/pulsers/analyst-insights/start-pulser.sh"),
-            command_label="./demos/pulsers/analyst-insights/start-pulser.sh",
+            command=_agent_command("demos/pulsers/analyst-insights/analyst-insights.pulser"),
+            command_label=_agent_command_label("demos/pulsers/analyst-insights/analyst-insights.pulser"),
             health_url="http://127.0.0.1:8267/health",
             expected_agent="DemoAnalystInsightPulser",
             ui_url="http://127.0.0.1:8267/",
@@ -1141,8 +1241,8 @@ def _analyst_spec(env: dict[str, str]) -> DemoSpec:
                 ServiceSpec(
                     name="DemoAnalystNewsWirePulser",
                     kind="pulser",
-                    command=_script_command("demos/pulsers/analyst-insights/start-news-pulser.sh"),
-                    command_label="./demos/pulsers/analyst-insights/start-news-pulser.sh",
+                    command=_agent_command("demos/pulsers/analyst-insights/news-wire.pulser"),
+                    command_label=_agent_command_label("demos/pulsers/analyst-insights/news-wire.pulser"),
                     health_url="http://127.0.0.1:8268/health",
                     expected_agent="DemoAnalystNewsWirePulser",
                     ui_url="http://127.0.0.1:8268/",
@@ -1151,8 +1251,8 @@ def _analyst_spec(env: dict[str, str]) -> DemoSpec:
                 ServiceSpec(
                     name="DemoAnalystOllamaPulser",
                     kind="pulser",
-                    command=_script_command("demos/pulsers/analyst-insights/start-ollama-pulser.sh"),
-                    command_label="./demos/pulsers/analyst-insights/start-ollama-pulser.sh",
+                    command=_agent_command("demos/pulsers/analyst-insights/ollama.pulser"),
+                    command_label=_agent_command_label("demos/pulsers/analyst-insights/ollama.pulser"),
                     health_url="http://127.0.0.1:8269/health",
                     expected_agent="DemoAnalystOllamaPulser",
                     ui_url="http://127.0.0.1:8269/",
@@ -1161,8 +1261,8 @@ def _analyst_spec(env: dict[str, str]) -> DemoSpec:
                 ServiceSpec(
                     name="DemoAnalystPromptedNewsPulser",
                     kind="pulser",
-                    command=_script_command("demos/pulsers/analyst-insights/start-analyst-news-pulser.sh"),
-                    command_label="./demos/pulsers/analyst-insights/start-analyst-news-pulser.sh",
+                    command=_agent_command("demos/pulsers/analyst-insights/analyst-news-ollama.pulser"),
+                    command_label=_agent_command_label("demos/pulsers/analyst-insights/analyst-news-ollama.pulser"),
                     health_url="http://127.0.0.1:8270/health",
                     expected_agent="DemoAnalystPromptedNewsPulser",
                     ui_url="http://127.0.0.1:8270/",
@@ -1171,16 +1271,30 @@ def _analyst_spec(env: dict[str, str]) -> DemoSpec:
                 ServiceSpec(
                     name="Phemacast Personal Agent",
                     kind="ui",
-                    command=_script_command("demos/pulsers/analyst-insights/start-personal-agent.sh"),
-                    command_label="./demos/pulsers/analyst-insights/start-personal-agent.sh",
-                    health_url="http://127.0.0.1:8061/health",
-                    ui_url="http://127.0.0.1:8061/",
+                    command=_uvicorn_command(
+                        "phemacast.personal_agent.app:app",
+                        host=personal_agent_host,
+                        port=personal_agent_port,
+                        reload_enabled=personal_agent_reload,
+                    ),
+                    command_label=_uvicorn_command_label(
+                        "phemacast.personal_agent.app:app",
+                        host=personal_agent_host,
+                        port=personal_agent_port,
+                        reload_enabled=personal_agent_reload,
+                    ),
+                    health_url=f"http://{personal_agent_browser_host}:{personal_agent_port}/health",
+                    ui_url=f"http://{personal_agent_browser_host}:{personal_agent_port}/",
                     description="Consumer-view walkthrough for the advanced analyst stack.",
                 ),
             ]
         )
         pages = [
-            BrowserPage(label="Personal Agent", url="http://127.0.0.1:8061/", description="Primary advanced walkthrough."),
+            BrowserPage(
+                label="Personal Agent",
+                url=f"http://{personal_agent_browser_host}:{personal_agent_port}/",
+                description="Primary advanced walkthrough.",
+            ),
             BrowserPage(label="Prompted Pulser UI", url="http://127.0.0.1:8270/", description="Advanced prompted outputs."),
             BrowserPage(label="Structured Pulser UI", url="http://127.0.0.1:8267/", description="Structured companion UI.", auto_open=False),
         ]
@@ -1188,7 +1302,7 @@ def _analyst_spec(env: dict[str, str]) -> DemoSpec:
     return DemoSpec(
         demo_id="analyst-insights",
         title="Analyst Insight Pulser Demo",
-        run_script_path="./demos/pulsers/analyst-insights/run-demo.sh",
+        run_script_path=_demo_run_command("analyst-insights"),
         readme_path=str(REPO_ROOT / "demos" / "pulsers" / "analyst-insights" / "README.md"),
         summary=_summary(
             localized(
@@ -1228,7 +1342,7 @@ def _finance_briefings_spec() -> DemoSpec:
     return DemoSpec(
         demo_id="finance-briefings",
         title="Finance Briefing Workflow Demo",
-        run_script_path="./demos/pulsers/finance-briefings/run-demo.sh",
+        run_script_path=_demo_run_command("finance-briefings"),
         readme_path=str(REPO_ROOT / "demos" / "pulsers" / "finance-briefings" / "README.md"),
         summary=_summary(
             localized(
@@ -1260,8 +1374,8 @@ def _finance_briefings_spec() -> DemoSpec:
             ServiceSpec(
                 name="finance-briefing-demo-plaza",
                 kind="registry",
-                command=_script_command("demos/pulsers/finance-briefings/start-plaza.sh"),
-                command_label="./demos/pulsers/finance-briefings/start-plaza.sh",
+                command=_agent_command("demos/pulsers/finance-briefings/plaza.agent"),
+                command_label=_agent_command_label("demos/pulsers/finance-briefings/plaza.agent"),
                 health_url="http://127.0.0.1:8272/health",
                 expected_agent="Plaza",
                 description="Local Plaza for the finance briefing workflow demo.",
@@ -1269,8 +1383,8 @@ def _finance_briefings_spec() -> DemoSpec:
             ServiceSpec(
                 name="DemoFinancialBriefingPulser",
                 kind="pulser",
-                command=_script_command("demos/pulsers/finance-briefings/start-pulser.sh"),
-                command_label="./demos/pulsers/finance-briefings/start-pulser.sh",
+                command=_agent_command("demos/pulsers/finance-briefings/finance-briefings.pulser"),
+                command_label=_agent_command_label("demos/pulsers/finance-briefings/finance-briefings.pulser"),
                 health_url="http://127.0.0.1:8271/health",
                 expected_agent="DemoFinancialBriefingPulser",
                 ui_url="http://127.0.0.1:8271/",
@@ -1310,7 +1424,7 @@ def resolve_demo_spec(demo_id: str, env: dict[str, str] | None = None) -> DemoSp
     if normalized == "data-pipeline":
         return _data_pipeline_spec()
     if normalized == "personal-research-workbench":
-        return _personal_research_spec()
+        return _personal_research_spec(runtime_env)
     if normalized == "file-storage":
         return _file_storage_spec()
     if normalized == "yfinance":
@@ -1363,23 +1477,7 @@ def _wait_for_service(spec: ServiceSpec, *, timeout_sec: float) -> tuple[bool, s
 
 def _terminate_process(process: subprocess.Popen[bytes]):
     """Terminate one managed process group."""
-    if process.poll() is not None:
-        return
-    with contextlib.suppress(Exception):
-        if hasattr(os, "killpg"):
-            os.killpg(process.pid, signal.SIGTERM)
-        else:
-            process.terminate()
-    deadline = time.time() + 5.0
-    while time.time() < deadline:
-        if process.poll() is not None:
-            return
-        time.sleep(0.1)
-    with contextlib.suppress(Exception):
-        if hasattr(os, "killpg"):
-            os.killpg(process.pid, signal.SIGKILL)
-        else:
-            process.kill()
+    terminate_process(process, timeout_sec=5.0)
 
 
 def _build_full_readme_html(spec: DemoSpec) -> str:
@@ -2464,7 +2562,7 @@ def _launch_service(spec: ServiceSpec, state: LauncherState, log_root: Path) -> 
             env=_merge_env(spec.env),
             stdout=handle,
             stderr=subprocess.STDOUT,
-            start_new_session=True,
+            **background_popen_kwargs(),
         )
     state.record_process(spec.name, process)
     state.mark_service(
