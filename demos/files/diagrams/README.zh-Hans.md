@@ -74,9 +74,9 @@
 
 指标图表假设：
 
-- Plaza 位址为 `http://127.0.0.1:8011`
-- `YFinancePulser` 位址为 `http://127.0.0.1:8020`
-- `TechnicalAnalysisPulser` 位址为 `http://127.0.0.1:8033`
+- Plaza 位址为 `http://127.0.0.1:8241`
+- `YFinancePulser` 位址为 `http://127.0.0.1:8243`
+- `TechnicalAnalysisPulser` 位址为 `http://127.0.0.1:8244`
 
 这些图表所引用的 pulser 配置位于：
 

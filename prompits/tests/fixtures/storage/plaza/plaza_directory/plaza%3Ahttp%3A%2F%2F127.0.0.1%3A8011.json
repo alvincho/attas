@@ -7,6 +7,7 @@
   "owner": "Plaza",
   "address": "http://127.0.0.1:8011",
   "meta": {
+    "trusted_plaza_urls": [],
     "accepts_inbound_from_plaza": true,
     "accepts_direct_call": true,
     "connectivity_mode": "plaza-forward"
@@ -21,11 +22,13 @@
     "port": 8011,
     "address": "http://127.0.0.1:8011",
     "meta": {
+      "trusted_plaza_urls": [],
       "accepts_inbound_from_plaza": true,
       "accepts_direct_call": true,
       "connectivity_mode": "plaza-forward"
     },
     "pit_type": "Agent",
+    "trusted_plaza_urls": [],
     "accepts_inbound_from_plaza": true,
     "accepts_direct_call": true,
     "connectivity_mode": "plaza-forward",
@@ -397,7 +400,7 @@
           },
           "pit_type": {
             "type": "string",
-            "description": "Agent type: Agent | Pulser | Schema | Pulse | Phema."
+            "description": "Agent type string. Plaza normalizes built-ins but also accepts custom values."
           },
           "card": {
             "type": "object",
@@ -428,7 +431,7 @@
       },
       {
         "name": "Plaza Authenticate",
-        "description": "Authenticate Plaza bearer tokens.",
+        "description": "Authenticate Plaza agent tokens or signed-in UI user tokens.",
         "id": "authenticate",
         "cost": 0,
         "tags": [
@@ -436,7 +439,7 @@
           "plaza"
         ],
         "examples": [
-          "POST /authenticate (Bearer token)"
+          "POST /authenticate (Bearer token for an agent or UI user)"
         ],
         "inputModes": [
           "http-post",
@@ -625,5 +628,5 @@
     ],
     "agent_id": "plaza:http://127.0.0.1:8011"
   },
-  "updated_at": "2026-04-04T10:39:54.736975+00:00"
+  "updated_at": "2026-04-08T12:29:29.462769+00:00"
 }

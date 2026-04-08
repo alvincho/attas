@@ -39,15 +39,26 @@ from phemacast.personal_agent.doc_pages import DOC_PAGES, load_doc_page
 from phemacast.personal_agent.layout_files import list_layout_files, save_layout_file
 from phemacast.personal_agent.plaza import (
     BossProxyError,
+    PlazaProxyError,
     fetch_boss_job_detail,
     fetch_managed_work_monitor,
     fetch_managed_work_schedule_history,
     fetch_managed_work_schedules,
     fetch_managed_work_ticket_detail,
     fetch_managed_work_tickets,
+    fetch_plaza_agent_keys,
+    fetch_plaza_auth_config,
+    fetch_plaza_auth_me,
     fetch_plaza_catalog,
+    create_plaza_agent_key,
+    delete_plaza_agent_key,
     run_managed_work_schedule_control,
+    run_plaza_auth_refresh,
+    run_plaza_auth_signin,
+    run_plaza_auth_signout,
+    run_plaza_auth_signup,
     run_plaza_pulser_test,
+    update_plaza_agent_key,
 )
 from prompits.channels import build_delivery_snapshot, default_b2b_channels
 from prompits.teamwork.runtime import managed_ticket_from_job_row
@@ -96,6 +107,18 @@ def _decorate_job_detail(payload: Any, *, manager_address: str = "") -> Dict[str
 def get_asset_version() -> str:
     """Return the asset version."""
     return get_map_phemar_asset_version()
+
+
+def _coerce_json_object(payload: Any, *, detail: str) -> Dict[str, Any]:
+    """Return a request JSON object or raise a 400 error."""
+    if not isinstance(payload, dict):
+        raise HTTPException(status_code=400, detail=detail)
+    return payload
+
+
+def _proxy_authorization_header(request: Request) -> str:
+    """Return the inbound Authorization header for Plaza proxy routes."""
+    return str(request.headers.get("authorization") or "").strip()
 
 
 def create_app() -> FastAPI:
@@ -173,6 +196,139 @@ def create_app() -> FastAPI:
         if not workspace:
             raise HTTPException(status_code=404, detail=f"Workspace '{workspace_id}' was not found.")
         return workspace
+
+    @app.get("/api/plaza/auth/config")
+    async def plaza_auth_config(plaza_url: str = ""):
+        """Route handler for GET /api/plaza/auth/config."""
+        try:
+            return await fetch_plaza_auth_config(plaza_url)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        except PlazaProxyError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+
+    @app.post("/api/plaza/auth/signup")
+    async def plaza_auth_signup(request: Request, plaza_url: str = ""):
+        """Route handler for POST /api/plaza/auth/signup."""
+        payload = _coerce_json_object(
+            await request.json(),
+            detail="Plaza sign-up payload must be a JSON object.",
+        )
+        try:
+            return await run_plaza_auth_signup(plaza_url, payload)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        except PlazaProxyError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+
+    @app.post("/api/plaza/auth/signin")
+    async def plaza_auth_signin(request: Request, plaza_url: str = ""):
+        """Route handler for POST /api/plaza/auth/signin."""
+        payload = _coerce_json_object(
+            await request.json(),
+            detail="Plaza sign-in payload must be a JSON object.",
+        )
+        try:
+            return await run_plaza_auth_signin(plaza_url, payload)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        except PlazaProxyError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+
+    @app.get("/api/plaza/auth/me")
+    async def plaza_auth_me(request: Request, plaza_url: str = ""):
+        """Route handler for GET /api/plaza/auth/me."""
+        try:
+            return await fetch_plaza_auth_me(plaza_url, authorization=_proxy_authorization_header(request))
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        except PlazaProxyError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+
+    @app.post("/api/plaza/auth/refresh")
+    async def plaza_auth_refresh(request: Request, plaza_url: str = ""):
+        """Route handler for POST /api/plaza/auth/refresh."""
+        payload = _coerce_json_object(
+            await request.json(),
+            detail="Plaza refresh payload must be a JSON object.",
+        )
+        try:
+            return await run_plaza_auth_refresh(plaza_url, payload)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        except PlazaProxyError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+
+    @app.post("/api/plaza/auth/signout")
+    async def plaza_auth_signout(request: Request, plaza_url: str = ""):
+        """Route handler for POST /api/plaza/auth/signout."""
+        try:
+            return await run_plaza_auth_signout(plaza_url, authorization=_proxy_authorization_header(request))
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        except PlazaProxyError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+
+    @app.get("/api/plaza/agent-keys")
+    async def plaza_agent_keys(request: Request, plaza_url: str = ""):
+        """Route handler for GET /api/plaza/agent-keys."""
+        try:
+            return await fetch_plaza_agent_keys(plaza_url, authorization=_proxy_authorization_header(request))
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        except PlazaProxyError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+
+    @app.post("/api/plaza/agent-keys")
+    async def plaza_create_agent_key(request: Request, plaza_url: str = ""):
+        """Route handler for POST /api/plaza/agent-keys."""
+        payload = _coerce_json_object(
+            await request.json(),
+            detail="Plaza agent-key payload must be a JSON object.",
+        )
+        try:
+            return await create_plaza_agent_key(
+                plaza_url,
+                payload,
+                authorization=_proxy_authorization_header(request),
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        except PlazaProxyError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+
+    @app.patch("/api/plaza/agent-keys/{key_id}")
+    async def plaza_update_agent_key(key_id: str, request: Request, plaza_url: str = ""):
+        """Route handler for PATCH /api/plaza/agent-keys/{key_id}."""
+        payload = _coerce_json_object(
+            await request.json(),
+            detail="Plaza agent-key update payload must be a JSON object.",
+        )
+        try:
+            return await update_plaza_agent_key(
+                plaza_url,
+                key_id,
+                payload,
+                authorization=_proxy_authorization_header(request),
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        except PlazaProxyError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+
+    @app.delete("/api/plaza/agent-keys/{key_id}")
+    async def plaza_delete_agent_key(key_id: str, request: Request, plaza_url: str = ""):
+        """Route handler for DELETE /api/plaza/agent-keys/{key_id}."""
+        try:
+            return await delete_plaza_agent_key(
+                plaza_url,
+                key_id,
+                authorization=_proxy_authorization_header(request),
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        except PlazaProxyError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
 
     @app.get("/api/managed-work/monitor")
     async def managed_work_monitor(

@@ -117,6 +117,7 @@ def test_ta_pulser_config_exposes_seeded_indicator_catalog():
         assert sma_editor_pulse["resolved_test_data"]["timestamp"] == payload["timestamp"]
 
     register_payload = pulser.build_register_payload("http://127.0.0.1:8011")
+    assert register_payload["pit_type"] == "Pulser"
     sma_pair = next(entry for entry in register_payload["pulse_pulser_pairs"] if entry["pulse_name"] == "sma")
     assert sma_pair["test_data"]["symbol"] == payload["symbol"]
     assert sma_pair["pulse_definition"]["test_data"]["symbol"] == payload["symbol"]

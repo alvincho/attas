@@ -256,6 +256,7 @@ class PlazaAgent(BaseAgent):
         async def plaza_status(request: Request):
             """Route handler for GET /api/plazas_status."""
             pit_type = request.query_params.get("pit_type")
+            live_only = str(request.query_params.get("live_only") or "").strip().lower() in {"1", "true", "yes", "on"}
 
             def _plaza_status_sync() -> Dict[str, Any]:
                 """Internal helper for Plaza status sync."""
@@ -263,7 +264,17 @@ class PlazaAgent(BaseAgent):
                 if practice is None:
                     return {"status": "success", "plazas": []}
 
-                agents = practice.state.search_entries(pit_type=pit_type)
+                agents = practice.state.search_entries(
+                    pit_type=pit_type,
+                    use_persisted_fallback=not live_only,
+                )
+                if live_only:
+                    agents = [
+                        agent
+                        for agent in agents
+                        if str(agent.get("pit_type") or agent.get("type") or "").strip() == "Pulse"
+                        or BaseAgent._heartbeat_is_active(agent.get("last_active"))
+                    ]
                 if not pit_type:
                     pulse_pulser_rows = practice.state.get_pulse_pulser_rows()
                     pulser_rows_by_id: Dict[str, List[Dict[str, Any]]] = {}
@@ -386,6 +397,8 @@ class PlazaAgent(BaseAgent):
                             summary = pulser_summaries_by_name.get(pulser_name)
                         if summary is not None:
                             return summary
+                        if live_only:
+                            return {}
                         return build_fallback_pulser_summary(row)
 
                     def resolve_pulse_definition(summary: Dict[str, Any], row: Dict[str, Any]) -> Dict[str, Any]:
@@ -454,7 +467,15 @@ class PlazaAgent(BaseAgent):
                             default_pulse_address=str(row_pulse_address or ""),
                         )
 
-                    for agent in agents:
+                    pulser_source_agents = agents
+                    if live_only:
+                        pulser_source_agents = [
+                            agent
+                            for agent in pulser_source_agents
+                            if BaseAgent._heartbeat_is_active(agent.get("last_active"))
+                        ]
+
+                    for agent in pulser_source_agents:
                         resolved_type = str(agent.get("pit_type") or "")
                         card = agent.get("card") if isinstance(agent.get("card"), dict) else {}
                         meta = agent.get("meta") if isinstance(agent.get("meta"), dict) else {}
@@ -541,6 +562,8 @@ class PlazaAgent(BaseAgent):
                             ):
                                 continue
                             summary = resolve_pulser_summary(row)
+                            if not summary:
+                                continue
                             pulse_definition = resolve_pulse_definition(summary, row)
                             if not practice.state.pulse_definition_is_complete(pulse_definition):
                                 continue
@@ -559,6 +582,14 @@ class PlazaAgent(BaseAgent):
                         available_pulsers.sort(key=lambda item: str(item.get("name") or "").lower())
                         agent["available_pulser_count"] = len(available_pulsers)
                         agent["available_pulsers"] = available_pulsers
+
+                    if live_only:
+                        agents = [
+                            agent
+                            for agent in agents
+                            if str(agent.get("pit_type") or agent.get("type") or "").strip() != "Pulse"
+                            or int(agent.get("available_pulser_count") or 0) > 0
+                        ]
 
                     def pulse_summary_signature(agent: Dict[str, Any]) -> Tuple[str, str, str, str]:
                         """Handle pulse summary signature for the Plaza agent."""
@@ -1515,7 +1546,7 @@ class PlazaAgent(BaseAgent):
             or raw_card.get("type")
             or "Custom"
         )
-        pit_type = state.normalize_pit_type(str(requested_type or "").strip() or "Custom")
+        pit_type = state.infer_runtime_pit_type(requested_type, raw_card, default="Custom")
         agent_id = str(
             normalized_payload.get("agent_id")
             or normalized_payload.get("id")

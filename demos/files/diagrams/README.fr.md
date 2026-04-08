@@ -74,9 +74,9 @@ Ces diagrammes sont enregistrés avec des adresses locales concrètes afin qu'il
 
 Les diagrammes d'indicateurs supposent :
 
-- Plaza à `http://127.0.0.1:8011`
-- `YFinancePulser` à `http://127.0.0.1:8020`
-- `TechnicalAnalysisPulser` à `http://127.0.0.1:8033`
+- Plaza à `http://127.0.0.1:8241`
+- `YFinancePulser` à `http://127.0.0.1:8243`
+- `TechnicalAnalysisPulser` à `http://127.0.0.1:8244`
 
 Les configurations pulser référencées par ces diagrammes se trouvent dans :
 

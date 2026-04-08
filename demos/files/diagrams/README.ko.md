@@ -74,9 +74,9 @@
 
 지표 다이어그램은 다음을 가정합니다:
 
-- Plaza: `http://127.0.0.1:8011`
-- `YFinancePulser`: `http://127.0.0.1:8020`
-- ``TechnicalAnalysisPulser`: `http://127.0.0.1:8033`
+- Plaza: `http://127.0.0.1:8241`
+- `YFinancePulser`: `http://127.0.0.1:8243`
+- ``TechnicalAnalysisPulser`: `http://127.0.0.1:8244`
 
 이 다이어그램들이 참조하는 pulser 설정은 다음 위치에 있습니다:
 

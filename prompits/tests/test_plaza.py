@@ -1250,6 +1250,63 @@ def test_plaza_registers_pulser_entry_with_supported_pulse_details():
     assert pulse_id_results[0]["name"] == "YFinancePulser"
 
 
+def test_plaza_register_infers_pulser_type_from_card_when_payload_omits_pit_type():
+    """Registering a pulser should not fall back to the request model's Agent default."""
+    pool = InMemoryPool()
+    app = FastAPI()
+    practice = PlazaPractice()
+    practice.bind(SimpleNamespace(
+        name="Plaza",
+        pool=pool,
+        host="127.0.0.1",
+        port=8011,
+        agent_card={
+            "name": "Plaza",
+            "role": "coordinator",
+            "tags": ["mediator"],
+            "address": "http://127.0.0.1:8011",
+            "pit_type": "Agent",
+            "agent_id": "plaza-self",
+        },
+    ))
+    practice.mount(app)
+
+    client = TestClient(app)
+    register = client.post("/register", json={
+        "agent_name": "demo-system-pulser",
+        "address": "http://127.0.0.1:8242",
+        "card": {
+            "name": "DemoSystemPulser",
+            "pit_type": "Pulser",
+            "role": "pulser",
+            "meta": {
+                "supported_pulses": [
+                    {
+                        "name": "file",
+                        "pulse_address": "plaza://pulse/file",
+                        "pulse_definition": {"resource_type": "pulse_definition"},
+                        "input_schema": {
+                            "type": "object",
+                            "properties": {"path": {"type": "string"}},
+                        },
+                    }
+                ]
+            },
+        },
+    })
+
+    assert register.status_code == 200
+    assert register.json()["pit_type"] == "Pulser"
+
+    headers = {"Authorization": f"Bearer {register.json()['token']}"}
+    search = client.get("/search", params={"pit_type": "Pulser", "name": "DemoSystemPulser"}, headers=headers)
+    assert search.status_code == 200
+    results = search.json()
+    assert len(results) == 1
+    assert results[0]["pit_type"] == "Pulser"
+    assert results[0]["meta"]["supported_pulses"][0]["pulse_name"] == "file"
+
+
 def test_plaza_register_accepts_multiple_pulse_pulser_pairs_in_single_request():
     """
     Exercise the
@@ -2038,6 +2095,73 @@ def test_plaza_status_collapses_ohlc_alias_pulses_into_canonical_card():
     }
 
 
+def test_plaza_status_live_only_uses_in_memory_directory(monkeypatch):
+    """The public Plaza status endpoint should skip persisted fallback when live_only is requested."""
+    pool = InMemoryPool()
+    agent = PlazaAgent(host="127.0.0.1", port=8011, pool=pool)
+    agent.add_practice(PlazaPractice())
+    practice = agent._get_plaza_practice()
+    assert practice is not None
+
+    captured = {}
+
+    def fake_search_entries(**kwargs):
+        captured.update(kwargs)
+        return []
+
+    monkeypatch.setattr(practice.state, "search_entries", fake_search_entries)
+
+    client = TestClient(agent.app)
+    response = client.get("/api/plazas_status?pit_type=Pulser&live_only=1")
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "success"
+    assert captured["pit_type"] == "Pulser"
+    assert captured["use_persisted_fallback"] is False
+
+
+def test_plaza_status_live_only_hides_pulses_without_live_pulsers():
+    """Live Plaza status should not surface pulse availability from disconnected persisted pulsers."""
+    pool = InMemoryPool()
+    agent = PlazaAgent(host="127.0.0.1", port=8011, pool=pool)
+    agent.add_practice(PlazaPractice())
+    practice = agent._get_plaza_practice()
+    assert practice is not None
+
+    practice.state.upsert_pulse_directory_entry(
+        {
+            "name": "last_price",
+            "pulse_name": "last_price",
+            "pulse_address": "plaza://pulse/last_price",
+            "pulse_definition": {"resource_type": "pulse_definition"},
+        }
+    )
+    pool._Insert(PlazaPractice.PULSE_PULSER_TABLE, {
+        "id": "dead-pair",
+        "pulser_id": "dead-pulser",
+        "pulser_name": "DeadPulser",
+        "pulser_address": "http://127.0.0.1:8242",
+        "pulse_id": "urn:plaza:pulse:last.price",
+        "pulse_name": "last_price",
+        "pulse_address": "plaza://pulse/last_price",
+        "pulse_definition": {"resource_type": "pulse_definition"},
+        "input_schema": {"type": "object", "properties": {"symbol": {"type": "string"}}},
+    })
+
+    client = TestClient(agent.app)
+    response = client.get("/api/plazas_status?live_only=1")
+
+    assert response.status_code == 200
+    plazas = response.json()["plazas"]
+    assert len(plazas) == 1
+    pulse_names = {
+        entry["name"]
+        for entry in plazas[0]["agents"]
+        if entry.get("pit_type") == "Pulse"
+    }
+    assert "last_price" not in pulse_names
+
+
 def test_plaza_pulser_test_proxy_calls_remote_use_practice():
     """
     Exercise the test_plaza_pulser_test_proxy_calls_remote_use_practice regression
@@ -2503,6 +2627,51 @@ def test_plaza_search_dedupes_duplicate_pulsers_by_name_and_address():
     assert len(results) == 1
     assert results[0]["agent_id"] == "ads-fresh"
     assert len(results[0]["meta"]["supported_pulses"]) == 3
+
+
+def test_plaza_hydrate_recovers_pulser_type_from_stale_directory_rows():
+    """Persisted pulser rows typed as Agent should be recovered as Pulsers on load."""
+    pool = InMemoryPool()
+    pool._CreateTable(PlazaPractice.DIRECTORY_TABLE, {})
+    pool._Insert(PlazaPractice.DIRECTORY_TABLE, {
+        "id": "demo-system",
+        "agent_id": "demo-system",
+        "name": "DemoSystemPulser",
+        "type": "Agent",
+        "address": "http://127.0.0.1:8242",
+        "card": {
+            "name": "DemoSystemPulser",
+            "pit_type": "Agent",
+            "role": "pulser",
+            "address": "http://127.0.0.1:8242",
+            "meta": {
+                "supported_pulses": [
+                    {
+                        "name": "file",
+                        "pulse_address": "plaza://pulse/file",
+                        "pulse_definition": {"resource_type": "pulse_definition"},
+                    }
+                ]
+            },
+        },
+        "updated_at": "2026-04-08T00:00:00+00:00",
+    })
+
+    agent = PlazaAgent(host="127.0.0.1", port=8011, pool=pool)
+    agent.add_practice(PlazaPractice())
+    practice = agent._get_plaza_practice()
+    assert practice is not None
+
+    practice.state._hydrate_plaza_state()
+    results = practice.state.search_entries(
+        pit_type="Pulser",
+        name="DemoSystemPulser",
+        use_persisted_fallback=False,
+    )
+
+    assert len(results) == 1
+    assert results[0]["pit_type"] == "Pulser"
+    assert pool.tables[PlazaPractice.DIRECTORY_TABLE]["demo-system"]["type"] == "Pulser"
 
 
 def test_register_relogin_with_agent_id_api_key_and_history_limit():

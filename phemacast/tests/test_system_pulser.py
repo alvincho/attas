@@ -77,6 +77,19 @@ def test_system_pulser_reads_remote_json_payloads(monkeypatch):
     }
 
 
+def test_system_pulser_register_payload_declares_pulser_type():
+    """Exercise the system pulser register payload regression scenario."""
+    pulser = SystemPulser(auto_register=False)
+
+    payload = pulser.build_register_payload(
+        "http://127.0.0.1:8011",
+        card=pulser.agent_card,
+    )
+
+    assert payload["pit_type"] == "Pulser"
+    assert payload["card"]["pit_type"] == "Pulser"
+
+
 def test_system_pulser_builds_from_config_with_system_party_defaults(tmp_path):
     """
     Exercise the

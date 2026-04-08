@@ -29,8 +29,8 @@
       ],
       "type": "prompits.agents.standby.StandbyAgent"
     },
-    "created_at": "2026-04-04T10:39:54.740292+00:00",
-    "updated_at": "2026-04-04T10:39:54.740292+00:00"
+    "created_at": "2026-04-08T12:29:29.469516+00:00",
+    "updated_at": "2026-04-08T12:29:29.469516+00:00"
   },
   "card": {
     "name": "alice",
@@ -47,5 +47,5 @@
       "config_id": "agent-config:alice"
     }
   },
-  "updated_at": "2026-04-04T10:39:54.740292+00:00"
+  "updated_at": "2026-04-08T12:29:29.469516+00:00"
 }

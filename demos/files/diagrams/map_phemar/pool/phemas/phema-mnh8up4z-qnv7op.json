@@ -38,7 +38,7 @@
     "map_phemar": {
       "version": 1,
       "diagram": {
-        "plazaUrl": "http://127.0.0.1:8011",
+        "plazaUrl": "http://127.0.0.1:8241",
         "showGrid": true,
         "inspectorWidth": 320,
         "expandedSourcePaths": [],

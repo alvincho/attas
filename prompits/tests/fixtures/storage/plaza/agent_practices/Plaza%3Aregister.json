@@ -38,7 +38,7 @@
       },
       "pit_type": {
         "type": "string",
-        "description": "Agent type: Agent | Pulser | Schema | Pulse | Phema."
+        "description": "Agent type string. Plaza normalizes built-ins but also accepts custom values."
       },
       "card": {
         "type": "object",
@@ -68,5 +68,5 @@
     "path": "/register"
   },
   "is_deleted": false,
-  "updated_at": "2026-04-04T10:39:54.787959+00:00"
+  "updated_at": "2026-04-08T12:29:29.528811+00:00"
 }

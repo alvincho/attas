@@ -12,6 +12,7 @@ which capture the primary workflow implemented by the module.
 from __future__ import annotations
 
 from copy import deepcopy
+import os
 
 
 LOCAL_DASHBOARD_SNAPSHOT = {
@@ -95,9 +96,16 @@ LOCAL_DASHBOARD_SNAPSHOT = {
 }
 
 
+def _dashboard_plaza_url() -> str:
+    """Return the Plaza URL seeded into the dashboard payload."""
+    return str(os.environ.get("PHEMACAST_PERSONAL_AGENT_PLAZA_URL") or "http://127.0.0.1:8011").strip()
+
+
 def get_dashboard_snapshot():
     """Return the dashboard snapshot."""
-    return deepcopy(LOCAL_DASHBOARD_SNAPSHOT)
+    snapshot = deepcopy(LOCAL_DASHBOARD_SNAPSHOT)
+    snapshot.setdefault("meta", {})["plaza_url"] = _dashboard_plaza_url()
+    return snapshot
 
 
 def get_workspace(workspace_id: str):

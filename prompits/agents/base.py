@@ -15,6 +15,7 @@ import fnmatch
 import inspect
 import json
 import os
+import re
 import requests
 import httpx
 import uvicorn
@@ -84,6 +85,26 @@ class BaseAgent(Pit, ABC):
         if value is None:
             return ""
         return str(value).strip().rstrip("/")
+
+    @classmethod
+    def _normalize_url_list(cls, value: Any) -> List[str]:
+        """Internal helper to normalize one-or-many Plaza URLs."""
+        raw_values: List[Any]
+        if isinstance(value, (list, tuple, set)):
+            raw_values = list(value)
+        elif isinstance(value, str):
+            raw_values = [part for part in re.split(r"[\n,]", value) if str(part).strip()]
+        elif value is None:
+            raw_values = []
+        else:
+            raw_values = [value]
+
+        normalized: List[str] = []
+        for entry in raw_values:
+            normalized_url = cls._normalize_url(entry)
+            if normalized_url and normalized_url not in normalized:
+                normalized.append(normalized_url)
+        return normalized
 
     @staticmethod
     def _coerce_optional_bool(value: Any) -> Optional[bool]:
@@ -295,6 +316,8 @@ class BaseAgent(Pit, ABC):
             or ""
         )
         self.direct_auth_token: Optional[str] = str(configured_direct_token).strip() or None
+        self.trusted_plaza_urls: List[str] = []
+        self._sync_trusted_plaza_metadata()
         self.remote_use_practice_policy = self._normalize_remote_use_practice_policy(raw_remote_policy)
         self.remote_use_practice_audit = self._normalize_remote_use_practice_audit(raw_remote_audit)
         self._sync_connectivity_metadata()
@@ -646,6 +669,38 @@ class BaseAgent(Pit, ABC):
             return env_address
 
         return f"http://{self.host}:{self.port}"
+
+    def _resolve_trusted_plaza_urls(self) -> List[str]:
+        """Return the receiver-side Plaza allowlist used for token verification."""
+        meta = self.agent_card.get("meta")
+        if not isinstance(meta, dict):
+            meta = {}
+            self.agent_card["meta"] = meta
+
+        trusted: List[str] = []
+        for candidate in (
+            self.agent_card.get("trusted_plaza_urls"),
+            self.agent_card.get("trusted_plazas"),
+            meta.get("trusted_plaza_urls"),
+            meta.get("trusted_plazas"),
+            os.getenv("PROMPITS_TRUSTED_PLAZA_URLS"),
+            self.plaza_url,
+        ):
+            for normalized in self._normalize_url_list(candidate):
+                if normalized not in trusted:
+                    trusted.append(normalized)
+        return trusted
+
+    def _sync_trusted_plaza_metadata(self):
+        """Persist canonical trusted Plaza metadata onto the runtime agent card."""
+        meta = self.agent_card.get("meta")
+        if not isinstance(meta, dict):
+            meta = {}
+            self.agent_card["meta"] = meta
+        trusted = self._resolve_trusted_plaza_urls()
+        self.trusted_plaza_urls = list(trusted)
+        self.agent_card["trusted_plaza_urls"] = list(trusted)
+        meta["trusted_plaza_urls"] = list(trusted)
 
     def _resolve_accepts_inbound_from_plaza(self) -> bool:
         """Internal helper to resolve the accepts inbound from Plaza."""
@@ -1603,6 +1658,7 @@ class BaseAgent(Pit, ABC):
                 return
 
             self._load_plaza_credentials_from_pool()
+            self._sync_trusted_plaza_metadata()
             self._sync_connectivity_metadata()
 
             # Ensure our address is known in the card
@@ -2055,15 +2111,7 @@ class BaseAgent(Pit, ABC):
             }
 
         if caller_plaza_token:
-            plazas: List[str] = []
-            for plaza in caller_pit_address.plazas:
-                normalized = str(plaza).rstrip("/")
-                if normalized and normalized not in plazas:
-                    plazas.append(normalized)
-            if self.plaza_url:
-                normalized_self_plaza = self.plaza_url.rstrip("/")
-                if normalized_self_plaza not in plazas:
-                    plazas.append(normalized_self_plaza)
+            plazas = self._resolve_trusted_plaza_urls()
 
             for plaza_url in plazas:
                 try:
@@ -2105,6 +2153,13 @@ class BaseAgent(Pit, ABC):
                     "plaza_url": plaza_url,
                     "auth_mode": "plaza",
                 }
+
+            if not plazas:
+                logger.warning(
+                    f"[{self.name}] Rejecting remote UsePractice request from '{caller_pit_address.pit_id}' "
+                    "because no trusted Plaza URLs are configured for token verification."
+                )
+                raise HTTPException(status_code=401, detail="Trusted Plaza verification is not configured")
 
         if self.direct_auth_token:
             logger.warning(

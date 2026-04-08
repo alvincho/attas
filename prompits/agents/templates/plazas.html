@@ -2458,11 +2458,12 @@
                         </form>
                         <div id="agent-key-message" class="muted-line"></div>
                         <div class="agent-key-note">
-                            Plaza only shows the full key when you create or regenerate it. Disabled keys stay saved but unusable until re-enabled, and deleted keys are retired from active use.
+                            Plaza only shows the full key when you create or regenerate it. Trusted agent runtimes should keep the owner-key id and the trusted Plaza URL together so cross-agent calls only accept Plaza-authorized tokens from this Plaza.
                         </div>
                         <pre class="code-preview agent-key-code">{
   "agent_card": {
     "meta": {
+      "trusted_plaza_urls": ["https://trusted-plaza.example"],
       "plaza_owner_key_id": "saved-key-id",
       "plaza_owner_key": "runtime-secret-if-not-using-launcher"
     }
@@ -3249,7 +3250,7 @@
             }
 
             try {
-                const response = await authFetch('/api/plazas_status');
+                const response = await authFetch('/api/plazas_status?live_only=1');
                 const data = await response.json();
                 if (data.status !== 'success') throw new Error(data.message || 'Unexpected response');
                 state.plazas = Array.isArray(data.plazas) ? data.plazas : [];
@@ -3675,6 +3676,7 @@
                     <code class="agent-key-secret-value">${escapeHtml(reveal.secret)}</code>
                     <div class="inline-actions">
                         <button class="primary-btn" type="button" data-copy-agent-key="${escapeAttribute(reveal.secret)}">Copy Key</button>
+                        <button class="ghost-btn" type="button" data-copy-agent-key-runtime-json="${escapeAttribute(reveal.id || '')}">Copy Runtime JSON</button>
                         <button class="ghost-btn" type="button" data-dismiss-agent-key-reveal="1">Dismiss</button>
                     </div>
                 `;
@@ -3733,6 +3735,8 @@
                         </div>
                         <div class="agent-key-actions">
                             <button class="ghost-btn" type="button" data-save-agent-key="${escapeHtml(key.id)}" ${pending ? 'disabled' : ''}>${saveBusy ? 'Saving...' : 'Save Name'}</button>
+                            <button class="ghost-btn" type="button" data-copy-agent-key-config="${escapeHtml(key.id)}" ${pending ? 'disabled' : ''}>Copy Config</button>
+                            <button class="ghost-btn" type="button" data-copy-agent-key-runtime="${escapeHtml(key.id)}" ${pending ? 'disabled' : ''}>Copy Runtime JSON</button>
                             ${isDisabled ? '' : `<button class="page-link-btn" type="button" data-regenerate-agent-key="${escapeHtml(key.id)}" ${pending ? 'disabled' : ''}>${regenerateBusy ? 'Regenerating...' : 'Regenerate'}</button>`}
                             <button class="ghost-btn" type="button" data-toggle-agent-key-status="${escapeHtml(key.id)}" data-next-status="${isDisabled ? 'active' : 'disabled'}" ${pending ? 'disabled' : ''}>${statusBusy ? (isDisabled ? 'Enabling...' : 'Disabling...') : (isDisabled ? 'Enable' : 'Disable')}</button>
                             <button class="ghost-btn" type="button" data-delete-agent-key="${escapeHtml(key.id)}" ${pending ? 'disabled' : ''}>${deleteBusy ? 'Deleting...' : 'Delete'}</button>
@@ -3898,6 +3902,29 @@
         }
 
         async function handleAgentKeyAction(event) {
+            const copyConfigButton = event.target.closest('[data-copy-agent-key-config]');
+            if (copyConfigButton) {
+                const keyId = copyConfigButton.dataset.copyAgentKeyConfig;
+                const key = (state.agentKeys || []).find((entry) => entry.id === keyId) || null;
+                const copied = await copyTextToClipboard(buildAgentKeyConfigSnippet(key));
+                state.agentKeyMessage = copied ? 'Trusted Plaza config snippet copied.' : 'Could not copy the config snippet automatically.';
+                renderAgentKeysPage();
+                return;
+            }
+
+            const copyRuntimeButton = event.target.closest('[data-copy-agent-key-runtime]');
+            if (copyRuntimeButton) {
+                const keyId = copyRuntimeButton.dataset.copyAgentKeyRuntime;
+                const key = (state.agentKeys || []).find((entry) => entry.id === keyId) || null;
+                const revealSecret = state.agentKeyReveal?.id === keyId ? state.agentKeyReveal.secret : '';
+                const copied = await copyTextToClipboard(buildAgentKeyRuntimeSnippet(key, revealSecret));
+                state.agentKeyMessage = copied
+                    ? (revealSecret ? 'Runtime JSON with the current secret copied.' : 'Runtime JSON copied with a secret placeholder. Regenerate the key to copy the live secret.')
+                    : 'Could not copy the runtime JSON automatically.';
+                renderAgentKeysPage();
+                return;
+            }
+
             const saveButton = event.target.closest('[data-save-agent-key]');
             if (saveButton) {
                 const keyId = saveButton.dataset.saveAgentKey;
@@ -3947,6 +3974,15 @@
         }
 
         async function handleAgentKeyRevealAction(event) {
+            const runtimeButton = event.target.closest('[data-copy-agent-key-runtime-json]');
+            if (runtimeButton) {
+                const keyId = runtimeButton.dataset.copyAgentKeyRuntimeJson || state.agentKeyReveal?.id || '';
+                const key = (state.agentKeys || []).find((entry) => entry.id === keyId) || { id: keyId, name: state.agentKeyReveal?.name || '' };
+                const copied = await copyTextToClipboard(buildAgentKeyRuntimeSnippet(key, state.agentKeyReveal?.secret || ''));
+                state.agentKeyMessage = copied ? 'Runtime JSON with the revealed secret copied.' : 'Could not copy the runtime JSON automatically.';
+                renderAgentKeysPage();
+                return;
+            }
             const copyButton = event.target.closest('[data-copy-agent-key]');
             if (copyButton) {
                 const secret = copyButton.dataset.copyAgentKey || '';
@@ -7689,6 +7725,35 @@
 
         function sanitizeFilename(value) {
             return String(value || 'draft').replace(/[^a-z0-9-_]+/gi, '_').replace(/^_+|_+$/g, '') || 'draft';
+        }
+
+        function trustedPlazaUrl() {
+            return window.location.origin.replace(/\/$/, '');
+        }
+
+        function buildAgentKeyConfigSnippet(key) {
+            const trustedUrl = trustedPlazaUrl();
+            return prettyJson({
+                agent_card: {
+                    meta: {
+                        trusted_plaza_urls: trustedUrl ? [trustedUrl] : [],
+                        plaza_owner_key_id: String(key?.id || 'saved-key-id'),
+                    }
+                }
+            });
+        }
+
+        function buildAgentKeyRuntimeSnippet(key, secret) {
+            const trustedUrl = trustedPlazaUrl();
+            return prettyJson({
+                agent_card: {
+                    meta: {
+                        trusted_plaza_urls: trustedUrl ? [trustedUrl] : [],
+                        plaza_owner_key_id: String(key?.id || 'saved-key-id'),
+                        plaza_owner_key: String(secret || '<paste current owner key secret>'),
+                    }
+                }
+            });
         }
 
         async function copyTextToClipboard(value) {

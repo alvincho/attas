@@ -77,9 +77,9 @@ These diagrams are saved with concrete local addresses so they can run without e
 
 The indicator diagrams assume:
 
-- Plaza at `http://127.0.0.1:8011`
-- `YFinancePulser` at `http://127.0.0.1:8020`
-- `TechnicalAnalysisPulser` at `http://127.0.0.1:8033`
+- Plaza at `http://127.0.0.1:8241`
+- `YFinancePulser` at `http://127.0.0.1:8243`
+- `TechnicalAnalysisPulser` at `http://127.0.0.1:8244`
 
 The pulser configs referenced by these diagrams live in:
 

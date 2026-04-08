@@ -350,15 +350,15 @@ UI_STRINGS = {
         "예상 포트에서 정상 서비스가 이미 실행 중이면 런처가 재사용합니다.",
     ),
     "noteTwo": localized(
-        "Set DEMO_OPEN_BROWSER=0 if you want the launcher to stay in the terminal without opening browser tabs.",
-        "若希望只在終端機中執行而不自動開啟分頁，請設定 DEMO_OPEN_BROWSER=0。",
-        "如果你只想在终端中运行而不自动打开浏览器标签页，请设置 DEMO_OPEN_BROWSER=0。",
-        "Usa DEMO_OPEN_BROWSER=0 si no quieres abrir pestañas del navegador.",
-        "Utilisez DEMO_OPEN_BROWSER=0 pour ne pas ouvrir d'onglets automatiquement.",
-        "Imposta DEMO_OPEN_BROWSER=0 se non vuoi aprire schede del browser.",
-        "Setze DEMO_OPEN_BROWSER=0, wenn keine Browser-Tabs geöffnet werden sollen.",
-        "ブラウザタブを自動で開きたくない場合は DEMO_OPEN_BROWSER=0 を設定してください。",
-        "브라우저 탭을 자동으로 열지 않으려면 DEMO_OPEN_BROWSER=0을 설정하세요.",
+        "The launcher opens this guide page only. Use the links below for each demo UI, or set DEMO_OPEN_BROWSER=0 to stay fully in the terminal.",
+        "啟動器預設只會開啟這個導覽頁。若要開啟各個示範介面，請使用下方連結；若想完全停留在終端機中，請設定 DEMO_OPEN_BROWSER=0。",
+        "启动器默认只会打开这个导览页。要打开各个演示界面，请使用下方链接；若想完全停留在终端中，请设置 DEMO_OPEN_BROWSER=0。",
+        "El lanzador abre solo esta guía. Usa los enlaces de abajo para cada UI de la demo, o define DEMO_OPEN_BROWSER=0 para quedarte en la terminal.",
+        "Le lanceur ouvre uniquement cette page guide. Utilisez les liens ci-dessous pour chaque UI de démo, ou définissez DEMO_OPEN_BROWSER=0 pour rester dans le terminal.",
+        "Il launcher apre solo questa guida. Usa i link qui sotto per ogni UI della demo, oppure imposta DEMO_OPEN_BROWSER=0 per restare nel terminale.",
+        "Der Launcher öffnet nur diese Übersichtsseite. Nutze die Links unten für die einzelnen Demo-UIs oder setze DEMO_OPEN_BROWSER=0, um vollständig im Terminal zu bleiben.",
+        "ランチャーはこのガイドページだけを開きます。各デモUIは下のリンクから開くか、完全にターミナルだけで使いたい場合は DEMO_OPEN_BROWSER=0 を設定してください。",
+        "런처는 이 가이드 페이지만 엽니다. 각 데모 UI는 아래 링크에서 열고, 완전히 터미널만 쓰려면 DEMO_OPEN_BROWSER=0을 설정하세요.",
     ),
     "noteThree": localized(
         "Keep this terminal open and press Ctrl-C here when you want to stop the managed processes.",
@@ -396,15 +396,15 @@ OPEN_BROWSER_ENV = {
     "default": "1",
     "choices": "0, 1",
     "description": localized(
-        "Set to 0 to keep the demo in the terminal without opening browser tabs automatically.",
-        "設為 0 可避免自動開啟瀏覽器分頁。",
-        "设为 0 可避免自动打开浏览器标签页。",
-        "Ponlo en 0 para no abrir pestañas automáticamente.",
-        "Réglez sur 0 pour ne pas ouvrir d'onglets automatiquement.",
-        "Imposta 0 per non aprire schede automaticamente.",
-        "Auf 0 setzen, um keine Browser-Tabs automatisch zu öffnen.",
-        "0 にするとブラウザタブを自動で開きません。",
-        "0으로 설정하면 브라우저 탭을 자동으로 열지 않습니다.",
+        "Set to 0 to keep the demo in the terminal without opening the launcher guide page automatically.",
+        "設為 0 可避免自動開啟啟動器導覽頁。",
+        "设为 0 可避免自动打开启动器导览页。",
+        "Ponlo en 0 para no abrir automáticamente la guía del lanzador.",
+        "Réglez sur 0 pour ne pas ouvrir automatiquement la page guide du lanceur.",
+        "Imposta 0 per non aprire automaticamente la guida del launcher.",
+        "Auf 0 setzen, um die Launcher-Übersichtsseite nicht automatisch zu öffnen.",
+        "0 にするとランチャーのガイドページを自動で開きません。",
+        "0으로 설정하면 런처 가이드 페이지를 자동으로 열지 않습니다.",
     ),
 }
 
@@ -508,6 +508,16 @@ class ServiceSpec:
     description: str = ""
     timeout_sec: float = 25.0
     env: dict[str, str] = field(default_factory=dict)
+    registration_plaza_url: str = ""
+
+
+@dataclass(frozen=True)
+class ProbeResult:
+    """Readiness probe result for one managed service."""
+
+    ready: bool
+    live: bool
+    detail: str
 
 
 @dataclass(frozen=True)
@@ -680,12 +690,37 @@ def _env_flag(env: dict[str, str], key: str, default: bool = False) -> bool:
     return value in {"1", "true", "yes", "on"}
 
 
+def _env_float(key: str, default: float) -> float:
+    """Return a positive float environment override or a default value."""
+    raw_value = str(os.environ.get(key) or "").strip()
+    if not raw_value:
+        return float(default)
+    with contextlib.suppress(Exception):
+        parsed = float(raw_value)
+        if parsed > 0:
+            return parsed
+    return float(default)
+
+
 def _browser_host(host: str) -> str:
     """Normalize wildcard bind hosts into a browser-friendly loopback address."""
     normalized = str(host or "").strip()
     if normalized in {"0.0.0.0", "::", "[::]"}:
         return "127.0.0.1"
     return normalized or "127.0.0.1"
+
+
+def _health_probe_timeout_sec() -> float:
+    """Return the HTTP timeout used for local service health probes."""
+    default = 2.0 if os.name == "nt" else 0.75
+    return _env_float("DEMO_HEALTH_PROBE_TIMEOUT_SEC", default)
+
+
+def _service_startup_timeout_sec(spec: ServiceSpec) -> float:
+    """Return the effective startup wait budget for one service."""
+    default_multiplier = 3.0 if os.name == "nt" else 1.0
+    multiplier = _env_float("DEMO_STARTUP_TIMEOUT_MULTIPLIER", default_multiplier)
+    return max(float(spec.timeout_sec) * multiplier, 0.1)
 
 
 def _registry_ui_url_from_health_url(health_url: str) -> str:
@@ -735,6 +770,34 @@ def _with_registry_ui_links(spec: DemoSpec) -> DemoSpec:
         existing_urls.add(service.ui_url)
 
     return replace(spec, services=tuple(updated_services), browser_pages=tuple(pages))
+
+
+def _with_manual_browser_pages(spec: DemoSpec) -> DemoSpec:
+    """Mark demo-specific browser pages as manual links on the guide page."""
+    return replace(
+        spec,
+        browser_pages=tuple(replace(page, auto_open=False) for page in spec.browser_pages),
+    )
+
+
+def _service_uses_create_agent(spec: ServiceSpec) -> bool:
+    """Return whether one service is launched through the generic agent runner."""
+    command = tuple(str(part) for part in (spec.command or ()))
+    return len(command) >= 3 and command[1] == "-m" and command[2] == "prompits.create_agent"
+
+
+def _with_plaza_registration_checks(spec: DemoSpec) -> DemoSpec:
+    """Attach Plaza registration checks to create-agent services in single-registry demos."""
+    registry_services = [service for service in spec.services if service.kind == "registry" and service.ui_url]
+    if len(registry_services) != 1:
+        return spec
+    registration_plaza_url = registry_services[0].ui_url
+    updated_services: list[ServiceSpec] = []
+    for service in spec.services:
+        if service.kind != "registry" and _service_uses_create_agent(service):
+            service = replace(service, registration_plaza_url=registration_plaza_url)
+        updated_services.append(service)
+    return replace(spec, services=tuple(updated_services))
 
 
 def _summary(text: dict[str, str], fallback: str = "") -> dict[str, str]:
@@ -943,6 +1006,11 @@ def _personal_research_spec(env: dict[str, str]) -> DemoSpec:
             env,
             "PHEMACAST_MAP_PHEMAR_POOL_PATH",
             str(REPO_ROOT / "demos" / "personal-research-workbench" / "map_phemar_pool"),
+        ),
+        "PHEMACAST_PERSONAL_AGENT_PLAZA_URL": _env_value(
+            env,
+            "PHEMACAST_PERSONAL_AGENT_PLAZA_URL",
+            "http://127.0.0.1:8241",
         ),
     }
     return DemoSpec(
@@ -1257,6 +1325,13 @@ def _analyst_spec(env: dict[str, str]) -> DemoSpec:
     personal_agent_port = _env_value(env, "PHEMACAST_PERSONAL_AGENT_PORT", "8061")
     personal_agent_browser_host = _browser_host(personal_agent_host)
     personal_agent_reload = _env_flag(env, "PHEMACAST_PERSONAL_AGENT_RELOAD")
+    personal_agent_env = {
+        "PHEMACAST_PERSONAL_AGENT_PLAZA_URL": _env_value(
+            env,
+            "PHEMACAST_PERSONAL_AGENT_PLAZA_URL",
+            "http://127.0.0.1:8266",
+        ),
+    }
 
     services: list[ServiceSpec] = [
         ServiceSpec(
@@ -1335,6 +1410,7 @@ def _analyst_spec(env: dict[str, str]) -> DemoSpec:
                     health_url=f"http://{personal_agent_browser_host}:{personal_agent_port}/health",
                     ui_url=f"http://{personal_agent_browser_host}:{personal_agent_port}/",
                     description="Consumer-view walkthrough for the advanced analyst stack.",
+                    env=personal_agent_env,
                 ),
             ]
         )
@@ -1488,43 +1564,126 @@ def resolve_demo_spec(demo_id: str, env: dict[str, str] | None = None) -> DemoSp
     elif normalized == "ads":
         spec = _ads_pulser_spec()
     if spec is not None:
-        return _with_registry_ui_links(spec)
+        return _with_manual_browser_pages(_with_plaza_registration_checks(_with_registry_ui_links(spec)))
     raise ValueError(f"Unknown demo '{demo_id}'. Supported demos: {', '.join(available_demo_ids())}")
 
 
-def _probe_service(spec: ServiceSpec) -> tuple[bool, str]:
-    """Probe one service and return success plus status detail."""
+def _service_root_url(spec: ServiceSpec) -> str:
+    """Return one service root URL suitable for Plaza directory matching."""
+    normalized_ui_url = str(spec.ui_url or "").strip()
+    if normalized_ui_url:
+        return normalized_ui_url.rstrip("/")
+    return _registry_ui_url_from_health_url(spec.health_url).rstrip("/")
+
+
+def _probe_plaza_registration(spec: ServiceSpec) -> ProbeResult:
+    """Check whether one healthy service is live in the expected Plaza directory."""
+    plaza_url = str(spec.registration_plaza_url or "").strip().rstrip("/")
+    if not plaza_url:
+        return ProbeResult(ready=True, live=True, detail="healthy")
+    expected_name = str(spec.expected_agent or spec.name).strip()
+    expected_address = _service_root_url(spec)
     try:
-        response = requests.get(spec.health_url, timeout=0.75)
+        response = requests.get(
+            f"{plaza_url}/api/plazas_status",
+            params={"live_only": "1"},
+            timeout=_health_probe_timeout_sec(),
+        )
     except Exception as exc:
-        return False, str(exc)
+        return ProbeResult(
+            ready=False,
+            live=True,
+            detail=f"healthy, waiting for Plaza registration in {plaza_url} ({exc})",
+        )
     if response.status_code != 200:
-        return False, f"HTTP {response.status_code}"
+        return ProbeResult(
+            ready=False,
+            live=True,
+            detail=f"healthy, waiting for Plaza registration in {plaza_url} (HTTP {response.status_code})",
+        )
+    if not _is_json_response(response):
+        return ProbeResult(
+            ready=False,
+            live=True,
+            detail=f"healthy, waiting for Plaza registration in {plaza_url} (non-JSON status payload)",
+        )
+    payload: dict[str, Any] = {}
+    with contextlib.suppress(Exception):
+        payload = response.json()
+    plazas = payload.get("plazas") if isinstance(payload, dict) else []
+    if not isinstance(plazas, list):
+        plazas = []
+
+    expected_name_lower = expected_name.lower()
+    expected_address_lower = expected_address.lower()
+    matched_addresses: set[str] = set()
+    for plaza in plazas:
+        agents = plaza.get("agents") if isinstance(plaza, dict) else []
+        if not isinstance(agents, list):
+            continue
+        for agent in agents:
+            if not isinstance(agent, dict):
+                continue
+            card = agent.get("card") if isinstance(agent.get("card"), dict) else {}
+            entry_name = str(agent.get("name") or card.get("name") or "").strip()
+            entry_address = str(card.get("address") or agent.get("address") or "").strip().rstrip("/")
+            if not entry_name or entry_name.lower() != expected_name_lower:
+                continue
+            if entry_address:
+                matched_addresses.add(entry_address)
+            if not expected_address or entry_address.lower() == expected_address_lower:
+                return ProbeResult(ready=True, live=True, detail=f"healthy and registered in Plaza ({plaza_url})")
+
+    if matched_addresses:
+        joined = ", ".join(sorted(matched_addresses))
+        return ProbeResult(
+            ready=False,
+            live=True,
+            detail=f"healthy, but Plaza shows {expected_name} at {joined} instead of {expected_address}",
+        )
+    return ProbeResult(
+        ready=False,
+        live=True,
+        detail=f"healthy, waiting for Plaza registration in {plaza_url}",
+    )
+
+
+def _probe_service(spec: ServiceSpec) -> ProbeResult:
+    """Probe one service and return liveness plus readiness detail."""
+    try:
+        response = requests.get(spec.health_url, timeout=_health_probe_timeout_sec())
+    except Exception as exc:
+        return ProbeResult(ready=False, live=False, detail=str(exc))
+    if response.status_code != 200:
+        return ProbeResult(ready=False, live=False, detail=f"HTTP {response.status_code}")
     if not spec.expected_agent:
-        return True, "healthy"
+        return _probe_plaza_registration(spec)
     payload: dict[str, Any] = {}
     if _is_json_response(response):
         with contextlib.suppress(Exception):
             payload = response.json()
     actual = str(payload.get("agent") or "").strip()
     if actual and actual != spec.expected_agent:
-        return False, f"expected agent {spec.expected_agent}, got {actual}"
+        return ProbeResult(ready=False, live=False, detail=f"expected agent {spec.expected_agent}, got {actual}")
     if not actual and spec.expected_agent:
-        return False, f"missing agent name in health payload"
-    return True, "healthy"
+        return ProbeResult(ready=False, live=False, detail="missing agent name in health payload")
+    return _probe_plaza_registration(spec)
 
 
 def _wait_for_service(spec: ServiceSpec, *, timeout_sec: float) -> tuple[bool, str]:
-    """Wait until one service is healthy or a timeout expires."""
-    deadline = time.time() + max(float(timeout_sec), 0.1)
+    """Wait until one service is ready or a timeout expires."""
+    effective_timeout = max(_service_startup_timeout_sec(spec), max(float(timeout_sec), 0.1))
+    deadline = time.time() + effective_timeout
     last_detail = ""
     while time.time() < deadline:
-        healthy, detail = _probe_service(spec)
-        last_detail = detail
-        if healthy:
-            return True, detail
+        probe = _probe_service(spec)
+        last_detail = probe.detail
+        if probe.ready:
+            return True, probe.detail
         time.sleep(0.25)
-    return False, last_detail
+    if last_detail:
+        return False, f"{last_detail} (waited {effective_timeout:.1f}s)"
+    return False, f"timed out after {effective_timeout:.1f}s"
 
 
 def _terminate_process(process: subprocess.Popen[bytes]):
@@ -2599,10 +2758,20 @@ def _start_guide_server(spec: DemoSpec, state: LauncherState) -> GuideHTTPServer
 
 def _launch_service(spec: ServiceSpec, state: LauncherState, log_root: Path) -> bool:
     """Launch or reuse one service."""
-    healthy, detail = _probe_service(spec)
-    if healthy:
-        state.mark_service(spec.name, status="external", detail="reused existing healthy service")
+    probe = _probe_service(spec)
+    if probe.ready:
+        state.mark_service(spec.name, status="external", detail=f"reused existing {probe.detail}")
         return True
+    if probe.live:
+        state.mark_service(spec.name, status="launching", detail=probe.detail)
+        ok, wait_detail = _wait_for_service(spec, timeout_sec=spec.timeout_sec)
+        if ok:
+            state.mark_service(spec.name, status="external", detail=f"reused existing {wait_detail}")
+            return True
+        message = f"{spec.name} did not become ready: {wait_detail or 'timeout'}"
+        state.mark_service(spec.name, status="failed", detail=wait_detail or "timeout")
+        state.add_error(message)
+        return False
 
     log_path = log_root / f"{_safe_slug(spec.name)}.log"
     log_path.parent.mkdir(parents=True, exist_ok=True)
@@ -2627,12 +2796,12 @@ def _launch_service(spec: ServiceSpec, state: LauncherState, log_root: Path) -> 
     )
     ok, wait_detail = _wait_for_service(spec, timeout_sec=spec.timeout_sec)
     if ok:
-        state.mark_service(spec.name, status="ready", detail="healthy", pid=process.pid, managed=True, log_path=str(log_path))
+        state.mark_service(spec.name, status="ready", detail=wait_detail or "healthy", pid=process.pid, managed=True, log_path=str(log_path))
         return True
 
     _terminate_process(process)
     log_tail = _tail_log(log_path)
-    message = f"{spec.name} did not become healthy: {wait_detail or 'timeout'}"
+    message = f"{spec.name} did not become ready: {wait_detail or 'timeout'}"
     if log_tail:
         message = f"{message}\n{log_tail}"
     state.mark_service(spec.name, status="failed", detail=wait_detail or "timeout", pid=process.pid, managed=True, log_path=str(log_path))
@@ -2641,20 +2810,14 @@ def _launch_service(spec: ServiceSpec, state: LauncherState, log_root: Path) -> 
 
 
 def _open_browser_pages(state: LauncherState, spec: DemoSpec, *, open_browser: bool):
-    """Open the guide and main demo pages in the default browser."""
+    """Open only the launcher guide page in the default browser."""
     if not open_browser:
         return
-    urls = [state.guide_url]
-    urls.extend(page.url for page in spec.browser_pages if page.auto_open)
-    seen: set[str] = set()
-    for url in urls:
-        normalized = str(url or "").strip()
-        if not normalized or normalized in seen:
-            continue
-        seen.add(normalized)
-        with contextlib.suppress(Exception):
-            webbrowser.open_new_tab(normalized)
-        time.sleep(0.25)
+    normalized = str(state.guide_url or "").strip()
+    if not normalized:
+        return
+    with contextlib.suppress(Exception):
+        webbrowser.open_new_tab(normalized)
 
 
 def _monitor_processes(state: LauncherState):
@@ -2725,10 +2888,6 @@ def run_demo(spec: DemoSpec, *, open_browser: bool = True) -> int:
             if not _launch_service(service, state, log_root):
                 launch_ok = False
                 break
-        if launch_ok:
-            # Re-open the main UI pages after all services are healthy so the guide
-            # page lands first and the interactive pages land second.
-            _open_browser_pages(state, spec, open_browser=open_browser)
         while True:
             time.sleep(0.5)
     except KeyboardInterrupt:

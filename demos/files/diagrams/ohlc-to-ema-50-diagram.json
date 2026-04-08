@@ -83,7 +83,7 @@
     "map_phemar": {
       "version": 1,
       "diagram": {
-        "plazaUrl": "http://127.0.0.1:8011",
+        "plazaUrl": "http://127.0.0.1:8241",
         "showGrid": true,
         "inspectorWidth": 320,
         "expandedSourcePaths": [],
@@ -135,7 +135,7 @@
             "h": 14,
             "pulserMode": "specific",
             "pulserName": "YFinancePulser",
-            "pulserAddress": "http://127.0.0.1:8020",
+            "pulserAddress": "http://127.0.0.1:8243",
             "practiceId": "get_pulse_data",
             "pulseName": "ohlc_bar_series",
             "pulseAddress": "ai.attas.finance.price.ohlc_bar_series",
@@ -205,7 +205,7 @@
             "h": 14,
             "pulserMode": "specific",
             "pulserName": "TechnicalAnalysisPulser",
-            "pulserAddress": "http://127.0.0.1:8033",
+            "pulserAddress": "http://127.0.0.1:8244",
             "practiceId": "get_pulse_data",
             "pulseName": "ema",
             "pulseAddress": "ai.attas.finance.technical.ema",

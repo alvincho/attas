@@ -12,6 +12,7 @@ const STORAGE_KEYS = {
   snapshots: "phemacast.personal_agent.browser_layouts.v1",
   mindMapLayouts: "phemacast.personal_agent.mindmap_layouts.v1",
   workspaceLayouts: "phemacast.personal_agent.workspace_layouts.v1",
+  plazaAuthSession: "phemacast.personal_agent.plaza_auth_session.v1",
 };
 const MAP_PHEMAR_PREFERENCE_STORAGE_KEY = "phemacast.map_phemar.preferences.v1";
 
@@ -25,6 +26,7 @@ const SETTINGS_TABS = [
   { id: "profile", label: "Profile" },
   { id: "llm", label: "LLM Config" },
   { id: "api_keys", label: "API Keys" },
+  { id: "plaza_access", label: "Plaza Access" },
   { id: "connection", label: "Connection" },
   { id: "storage", label: "Storage" },
 ];
@@ -1826,6 +1828,7 @@ function resolveMapPhemaAppState(appState = null) {
   const preferences = normalizePreferences(loadStorage(currentPreferenceStorageKey(), {}), BOOTSTRAP);
   return {
     preferences,
+    plazaAccess: createDefaultPlazaAccessState(preferences.connectionPlazaUrl),
     globalPlazaStatus: emptyCatalog(preferences.connectionPlazaUrl),
     workspaces: [],
   };
@@ -2646,6 +2649,88 @@ function saveStorage(key, value) {
   }
 }
 
+function loadStoredPlazaAuthSession(plazaUrl) {
+  const record = loadStorage(STORAGE_KEYS.plazaAuthSession, null);
+  const normalizedPlazaUrl = normalizePlazaUrl(plazaUrl);
+  if (!(record && typeof record === "object")) {
+    return null;
+  }
+  const recordPlazaUrl = normalizePlazaUrl(record.plazaUrl || "");
+  const session = record.session && typeof record.session === "object" ? record.session : null;
+  if (!normalizedPlazaUrl || !recordPlazaUrl || recordPlazaUrl !== normalizedPlazaUrl || !session) {
+    return null;
+  }
+  return cloneValue(session);
+}
+
+function saveStoredPlazaAuthSession(plazaUrl, session) {
+  const normalizedPlazaUrl = normalizePlazaUrl(plazaUrl);
+  if (!normalizedPlazaUrl || !(session && typeof session === "object")) {
+    try {
+      window.localStorage.removeItem(STORAGE_KEYS.plazaAuthSession);
+    } catch (error) {
+      // Ignore storage cleanup failures.
+    }
+    return;
+  }
+  saveStorage(STORAGE_KEYS.plazaAuthSession, {
+    plazaUrl: normalizedPlazaUrl,
+    session: cloneValue(session),
+  });
+}
+
+function createDefaultPlazaAccessState(plazaUrl = "") {
+  const normalizedPlazaUrl = normalizePlazaUrl(plazaUrl);
+  const storedSession = normalizedPlazaUrl ? loadStoredPlazaAuthSession(normalizedPlazaUrl) : null;
+  return {
+    session: storedSession,
+    sessionPlazaUrl: storedSession ? normalizedPlazaUrl : "",
+    user: null,
+    authMode: "signin",
+    authBusy: false,
+    authMessage: "",
+    identifier: "",
+    password: "",
+    displayName: "",
+    config: null,
+    configStatus: normalizedPlazaUrl ? "idle" : "error",
+    configError: normalizedPlazaUrl ? "" : "Plaza URL is required.",
+    keys: [],
+    keysStatus: "idle",
+    keysError: "",
+    keyDraftName: "",
+    keyBusy: false,
+    keyMessage: "",
+    keyReveal: null,
+    pendingKeyId: "",
+    pendingKeyAction: "",
+  };
+}
+
+function currentPlazaAccessSession(appState) {
+  const normalizedPlazaUrl = normalizePlazaUrl(appState?.preferences?.connectionPlazaUrl || "");
+  const sessionPlazaUrl = normalizePlazaUrl(appState?.plazaAccess?.sessionPlazaUrl || "");
+  if (!normalizedPlazaUrl || !sessionPlazaUrl || normalizedPlazaUrl !== sessionPlazaUrl) {
+    return null;
+  }
+  return appState?.plazaAccess?.session && typeof appState.plazaAccess.session === "object"
+    ? appState.plazaAccess.session
+    : null;
+}
+
+function buildPlazaOwnerKeySnippet(plazaUrl, keyId, secret = "") {
+  const normalizedPlazaUrl = normalizePlazaUrl(plazaUrl);
+  return JSON.stringify({
+    agent_card: {
+      meta: {
+        trusted_plaza_urls: normalizedPlazaUrl ? [normalizedPlazaUrl] : [],
+        plaza_owner_key_id: String(keyId || "saved-key-id"),
+        ...(secret ? { plaza_owner_key: String(secret) } : {}),
+      },
+    },
+  }, null, 2);
+}
+
 function resetPersonalAgentStorage({ preservePreferences = false } = {}) {
   try {
     const preferenceSnapshot = preservePreferences ? loadStorage(currentPreferenceStorageKey(), null) : null;
@@ -3274,6 +3359,7 @@ function createMapPhemarInitialState(dashboard) {
     preferences,
     workspaces: [workspace],
     activeWorkspaceId: workspace.id,
+    plazaAccess: createDefaultPlazaAccessState(preferences.connectionPlazaUrl),
     settingsOpen: false,
     settingsTab: "storage",
     settingsLlmSelectedId: preferences.llmDefaultConfigId || preferences.llmConfigs[0]?.id || "",
@@ -3313,6 +3399,7 @@ function createInitialState() {
       preferences,
       workspaces: normalizedWorkspaces,
       activeWorkspaceId,
+      plazaAccess: createDefaultPlazaAccessState(preferences.connectionPlazaUrl),
       settingsOpen: false,
       settingsTab: "profile",
       settingsLlmSelectedId: preferences.llmDefaultConfigId || preferences.llmConfigs[0]?.id || "",
@@ -3345,6 +3432,7 @@ function createInitialState() {
       activeWorkspaceId: preferences.defaultWorkspaceId && normalizedWorkspaces.some((entry) => entry.id === preferences.defaultWorkspaceId)
         ? preferences.defaultWorkspaceId
         : normalizedWorkspaces[0]?.id || "",
+      plazaAccess: createDefaultPlazaAccessState(preferences.connectionPlazaUrl),
       settingsOpen: false,
       settingsTab: "profile",
       settingsLlmSelectedId: preferences.llmDefaultConfigId || preferences.llmConfigs[0]?.id || "",
@@ -5665,6 +5753,7 @@ function App() {
   const initialPhemaLoadRef = useRef(false);
   const storagePlazaRefreshRef = useRef("");
   const storageBucketRefreshRef = useRef("");
+  const plazaAccessRefreshRef = useRef("");
   const latestStateRef = useRef(state);
 
   useEffect(() => {
@@ -5675,6 +5764,7 @@ function App() {
     setState((current) => {
       const next = cloneValue(current);
       mutator(next);
+      latestStateRef.current = next;
       return next;
     });
   }
@@ -5691,6 +5781,581 @@ function App() {
     } catch (error) {
       window.alert(String(error?.message || "Unable to choose a local folder."));
     }
+  }
+
+  function clearPlazaAccessSession(next, message = "") {
+    next.plazaAccess.session = null;
+    next.plazaAccess.sessionPlazaUrl = "";
+    next.plazaAccess.user = null;
+    next.plazaAccess.keys = [];
+    next.plazaAccess.keysStatus = "idle";
+    next.plazaAccess.keysError = "";
+    next.plazaAccess.keyReveal = null;
+    next.plazaAccess.pendingKeyId = "";
+    next.plazaAccess.pendingKeyAction = "";
+    next.plazaAccess.authMessage = message;
+    next.plazaAccess.keyMessage = "";
+  }
+
+  function plazaProxyPath(path, plazaUrlOverride = "") {
+    const normalizedPlazaUrl = normalizePlazaUrl(plazaUrlOverride || latestStateRef.current?.preferences?.connectionPlazaUrl || "");
+    const url = new URL(path, window.location.origin);
+    if (normalizedPlazaUrl) {
+      url.searchParams.set("plaza_url", normalizedPlazaUrl);
+    }
+    return `${url.pathname}${url.search}`;
+  }
+
+  async function refreshPlazaAccessSession() {
+    const currentState = latestStateRef.current;
+    const plazaUrl = normalizePlazaUrl(currentState?.preferences?.connectionPlazaUrl || "");
+    const session = currentPlazaAccessSession(currentState);
+    const refreshToken = String(session?.refresh_token || "").trim();
+    if (!plazaUrl || !refreshToken) {
+      return null;
+    }
+    try {
+      const response = await fetch(plazaProxyPath("/api/plaza/auth/refresh", plazaUrl), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+      });
+      const payload = await loadJsonResponse(response);
+      if (!response.ok) {
+        updateState((next) => {
+          if (normalizePlazaUrl(next.preferences.connectionPlazaUrl || "") !== plazaUrl) {
+            return;
+          }
+          clearPlazaAccessSession(next, payload.detail || payload.message || "Plaza session expired.");
+        });
+        return null;
+      }
+      const refreshedSession = payload.session && typeof payload.session === "object" ? payload.session : null;
+      updateState((next) => {
+        if (normalizePlazaUrl(next.preferences.connectionPlazaUrl || "") !== plazaUrl) {
+          return;
+        }
+        next.plazaAccess.session = refreshedSession;
+        next.plazaAccess.sessionPlazaUrl = refreshedSession ? plazaUrl : "";
+        next.plazaAccess.user = payload.user || next.plazaAccess.user;
+        next.plazaAccess.authMessage = "";
+      });
+      return refreshedSession;
+    } catch (error) {
+      updateState((next) => {
+        if (normalizePlazaUrl(next.preferences.connectionPlazaUrl || "") !== plazaUrl) {
+          return;
+        }
+        clearPlazaAccessSession(next, String(error?.message || "Unable to refresh the Plaza session."));
+      });
+      return null;
+    }
+  }
+
+  async function plazaAccessFetch(path, options = {}) {
+    const {
+      auth = true,
+      plazaUrlOverride = "",
+      _retryAfterRefresh = false,
+      ...requestOptions
+    } = options;
+    const currentState = latestStateRef.current;
+    const plazaUrl = normalizePlazaUrl(plazaUrlOverride || currentState?.preferences?.connectionPlazaUrl || "");
+    if (!plazaUrl) {
+      throw new Error("Plaza URL is required.");
+    }
+    const headers = new Headers(requestOptions.headers || {});
+    const session = auth ? currentPlazaAccessSession(currentState) : null;
+    if (auth && session?.access_token) {
+      headers.set("Authorization", `Bearer ${session.access_token}`);
+    }
+    const response = await fetch(plazaProxyPath(path, plazaUrl), { ...requestOptions, headers });
+    if (auth && response.status === 401 && !_retryAfterRefresh && String(session?.refresh_token || "").trim()) {
+      const refreshedSession = await refreshPlazaAccessSession();
+      if (refreshedSession?.access_token) {
+        const retryHeaders = new Headers(requestOptions.headers || {});
+        retryHeaders.set("Authorization", `Bearer ${refreshedSession.access_token}`);
+        return fetch(plazaProxyPath(path, plazaUrl), { ...requestOptions, headers: retryHeaders });
+      }
+    }
+    return response;
+  }
+
+  async function refreshPlazaAccessConfig({ quiet = false } = {}) {
+    const plazaUrl = normalizePlazaUrl(latestStateRef.current?.preferences?.connectionPlazaUrl || "");
+    if (!plazaUrl) {
+      updateState((next) => {
+        next.plazaAccess.config = null;
+        next.plazaAccess.configStatus = "error";
+        next.plazaAccess.configError = "Plaza URL is required.";
+      });
+      return null;
+    }
+    updateState((next) => {
+      next.plazaAccess.configStatus = "loading";
+      if (!quiet) {
+        next.plazaAccess.configError = "";
+      }
+    });
+    try {
+      const response = await plazaAccessFetch("/api/plaza/auth/config", { auth: false, plazaUrlOverride: plazaUrl });
+      const payload = await loadJsonResponse(response);
+      if (!response.ok) {
+        throw new Error(payload.detail || payload.message || "Unable to load Plaza access settings.");
+      }
+      updateState((next) => {
+        if (normalizePlazaUrl(next.preferences.connectionPlazaUrl || "") !== plazaUrl) {
+          return;
+        }
+        next.plazaAccess.config = payload;
+        next.plazaAccess.configStatus = "ready";
+        next.plazaAccess.configError = "";
+      });
+      return payload;
+    } catch (error) {
+      updateState((next) => {
+        if (normalizePlazaUrl(next.preferences.connectionPlazaUrl || "") !== plazaUrl) {
+          return;
+        }
+        next.plazaAccess.config = null;
+        next.plazaAccess.configStatus = "error";
+        next.plazaAccess.configError = String(error?.message || "Unable to load Plaza access settings.");
+      });
+      return null;
+    }
+  }
+
+  async function refreshPlazaAccessUser({ quiet = false } = {}) {
+    const plazaUrl = normalizePlazaUrl(latestStateRef.current?.preferences?.connectionPlazaUrl || "");
+    if (!plazaUrl || !currentPlazaAccessSession(latestStateRef.current)) {
+      updateState((next) => {
+        next.plazaAccess.user = null;
+        if (!quiet) {
+          next.plazaAccess.authMessage = "";
+        }
+      });
+      return null;
+    }
+    try {
+      const response = await plazaAccessFetch("/api/plaza/auth/me", { plazaUrlOverride: plazaUrl });
+      const payload = await loadJsonResponse(response);
+      if (!response.ok) {
+        throw new Error(payload.detail || payload.message || "Unable to load the Plaza user profile.");
+      }
+      updateState((next) => {
+        if (normalizePlazaUrl(next.preferences.connectionPlazaUrl || "") !== plazaUrl) {
+          return;
+        }
+        next.plazaAccess.user = payload.user || null;
+        if (!quiet) {
+          next.plazaAccess.authMessage = "";
+        }
+      });
+      return payload.user || null;
+    } catch (error) {
+      updateState((next) => {
+        if (normalizePlazaUrl(next.preferences.connectionPlazaUrl || "") !== plazaUrl) {
+          return;
+        }
+        next.plazaAccess.user = null;
+        if (!quiet) {
+          next.plazaAccess.authMessage = String(error?.message || "Unable to load the Plaza user profile.");
+        }
+      });
+      return null;
+    }
+  }
+
+  async function refreshPlazaAccessKeys({ quiet = false } = {}) {
+    const plazaUrl = normalizePlazaUrl(latestStateRef.current?.preferences?.connectionPlazaUrl || "");
+    if (!plazaUrl || !currentPlazaAccessSession(latestStateRef.current)) {
+      updateState((next) => {
+        next.plazaAccess.keys = [];
+        next.plazaAccess.keysStatus = "idle";
+        next.plazaAccess.keysError = "";
+        if (!quiet) {
+          next.plazaAccess.keyMessage = "";
+        }
+      });
+      return [];
+    }
+    updateState((next) => {
+      next.plazaAccess.keysStatus = "loading";
+      if (!quiet) {
+        next.plazaAccess.keysError = "";
+      }
+    });
+    try {
+      const response = await plazaAccessFetch("/api/plaza/agent-keys", { plazaUrlOverride: plazaUrl });
+      const payload = await loadJsonResponse(response);
+      if (!response.ok) {
+        throw new Error(payload.detail || payload.message || "Unable to load Plaza owner keys.");
+      }
+      const keys = Array.isArray(payload.agent_keys) ? payload.agent_keys : [];
+      updateState((next) => {
+        if (normalizePlazaUrl(next.preferences.connectionPlazaUrl || "") !== plazaUrl) {
+          return;
+        }
+        next.plazaAccess.keys = keys;
+        next.plazaAccess.keysStatus = "ready";
+        next.plazaAccess.keysError = "";
+        next.plazaAccess.user = payload.viewer || next.plazaAccess.user;
+        if (!quiet) {
+          next.plazaAccess.keyMessage = "";
+        }
+      });
+      return keys;
+    } catch (error) {
+      updateState((next) => {
+        if (normalizePlazaUrl(next.preferences.connectionPlazaUrl || "") !== plazaUrl) {
+          return;
+        }
+        next.plazaAccess.keys = [];
+        next.plazaAccess.keysStatus = "error";
+        next.plazaAccess.keysError = String(error?.message || "Unable to load Plaza owner keys.");
+        if (!quiet) {
+          next.plazaAccess.keyMessage = next.plazaAccess.keysError;
+        }
+      });
+      return [];
+    }
+  }
+
+  async function runPlazaAccessSignIn(identifier, password, successMessage = "Signed in to Plaza.") {
+    const plazaUrl = normalizePlazaUrl(latestStateRef.current?.preferences?.connectionPlazaUrl || "");
+    const response = await plazaAccessFetch("/api/plaza/auth/signin", {
+      auth: false,
+      plazaUrlOverride: plazaUrl,
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ identifier, password }),
+    });
+    const payload = await loadJsonResponse(response);
+    if (!response.ok) {
+      throw new Error(payload.detail || payload.message || "Unable to sign in to Plaza.");
+    }
+    updateState((next) => {
+      if (normalizePlazaUrl(next.preferences.connectionPlazaUrl || "") !== plazaUrl) {
+        return;
+      }
+      next.plazaAccess.session = payload.session || null;
+      next.plazaAccess.sessionPlazaUrl = payload.session ? plazaUrl : "";
+      next.plazaAccess.user = payload.user || null;
+      next.plazaAccess.authMessage = successMessage;
+      next.plazaAccess.password = "";
+    });
+    await refreshPlazaAccessKeys({ quiet: true });
+    return payload;
+  }
+
+  async function submitPlazaAccessAuth() {
+    const currentState = latestStateRef.current;
+    const plazaUrl = normalizePlazaUrl(currentState?.preferences?.connectionPlazaUrl || "");
+    const identifier = String(currentState?.plazaAccess?.identifier || "").trim();
+    const password = String(currentState?.plazaAccess?.password || "");
+    const displayName = String(currentState?.plazaAccess?.displayName || "").trim();
+    const authMode = currentState?.plazaAccess?.authMode === "signup" ? "signup" : "signin";
+    if (!plazaUrl) {
+      updateState((next) => {
+        next.plazaAccess.authMessage = "Set the Plaza URL in Settings before signing in.";
+      });
+      return;
+    }
+    if (!identifier || !password) {
+      updateState((next) => {
+        next.plazaAccess.authMessage = authMode === "signup"
+          ? "Enter a username or email and a password to create the Plaza account."
+          : "Enter your Plaza username or email and password.";
+      });
+      return;
+    }
+    updateState((next) => {
+      next.plazaAccess.authBusy = true;
+      next.plazaAccess.authMessage = authMode === "signup" ? "Creating Plaza account..." : "Signing in to Plaza...";
+    });
+    try {
+      if (authMode === "signup") {
+        const signupPayload = identifier.includes("@")
+          ? { email: identifier, password, display_name: displayName || undefined }
+          : { username: identifier, password, display_name: displayName || undefined };
+        const signupResponse = await plazaAccessFetch("/api/plaza/auth/signup", {
+          auth: false,
+          plazaUrlOverride: plazaUrl,
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(signupPayload),
+        });
+        const signupData = await loadJsonResponse(signupResponse);
+        if (!signupResponse.ok) {
+          throw new Error(signupData.detail || signupData.message || "Unable to create the Plaza account.");
+        }
+        try {
+          await runPlazaAccessSignIn(identifier, password, signupData.message || "Plaza account created and signed in.");
+        } catch (signInError) {
+          updateState((next) => {
+            if (normalizePlazaUrl(next.preferences.connectionPlazaUrl || "") !== plazaUrl) {
+              return;
+            }
+            next.plazaAccess.authMode = "signin";
+            next.plazaAccess.authMessage = signupData.message || String(signInError?.message || "Plaza account created. Sign in to continue.");
+          });
+        }
+      } else {
+        await runPlazaAccessSignIn(identifier, password);
+      }
+    } catch (error) {
+      updateState((next) => {
+        if (normalizePlazaUrl(next.preferences.connectionPlazaUrl || "") !== plazaUrl) {
+          return;
+        }
+        next.plazaAccess.authMessage = String(error?.message || "Unable to reach Plaza.");
+      });
+    } finally {
+      updateState((next) => {
+        if (normalizePlazaUrl(next.preferences.connectionPlazaUrl || "") !== plazaUrl) {
+          return;
+        }
+        next.plazaAccess.authBusy = false;
+      });
+    }
+  }
+
+  async function signOutPlazaAccess() {
+    const plazaUrl = normalizePlazaUrl(latestStateRef.current?.preferences?.connectionPlazaUrl || "");
+    try {
+      if (plazaUrl && currentPlazaAccessSession(latestStateRef.current)) {
+        await plazaAccessFetch("/api/plaza/auth/signout", {
+          plazaUrlOverride: plazaUrl,
+          method: "POST",
+        });
+      }
+    } catch (error) {
+      // Local sign-out still clears Personal Agent state.
+    }
+    updateState((next) => {
+      clearPlazaAccessSession(next, "Signed out from Plaza.");
+    });
+  }
+
+  async function createPlazaOwnerKey() {
+    const currentState = latestStateRef.current;
+    const plazaUrl = normalizePlazaUrl(currentState?.preferences?.connectionPlazaUrl || "");
+    const keyName = String(currentState?.plazaAccess?.keyDraftName || "").trim();
+    if (!currentPlazaAccessSession(currentState)) {
+      updateState((next) => {
+        next.plazaAccess.keyMessage = "Sign in to Plaza before creating an owner key.";
+      });
+      return;
+    }
+    if (!keyName) {
+      updateState((next) => {
+        next.plazaAccess.keyMessage = "Enter a name for the Plaza owner key.";
+      });
+      return;
+    }
+    updateState((next) => {
+      next.plazaAccess.keyBusy = true;
+      next.plazaAccess.keyMessage = "Creating Plaza owner key...";
+    });
+    try {
+      const response = await plazaAccessFetch("/api/plaza/agent-keys", {
+        plazaUrlOverride: plazaUrl,
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: keyName }),
+      });
+      const payload = await loadJsonResponse(response);
+      if (!response.ok) {
+        throw new Error(payload.detail || payload.message || "Unable to create the Plaza owner key.");
+      }
+      const createdKey = payload.agent_key || {};
+      updateState((next) => {
+        if (normalizePlazaUrl(next.preferences.connectionPlazaUrl || "") !== plazaUrl) {
+          return;
+        }
+        next.plazaAccess.keyDraftName = "";
+        next.plazaAccess.keyReveal = createdKey.secret
+          ? { id: createdKey.id || "", name: createdKey.name || keyName, secret: createdKey.secret }
+          : null;
+        next.plazaAccess.keyMessage = `Created Plaza owner key "${createdKey.name || keyName}".`;
+      });
+      await refreshPlazaAccessKeys({ quiet: true });
+    } catch (error) {
+      updateState((next) => {
+        if (normalizePlazaUrl(next.preferences.connectionPlazaUrl || "") !== plazaUrl) {
+          return;
+        }
+        next.plazaAccess.keyMessage = String(error?.message || "Unable to create the Plaza owner key.");
+      });
+    } finally {
+      updateState((next) => {
+        if (normalizePlazaUrl(next.preferences.connectionPlazaUrl || "") !== plazaUrl) {
+          return;
+        }
+        next.plazaAccess.keyBusy = false;
+      });
+    }
+  }
+
+  async function setPlazaOwnerKeyStatus(keyId, nextStatus) {
+    const currentState = latestStateRef.current;
+    const plazaUrl = normalizePlazaUrl(currentState?.preferences?.connectionPlazaUrl || "");
+    const normalizedStatus = String(nextStatus || "").trim().toLowerCase();
+    const action = normalizedStatus === "active" ? "enable" : "disable";
+    updateState((next) => {
+      next.plazaAccess.pendingKeyId = keyId;
+      next.plazaAccess.pendingKeyAction = action;
+      next.plazaAccess.keyMessage = normalizedStatus === "active" ? "Enabling Plaza owner key..." : "Disabling Plaza owner key...";
+    });
+    try {
+      const response = await plazaAccessFetch(`/api/plaza/agent-keys/${encodeURIComponent(keyId)}`, {
+        plazaUrlOverride: plazaUrl,
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: normalizedStatus }),
+      });
+      const payload = await loadJsonResponse(response);
+      if (!response.ok) {
+        throw new Error(payload.detail || payload.message || "Unable to update the Plaza owner key.");
+      }
+      await refreshPlazaAccessKeys({ quiet: true });
+      updateState((next) => {
+        if (normalizePlazaUrl(next.preferences.connectionPlazaUrl || "") !== plazaUrl) {
+          return;
+        }
+        next.plazaAccess.keyMessage = normalizedStatus === "active" ? "Plaza owner key enabled." : "Plaza owner key disabled.";
+      });
+    } catch (error) {
+      updateState((next) => {
+        if (normalizePlazaUrl(next.preferences.connectionPlazaUrl || "") !== plazaUrl) {
+          return;
+        }
+        next.plazaAccess.keyMessage = String(error?.message || "Unable to update the Plaza owner key.");
+      });
+    } finally {
+      updateState((next) => {
+        if (normalizePlazaUrl(next.preferences.connectionPlazaUrl || "") !== plazaUrl) {
+          return;
+        }
+        next.plazaAccess.pendingKeyId = "";
+        next.plazaAccess.pendingKeyAction = "";
+      });
+    }
+  }
+
+  async function regeneratePlazaOwnerKey(keyId) {
+    const plazaUrl = normalizePlazaUrl(latestStateRef.current?.preferences?.connectionPlazaUrl || "");
+    updateState((next) => {
+      next.plazaAccess.pendingKeyId = keyId;
+      next.plazaAccess.pendingKeyAction = "regenerate";
+      next.plazaAccess.keyMessage = "Regenerating Plaza owner key...";
+    });
+    try {
+      const response = await plazaAccessFetch(`/api/plaza/agent-keys/${encodeURIComponent(keyId)}`, {
+        plazaUrlOverride: plazaUrl,
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ regenerate: true }),
+      });
+      const payload = await loadJsonResponse(response);
+      if (!response.ok) {
+        throw new Error(payload.detail || payload.message || "Unable to regenerate the Plaza owner key.");
+      }
+      const updatedKey = payload.agent_key || {};
+      updateState((next) => {
+        if (normalizePlazaUrl(next.preferences.connectionPlazaUrl || "") !== plazaUrl) {
+          return;
+        }
+        next.plazaAccess.keyReveal = updatedKey.secret
+          ? { id: updatedKey.id || keyId, name: updatedKey.name || "Plaza owner key", secret: updatedKey.secret }
+          : null;
+        next.plazaAccess.keyMessage = `Regenerated Plaza owner key "${updatedKey.name || keyId}".`;
+      });
+      await refreshPlazaAccessKeys({ quiet: true });
+    } catch (error) {
+      updateState((next) => {
+        if (normalizePlazaUrl(next.preferences.connectionPlazaUrl || "") !== plazaUrl) {
+          return;
+        }
+        next.plazaAccess.keyMessage = String(error?.message || "Unable to regenerate the Plaza owner key.");
+      });
+    } finally {
+      updateState((next) => {
+        if (normalizePlazaUrl(next.preferences.connectionPlazaUrl || "") !== plazaUrl) {
+          return;
+        }
+        next.plazaAccess.pendingKeyId = "";
+        next.plazaAccess.pendingKeyAction = "";
+      });
+    }
+  }
+
+  async function deletePlazaOwnerKey(keyId) {
+    const plazaUrl = normalizePlazaUrl(latestStateRef.current?.preferences?.connectionPlazaUrl || "");
+    updateState((next) => {
+      next.plazaAccess.pendingKeyId = keyId;
+      next.plazaAccess.pendingKeyAction = "delete";
+      next.plazaAccess.keyMessage = "Deleting Plaza owner key...";
+    });
+    try {
+      const response = await plazaAccessFetch(`/api/plaza/agent-keys/${encodeURIComponent(keyId)}`, {
+        plazaUrlOverride: plazaUrl,
+        method: "DELETE",
+      });
+      const payload = await loadJsonResponse(response);
+      if (!response.ok) {
+        throw new Error(payload.detail || payload.message || "Unable to delete the Plaza owner key.");
+      }
+      updateState((next) => {
+        if (normalizePlazaUrl(next.preferences.connectionPlazaUrl || "") !== plazaUrl) {
+          return;
+        }
+        if (next.plazaAccess.keyReveal?.id === keyId) {
+          next.plazaAccess.keyReveal = null;
+        }
+        next.plazaAccess.keyMessage = "Plaza owner key deleted.";
+      });
+      await refreshPlazaAccessKeys({ quiet: true });
+    } catch (error) {
+      updateState((next) => {
+        if (normalizePlazaUrl(next.preferences.connectionPlazaUrl || "") !== plazaUrl) {
+          return;
+        }
+        next.plazaAccess.keyMessage = String(error?.message || "Unable to delete the Plaza owner key.");
+      });
+    } finally {
+      updateState((next) => {
+        if (normalizePlazaUrl(next.preferences.connectionPlazaUrl || "") !== plazaUrl) {
+          return;
+        }
+        next.plazaAccess.pendingKeyId = "";
+        next.plazaAccess.pendingKeyAction = "";
+      });
+    }
+  }
+
+  async function copyPlazaOwnerKeySecret(secret) {
+    const normalized = String(secret || "").trim();
+    if (!normalized) {
+      return;
+    }
+    await copyOperatorText(normalized, "Plaza owner key");
+    updateState((next) => {
+      next.plazaAccess.keyMessage = "Plaza owner key copied to the clipboard prompt.";
+    });
+  }
+
+  async function copyPlazaOwnerKeySnippet(keyId, secret = "", includeRuntime = Boolean(secret)) {
+    const plazaUrl = normalizePlazaUrl(latestStateRef.current?.preferences?.connectionPlazaUrl || "");
+    await copyOperatorText(
+      buildPlazaOwnerKeySnippet(plazaUrl, keyId, secret),
+      includeRuntime ? "Plaza runtime JSON" : "Plaza config JSON",
+    );
+    updateState((next) => {
+      next.plazaAccess.keyMessage = includeRuntime
+        ? (secret ? "Plaza runtime JSON copied with the current secret." : "Plaza runtime JSON copied with a secret placeholder.")
+        : "Plaza config JSON copied with the trusted Plaza URL and key id.";
+    });
   }
 
   function activeWorkspace() {
@@ -6308,6 +6973,90 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
     document.body.dataset.theme = state.preferences.theme;
     document.body.dataset.appMode = APP_MODE || "personal_agent";
   }, [state.preferences.theme]);
+
+  useEffect(() => {
+    saveStoredPlazaAuthSession(
+      state.preferences.connectionPlazaUrl,
+      currentPlazaAccessSession(state),
+    );
+  }, [
+    state.preferences.connectionPlazaUrl,
+    state.plazaAccess.session,
+    state.plazaAccess.sessionPlazaUrl,
+  ]);
+
+  useEffect(() => {
+    const normalizedPlazaUrl = normalizePlazaUrl(state.preferences.connectionPlazaUrl || "");
+    const sessionPlazaUrl = normalizePlazaUrl(state.plazaAccess.sessionPlazaUrl || "");
+    if (!state.plazaAccess.session || !sessionPlazaUrl || sessionPlazaUrl === normalizedPlazaUrl) {
+      return;
+    }
+    updateState((next) => {
+      if (
+        !next.plazaAccess.session
+        || normalizePlazaUrl(next.plazaAccess.sessionPlazaUrl || "") === normalizePlazaUrl(next.preferences.connectionPlazaUrl || "")
+      ) {
+        return;
+      }
+      clearPlazaAccessSession(next, "Plaza URL changed. Sign in again for this Plaza.");
+      next.plazaAccess.config = null;
+      next.plazaAccess.configStatus = normalizedPlazaUrl ? "idle" : "error";
+      next.plazaAccess.configError = normalizedPlazaUrl ? "" : "Plaza URL is required.";
+    });
+  }, [
+    state.preferences.connectionPlazaUrl,
+    state.plazaAccess.session,
+    state.plazaAccess.sessionPlazaUrl,
+  ]);
+
+  useEffect(() => {
+    const viewingPlazaAccess = state.settingsOpen && state.settingsTab === "plaza_access";
+    if (!viewingPlazaAccess) {
+      plazaAccessRefreshRef.current = "";
+      return;
+    }
+    const plazaUrl = normalizePlazaUrl(state.preferences.connectionPlazaUrl || "");
+    const session = currentPlazaAccessSession(state);
+    const refreshKey = [plazaUrl, session?.access_token || "", session?.refresh_token || ""].join("|");
+    if (plazaAccessRefreshRef.current === refreshKey) {
+      return;
+    }
+    plazaAccessRefreshRef.current = refreshKey;
+    let cancelled = false;
+    (async () => {
+      await refreshPlazaAccessConfig({ quiet: true });
+      if (cancelled) {
+        return;
+      }
+      if (session) {
+        await refreshPlazaAccessUser({ quiet: true });
+        if (cancelled) {
+          return;
+        }
+        await refreshPlazaAccessKeys({ quiet: true });
+        return;
+      }
+      updateState((next) => {
+        if (normalizePlazaUrl(next.preferences.connectionPlazaUrl || "") !== plazaUrl) {
+          return;
+        }
+        next.plazaAccess.user = null;
+        next.plazaAccess.keys = [];
+        next.plazaAccess.keysStatus = "idle";
+        next.plazaAccess.keysError = "";
+        next.plazaAccess.keyReveal = null;
+      });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    state.settingsOpen,
+    state.settingsTab,
+    state.preferences.connectionPlazaUrl,
+    state.plazaAccess.session,
+    state.plazaAccess.sessionPlazaUrl,
+  ]);
 
   useEffect(() => {
     const currentWorkspace = findWorkspace(state, state.activeWorkspaceId);
@@ -11002,6 +11751,10 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
     const configuredStorageSummary = formatStorageTargetSummary(defaultSaveStorageTarget(state.preferences, state));
     const usingSystemPulser = normalizeFileSaveBackend(state.preferences.fileSaveBackend) === "system_pulser";
     const currentBucketName = String(state.preferences.fileSaveBucketName || "").trim();
+    const plazaAccess = state.plazaAccess || createDefaultPlazaAccessState(state.preferences.connectionPlazaUrl);
+    const plazaAccessSession = currentPlazaAccessSession(state);
+    const plazaAccessUser = plazaAccess.user;
+    const plazaAccessKeys = Array.isArray(plazaAccess.keys) ? plazaAccess.keys : [];
     const storageBucketOptions = sortStorageBucketRows([
       ...(currentBucketName && !storageBuckets.some((entry) => String(entry?.bucket_name || "").trim() === currentBucketName)
         ? [{ bucket_name: currentBucketName, visibility: "current" }]
@@ -11059,6 +11812,255 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
                     <input type="password" value={state.preferences[field]} onChange={(event) => updateState((next) => { next.preferences[field] = event.target.value; })} />
                   </label>
                 ))}
+              </div>
+            ) : null}
+            {selectedSettingsTab === "plaza_access" ? (
+              <div className="settings-grid">
+                <div className="connection-card wide">
+                  <strong>
+                    {plazaAccessSession
+                      ? "Plaza Session Active"
+                      : plazaAccess.configStatus === "loading"
+                        ? "Checking Plaza Access..."
+                        : plazaAccess.config?.auth_enabled
+                          ? "Plaza Ready"
+                          : "Plaza Access Unavailable"}
+                  </strong>
+                  <span>{normalizePlazaUrl(state.preferences.connectionPlazaUrl) || "Set the Plaza URL in Connection settings first."}</span>
+                  <span>
+                    {plazaAccessSession
+                      ? `${plazaAccessUser?.display_name || plazaAccessUser?.username || plazaAccessUser?.email || "Signed in"} · ${plazaAccessUser?.role || "user"}`
+                      : plazaAccess.configError
+                        || (plazaAccess.config?.auth_enabled
+                          ? "Create a Plaza account or sign in to register owner keys for this Personal Agent."
+                          : "This Plaza has not enabled UI authentication yet.")}
+                  </span>
+                  <div className="theme-row">
+                    <button className="ghost-button" onClick={() => void refreshPlazaAccessConfig()}>
+                      {plazaAccess.configStatus === "loading" ? "Refreshing Access..." : "Refresh Access"}
+                    </button>
+                    {plazaAccessSession ? (
+                      <button className="ghost-button" onClick={() => void refreshPlazaAccessKeys()}>
+                        {plazaAccess.keysStatus === "loading" ? "Refreshing Keys..." : "Refresh Keys"}
+                      </button>
+                    ) : null}
+                    {plazaAccessSession ? (
+                      <button className="ghost-button" onClick={() => void signOutPlazaAccess()}>
+                        Sign Out
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+
+                {!plazaAccessSession ? (
+                  <>
+                    <div className="field wide">
+                      <span>Access Mode</span>
+                      <div className="theme-row">
+                        <button
+                          className={plazaAccess.authMode === "signin" ? "theme-chip active" : "theme-chip"}
+                          onClick={() => updateState((next) => {
+                            next.plazaAccess.authMode = "signin";
+                            next.plazaAccess.authMessage = "";
+                          })}
+                        >
+                          Sign In
+                        </button>
+                        <button
+                          className={plazaAccess.authMode === "signup" ? "theme-chip active" : "theme-chip"}
+                          onClick={() => updateState((next) => {
+                            next.plazaAccess.authMode = "signup";
+                            next.plazaAccess.authMessage = "";
+                          })}
+                        >
+                          Create Account
+                        </button>
+                      </div>
+                    </div>
+                    <label className="field">
+                      <span>Username or Email</span>
+                      <input
+                        value={plazaAccess.identifier}
+                        onChange={(event) => updateState((next) => { next.plazaAccess.identifier = event.target.value; })}
+                      />
+                    </label>
+                    <label className="field">
+                      <span>Password</span>
+                      <input
+                        type="password"
+                        value={plazaAccess.password}
+                        onChange={(event) => updateState((next) => { next.plazaAccess.password = event.target.value; })}
+                      />
+                    </label>
+                    {plazaAccess.authMode === "signup" ? (
+                      <label className="field wide">
+                        <span>Display Name</span>
+                        <input
+                          value={plazaAccess.displayName}
+                          onChange={(event) => updateState((next) => { next.plazaAccess.displayName = event.target.value; })}
+                        />
+                      </label>
+                    ) : null}
+                    <div className="field wide">
+                      <span>Connect</span>
+                      <button
+                        className="accent-button"
+                        onClick={() => void submitPlazaAccessAuth()}
+                        disabled={plazaAccess.authBusy || !normalizePlazaUrl(state.preferences.connectionPlazaUrl)}
+                      >
+                        {plazaAccess.authBusy
+                          ? (plazaAccess.authMode === "signup" ? "Creating Account..." : "Signing In...")
+                          : (plazaAccess.authMode === "signup" ? "Create Plaza Account" : "Sign In to Plaza")}
+                      </button>
+                    </div>
+                    {plazaAccess.authMessage ? (
+                      <div className="connection-card wide">
+                        <strong>Access Status</strong>
+                        <span>{plazaAccess.authMessage}</span>
+                      </div>
+                    ) : null}
+                  </>
+                ) : (
+                  <>
+                    <div className="connection-card">
+                      <strong>{plazaAccessUser?.display_name || plazaAccessUser?.username || plazaAccessUser?.email || "Plaza User"}</strong>
+                      <span>{plazaAccessUser?.email || "No email available"}</span>
+                      <span>{`${plazaAccessUser?.role || "user"} · ${plazaAccessUser?.auth_provider || "password"}`}</span>
+                    </div>
+                    <div className="connection-card">
+                      <strong>Owner Key Library</strong>
+                      <span>{plazaAccess.keysStatus === "loading" ? "Refreshing Plaza owner keys..." : `${plazaAccessKeys.length} key${plazaAccessKeys.length === 1 ? "" : "s"} available on this Plaza.`}</span>
+                      <span>Use these keys to register Personal Agent-launched runtimes under your Plaza account.</span>
+                    </div>
+                    <label className="field wide">
+                      <span>Create Owner Key</span>
+                      <input
+                        value={plazaAccess.keyDraftName}
+                        placeholder="Personal agent launcher"
+                        onChange={(event) => updateState((next) => { next.plazaAccess.keyDraftName = event.target.value; })}
+                      />
+                    </label>
+                    <div className="field">
+                      <span>Create</span>
+                      <button
+                        className="accent-button"
+                        onClick={() => void createPlazaOwnerKey()}
+                        disabled={plazaAccess.keyBusy}
+                      >
+                        {plazaAccess.keyBusy ? "Creating Key..." : "Create Owner Key"}
+                      </button>
+                    </div>
+                    {plazaAccess.keyMessage ? (
+                      <div className="connection-card wide">
+                        <strong>Key Status</strong>
+                        <span>{plazaAccess.keyMessage}</span>
+                      </div>
+                    ) : null}
+                    {plazaAccess.keyReveal?.secret ? (
+                      <div className="connection-card wide">
+                        <strong>{plazaAccess.keyReveal.name || "Plaza owner key ready"}</strong>
+                        <span>Plaza only shows the full secret when you create or regenerate a key.</span>
+                        <pre className="value-pre">{buildPlazaOwnerKeySnippet(state.preferences.connectionPlazaUrl, plazaAccess.keyReveal.id, plazaAccess.keyReveal.secret)}</pre>
+                        <div className="theme-row">
+                          <button className="ghost-button" onClick={() => void copyPlazaOwnerKeySecret(plazaAccess.keyReveal.secret)}>
+                            Copy Secret
+                          </button>
+                          <button className="ghost-button" onClick={() => void copyPlazaOwnerKeySnippet(plazaAccess.keyReveal.id, "", false)}>
+                            Copy Config JSON
+                          </button>
+                          <button className="ghost-button" onClick={() => void copyPlazaOwnerKeySnippet(plazaAccess.keyReveal.id, plazaAccess.keyReveal.secret, true)}>
+                            Copy Runtime JSON
+                          </button>
+                          <button className="ghost-button" onClick={() => updateState((next) => { next.plazaAccess.keyReveal = null; })}>
+                            Dismiss
+                          </button>
+                        </div>
+                      </div>
+                    ) : null}
+                    <div className="connection-card wide">
+                      <strong>Trusted Plaza Template</strong>
+                      <span>Personal Agent uses the same trusted-Plaza metadata as the Plaza UI for launched runtimes.</span>
+                      <pre className="value-pre">{buildPlazaOwnerKeySnippet(state.preferences.connectionPlazaUrl, plazaAccessKeys[0]?.id || "saved-key-id")}</pre>
+                    </div>
+                    <div className="connection-card wide">
+                      <strong>Saved Keys</strong>
+                      {plazaAccessKeys.length ? (
+                        <div className="diagram-run-step-list">
+                          {plazaAccessKeys.map((key) => {
+                            const pending = plazaAccess.pendingKeyId === key.id;
+                            const isDisabled = String(key.status || "").trim().toLowerCase() === "disabled";
+                            const revealSecret = plazaAccess.keyReveal?.id === key.id ? plazaAccess.keyReveal.secret : "";
+                            return (
+                              <article key={key.id || key.name} className="diagram-run-step">
+                                <div className="diagram-run-step-head">
+                                  <div>
+                                    <strong>{key.name || "Unnamed owner key"}</strong>
+                                    <span>{key.id || "Key id unavailable"}</span>
+                                  </div>
+                                  <span className={statusPillClass(key.status || "active")}>{labelizeStatus(key.status || "active")}</span>
+                                </div>
+                                <div className="diagram-run-meta">
+                                  <span>{`Preview: ${key.secret_preview || "hidden"}`}</span>
+                                  <span>{`Last used: ${formatTimestamp(key.last_used_at || "never")}`}</span>
+                                  <span>{`Updated: ${formatTimestamp(key.updated_at || key.created_at)}`}</span>
+                                </div>
+                                <pre className="value-pre">{buildPlazaOwnerKeySnippet(state.preferences.connectionPlazaUrl, key.id, revealSecret)}</pre>
+                                <div className="theme-row">
+                                  <button className="ghost-button" onClick={() => void copyPlazaOwnerKeySnippet(key.id, "", false)}>
+                                    Copy Config
+                                  </button>
+                                  <button className="ghost-button" onClick={() => void copyPlazaOwnerKeySnippet(key.id, revealSecret, true)}>
+                                    Copy Runtime JSON
+                                  </button>
+                                  {!isDisabled ? (
+                                    <button
+                                      className="ghost-button"
+                                      onClick={() => {
+                                        if (window.confirm(`Regenerate Plaza owner key "${key.name || key.id}"? Existing runtimes using the old secret will stop claiming your account until updated.`)) {
+                                          void regeneratePlazaOwnerKey(key.id);
+                                        }
+                                      }}
+                                      disabled={pending}
+                                    >
+                                      {pending && plazaAccess.pendingKeyAction === "regenerate" ? "Regenerating..." : "Regenerate"}
+                                    </button>
+                                  ) : null}
+                                  <button
+                                    className="ghost-button"
+                                    onClick={() => {
+                                      if (!isDisabled && !window.confirm(`Disable Plaza owner key "${key.name || key.id}"? You can re-enable it later.`)) {
+                                        return;
+                                      }
+                                      void setPlazaOwnerKeyStatus(key.id, isDisabled ? "active" : "disabled");
+                                    }}
+                                    disabled={pending}
+                                  >
+                                    {pending && (plazaAccess.pendingKeyAction === "disable" || plazaAccess.pendingKeyAction === "enable")
+                                      ? (isDisabled ? "Enabling..." : "Disabling...")
+                                      : (isDisabled ? "Enable" : "Disable")}
+                                  </button>
+                                  <button
+                                    className="ghost-button"
+                                    onClick={() => {
+                                      if (window.confirm(`Delete Plaza owner key "${key.name || key.id}"? It will no longer claim ownership for saved launches.`)) {
+                                        void deletePlazaOwnerKey(key.id);
+                                      }
+                                    }}
+                                    disabled={pending}
+                                  >
+                                    {pending && plazaAccess.pendingKeyAction === "delete" ? "Deleting..." : "Delete"}
+                                  </button>
+                                </div>
+                              </article>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <span>{plazaAccess.keysError || "No Plaza owner keys yet. Create one above to register trusted Personal Agent launches."}</span>
+                      )}
+                    </div>
+                  </>
+                )}
               </div>
             ) : null}
             {selectedSettingsTab === "connection" ? (

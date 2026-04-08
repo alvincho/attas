@@ -25,6 +25,7 @@ import requests
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 import pytest
+from fastapi import HTTPException
 from prompits.agents.standby import StandbyAgent
 from prompits.core.pit import Pit, PitAddress
 from prompits.core.init_schema import plaza_credentials_table_schema
@@ -1129,3 +1130,63 @@ async def test_verify_remote_caller_skips_plaza_when_direct_shared_token_is_vali
 
     assert verified["agent_id"] == "alice-id"
     assert verified["auth_mode"] == "direct"
+
+
+@pytest.mark.asyncio
+async def test_verify_remote_caller_only_checks_receiver_trusted_plazas():
+    """
+    Exercise the receiver-side trusted Plaza allowlist regression scenario for
+    remote caller verification.
+    """
+    agent = StandbyAgent(name="bob", plaza_url="http://127.0.0.1:8011")
+    seen_plazas = []
+
+    class FakeAsyncResponse:
+        """Response model for fake async auth payloads."""
+
+        status_code = 200
+        content = b'{"agent_id":"alice-id","agent_name":"alice"}'
+
+        def json(self):
+            """Handle JSON for the fake async response."""
+            return {"agent_id": "alice-id", "agent_name": "alice"}
+
+    async def fake_plaza_request(method, path, plaza_url=None, headers=None, **kwargs):
+        """Handle fake Plaza auth verification."""
+        seen_plazas.append(plaza_url)
+        assert method == "post"
+        assert path == "/authenticate"
+        assert headers == {"Authorization": "Bearer alice-token"}
+        return FakeAsyncResponse()
+
+    with patch.object(agent, "_plaza_request_async", side_effect=fake_plaza_request):
+        verified = await agent._verify_remote_caller(
+            caller_agent_address={
+                "pit_id": "alice-id",
+                "plazas": ["http://evil.example:8011", "http://127.0.0.1:8011"],
+            },
+            caller_plaza_token="alice-token",
+        )
+
+    assert seen_plazas == ["http://127.0.0.1:8011"]
+    assert verified["agent_id"] == "alice-id"
+    assert verified["plaza_url"] == "http://127.0.0.1:8011"
+    assert verified["auth_mode"] == "plaza"
+
+
+@pytest.mark.asyncio
+async def test_verify_remote_caller_rejects_when_no_trusted_plaza_is_configured():
+    """
+    Exercise the missing trusted Plaza configuration regression scenario for
+    remote caller verification.
+    """
+    agent = StandbyAgent(name="bob")
+
+    with pytest.raises(HTTPException) as exc_info:
+        await agent._verify_remote_caller(
+            caller_agent_address={"pit_id": "alice-id", "plazas": ["http://127.0.0.1:8011"]},
+            caller_plaza_token="alice-token",
+        )
+
+    assert exc_info.value.status_code == 401
+    assert exc_info.value.detail == "Trusted Plaza verification is not configured"

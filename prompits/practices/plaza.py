@@ -569,7 +569,11 @@ class PlazaState:
                                 card = {}
 
                             agent_name = row.get("name") or card.get("name")
-                            pit_type = self.canonical_pit_type(row.get("type") or card.get("pit_type"), default="Agent") or "Agent"
+                            stored_pit_type = self.canonical_pit_type(
+                                row.get("type") or card.get("pit_type"),
+                                default="Agent",
+                            ) or "Agent"
+                            pit_type = self.infer_runtime_pit_type(row.get("type"), card, default="Agent")
                             address = row.get("address") or card.get("address")
                             updated_at = PlazaCredentialStore._to_epoch_seconds(row.get("updated_at"))
                             last_active = updated_at or time.time()
@@ -590,7 +594,7 @@ class PlazaState:
                                 self.registry[agent_id] = address
                                 if agent_name:
                                     self.registry_by_name[agent_name] = address
-                            if normalized_card != card:
+                            if normalized_card != card or pit_type != stored_pit_type:
                                 self.upsert_directory_entry(str(agent_id), str(agent_name or ""), str(address or ""), str(pit_type), normalized_card)
                                 if pit_type == "Pulser":
                                     self.upsert_pulse_pulser_pairs(
@@ -867,11 +871,13 @@ class PlazaState:
     ) -> Dict[str, Any]:
         """Normalize the card for the pit."""
         normalized_card = dict(card or {})
+        normalized_card["pit_type"] = pit_type
         meta = normalized_card.get("meta")
         if not isinstance(meta, dict):
             meta = {}
 
         if pit_type == "Pulser":
+            normalized_card.setdefault("role", "pulser")
             supported_pulses = meta.get("supported_pulses")
             if isinstance(supported_pulses, list) and supported_pulses:
                 default_pulse_address = meta.get("pulse_address")
@@ -1182,6 +1188,75 @@ class PlazaState:
             if candidate.lower() == normalized.lower():
                 return candidate
         return raw_value
+
+    @staticmethod
+    def _card_role_tokens(card: Dict[str, Any]) -> set[str]:
+        """Return normalized role and tag tokens from a card payload."""
+        tokens: set[str] = set()
+        if not isinstance(card, dict):
+            return tokens
+
+        role = str(card.get("role") or "").strip().lower()
+        if role:
+            tokens.add(role)
+        for tag in card.get("tags") or []:
+            token = str(tag or "").strip().lower()
+            if token:
+                tokens.add(token)
+
+        meta = card.get("meta") if isinstance(card.get("meta"), dict) else {}
+        meta_role = str(meta.get("role") or "").strip().lower()
+        if meta_role:
+            tokens.add(meta_role)
+        for tag in meta.get("tags") or []:
+            token = str(tag or "").strip().lower()
+            if token:
+                tokens.add(token)
+        return tokens
+
+    def infer_runtime_pit_type(
+        self,
+        pit_type: Optional[str],
+        card: Optional[Dict[str, Any]],
+        *,
+        default: str = "Agent",
+    ) -> str:
+        """Infer the effective pit type from explicit type plus card metadata."""
+        explicit_type = self.canonical_pit_type(pit_type, default="") or ""
+        if explicit_type and explicit_type != "Agent":
+            return explicit_type
+
+        inferred_type = ""
+        if isinstance(card, dict):
+            card_type = self.canonical_pit_type(card.get("pit_type") or card.get("type"), default="") or ""
+            if card_type and card_type != "Agent":
+                inferred_type = card_type
+
+            meta = card.get("meta") if isinstance(card.get("meta"), dict) else {}
+            supported_pulses = self._dedupe_supported_pulses(meta.get("supported_pulses"))
+            role_tokens = self._card_role_tokens(card)
+            if supported_pulses or "pulser" in role_tokens:
+                inferred_type = "Pulser"
+            elif not inferred_type:
+                pulse_definition = meta.get("pulse_definition") if isinstance(meta.get("pulse_definition"), dict) else {}
+                if (
+                    meta.get("pulse_id")
+                    or meta.get("pulse_address")
+                    or pulse_definition
+                    or meta.get("resource_type") == "pulse_definition"
+                ):
+                    inferred_type = "Pulse"
+                elif any(
+                    key in meta or key in card
+                    for key in ("rowSchema", "primary_key", "schema_kind", "columns")
+                ):
+                    inferred_type = "Schema"
+
+        if inferred_type:
+            return inferred_type
+        if explicit_type:
+            return explicit_type
+        return self.canonical_pit_type(default, default=default) or default
 
     def normalize_pit_type(self, pit_type: Optional[str]) -> str:
         """Normalize the pit type."""
@@ -1643,7 +1718,7 @@ class PlazaState:
 
         for aid, acard in agent_cards_snapshot:
             display_name = acard.get("name") or agent_names_by_id.get(aid) or aid
-            resolved_type = self.normalize_pit_type(pit_types.get(aid) or acard.get("pit_type") or "Agent")
+            resolved_type = self.infer_runtime_pit_type(pit_types.get(aid), acard, default="Agent")
             entry_owner = acard.get("owner") or display_name
             entry_desc = acard.get("description", "")
             emeta = acard.get("meta", {})
@@ -1750,7 +1825,11 @@ class PlazaState:
                 emeta = {"value": raw_meta}
 
             display_name = acard.get("name") or row.get("name") or agent_names_by_id.get(aid) or aid
-            resolved_type = self.normalize_pit_type(row.get("type") or pit_types.get(aid) or acard.get("pit_type") or "Agent")
+            resolved_type = self.infer_runtime_pit_type(
+                row.get("type") or pit_types.get(aid),
+                acard,
+                default="Agent",
+            )
             entry_owner = row.get("owner") or acard.get("owner") or display_name
             entry_desc = row.get("description") or acard.get("description", "")
             if isinstance(acard, dict):
@@ -2130,7 +2209,18 @@ class PlazaState:
         for row in rows:
             row_id = row.get("agent_id") or row.get("id")
             row_name = str(row.get("name") or "").strip()
-            row_type = self.canonical_pit_type(row.get("type"), default="Agent") or "Agent"
+            raw_card = row.get("card", {})
+            if isinstance(raw_card, str):
+                try:
+                    parsed_card = json.loads(raw_card)
+                    row_card = parsed_card if isinstance(parsed_card, dict) else {}
+                except Exception:
+                    row_card = {}
+            elif isinstance(raw_card, dict):
+                row_card = raw_card
+            else:
+                row_card = {}
+            row_type = self.infer_runtime_pit_type(row.get("type"), row_card, default="Agent")
             if row_id:
                 existing_ids.add(str(row_id))
             if row_name and row_type:
@@ -2380,8 +2470,7 @@ class PlazaRegisterPractice(PlazaEndpointPractice):
                 if not callable(owner_resolver):
                     raise HTTPException(status_code=501, detail="Owner keys are unavailable for this Plaza")
                 owner_context = owner_resolver(owner_key)
-            requested_type = req.pit_type or card.get("pit_type") or card.get("type")
-            pit_type = self.state.normalize_pit_type(requested_type)
+            pit_type = self.state.infer_runtime_pit_type(req.pit_type, card, default="Agent")
             provided_id = (req.agent_id or "").strip()
             provided_key = (req.api_key or "").strip()
             issued_new_identity = False
@@ -2479,6 +2568,12 @@ class PlazaRegisterPractice(PlazaEndpointPractice):
                 if self.state.plaza_url_for_store:
                     pit_address.register_plaza(self.state.plaza_url_for_store)
                 card["pit_address"] = pit_address.to_dict()
+                card = self.state.normalize_card_for_pit(
+                    card,
+                    pit_type,
+                    agent_name=req.agent_name,
+                    address=req.address,
+                )
                 self.state.agent_cards[agent_id] = card
                 self.state.pit_types[agent_id] = pit_type
                 self.state.agent_ids[req.agent_name] = agent_id
@@ -2587,9 +2682,9 @@ class PlazaAuthenticatePractice(PlazaEndpointPractice):
         super().__init__(
             state,
             "Plaza Authenticate",
-            "Authenticate Plaza bearer tokens.",
+            "Authenticate Plaza agent tokens or signed-in UI user tokens.",
             "authenticate",
-            examples=["POST /authenticate (Bearer token)"],
+            examples=["POST /authenticate (Bearer token for an agent or UI user)"],
             parameters={},
         )
 
@@ -2603,11 +2698,55 @@ class PlazaAuthenticatePractice(PlazaEndpointPractice):
             if self.state.is_starting:
                 raise HTTPException(status_code=503, detail="Starting")
             if creds is not None:
+                token = str(creds.credentials or "").strip()
+                agent_auth_error: Optional[HTTPException] = None
+                try:
+                    auth = self.state.verify_token(creds)
+                except HTTPException as exc:
+                    agent_auth_error = exc
+                else:
+                    return {
+                        "status": "authenticated",
+                        "subject_type": "agent",
+                        "auth_mode": "agent_token",
+                        "agent_name": auth.get("agent_name"),
+                        "agent_id": auth.get("agent_id"),
+                    }
+
+                if token and getattr(self, "agent", None) is not None:
+                    get_user = getattr(self.agent, "_get_supabase_user", None)
+                    sync_profile = getattr(self.agent, "_sync_ui_user_profile", None)
+                    if callable(get_user) and callable(sync_profile):
+                        try:
+                            user_payload = get_user(token)
+                            profile = sync_profile(user_payload)
+                            if profile.get("status") == "disabled":
+                                raise HTTPException(status_code=403, detail="This account is disabled")
+                        except HTTPException as exc:
+                            if exc.status_code == 403:
+                                raise
+                        else:
+                            return {
+                                "status": "authenticated",
+                                "subject_type": "user",
+                                "auth_mode": "ui_user",
+                                "user_id": profile.get("id"),
+                                "username": profile.get("username"),
+                                "email": profile.get("email"),
+                                "role": profile.get("role"),
+                                "user": profile,
+                            }
+
+                if agent_auth_error is not None:
+                    raise agent_auth_error
+
                 auth = self.state.verify_token(creds)
                 return {
                     "status": "authenticated",
+                    "subject_type": "agent",
+                    "auth_mode": "agent_token",
                     "agent_name": auth.get("agent_name"),
-                    "agent_id": auth.get("agent_id")
+                    "agent_id": auth.get("agent_id"),
                 }
 
             raise HTTPException(

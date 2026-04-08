@@ -3,10 +3,10 @@
   "agent_name": "Plaza",
   "practice_id": "authenticate",
   "practice_name": "Plaza Authenticate",
-  "practice_description": "Authenticate Plaza bearer tokens.",
+  "practice_description": "Authenticate Plaza agent tokens or signed-in UI user tokens.",
   "practice_data": {
     "name": "Plaza Authenticate",
-    "description": "Authenticate Plaza bearer tokens.",
+    "description": "Authenticate Plaza agent tokens or signed-in UI user tokens.",
     "id": "authenticate",
     "cost": 0,
     "tags": [
@@ -14,7 +14,7 @@
       "plaza"
     ],
     "examples": [
-      "POST /authenticate (Bearer token)"
+      "POST /authenticate (Bearer token for an agent or UI user)"
     ],
     "inputModes": [
       "http-post",
@@ -27,5 +27,5 @@
     "path": "/authenticate"
   },
   "is_deleted": false,
-  "updated_at": "2026-04-04T10:39:54.787966+00:00"
+  "updated_at": "2026-04-08T12:29:29.528821+00:00"
 }

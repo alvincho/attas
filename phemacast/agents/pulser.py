@@ -408,7 +408,7 @@ class Pulser(StandbyAgent):
             card=card,
             address=address,
             expires_in=expires_in,
-            pit_type=pit_type,
+            pit_type=pit_type or "Pulser",
             pit_id=pit_id,
             api_key=api_key,
             accepts_inbound_from_plaza=accepts_inbound_from_plaza,

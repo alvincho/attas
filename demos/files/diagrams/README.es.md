@@ -74,9 +74,9 @@ Estos diagramas se guardan con direcciones locales concretas para que puedan eje
 
 Los diagramas de indicadores asumen:
 
-- Plaza en `http://127.0.0.1:8011`
-- `YFinancePulser` en `http://127.0.0.1:8020`
-- `TechnicalAnalysisPulser` en `http://127.0.0.1:8033`
+- Plaza en `http://127.0.0.1:8241`
+- `YFinancePulser` en `http://127.0.0.1:8243`
+- `TechnicalAnalysisPulser` en `http://127.0.0.1:8244`
 
 Las configuraciones de pulser referenciadas por estos diagramas se encuentran en:
 

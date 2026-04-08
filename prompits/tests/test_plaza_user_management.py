@@ -526,6 +526,7 @@ def test_plaza_user_management_roles_and_permissions(plaza_client):
     assert "Role-based access for admin and user accounts" in resp.text
     assert 'id="agent-key-form"' in resp.text
     assert 'id="launch-owner-key"' in resp.text
+    assert "trusted_plaza_urls" in resp.text
 
     config_resp = client.get("/api/ui_auth/config")
     assert config_resp.status_code == 200
@@ -1031,6 +1032,33 @@ def test_plaza_oauth_redirect_and_callback_syncs_user(plaza_client):
     oauth_user = agent._find_ui_user_by_username("octocat")
     assert oauth_user is not None
     assert oauth_user["auth_provider"] == "google"
+
+
+def test_plaza_authenticate_accepts_ui_user_token(plaza_client):
+    """
+    Exercise the test_plaza_authenticate_accepts_ui_user_token regression
+    scenario.
+    """
+    client, _agent, _fake_auth = plaza_client
+    user, token = _signup_and_signin(
+        client,
+        username="token-user",
+        password="pw-token-user",
+        display_name="Token User",
+    )
+
+    response = client.post(
+        "/authenticate",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "authenticated"
+    assert payload["subject_type"] == "user"
+    assert payload["auth_mode"] == "ui_user"
+    assert payload["user_id"] == user["id"]
+    assert payload["username"] == "token-user"
 
 
 def test_profile_update_and_password_change(plaza_client):

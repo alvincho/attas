@@ -270,6 +270,20 @@ def test_personal_agent_source_exposes_managed_work_pane_sections():
     assert "renderOperatorConsole()" not in source
 
 
+def test_personal_agent_source_exposes_plaza_access_settings():
+    """
+    Exercise the
+    test_personal_agent_source_exposes_plaza_access_settings regression
+    scenario.
+    """
+    source = (Path(__file__).resolve().parents[1] / "personal_agent" / "static" / "personal_agent.jsx").read_text(encoding="utf-8")
+
+    assert 'id: "plaza_access"' in source
+    assert "Plaza Access" in source
+    assert "/api/plaza/auth/signin" in source
+    assert "/api/plaza/agent-keys" in source
+
+
 def test_personal_agent_normalize_plaza_url_strips_known_endpoint_suffixes():
     """
     Exercise the
@@ -301,6 +315,102 @@ def test_personal_agent_plaza_catalog_proxy_returns_normalized_payload():
     payload = response.json()
     assert payload["connected"] is True
     assert payload["pulser_count"] == 1
+
+
+def test_personal_agent_plaza_auth_config_proxy_returns_payload():
+    """
+    Exercise the
+    test_personal_agent_plaza_auth_config_proxy_returns_payload regression
+    scenario.
+    """
+    with patch("phemacast.personal_agent.app.fetch_plaza_auth_config", new=AsyncMock(return_value={
+        "status": "success",
+        "auth_enabled": True,
+        "oauth_providers": ["google", "github"],
+    })):
+        response = client.get("/api/plaza/auth/config", params={"plaza_url": "http://127.0.0.1:8011"})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["auth_enabled"] is True
+    assert payload["oauth_providers"] == ["google", "github"]
+
+
+def test_personal_agent_plaza_auth_signup_proxy_returns_user():
+    """
+    Exercise the
+    test_personal_agent_plaza_auth_signup_proxy_returns_user regression
+    scenario.
+    """
+    with patch("phemacast.personal_agent.app.run_plaza_auth_signup", new=AsyncMock(return_value={
+        "status": "success",
+        "user": {"id": "user-1", "username": "desk-user"},
+        "message": "Account created.",
+    })):
+        response = client.post(
+            "/api/plaza/auth/signup",
+            params={"plaza_url": "http://127.0.0.1:8011"},
+            json={"username": "desk-user", "password": "pw", "display_name": "Desk User"},
+        )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["user"]["id"] == "user-1"
+    assert payload["message"] == "Account created."
+
+
+def test_personal_agent_plaza_auth_me_proxy_forwards_authorization():
+    """
+    Exercise the
+    test_personal_agent_plaza_auth_me_proxy_forwards_authorization regression
+    scenario.
+    """
+
+    async def fake_fetch(plaza_url, authorization=""):
+        assert plaza_url == "http://127.0.0.1:8011"
+        assert authorization == "Bearer personal-agent-token"
+        return {
+            "status": "success",
+            "user": {"id": "user-1", "username": "desk-user"},
+        }
+
+    with patch("phemacast.personal_agent.app.fetch_plaza_auth_me", new=AsyncMock(side_effect=fake_fetch)):
+        response = client.get(
+            "/api/plaza/auth/me",
+            params={"plaza_url": "http://127.0.0.1:8011"},
+            headers={"Authorization": "Bearer personal-agent-token"},
+        )
+
+    assert response.status_code == 200
+    assert response.json()["user"]["username"] == "desk-user"
+
+
+def test_personal_agent_plaza_agent_key_proxy_forwards_authorization_and_payload():
+    """
+    Exercise the
+    test_personal_agent_plaza_agent_key_proxy_forwards_authorization_and_payload
+    regression scenario.
+    """
+
+    async def fake_create(plaza_url, payload, authorization=""):
+        assert plaza_url == "http://127.0.0.1:8011"
+        assert payload == {"name": "Desk Launcher"}
+        assert authorization == "Bearer personal-agent-token"
+        return {
+            "status": "success",
+            "agent_key": {"id": "key-1", "name": "Desk Launcher", "secret": "plaza_secret"},
+        }
+
+    with patch("phemacast.personal_agent.app.create_plaza_agent_key", new=AsyncMock(side_effect=fake_create)):
+        response = client.post(
+            "/api/plaza/agent-keys",
+            params={"plaza_url": "http://127.0.0.1:8011"},
+            headers={"Authorization": "Bearer personal-agent-token"},
+            json={"name": "Desk Launcher"},
+        )
+
+    assert response.status_code == 200
+    assert response.json()["agent_key"]["id"] == "key-1"
 
 
 def test_personal_agent_catalog_preserves_supported_pulse_sample_parameters():

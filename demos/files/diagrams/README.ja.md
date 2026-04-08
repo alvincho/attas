@@ -74,9 +74,9 @@
 
 インジケーター図面は以下を前提としています：
 
-- Plaza: `http://127.0.0.1:8011`
-- `YFinancePulser`: `http://127.0.0.1:8020`
-- `TechnicalAnalysisPulser`: `http://127.0.0.1:8033`
+- Plaza: `http://127.0.0.1:8241`
+- `YFinancePulser`: `http://127.0.0.1:8243`
+- `TechnicalAnalysisPulser`: `http://127.0.0.1:8244`
 
 これらの図面で参照されているpulser設定は以下にあります：
 

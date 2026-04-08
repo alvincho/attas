@@ -154,20 +154,24 @@ async def _request_json(
     service_url: str,
     path: str,
     *,
+    method: str = "",
     params: Optional[Dict[str, Any]] = None,
     json_body: Optional[Dict[str, Any]] = None,
+    headers: Optional[Dict[str, str]] = None,
     timeout: float = 30.0,
     action: str,
     error_cls: type[RemoteProxyError] = RemoteProxyError,
 ) -> Dict[str, Any]:
     """Request a proxied JSON payload from a remote service."""
+    normalized_method = str(method or "").strip().upper() or ("POST" if json_body is not None else "GET")
     try:
         async with _create_http_client() as client:
             response = await client.request(
-                "POST" if json_body is not None else "GET",
+                normalized_method,
                 f"{service_url}{path}",
                 params=params,
                 json=json_body,
+                headers=headers,
                 timeout=timeout,
             )
     except httpx.HTTPError as exc:
@@ -181,6 +185,12 @@ async def _request_json(
         data = {"status": "success"}
     data.setdefault("status", "success")
     return data
+
+
+def _authorization_headers(authorization: str = "") -> Dict[str, str]:
+    """Return optional authorization headers for proxied Plaza requests."""
+    normalized = str(authorization or "").strip()
+    return {"Authorization": normalized} if normalized else {}
 
 
 def _normalize_practice(entry: Any) -> Optional[Dict[str, Any]]:
@@ -449,6 +459,152 @@ async def fetch_plaza_catalog(plaza_url: str) -> Dict[str, Any]:
     return _normalize_catalog(data, normalized_url, catalog_pulses)
 
 
+async def fetch_plaza_auth_config(plaza_url: str) -> Dict[str, Any]:
+    """Fetch the remote Plaza auth configuration."""
+    normalized_url = normalize_plaza_url(plaza_url)
+    return await _request_json(
+        normalized_url,
+        "/api/ui_auth/config",
+        method="GET",
+        timeout=20.0,
+        action="Plaza auth config",
+        error_cls=PlazaProxyError,
+    )
+
+
+async def run_plaza_auth_signup(plaza_url: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+    """Create one Plaza UI user account through the Personal Agent proxy."""
+    normalized_url = normalize_plaza_url(plaza_url)
+    return await _request_json(
+        normalized_url,
+        "/api/ui_auth/signup",
+        method="POST",
+        json_body=payload,
+        timeout=20.0,
+        action="Plaza sign up",
+        error_cls=PlazaProxyError,
+    )
+
+
+async def run_plaza_auth_signin(plaza_url: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+    """Sign in to Plaza through the Personal Agent proxy."""
+    normalized_url = normalize_plaza_url(plaza_url)
+    return await _request_json(
+        normalized_url,
+        "/api/ui_auth/signin",
+        method="POST",
+        json_body=payload,
+        timeout=20.0,
+        action="Plaza sign in",
+        error_cls=PlazaProxyError,
+    )
+
+
+async def fetch_plaza_auth_me(plaza_url: str, authorization: str = "") -> Dict[str, Any]:
+    """Fetch the current signed-in Plaza UI user."""
+    normalized_url = normalize_plaza_url(plaza_url)
+    return await _request_json(
+        normalized_url,
+        "/api/ui_auth/me",
+        method="GET",
+        headers=_authorization_headers(authorization),
+        timeout=20.0,
+        action="Plaza current user",
+        error_cls=PlazaProxyError,
+    )
+
+
+async def run_plaza_auth_refresh(plaza_url: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+    """Refresh a Plaza UI auth session."""
+    normalized_url = normalize_plaza_url(plaza_url)
+    return await _request_json(
+        normalized_url,
+        "/api/ui_auth/refresh",
+        method="POST",
+        json_body=payload,
+        timeout=20.0,
+        action="Plaza session refresh",
+        error_cls=PlazaProxyError,
+    )
+
+
+async def run_plaza_auth_signout(plaza_url: str, authorization: str = "") -> Dict[str, Any]:
+    """Sign out from Plaza through the Personal Agent proxy."""
+    normalized_url = normalize_plaza_url(plaza_url)
+    return await _request_json(
+        normalized_url,
+        "/api/ui_auth/signout",
+        method="POST",
+        headers=_authorization_headers(authorization),
+        timeout=20.0,
+        action="Plaza sign out",
+        error_cls=PlazaProxyError,
+    )
+
+
+async def fetch_plaza_agent_keys(plaza_url: str, authorization: str = "") -> Dict[str, Any]:
+    """Fetch Plaza owner keys for the signed-in user."""
+    normalized_url = normalize_plaza_url(plaza_url)
+    return await _request_json(
+        normalized_url,
+        "/api/ui_agent_keys",
+        method="GET",
+        headers=_authorization_headers(authorization),
+        timeout=20.0,
+        action="Plaza agent keys",
+        error_cls=PlazaProxyError,
+    )
+
+
+async def create_plaza_agent_key(plaza_url: str, payload: Dict[str, Any], authorization: str = "") -> Dict[str, Any]:
+    """Create one Plaza owner key for the signed-in user."""
+    normalized_url = normalize_plaza_url(plaza_url)
+    return await _request_json(
+        normalized_url,
+        "/api/ui_agent_keys",
+        method="POST",
+        json_body=payload,
+        headers=_authorization_headers(authorization),
+        timeout=20.0,
+        action="Create Plaza agent key",
+        error_cls=PlazaProxyError,
+    )
+
+
+async def update_plaza_agent_key(
+    plaza_url: str,
+    key_id: str,
+    payload: Dict[str, Any],
+    authorization: str = "",
+) -> Dict[str, Any]:
+    """Update one Plaza owner key."""
+    normalized_url = normalize_plaza_url(plaza_url)
+    return await _request_json(
+        normalized_url,
+        f"/api/ui_agent_keys/{quote(str(key_id or '').strip(), safe='')}",
+        method="PATCH",
+        json_body=payload,
+        headers=_authorization_headers(authorization),
+        timeout=20.0,
+        action="Update Plaza agent key",
+        error_cls=PlazaProxyError,
+    )
+
+
+async def delete_plaza_agent_key(plaza_url: str, key_id: str, authorization: str = "") -> Dict[str, Any]:
+    """Delete one Plaza owner key."""
+    normalized_url = normalize_plaza_url(plaza_url)
+    return await _request_json(
+        normalized_url,
+        f"/api/ui_agent_keys/{quote(str(key_id or '').strip(), safe='')}",
+        method="DELETE",
+        headers=_authorization_headers(authorization),
+        timeout=20.0,
+        action="Delete Plaza agent key",
+        error_cls=PlazaProxyError,
+    )
+
+
 async def run_plaza_pulser_test(plaza_url: str, payload: Dict[str, Any]) -> Dict[str, Any]:
     """Run the Plaza pulser test."""
     normalized_url = normalize_plaza_url(plaza_url)
@@ -653,9 +809,19 @@ __all__ = [
     "fetch_managed_work_schedules",
     "fetch_managed_work_ticket_detail",
     "fetch_managed_work_tickets",
+    "fetch_plaza_agent_keys",
+    "fetch_plaza_auth_config",
+    "fetch_plaza_auth_me",
     "fetch_plaza_catalog",
     "normalize_boss_url",
     "normalize_plaza_url",
+    "create_plaza_agent_key",
+    "delete_plaza_agent_key",
     "run_managed_work_schedule_control",
+    "run_plaza_auth_refresh",
+    "run_plaza_auth_signin",
+    "run_plaza_auth_signout",
+    "run_plaza_auth_signup",
     "run_plaza_pulser_test",
+    "update_plaza_agent_key",
 ]
