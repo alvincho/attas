@@ -154,6 +154,8 @@ def relative_link(_from_path: Path, to_path: Path) -> str:
 def strip_generated_sections(text: str) -> str:
     lines = text.splitlines(keepends=True)
     output: list[str] = []
+    translation_heading_lines = {f"## {heading}" for heading in TRANSLATIONS_HEADING.values()}
+    translation_heading_lines.update({"## Language Availability", "## Translations"})
     i = 0
     while i < len(lines):
         line = lines[i]
@@ -171,9 +173,13 @@ def strip_generated_sections(text: str) -> str:
                     continue
                 break
             continue
-        if line.startswith("## Language Availability") or line.startswith("## Translations"):
+        if line.rstrip("\n") in translation_heading_lines:
             i += 1
-            while i < len(lines) and not lines[i].startswith("## "):
+            while i < len(lines) and lines[i].strip() == "":
+                i += 1
+            while i < len(lines) and lines[i].lstrip().startswith("- ["):
+                i += 1
+            while i < len(lines) and lines[i].strip() == "":
                 i += 1
             continue
         output.append(line)

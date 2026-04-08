@@ -12,6 +12,8 @@
 - [日本語](README.ja.md)
 - [한국어](README.ko.md)
 
+L’objectif de `attas` est de soutenir un réseau mondial de professionnels de la finance connectés. Chaque participant peut exploiter son propre agent, partager son expertise via cet agent et protéger sa propriété intellectuelle. Dans ce modèle, les prompts privés, la logique de workflow, les algorithmes et les autres méthodes internes restent à l’intérieur de l’agent du propriétaire. Les autres participants consomment les résultats et les services produits, au lieu de recevoir directement la logique sous-jacente.
+
 ## État
 
 Ce dépôt est en cours de développement actif et continue d'évoluer. Les API, les formats de configuration et les flux d'exemples peuvent changer à mesure que les projets sont divisés, stabilisés ou emballés de manière plus formelle.
@@ -29,6 +31,60 @@ Le dépôt public est destiné à :
 - l'exploration de l'architecture
 
 Il ne s'agit pas encore d'un produit fini prêt à l'emploi ou d'un déploiement de production en une seule commande.
+
+## Où se situe `attas` pour les développeurs
+
+Ce dépôt comporte trois couches produit :
+
+- `prompits` est la couche générique de runtime multi-agent et de coordination Plaza.
+- `phemacast` est la couche réutilisable de collaboration de contenu construite sur `prompits`.
+- `attas` est la couche d’application financière construite au-dessus des deux.
+
+Pour les développeurs, `attas` est l’endroit où doit vivre le travail spécifique à la finance. Cela comprend notamment :
+
+- les définitions, mappings, catalogues et exemples de validation de `Pulse` financiers
+- les configurations d’agents orientées finance, les flux d’agents personnels et l’orchestration de workflows
+- les briefings, modèles de rapport et comportements produit pour les analystes, les équipes de trésorerie et les workflows d’investissement
+- le branding, les valeurs par défaut et les concepts orientés utilisateur propres à la finance
+
+Si un changement est réutilisable pour la collaboration de contenu en général, il relève probablement de `phemacast`. S’il s’agit d’infrastructure multi-agent générique, il relève probablement de `prompits`. Évitez de résoudre la réutilisation en important `attas` dans ces couches inférieures.
+
+![attas-3-layers-diagram-1.png](static/images/attas-3-layers-diagram-1.png)
+
+## Où se situe `phemacast` pour les développeurs
+
+`phemacast` est la couche réutilisable de collaboration de contenu entre `prompits` et `attas`. Elle transforme des entrées dynamiques en sorties de contenu structurées à l’aide d’un petit ensemble de concepts de pipeline :
+
+- `Pulse` : une charge utile d’entrée dynamique ou un instantané de données utilisé pendant la génération de contenu. Dans `phemacast`, un pulse est la donnée qui remplit une liaison, une section ou un emplacement de template.
+- `Pulser` : un agent qui récupère, calcule ou expose des données de pulse. Un pulser annonce les pulses qu’il peut servir et expose des endpoints de practice comme `get_pulse_data`.
+- `Phema` : un plan de contenu structuré. Il décrit ce qui doit être produit, comment la sortie est organisée et quelles liaisons de pulse sont requises.
+- `Phemar` : un agent qui résout un `Phema` en charge utile statique en collectant des données de pulse auprès des pulsers et en les intégrant à la structure du `Phema`.
+
+Le flux habituel de `phemacast` est le suivant :
+
+1. Un créateur définit ou sélectionne un `Phema`.
+2. Un `Pulser` fournit les entrées de pulse requises pour ce `Phema`.
+3. Un `Phemar` intègre ces valeurs de pulse dans le plan et produit un résultat structuré.
+4. Un `Castr` ou un moteur de rendu en aval convertit ce résultat en markdown, JSON, texte, pages, diapositives ou autres formats destinés au public.
+
+Pour les développeurs, `phemacast` est la bonne couche pour les workflows de contenu réutilisables pilotés par pulse, la logique de rendu partagée, la cartographie de contenu pilotée par diagrammes et les agents de contenu non spécifiques à la finance. Si un concept est spécifique aux contrats de données financières, aux catalogues financiers ou au comportement produit financier, il doit rester dans `attas`.
+
+## Concepts fondamentaux du runtime
+
+Le modèle multi-agent de niveau inférieur vit dans `prompits` et est réutilisé par `phemacast` et `attas`.
+
+- `Pit` : la plus petite unité d’identité. Il porte des métadonnées telles que le nom, la description et les informations d’adresse. En pratique, les agents de runtime partagent ce modèle d’identité.
+- `Practice` : une capacité montée sur un agent. Une practice peut exposer des routes HTTP, prendre en charge une exécution locale et publier des métadonnées pour la découverte.
+- `Pool` : la frontière de persistance d’un agent. Les pools stockent des éléments comme les identifiants Plaza, les métadonnées de practices découvertes, la mémoire locale et d’autres états persistants du runtime.
+- `Plaza` : le plan de coordination. Les agents s’enregistrent auprès de Plaza, reçoivent et renouvellent leurs identifiants, publient des cartes consultables, envoient des heartbeats, découvrent leurs pairs et relaient des messages.
+
+Les connexions entre agents fonctionnent généralement ainsi :
+
+1. Un agent démarre avec un ou plusieurs pools et monte ses practices.
+2. S’il ne s’agit pas de Plaza lui-même, il s’enregistre auprès de Plaza et reçoit un `agent_id` stable, une `api_key` persistante et un bearer token de courte durée.
+3. L’agent stocke ces identifiants dans son pool principal et apparaît dans l’annuaire consultable de Plaza.
+4. Les autres agents le trouvent via la recherche Plaza selon des champs tels que le nom, le rôle ou la practice annoncée.
+5. Les agents communiquent ensuite soit en envoyant des messages via le relay de Plaza et des endpoints de type boîte aux lettres, soit en invoquant directement une practice distante avec vérification de l’appelant.
 
 ## Démarrage rapide d'un nouveau clone
 
@@ -133,7 +189,7 @@ Notes sur la politique :
 
 ## Structure du dépôt
 ```text
-attas/       Finance-oriented agent, pulse, and personal-agent work
+attas/       Couche d’application financière : catalogues de Pulse, briefings, flux d’agents personnels et configurations orientées finance
 ads/         Data-service agents, workers, and normalized dataset pipelines
 docs/        Project notes and architecture documents
 deploy/      Deployment helpers
@@ -146,7 +202,8 @@ tests/       Cross-project tests and fixtures
 
 ## Orientation
 
-- Commencez par `prompts/README.md` pour le modèle d'exécution principal.
+- Commencez par `prompits/README.md` pour le modèle d'exécution principal.
+- Lisez `docs/CONCEPTS_AND_CLASSES.md` pour les détails sur `Pit`, `Practice`, `Pool`, `Plaza` et le flux distant entre agents.
 - Lisez `phemacast/README.md` pour la couche de pipeline de contenu.
 - Lisez `attas/README.md` pour le cadrage du réseau financier et les concepts de haut niveau.
 - Lisez `ads/README.md` pour les composants du service de données.

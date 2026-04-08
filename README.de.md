@@ -12,6 +12,8 @@
 - [日本語](README.ja.md)
 - [한국어](README.ko.md)
 
+Das Ziel von `attas` ist es, ein weltweites Netzwerk vernetzter Finanzfachleute zu unterstützen. Jeder Teilnehmer kann seinen eigenen Agenten betreiben, Fachwissen über diesen Agenten teilen und dabei sein geistiges Eigentum schützen. In diesem Modell bleiben private Prompts, Workflow-Logik, Algorithmen und andere interne Methoden im Agenten des Eigentümers. Andere Teilnehmer nutzen die daraus entstehenden Ergebnisse und Dienste, anstatt die zugrunde liegende Logik direkt zu erhalten.
+
 ## Status
 
 Dieses Repository wird aktiv entwickelt und befindet sich noch in der Entwicklung. APIs, Konfigurationsformate und Beispielabläufe können sich ändern, wenn die Projekte aufgeteilt, stabilisiert oder formeller verpackt werden.
@@ -29,6 +31,60 @@ Das öffentliche Repository ist gedacht für:
 - Architektur-Exploration
 
 Es ist noch kein fertiges Produkt oder eine Produktionsbereitstellung mit nur einem Befehl.
+
+## Wo `attas` für Entwickler einzuordnen ist
+
+Dieses Repository hat drei Produktebenen:
+
+- `prompits` ist die generische Multi-Agent-Runtime und die Plaza-Koordinationsschicht.
+- `phemacast` ist die wiederverwendbare Content-Collaboration-Schicht auf Basis von `prompits`.
+- `attas` ist die Finanzanwendungs-Schicht, die auf beiden aufbaut.
+
+Für Entwickler ist `attas` der Ort für finanzspezifische Arbeit. Dazu gehören:
+
+- finanzielle `Pulse`-Definitionen, Zuordnungen, Kataloge und Validierungsbeispiele
+- finanzorientierte Agentenkonfigurationen, Personal-Agent-Flows und Workflow-Orchestrierung
+- Briefings, Berichtsvorlagen und Produktverhalten für Analysten, Treasury-Teams und Investment-Workflows
+- finanzspezifisches Branding, Standardwerte und nutzerseitige Konzepte
+
+Wenn eine Änderung für allgemeine Content-Collaboration wiederverwendbar ist, gehört sie wahrscheinlich zu `phemacast`. Wenn sie generische Multi-Agent-Infrastruktur betrifft, gehört sie wahrscheinlich zu `prompits`. Vermeiden Sie es, Wiederverwendung dadurch zu lösen, dass `attas` in niedrigere Schichten importiert wird.
+
+![attas-3-layers-diagram-1.png](static/images/attas-3-layers-diagram-1.png)
+
+## Wo `phemacast` für Entwickler einzuordnen ist
+
+`phemacast` ist die wiederverwendbare Content-Collaboration-Schicht zwischen `prompits` und `attas`. Sie verwandelt dynamische Eingaben mithilfe einiger Pipeline-Konzepte in strukturierte Inhalte:
+
+- `Pulse`: eine dynamische Eingabe-Payload oder ein Datenschnappschuss, der während der Content-Erzeugung verwendet wird. In `phemacast` ist ein Pulse die Daten, die ein Binding, einen Abschnitt oder einen Template-Slot füllen.
+- `Pulser`: ein Agent, der Pulse-Daten abruft, berechnet oder bereitstellt. Ein Pulser kündigt die Pulse an, die er liefern kann, und stellt Practice-Endpunkte wie `get_pulse_data` bereit.
+- `Phema`: ein strukturierter Content-Blueprint. Er beschreibt, was erzeugt werden soll, wie die Ausgabe organisiert ist und welche Pulse-Bindings erforderlich sind.
+- `Phemar`: ein Agent, der ein `Phema` in eine statische Payload auflöst, indem er Pulse-Daten von Pulsern sammelt und diese Daten in die `Phema`-Struktur einbindet.
+
+Der typische `phemacast`-Ablauf ist:
+
+1. Ein Ersteller definiert oder wählt ein `Phema`.
+2. Ein `Pulser` stellt die für dieses `Phema` erforderlichen Pulse-Eingaben bereit.
+3. Ein `Phemar` bindet diese Pulse-Werte in den Blueprint ein und erzeugt ein strukturiertes Ergebnis.
+4. Ein `Castr` oder ein nachgelagerter Renderer wandelt dieses Ergebnis in Markdown, JSON, Text, Seiten, Folien oder andere zielgruppenorientierte Formate um.
+
+Für Entwickler ist `phemacast` die richtige Ebene für wiederverwendbare, Pulse-gesteuerte Content-Workflows, gemeinsame Rendering-Logik, diagrammgestützte Content-Abbildung und nicht finanzspezifische Content-Agenten. Wenn ein Konzept spezifisch für Finanzdatenverträge, Finanzkataloge oder Finanzproduktverhalten ist, sollte es in `attas` bleiben.
+
+## Kernkonzepte der Laufzeit
+
+Das zugrunde liegende Multi-Agenten-Modell lebt in `prompits` und wird von `phemacast` und `attas` wiederverwendet.
+
+- `Pit`: die kleinste Identitätseinheit. Sie trägt Metadaten wie Name, Beschreibung und Adressinformationen. In der Praxis teilen sich Laufzeit-Agenten dieses Identitätsmodell.
+- `Practice`: eine einem Agenten zugewiesene Fähigkeit. Eine Practice kann HTTP-Routen bereitstellen, lokale Ausführung unterstützen und Metadaten zur Entdeckung veröffentlichen.
+- `Pool`: die Persistenzgrenze eines Agenten. Pools speichern Dinge wie Plaza-Anmeldedaten, entdeckte Practice-Metadaten, lokalen Speicher und andere dauerhafte Laufzeit-Zustände.
+- `Plaza`: die Koordinationsschicht. Agenten registrieren sich bei Plaza, erhalten und erneuern Anmeldedaten, veröffentlichen durchsuchbare Karten, senden Heartbeats, entdecken Peers und leiten Nachrichten weiter.
+
+Agent-zu-Agent-Verbindungen funktionieren normalerweise so:
+
+1. Ein Agent startet mit einem oder mehreren Pools und bindet seine Practices ein.
+2. Wenn er nicht Plaza selbst ist, registriert er sich bei Plaza und erhält eine stabile `agent_id`, einen persistenten `api_key` und ein kurzlebiges Bearer-Token.
+3. Der Agent speichert diese Anmeldedaten in seinem primären Pool und erscheint im durchsuchbaren Verzeichnis von Plaza.
+4. Andere Agenten finden ihn über die Plaza-Suche anhand von Feldern wie Name, Rolle oder angebotener Practice.
+5. Agenten kommunizieren dann entweder durch das Senden von Nachrichten über Plaza-Relay- und Postfach-Endpunkte oder durch das direkte Aufrufen einer Remote-Practice mit Aufruferverifizierung.
 
 ## Schneller Start mit einem frischen Clone
 
@@ -133,7 +189,7 @@ Richtlinienhinweise:
 
 ## Repository-Struktur
 ```text
-attas/       Finance-oriented agent, pulse, and personal-agent work
+attas/       Finanzanwendungs-Schicht: Pulse-Kataloge, Briefings, Personal-Agent-Flows und finanzorientierte Konfigurationen
 ads/         Data-service agents, workers, and normalized dataset pipelines
 docs/        Project notes and architecture documents
 deploy/      Deployment helpers
@@ -146,7 +202,8 @@ tests/       Cross-project tests and fixtures
 
 ## Orientierung
 
-- Beginnen Sie mit `prompts/README.md` für das Kern-Runtime-Modell.
+- Beginnen Sie mit `prompits/README.md` für das Kern-Runtime-Modell.
+- Lesen Sie `docs/CONCEPTS_AND_CLASSES.md` für Details zu `Pit`, `Practice`, `Pool`, `Plaza` und dem Remote-Agent-Flow.
 - Lesen Sie `phemacast/README.md` für die Content-Pipeline-Ebene.
 - Lesen Sie `attas/README.md` für das Finance-Network-Framing und übergeordnete Konzepte.
 - Lesen Sie `ads/README.md` für die Data-Service-Komponenten.

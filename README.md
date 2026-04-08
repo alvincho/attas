@@ -12,6 +12,14 @@
 - [日本語](README.ja.md)
 - [한국어](README.ko.md)
 
+The goal of `attas` is to support a world-wide network of connected financial
+professionals. Each participant can operate their own agent, share expertise
+through that agent, and still protect their intellectual property. In that
+model, the private prompts, workflow logic, algorithms, and other internal
+methods remain inside the owner's agent. Other participants consume the
+resulting outputs and services, rather than receiving the underlying logic
+directly.
+
 ## Status
 
 This repository is actively developed and still evolving. APIs, config formats, and
@@ -32,6 +40,94 @@ The public repo is meant for:
 - architecture exploration
 
 It is not yet a polished turnkey product or a one-command production deployment.
+
+
+## Where `attas` Fits For Developers
+
+This repository has three product layers:
+
+- `prompits` is the generic multi-agent runtime and Plaza coordination layer.
+- `phemacast` is the reusable content-collaboration layer built on `prompits`.
+- `attas` is the finance application layer built on top of both.
+
+For developers, `attas` is where finance-specific work should live. It owns things
+like:
+
+- financial `Pulse` definitions, mappings, catalogs, and validation examples
+- finance-oriented agent configs, personal-agent flows, and workflow orchestration
+- briefings, report templates, and product behavior for analysts, treasury teams,
+  and investment workflows
+- finance-specific branding, defaults, and user-facing concepts
+
+
+If a change is reusable for content collaboration in general, it likely belongs in
+`phemacast`. If it is generic multi-agent infrastructure, it likely belongs in
+`prompits`. Avoid solving reuse by importing `attas` into those lower layers.
+
+![attas-3-layers-diagram-1.png](static/images/attas-3-layers-diagram-1.png)
+
+## Where `phemacast` Fits For Developers
+
+`phemacast` is the reusable content-collaboration layer between `prompits` and
+`attas`. It turns dynamic inputs into structured content outputs through a small
+set of pipeline concepts:
+
+- `Pulse`: a dynamic input payload or data snapshot used during content
+  generation. In `phemacast`, a pulse is the data that fills a binding, section,
+  or template slot.
+- `Pulser`: an agent that fetches, computes, or exposes pulse data. A pulser
+  advertises the pulses it can serve and exposes practice endpoints such as
+  `get_pulse_data`.
+- `Phema`: a structured content blueprint. It describes what should be produced,
+  how the output is organized, and which pulse bindings are required.
+- `Phemar`: an agent that resolves a `Phema` into a static payload by collecting
+  pulse data from pulsers and binding that data into the `Phema` structure.
+
+The usual `phemacast` flow is:
+
+1. A creator defines or selects a `Phema`.
+2. A `Pulser` provides the pulse inputs required by that `Phema`.
+3. A `Phemar` binds those pulse values into the blueprint and produces a
+   structured result.
+4. A `Castr` or downstream renderer turns that result into markdown, JSON, text,
+   pages, slides, or other audience-facing formats.
+
+For developers, `phemacast` is the right layer for reusable pulse-driven content
+workflows, shared rendering logic, diagram-backed content mapping, and
+non-finance-specific content agents. If the concept is specific to financial data
+contracts, finance catalogs, or finance product behavior, keep it in `attas`
+instead.
+
+
+## Core Runtime Concepts
+
+The lower-level multi-agent model lives in `prompits` and is reused by
+`phemacast` and `attas`.
+
+- `Pit`: the smallest identity unit. It carries metadata such as name,
+  description, and address information. In practice, runtime agents share this
+  identity model.
+- `Practice`: a capability mounted onto an agent. A practice can expose HTTP
+  routes, support local execution, and publish metadata for discovery.
+- `Pool`: the persistence boundary for an agent. Pools store things like Plaza
+  credentials, discovered practice metadata, local memory, and other durable
+  runtime state.
+- `Plaza`: the coordination plane. Agents register with Plaza, receive and renew
+  credentials, publish searchable cards, send heartbeats, discover peers, and
+  relay messages.
+
+Agent-to-agent connections usually work like this:
+
+1. An agent starts with one or more pools and mounts its practices.
+2. If it is not Plaza itself, it registers with Plaza and receives a stable
+   `agent_id`, a persistent `api_key`, and a short-lived bearer token.
+3. The agent stores those credentials in its primary pool and appears in Plaza's
+   searchable directory.
+4. Other agents find it through Plaza search by fields such as name, role, or
+   advertised practice.
+5. Agents then communicate either by sending messages through Plaza relay and
+   mailbox-style endpoints, or by invoking a remote practice directly with
+   caller verification.
 
 ## Fresh Clone Quickstart
 
@@ -157,7 +253,7 @@ Policy notes:
 ## Repository Layout
 
 ```text
-attas/       Finance-oriented agent, pulse, and personal-agent work
+attas/       Finance application layer: Pulse catalogs, briefings, personal-agent flows, and finance-oriented configs
 ads/         Data-service agents, workers, and normalized dataset pipelines
 docs/        Project notes and architecture documents
 deploy/      Deployment helpers
@@ -171,6 +267,8 @@ tests/       Cross-project tests and fixtures
 ## Getting Oriented
 
 - Start with `prompits/README.md` for the core runtime model.
+- Read `docs/CONCEPTS_AND_CLASSES.md` for `Pit`, `Practice`, `Pool`, `Plaza`,
+  and remote agent-flow details.
 - Read `phemacast/README.md` for the content pipeline layer.
 - Read `attas/README.md` for the finance-network framing and higher-level concepts.
 - Read `ads/README.md` for the data-service components.

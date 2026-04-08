@@ -12,6 +12,8 @@
 - [日本語](README.ja.md)
 - [한국어](README.ko.md)
 
+`attas` 的目標是支持一個由全球金融專業人士組成的互聯網絡。每個參與者都可以運行自己的代理，透過該代理分享專業知識，同時保護自己的知識產權。在這種模式下，私有提示詞、工作流邏輯、演算法以及其他內部方法都保留在所有者的代理內部。其他參與者使用的是產生的輸出與服務，而不是直接取得底層邏輯。
+
 ## 狀態
 
 此儲存庫正在積極開發中，且仍在不斷演進。隨著專案進行拆分、穩定化或更正式的封裝，API、配置格式和範例流程可能會發生變化。
@@ -29,6 +31,60 @@
 - 架構探索
 
 它目前還不是一個完善的開箱即用產品，也不是一個只需單一指令即可進行的生產環境部署。
+
+## `attas` 對開發者的定位
+
+此儲存庫包含三個產品層：
+
+- `prompits` 是通用的多代理執行環境與 Plaza 協調層。
+- `phemacast` 是建立在 `prompits` 之上的可重複使用內容協作層。
+- `attas` 是建立在這兩層之上的金融應用層。
+
+對於開發者而言，`attas` 是金融特定工作應該放置的地方，包含例如：
+
+- 金融 `Pulse` 定義、映射、目錄與驗證範例
+- 面向金融的代理配置、個人代理流程與工作流編排
+- 面向分析師、司庫團隊與投資工作流的簡報、報告模板與產品行為
+- 金融特定的品牌、預設值與面向使用者的概念
+
+如果某項變更對一般內容協作具有重複使用價值，它很可能屬於 `phemacast`。如果它是通用的多代理基礎設施，它很可能屬於 `prompits`。不要透過把 `attas` 匯入這些下層來解決重複使用問題。
+
+![attas-3-layers-diagram-1.png](static/images/attas-3-layers-diagram-1.png)
+
+## `phemacast` 對開發者的定位
+
+`phemacast` 是位於 `prompits` 與 `attas` 之間的可重複使用內容協作層。它透過一組精簡的流水線概念，把動態輸入轉換為結構化內容輸出：
+
+- `Pulse`：內容生成過程中使用的動態輸入負載或數據快照。在 `phemacast` 中，它是填充綁定、章節或模板槽位的數據。
+- `Pulser`：負責取得、計算或公開 pulse 數據的代理。一個 pulser 會宣告它可以提供的 pulses，並公開如 `get_pulse_data` 這樣的 practice endpoint。
+- `Phema`：結構化內容藍圖。它描述要產出什麼、輸出如何組織，以及需要哪些 pulse 綁定。
+- `Phemar`：透過從 pulsers 收集 pulse 數據並將數據綁定到 `Phema` 結構中，把 `Phema` 解析為靜態負載的代理。
+
+典型的 `phemacast` 流程如下：
+
+1. 創作者定義或選擇一個 `Phema`。
+2. `Pulser` 提供該 `Phema` 所需的 pulse 輸入。
+3. `Phemar` 將這些 pulse 值綁定到藍圖中並生成結構化結果。
+4. `Castr` 或下游渲染器把該結果轉換為 markdown、JSON、文字、頁面、投影片或其他面向受眾的格式。
+
+對於開發者而言，`phemacast` 適合承載可重複使用的 pulse 驅動內容工作流、共享渲染邏輯、基於圖表的內容映射以及非金融特定內容代理。如果某個概念特定於金融數據契約、金融目錄或金融產品行為，請將其保留在 `attas` 中。
+
+## 核心執行時概念
+
+底層多代理模型位於 `prompits` 中，並由 `phemacast` 和 `attas` 重複使用。
+
+- `Pit`：最小的身份單元。它攜帶名稱、描述與地址資訊等元數據。在實務上，執行時代理共享這一身份模型。
+- `Practice`：掛載到代理上的能力。一個 practice 可以暴露 HTTP 路由、支援本地執行，並發布用於發現的元數據。
+- `Pool`：代理的持久化邊界。Pool 儲存 Plaza 憑證、已發現的 practice 元數據、本地記憶以及其他持久化執行時狀態。
+- `Plaza`：協調平面。代理向 Plaza 註冊、接收並續訂憑證、發布可搜尋卡片、發送 heartbeat、發現同儕並中繼訊息。
+
+代理之間的連接通常這樣運作：
+
+1. 代理從一個或多個 pool 開始運行，並掛載自己的 practices。
+2. 如果它本身不是 Plaza，它會向 Plaza 註冊，並獲得穩定的 `agent_id`、持久的 `api_key` 與短期 bearer token。
+3. 代理將這些憑證儲存在主 pool 中，並出現在 Plaza 的可搜尋目錄裡。
+4. 其他代理透過 Plaza 搜尋，按照名稱、角色或公開的 practice 等欄位找到它。
+5. 接著，代理可以透過 Plaza relay 與 mailbox 風格 endpoint 傳送訊息，或在呼叫方驗證通過後直接調用遠端 practice。
 
 ## 全新 Clone 快速入門
 
@@ -133,7 +189,7 @@ Prompits 現在支援針對遠端 `UsePractice(...)` 呼叫的輕量化跨代理
 
 ## 儲存庫佈局
 ```text
-attas/       Finance-oriented agent, pulse, and personal-agent work
+attas/       金融應用層：Pulse 目錄、簡報、個人代理流程以及面向金融的配置
 ads/         Data-service agents, workers, and normalized dataset pipelines
 docs/        Project notes and architecture documents
 deploy/      Deployment helpers
@@ -147,6 +203,7 @@ tests/       Cross-project tests and fixtures
 ## 入門指南
 
 - 從 `prompits/README.md` 開始了解核心執行模型。
+- 閱讀 `docs/CONCEPTS_AND_CLASSES.md` 以了解 `Pit`、`Practice`、`Pool`、`Plaza` 以及遠端代理流程的細節。
 - 閱讀 `phemacast/README.md` 以了解內容流水線層。
 - 閱讀 `attas/README.md` 以了解金融網路框架與高階概念。
 - 閱讀 `ads/README.md` 以了解數據服務組件。
