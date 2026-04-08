@@ -93,6 +93,38 @@ def test_all_registry_services_expect_plaza_health_identity():
             assert service.expected_agent == "Plaza"
 
 
+def test_all_supported_demos_have_windows_batch_wrappers():
+    """Every supported demo should ship a Windows batch launcher next to its README."""
+    for demo_id in demo_launcher.available_demo_ids():
+        spec = demo_launcher.resolve_demo_spec(demo_id, {})
+        wrapper_path = Path(spec.readme_path).resolve().parent / "run_demo.bat"
+
+        assert wrapper_path.exists(), f"missing Windows wrapper for {demo_id}"
+
+        content = wrapper_path.read_text(encoding="utf-8")
+        assert "@echo off" in content
+        assert "setlocal" in content
+        assert "pushd" in content
+        assert "where py >nul 2>&1" in content
+        assert "py -3 -m scripts.demo_launcher" in content
+        assert "python -m scripts.demo_launcher" in content
+        assert f"scripts.demo_launcher {demo_id} %*" in content
+        if "demos/pulsers/" in spec.readme_path.replace("\\", "/"):
+            assert r"%~dp0..\..\.." in content
+        else:
+            assert r"%~dp0..\.." in content
+
+
+def test_registry_services_expose_plaza_ui_links_on_guide_pages():
+    """Registry-backed demos should expose the Plaza root URL in both services and page links."""
+    spec = demo_launcher.resolve_demo_spec("hello-plaza", {})
+
+    registry_services = [service for service in spec.services if service.kind == "registry"]
+    assert registry_services
+    assert registry_services[0].ui_url == "http://127.0.0.1:8211/"
+    assert any(page.label == "Plaza UI" and page.url == "http://127.0.0.1:8211/" for page in spec.browser_pages)
+
+
 def test_main_page_html_contains_languages_and_status_routes():
     """The guide page should embed every requested language option and the live status endpoints."""
     spec = demo_launcher.resolve_demo_spec("hello-plaza", {})
@@ -107,6 +139,8 @@ def test_main_page_html_contains_languages_and_status_routes():
     assert 'class="meta-link"' in html
     assert "renderMetaValue(service.healthUrl, { preferLink: true })" in html
     assert "renderMetaValue(page.url, { preferLink: true })" in html
+    assert "Plaza UI" in html
+    assert "http://127.0.0.1:8211/" in html
 
 
 def test_full_readme_html_renders_source_path_and_title():

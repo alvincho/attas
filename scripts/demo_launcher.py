@@ -20,7 +20,7 @@ import sys
 import threading
 import time
 import webbrowser
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime, timezone
 from html import escape
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -686,6 +686,55 @@ def _browser_host(host: str) -> str:
     if normalized in {"0.0.0.0", "::", "[::]"}:
         return "127.0.0.1"
     return normalized or "127.0.0.1"
+
+
+def _registry_ui_url_from_health_url(health_url: str) -> str:
+    """Return the registry UI URL for one health endpoint when possible."""
+    normalized = str(health_url or "").strip()
+    if not normalized:
+        return ""
+    parsed = urlparse(normalized)
+    if not parsed.scheme or not parsed.netloc:
+        return ""
+    path = parsed.path or "/"
+    if path.endswith("/health"):
+        path = path[: -len("/health")] or "/"
+    if not path.endswith("/"):
+        path += "/"
+    return parsed._replace(path=path, params="", query="", fragment="").geturl()
+
+
+def _with_registry_ui_links(spec: DemoSpec) -> DemoSpec:
+    """Augment one demo spec with derived Plaza UI links for registry services."""
+    updated_services: list[ServiceSpec] = []
+    registry_services: list[ServiceSpec] = []
+    for service in spec.services:
+        if service.kind == "registry" and not service.ui_url:
+            ui_url = _registry_ui_url_from_health_url(service.health_url)
+            if ui_url:
+                service = replace(service, ui_url=ui_url)
+        updated_services.append(service)
+        if service.kind == "registry" and service.ui_url:
+            registry_services.append(service)
+
+    pages = list(spec.browser_pages)
+    existing_urls = {page.url for page in pages}
+    multiple_registries = len(registry_services) > 1
+    for service in registry_services:
+        if service.ui_url in existing_urls:
+            continue
+        label = f"{service.name} UI" if multiple_registries else "Plaza UI"
+        pages.append(
+            BrowserPage(
+                label=label,
+                url=service.ui_url,
+                description="Open the local Plaza registry UI for browsing registered services.",
+                auto_open=False,
+            )
+        )
+        existing_urls.add(service.ui_url)
+
+    return replace(spec, services=tuple(updated_services), browser_pages=tuple(pages))
 
 
 def _summary(text: dict[str, str], fallback: str = "") -> dict[str, str]:
@@ -1419,24 +1468,27 @@ def resolve_demo_spec(demo_id: str, env: dict[str, str] | None = None) -> DemoSp
     """Resolve one demo ID into a concrete manifest."""
     normalized = _safe_slug(demo_id)
     runtime_env = dict(env or os.environ)
+    spec: DemoSpec | None = None
     if normalized == "hello-plaza":
-        return _hello_plaza_spec()
-    if normalized == "data-pipeline":
-        return _data_pipeline_spec()
-    if normalized == "personal-research-workbench":
-        return _personal_research_spec(runtime_env)
-    if normalized == "file-storage":
-        return _file_storage_spec()
-    if normalized == "yfinance":
-        return _yfinance_spec()
-    if normalized == "llm":
-        return _llm_spec(runtime_env)
-    if normalized == "analyst-insights":
-        return _analyst_spec(runtime_env)
-    if normalized == "finance-briefings":
-        return _finance_briefings_spec()
-    if normalized == "ads":
-        return _ads_pulser_spec()
+        spec = _hello_plaza_spec()
+    elif normalized == "data-pipeline":
+        spec = _data_pipeline_spec()
+    elif normalized == "personal-research-workbench":
+        spec = _personal_research_spec(runtime_env)
+    elif normalized == "file-storage":
+        spec = _file_storage_spec()
+    elif normalized == "yfinance":
+        spec = _yfinance_spec()
+    elif normalized == "llm":
+        spec = _llm_spec(runtime_env)
+    elif normalized == "analyst-insights":
+        spec = _analyst_spec(runtime_env)
+    elif normalized == "finance-briefings":
+        spec = _finance_briefings_spec()
+    elif normalized == "ads":
+        spec = _ads_pulser_spec()
+    if spec is not None:
+        return _with_registry_ui_links(spec)
     raise ValueError(f"Unknown demo '{demo_id}'. Supported demos: {', '.join(available_demo_ids())}")
 
 
