@@ -331,7 +331,7 @@ def test_phemar_enforces_owner_checks_for_plaza_edit_and_deregister(tmp_path):
     with patch.object(agent, "_search_directory", side_effect=fake_search_directory), patch.object(
         agent,
         "_plaza_post",
-        return_value=FakeResponse({"status": "success", "phema": owned_remote["card"]}),
+        return_value=FakeResponse({"status": "success", "entry": owned_remote}),
     ) as mocked_post, patch.object(
         agent,
         "_plaza_request",
@@ -372,7 +372,8 @@ def test_phemar_enforces_owner_checks_for_plaza_edit_and_deregister(tmp_path):
             )
             assert allowed_update.status_code == 200
             assert mocked_post.called
-            sent_payload = mocked_post.call_args.kwargs["json"]["phema"]
+            assert mocked_post.call_args.args[0] == "/api/directory/entries"
+            sent_payload = mocked_post.call_args.kwargs["json"]["entry"]["card"]
             assert sent_payload["meta"]["registration_mode"] == "info_only"
             assert sent_payload["sections"] == []
             assert sent_payload["input_schema"] == {}
@@ -383,6 +384,7 @@ def test_phemar_enforces_owner_checks_for_plaza_edit_and_deregister(tmp_path):
             allowed_delete = client.delete("/api/plaza/phemas/owned-remote")
             assert allowed_delete.status_code == 200
             assert mocked_delete.called
+            assert mocked_delete.call_args.args == ("delete", "/api/directory/entries/owned-remote")
 
 
 def test_phemar_runs_pulser_test_via_use_practice(tmp_path):

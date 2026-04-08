@@ -1,13 +1,9 @@
 """
-Phema domain helpers for `prompits.core.phema`.
+Generic blueprint helpers for `prompits.core.blueprint`.
 
-Prompits provides the core HTTP-native agent runtime, Plaza coordination layer, and
-pit abstractions used by higher-level systems. Within Prompits, this module defines
-the structured blueprint model used to describe composed content and participating
-parties.
-
-Core types exposed here include `Phema` and `PhemaSection`, which carry the main
-behavior or state managed by this module.
+Prompits owns the framework-level structured blueprint model used by higher
+layers to describe composed payloads and participating parties. Product-specific
+names such as `Phema` live in higher layers and can wrap these primitives.
 """
 
 from __future__ import annotations
@@ -19,8 +15,8 @@ from prompits.core.pit import Pit, PitAddress
 
 
 @dataclass
-class PhemaSection:
-    """Composable section used to structure a `Phema` blueprint."""
+class BlueprintSection:
+    """Composable section used to structure a blueprint."""
 
     name: str
     description: str = ""
@@ -28,15 +24,15 @@ class PhemaSection:
     content: List[Any] = field(default_factory=list)
 
     @classmethod
-    def from_dict(cls, payload: Dict[str, Any] | "PhemaSection") -> "PhemaSection":
+    def from_dict(cls, payload: Dict[str, Any] | "BlueprintSection") -> "BlueprintSection":
         """Build an instance from dict."""
         if isinstance(payload, cls):
             return payload
         if not isinstance(payload, dict):
-            raise ValueError("Phema sections must be objects.")
+            raise ValueError("Blueprint sections must be objects.")
         content = payload.get("content") or []
         if not isinstance(content, list):
-            raise ValueError("Phema section content must be a list.")
+            raise ValueError("Blueprint section content must be a list.")
         return cls(
             name=str(payload.get("name") or "").strip(),
             description=str(payload.get("description") or ""),
@@ -54,8 +50,8 @@ class PhemaSection:
         }
 
 
-class Phema(Pit):
-    """Plaza-registrable blueprint describing a structured content narrative."""
+class StructuredBlueprint(Pit):
+    """Plaza-registrable structured blueprint."""
 
     PIT_TYPE = "Phema"
 
@@ -63,10 +59,11 @@ class Phema(Pit):
         self,
         name: str,
         description: str = "",
-        sections: Optional[List[Dict[str, Any] | PhemaSection]] = None,
+        sections: Optional[List[Dict[str, Any] | BlueprintSection]] = None,
         input_schema: Optional[Dict[str, Any]] = None,
         output_schema: Optional[Dict[str, Any]] = None,
         owner: str = "",
+        blueprint_id: Optional[str] = None,
         phema_id: Optional[str] = None,
         address: Optional[str] = None,
         tags: Optional[List[str]] = None,
@@ -74,12 +71,13 @@ class Phema(Pit):
         resolution_mode: Optional[str] = None,
         snapshot_cache_time: Optional[Any] = None,
     ):
-        """Initialize the phema."""
+        """Initialize the blueprint."""
         pit_address = PitAddress()
-        if phema_id:
-            pit_address.pit_id = str(phema_id)
+        resolved_blueprint_id = str(blueprint_id or phema_id or "").strip()
+        if resolved_blueprint_id:
+            pit_address.pit_id = resolved_blueprint_id
         normalized_meta = dict(meta or {})
-        normalized_sections = [PhemaSection.from_dict(section) for section in (sections or [])]
+        normalized_sections = [BlueprintSection.from_dict(section) for section in (sections or [])]
         resolved_mode = self.infer_resolution_mode(
             sections=[section.to_dict() for section in normalized_sections],
             meta=normalized_meta,
@@ -107,20 +105,26 @@ class Phema(Pit):
         self.snapshot_cache_time = resolved_snapshot_cache_time
 
     @property
-    def phema_id(self) -> str:
-        """Return the phema ID."""
+    def blueprint_id(self) -> str:
+        """Return the blueprint ID."""
         return str(self.address.pit_id)
+
+    @property
+    def phema_id(self) -> str:
+        """Backward-compatible alias for the blueprint ID."""
+        return self.blueprint_id
 
     @property
     def resolved_address(self) -> str:
         """Return the resolved address."""
-        return self.directory_address or f"plaza://phema/{self.phema_id}"
+        return self.directory_address or f"plaza://phema/{self.blueprint_id}"
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert the value to dict."""
         return {
-            "id": self.phema_id,
-            "phema_id": self.phema_id,
+            "id": self.blueprint_id,
+            "blueprint_id": self.blueprint_id,
+            "phema_id": self.blueprint_id,
             "name": self.name,
             "description": self.description,
             "owner": self.owner,
@@ -162,7 +166,7 @@ class Phema(Pit):
             "owner": self.owner,
             "address": self.resolved_address,
             "pit_type": self.PIT_TYPE,
-            "agent_id": self.phema_id,
+            "agent_id": self.blueprint_id,
             "resolution_mode": self.resolution_mode,
             "snapshot_cache_time": self.snapshot_cache_time,
             "tags": list(self.tags),
@@ -172,38 +176,38 @@ class Phema(Pit):
         }
 
     @classmethod
-    def from_dict(cls, payload: Dict[str, Any]) -> "Phema":
+    def from_dict(cls, payload: Dict[str, Any]) -> "StructuredBlueprint":
         """Build an instance from dict."""
         if not isinstance(payload, dict):
-            raise ValueError("Phema payload must be an object.")
+            raise ValueError("Blueprint payload must be an object.")
 
         raw_meta = payload.get("meta") or {}
         if not isinstance(raw_meta, dict):
-            raise ValueError("Phema meta must be an object.")
+            raise ValueError("Blueprint meta must be an object.")
 
         sections = payload.get("sections")
         if sections is None:
             sections = raw_meta.get("sections") or []
         if not isinstance(sections, list):
-            raise ValueError("Phema sections must be a list.")
+            raise ValueError("Blueprint sections must be a list.")
 
         tags = payload.get("tags")
         if tags is None:
             tags = raw_meta.get("tags") or []
         if not isinstance(tags, list):
-            raise ValueError("Phema tags must be a list.")
+            raise ValueError("Blueprint tags must be a list.")
 
         input_schema = payload.get("input_schema")
         if input_schema is None:
             input_schema = raw_meta.get("input_schema") or {}
         if not isinstance(input_schema, dict):
-            raise ValueError("Phema input_schema must be an object.")
+            raise ValueError("Blueprint input_schema must be an object.")
 
         output_schema = payload.get("output_schema")
         if output_schema is None:
             output_schema = raw_meta.get("output_schema") or {}
         if not isinstance(output_schema, dict):
-            raise ValueError("Phema output_schema must be an object.")
+            raise ValueError("Blueprint output_schema must be an object.")
 
         meta = dict(raw_meta)
         meta.pop("sections", None)
@@ -212,31 +216,33 @@ class Phema(Pit):
         meta.pop("output_schema", None)
 
         pit_address = PitAddress.from_value(payload.get("pit_address"))
-        phema_id = (
-            payload.get("phema_id")
+        blueprint_id = (
+            payload.get("blueprint_id")
+            or payload.get("phema_id")
             or payload.get("id")
             or payload.get("agent_id")
             or pit_address.pit_id
         )
 
-        phema = cls(
+        blueprint = cls(
             name=str(payload.get("name") or "").strip(),
             description=str(payload.get("description") or ""),
             sections=sections,
             input_schema=input_schema,
             output_schema=output_schema,
             owner=str(payload.get("owner") or ""),
-            phema_id=str(phema_id or ""),
+            blueprint_id=str(blueprint_id or ""),
+            phema_id=str(payload.get("phema_id") or ""),
             address=str(payload.get("address") or ""),
             tags=[str(tag) for tag in tags if str(tag).strip()],
             meta=meta,
             resolution_mode=str(payload.get("resolution_mode") or raw_meta.get("resolution_mode") or ""),
             snapshot_cache_time=payload.get("snapshot_cache_time"),
         )
-        phema.address = pit_address
-        if phema_id:
-            phema.address.pit_id = str(phema_id)
-        return phema
+        blueprint.address = pit_address
+        if blueprint_id:
+            blueprint.address.pit_id = str(blueprint_id)
+        return blueprint
 
     @staticmethod
     def _normalize_snapshot_cache_time(*values: Any) -> int:
@@ -252,8 +258,8 @@ class Phema(Pit):
         return 0
 
     @staticmethod
-    def _content_item_has_unbound_pulse(item: Any) -> bool:
-        """Internal helper for content item has unbound pulse."""
+    def _content_item_has_unbound_signal(item: Any) -> bool:
+        """Internal helper for content item has unbound signal."""
         if not isinstance(item, dict):
             return False
         if item.get("static") is True:
@@ -269,7 +275,7 @@ class Phema(Pit):
         meta: Optional[Dict[str, Any]] = None,
         explicit_mode: Optional[str] = None,
     ) -> str:
-        """Handle infer resolution mode for the phema."""
+        """Infer the resolution mode for the blueprint."""
         normalized_explicit = str(explicit_mode or "").strip().lower()
         if normalized_explicit in {"static", "dynamic"}:
             return normalized_explicit
@@ -284,6 +290,9 @@ class Phema(Pit):
             if not isinstance(section, dict):
                 continue
             content = section.get("content") if isinstance(section.get("content"), list) else []
-            if any(cls._content_item_has_unbound_pulse(item) for item in content):
+            if any(cls._content_item_has_unbound_signal(item) for item in content):
                 return "dynamic"
         return "static"
+
+
+__all__ = ["BlueprintSection", "StructuredBlueprint"]

@@ -34,7 +34,7 @@ from prompits.core.init_schema import (
     plaza_directory_table_schema,
     pulse_pulser_pairs_table_schema,
 )
-from prompits.core.pulse_runtime import normalize_pulse_pair_entry, normalize_runtime_pulse_entry
+from prompits.core.directory_runtime import normalize_pulse_pair_entry, normalize_runtime_pulse_entry
 from prompits.core.practice import Practice
 from prompits.core.pool import Pool
 from prompits.core.pit import PitAddress
@@ -313,7 +313,7 @@ class PlazaState:
     - heartbeat/activity timestamps
     """
 
-    SUPPORTED_PIT_TYPES = {"Agent", "AgentConfig", "Pulser", "Schema", "Pulse", "Phema", "Party"}
+    SUPPORTED_PIT_TYPES = {"Agent", "AgentConfig", "Pulser", "Schema", "Pulse", "Party"}
     DIRECTORY_TABLE = "plaza_directory"
     PULSE_PULSER_TABLE = "pulse_pulser_pairs"
     LOGIN_HISTORY_LIMIT = 10
@@ -1181,17 +1181,11 @@ class PlazaState:
         for candidate in cls.SUPPORTED_PIT_TYPES:
             if candidate.lower() == normalized.lower():
                 return candidate
-        return None
+        return raw_value
 
     def normalize_pit_type(self, pit_type: Optional[str]) -> str:
         """Normalize the pit type."""
-        normalized = self.canonical_pit_type(pit_type, default="Agent")
-        if normalized not in self.SUPPORTED_PIT_TYPES:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Unsupported pit_type '{pit_type}'. Supported: {', '.join(sorted(self.SUPPORTED_PIT_TYPES))}"
-            )
-        return normalized
+        return self.canonical_pit_type(pit_type, default="Agent") or "Agent"
 
     def record_login_event(self, agent_id: str, agent_name: str, address: str, event: str):
         """Handle record login event for the Plaza state."""
@@ -1244,22 +1238,25 @@ class PlazaState:
         if not agent_id:
             return
         loader_event: Optional[threading.Event] = None
+        should_start_loader = False
         while True:
             with self.lock:
                 if agent_id in self._loaded_login_history_ids:
                     return
                 loader_event = self._login_history_load_events.get(agent_id)
                 if loader_event is None:
-                    if not block:
-                        return
                     loader_event = threading.Event()
                     self._login_history_load_events[agent_id] = loader_event
+                    should_start_loader = True
                     break
             if not block:
                 return
             loader_event.wait()
 
-        self._submit_background_task(self._run_hydrate_login_history, agent_id, loader_event)
+        if should_start_loader:
+            self._submit_background_task(self._run_hydrate_login_history, agent_id, loader_event)
+        if block:
+            loader_event.wait()
 
     def _run_hydrate_login_history(self, agent_id: str, loader_event: threading.Event):
         """Internal helper to run the hydrate login history."""
@@ -1685,7 +1682,7 @@ class PlazaState:
                     continue
             if party and acard.get("party") != party:
                 continue
-                self.hydrate_login_history_for_id(aid, block=False)
+            self.hydrate_login_history_for_id(aid, block=False)
             with self.lock:
                 login_history = list(self.login_history_by_id.get(aid, []))
 
@@ -2079,15 +2076,11 @@ class PlazaState:
         """Internal helper for infer seed pit type."""
         explicit = default_pit_type or seed.get("PitType") or seed.get("pit_type") or seed.get("Type") or seed.get("type")
         if explicit:
-            normalized = self.canonical_pit_type(explicit)
-            if normalized in self.SUPPORTED_PIT_TYPES:
-                return normalized
+            return self.normalize_pit_type(explicit)
         if seed.get("resource_type") == "pulse_definition":
             return "Pulse"
         if "pulse" in os.path.basename(file_path).lower():
             return "Pulse"
-        if "sections" in seed:
-            return "Phema"
         if any(key in seed for key in ("output_schema", "input_schema", "rowSchema", "primary_key", "schema_kind")):
             return "Schema"
         return "Agent"
@@ -2349,7 +2342,7 @@ class PlazaRegisterPractice(PlazaEndpointPractice):
                 "agent_name": {"type": "string", "description": "Agent display name."},
                 "address": {"type": "string", "description": "HTTP base URL for this agent."},
                 "expires_in": {"type": "integer", "description": "Token TTL in seconds."},
-                "pit_type": {"type": "string", "description": "Agent type: Agent | Pulser | Schema | Pulse | Phema."},
+                "pit_type": {"type": "string", "description": "Agent type string. Plaza normalizes built-ins but also accepts custom values."},
                 "card": {"type": "object", "description": "Optional agent card payload."},
                 "pulse_pulser_pairs": {"type": "array", "description": "Optional batch of pulse-pulser pair rows to index in the same request."},
                 "agent_id": {"type": "string", "description": "Optional existing identity for relogin."},

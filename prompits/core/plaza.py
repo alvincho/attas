@@ -6,8 +6,8 @@ pool/practice infrastructure for FinMAS. Within Prompits, the core package defin
 shared abstractions that the rest of the runtime builds on.
 
 Core types exposed here include `PlazaAgent`, `PlazaAgentConfigLaunchRequest`,
-`PlazaAgentConfigUpsertRequest`, `PlazaPhemaUpsertRequest`, and
-`PlazaPulserTestRequest`, which carry the main behavior or state managed by this module.
+`PlazaAgentConfigUpsertRequest`, and `PlazaPulserTestRequest`, which carry the main
+behavior or state managed by this module.
 """
 
 import copy
@@ -39,13 +39,11 @@ from starlette.concurrency import run_in_threadpool
 from prompits.agents.base import BaseAgent
 from prompits.core.agent_config import AgentConfigStore, AgentLaunchManager
 from prompits.core.init_schema import (
-    phemas_table_schema,
     plaza_ui_agent_keys_table_schema,
     plaza_ui_users_table_schema,
 )
 from prompits.core.message import Message
-from prompits.core.phema import Phema
-from prompits.core.pulse_runtime import normalize_runtime_pulse_entry
+from prompits.core.directory_runtime import normalize_runtime_pulse_entry
 from prompits.practices.plaza import PlazaPractice
 
 logger = logging.getLogger(__name__)
@@ -104,11 +102,6 @@ class PlazaUiAgentKeyUpdateRequest(BaseModel):
     regenerate: bool = False
 
 
-class PlazaPhemaUpsertRequest(BaseModel):
-    """Request model for Plaza phema upsert payloads."""
-    phema: Dict[str, Any]
-
-
 class PlazaPulserTestRequest(BaseModel):
     """Request model for Plaza pulser test payloads."""
     pulser_id: Optional[str] = None
@@ -156,7 +149,6 @@ class PlazaAgent(BaseAgent):
 
     UI_USERS_TABLE = "plaza_ui_users"
     UI_AGENT_KEYS_TABLE = "plaza_ui_agent_keys"
-    PHEMA_TABLE = "phemas"
     UI_USER_ROLES = {"admin", "user"}
     UI_USER_STATUSES = {"active", "disabled"}
     UI_AGENT_KEY_STATUSES = {"active", "disabled", "deleted"}
@@ -207,7 +199,6 @@ class PlazaAgent(BaseAgent):
             allow_headers=["*"],
         )
         self.agent_cards: Dict[str, Dict[str, Any]] = {}
-        self._phema_cache: Dict[str, Dict[str, Any]] = {}
         self.plaza_practice: Optional[PlazaPractice] = None
         self._ui_auth_bootstrap_lock = threading.Lock()
         self._ui_auth_bootstrap_error: Optional[str] = None
@@ -259,24 +250,6 @@ class PlazaAgent(BaseAgent):
                 request=request,
                 name="plazas.html",
                 context={"request": request, "agent_name": self.name, "supported_pit_types": supported_pit_types},
-            )
-
-        @self.app.get("/phemas/editor")
-        async def phema_editor(request: Request):
-            """Route handler for GET /phemas/editor."""
-            return self.templates.TemplateResponse(
-                request=request,
-                name="phema_editor.html",
-                context={"request": request, "agent_name": self.name, "initial_phema_id": ""},
-            )
-
-        @self.app.get("/phemas/editor/{phema_id}")
-        async def phema_editor_existing(request: Request, phema_id: str):
-            """Route handler for GET /phemas/editor/{phema_id}."""
-            return self.templates.TemplateResponse(
-                request=request,
-                name="phema_editor.html",
-                context={"request": request, "agent_name": self.name, "initial_phema_id": phema_id},
             )
 
         @self.app.get("/api/plazas_status")
@@ -1135,34 +1108,22 @@ class PlazaAgent(BaseAgent):
 
             return await run_in_threadpool(_delete_agent_key_sync)
 
-        @self.app.get("/api/phemas")
-        async def list_phemas():
-            """Route handler for GET /api/phemas."""
-            phemas = await run_in_threadpool(self._list_phemas)
-            return {"status": "success", "phemas": phemas}
-
-        @self.app.get("/api/phemas/{phema_id}")
-        async def get_phema(phema_id: str):
-            """Route handler for GET /api/phemas/{phema_id}."""
-            row = await run_in_threadpool(self._get_phema_row, phema_id)
-            if row is None:
-                raise HTTPException(status_code=404, detail="Phema not found")
-            return {"status": "success", "phema": row}
-
-        @self.app.post("/api/phemas")
-        async def save_phema(request: PlazaPhemaUpsertRequest):
-            """Route handler for POST /api/phemas."""
+        @self.app.post("/api/directory/entries")
+        async def save_directory_entry(request: Request):
+            """Route handler for POST /api/directory/entries."""
+            payload = await request.json()
+            entry_payload = payload.get("entry") if isinstance(payload, dict) and isinstance(payload.get("entry"), dict) else payload
             try:
-                saved = await run_in_threadpool(self._save_phema, request.phema)
+                saved = await run_in_threadpool(self._upsert_directory_entry, entry_payload)
             except ValueError as exc:
                 raise HTTPException(status_code=400, detail=str(exc)) from exc
-            return {"status": "success", "phema": saved}
+            return {"status": "success", "entry": saved}
 
-        @self.app.delete("/api/phemas/{phema_id}")
-        async def delete_phema(phema_id: str):
-            """Route handler for DELETE /api/phemas/{phema_id}."""
-            await run_in_threadpool(self._delete_phema, phema_id)
-            return {"status": "success", "phema_id": phema_id}
+        @self.app.delete("/api/directory/entries/{agent_id}")
+        async def delete_directory_entry(agent_id: str):
+            """Route handler for DELETE /api/directory/entries/{agent_id}."""
+            await run_in_threadpool(self._delete_directory_entry, agent_id)
+            return {"status": "success", "agent_id": agent_id}
 
         @self.app.get("/api/site-settings")
         async def get_site_settings():
@@ -1300,14 +1261,6 @@ class PlazaAgent(BaseAgent):
                 self.plaza_practice = practice
                 break
         return self.plaza_practice
-
-    def _ensure_phemas_table(self):
-        """Internal helper to ensure the phemas table exists."""
-        if not self.pool:
-            return
-        if self.pool._TableExists(self.PHEMA_TABLE):
-            return
-        self.pool._CreateTable(self.PHEMA_TABLE, phemas_table_schema())
 
     def _list_agent_configs(
         self,
@@ -1512,81 +1465,6 @@ class PlazaAgent(BaseAgent):
             }
         return None
 
-    @staticmethod
-    def _normalize_phema_row(row: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Internal helper to normalize the phema row."""
-        if not isinstance(row, dict):
-            return None
-        phema_id = str(row.get("id") or row.get("phema_id") or row.get("agent_id") or "").strip()
-        if not phema_id:
-            return None
-        meta = row.get("meta") if isinstance(row.get("meta"), dict) else {}
-        sections = row.get("sections") if isinstance(row.get("sections"), list) else []
-        tags = row.get("tags") if isinstance(row.get("tags"), list) else []
-        input_schema = row.get("input_schema") if isinstance(row.get("input_schema"), dict) else {}
-        resolution_mode = Phema.infer_resolution_mode(
-            sections=sections,
-            meta=meta,
-            explicit_mode=row.get("resolution_mode"),
-        )
-        meta = {**meta, "resolution_mode": resolution_mode}
-        registration_mode = str(meta.get("registration_mode") or "hosted").strip().lower() or "hosted"
-        if registration_mode not in {"hosted", "info_only"}:
-            registration_mode = "hosted"
-        return {
-            "id": phema_id,
-            "phema_id": phema_id,
-            "name": str(row.get("name") or "").strip(),
-            "description": str(row.get("description") or ""),
-            "owner": str(row.get("owner") or ""),
-            "address": str(row.get("address") or ""),
-            "pit_type": "Phema",
-            "tags": [str(tag) for tag in tags if str(tag).strip()],
-            "input_schema": input_schema,
-            "sections": sections,
-            "resolution_mode": resolution_mode,
-            "meta": meta,
-            "registration_mode": registration_mode,
-            "hosted_on_plaza": registration_mode == "hosted",
-            "downloadable": bool(meta.get("downloadable")) if "downloadable" in meta else registration_mode == "hosted",
-            "host_phemar_name": str(meta.get("host_phemar_name") or meta.get("registered_by_phemar") or ""),
-            "host_phemar_agent_id": str(meta.get("host_phemar_agent_id") or meta.get("registered_by_agent_id") or ""),
-            "host_phemar_pit_address": meta.get("host_phemar_pit_address") if isinstance(meta.get("host_phemar_pit_address"), dict) else {},
-            "phema_pit_address": meta.get("phema_pit_address") if isinstance(meta.get("phema_pit_address"), dict) else {},
-            "access_practice_id": str(meta.get("access_practice_id") or "generate_phema"),
-            "created_at": row.get("created_at"),
-            "updated_at": row.get("updated_at"),
-        }
-
-    def _list_phemas(self) -> List[Dict[str, Any]]:
-        """Internal helper to list the phemas."""
-        rows: List[Dict[str, Any]] = []
-        if self.pool:
-            self._ensure_phemas_table()
-            rows = self.pool._GetTableData(self.PHEMA_TABLE) or []
-        rows.extend(list(self._phema_cache.values()))
-        normalized = []
-        seen = set()
-        for row in rows:
-            item = self._normalize_phema_row(row)
-            if not item or item["id"] in seen:
-                continue
-            seen.add(item["id"])
-            normalized.append(item)
-        return sorted(normalized, key=lambda item: (item.get("name") or item["id"]).lower())
-
-    def _get_phema_row(self, phema_id: str) -> Optional[Dict[str, Any]]:
-        """Internal helper to return the phema row."""
-        if not phema_id:
-            return None
-        if self.pool:
-            self._ensure_phemas_table()
-            rows = self.pool._GetTableData(self.PHEMA_TABLE, {"id": phema_id}) or []
-            if rows:
-                return self._normalize_phema_row(rows[-1])
-        cached = self._phema_cache.get(phema_id)
-        return self._normalize_phema_row(cached) if cached else None
-
     def _delete_pool_row(self, table_name: str, row_id: str):
         """Internal helper to delete the pool row."""
         if not self.pool or not row_id:
@@ -1618,132 +1496,140 @@ class PlazaAgent(BaseAgent):
         if supabase is not None:
             supabase.table(table_name).delete().eq("id", row_id).execute()
 
-    def _build_phema_registry_card(self, phema: Phema, row: Dict[str, Any]) -> Dict[str, Any]:
-        """Internal helper to build the phema registry card."""
-        normalized = self._normalize_phema_row(row) or {}
-        registration_mode = str(normalized.get("registration_mode") or "hosted")
-        base_meta = dict(normalized.get("meta") or {})
-        base_meta.setdefault("registration_mode", registration_mode)
-        base_meta.setdefault("hosted_on_plaza", registration_mode == "hosted")
-        base_meta.setdefault("downloadable", registration_mode == "hosted")
-        base_meta.setdefault("access_practice_id", "generate_phema")
-        base_meta.setdefault("phema_pit_address", phema.address.to_dict())
-        include_details = registration_mode == "hosted"
-        if include_details:
-            base_meta["input_schema"] = dict(normalized.get("input_schema") or {})
-            base_meta["sections"] = list(normalized.get("sections") or [])
-        else:
-            base_meta.pop("input_schema", None)
-            base_meta.pop("sections", None)
-        return phema.to_card(
-            self.agent_card.get("address", ""),
-            include_details=include_details,
-            extra_meta=base_meta,
-        )
-
-    def _sync_phema_registry(self, phema: Phema, row: Dict[str, Any], previous_name: str = ""):
-        """Internal helper to synchronize the phema registry."""
-        practice = self._get_plaza_practice()
-        if practice is None:
-            return
-        state = practice.state
-        card = self._build_phema_registry_card(phema, row)
-        if previous_name and previous_name != phema.name and state.agent_ids.get(previous_name) == phema.phema_id:
-            state.agent_ids.pop(previous_name, None)
-        state.agent_cards[phema.phema_id] = card
-        state.pit_types[phema.phema_id] = "Phema"
-        state.agent_names_by_id[phema.phema_id] = phema.name
-        state.agent_ids[phema.name] = phema.phema_id
-        state.last_active[phema.phema_id] = time.time()
-        state.upsert_directory_entry(phema.phema_id, phema.name, phema.resolved_address, "Phema", card)
-
-    def _remove_phema_registry(self, phema_id: str, phema_name: str = ""):
-        """Internal helper to remove the phema registry."""
-        practice = self._get_plaza_practice()
-        if practice is None:
-            return
-        state = practice.state
-        resolved_name = phema_name or state.agent_names_by_id.get(phema_id, "")
-        if resolved_name and state.agent_ids.get(resolved_name) == phema_id:
-            state.agent_ids.pop(resolved_name, None)
-        state.agent_cards.pop(phema_id, None)
-        state.pit_types.pop(phema_id, None)
-        state.agent_names_by_id.pop(phema_id, None)
-        state.last_active.pop(phema_id, None)
-        if state.directory_pool:
-            self._delete_pool_row(state.DIRECTORY_TABLE, phema_id)
-
-    def _save_phema(self, payload: Dict[str, Any]) -> Dict[str, Any]:
-        """Internal helper to save the phema."""
+    def _upsert_directory_entry(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Create or update a generic directory entry."""
         if not isinstance(payload, dict):
-            raise ValueError("Phema payload must be an object.")
+            raise ValueError("Directory entry payload must be an object.")
+
+        practice = self._get_plaza_practice()
+        if practice is None:
+            raise ValueError("Plaza practice is not loaded.")
+        state = practice.state
 
         normalized_payload = dict(payload)
-        existing_id = str(normalized_payload.get("phema_id") or normalized_payload.get("id") or normalized_payload.get("agent_id") or "").strip()
-        existing = self._get_phema_row(existing_id) if existing_id else None
-        if not existing_id:
-            generated_id = str(uuid.uuid4())
-            normalized_payload["phema_id"] = generated_id
-            existing_id = generated_id
-        elif existing is not None:
-            normalized_payload.setdefault("address", existing.get("address", ""))
-        phema = Phema.from_dict(normalized_payload)
-        if not phema.name:
-            raise ValueError("Phema name is required.")
-        registration_mode = str((normalized_payload.get("meta") or {}).get("registration_mode") or "hosted").strip().lower() or "hosted"
-        if registration_mode not in {"hosted", "info_only"}:
-            registration_mode = "hosted"
-        host_phemar_pit_address = (normalized_payload.get("meta") or {}).get("host_phemar_pit_address")
-        if not isinstance(host_phemar_pit_address, dict):
-            host_phemar_pit_address = {}
+        raw_card = normalized_payload.get("card") if isinstance(normalized_payload.get("card"), dict) else dict(normalized_payload)
+        requested_type = (
+            normalized_payload.get("pit_type")
+            or normalized_payload.get("type")
+            or raw_card.get("pit_type")
+            or raw_card.get("type")
+            or "Custom"
+        )
+        pit_type = state.normalize_pit_type(str(requested_type or "").strip() or "Custom")
+        agent_id = str(
+            normalized_payload.get("agent_id")
+            or normalized_payload.get("id")
+            or raw_card.get("agent_id")
+            or ((raw_card.get("pit_address") or {}).get("pit_id") if isinstance(raw_card.get("pit_address"), dict) else "")
+            or uuid.uuid4()
+        ).strip()
+        if not agent_id:
+            raise ValueError("Directory entry id is required.")
 
-        now = datetime.now(timezone.utc).isoformat()
-        row_meta = {
-            **dict(phema.meta),
-            "resolution_mode": phema.resolution_mode,
-            "registration_mode": registration_mode,
-            "hosted_on_plaza": registration_mode == "hosted",
-            "downloadable": registration_mode == "hosted",
-            "host_phemar_name": str(phema.meta.get("host_phemar_name") or phema.meta.get("registered_by_phemar") or ""),
-            "host_phemar_agent_id": str(phema.meta.get("host_phemar_agent_id") or phema.meta.get("registered_by_agent_id") or ""),
-            "host_phemar_pit_address": host_phemar_pit_address,
-            "phema_pit_address": phema.address.to_dict(),
-            "access_practice_id": str(phema.meta.get("access_practice_id") or "generate_phema"),
+        agent_name = str(normalized_payload.get("name") or raw_card.get("name") or agent_id).strip()
+        if not agent_name:
+            raise ValueError("Directory entry name is required.")
+        address = str(normalized_payload.get("address") or raw_card.get("address") or "").strip()
+
+        card = dict(raw_card)
+        payload_meta = normalized_payload.get("meta")
+        card_meta = card.get("meta") if isinstance(card.get("meta"), dict) else {}
+        if isinstance(payload_meta, dict):
+            card_meta = {**card_meta, **dict(payload_meta)}
+        card["meta"] = card_meta
+
+        for key in ("description", "owner", "tags", "input_schema", "output_schema", "sections"):
+            if key in normalized_payload and normalized_payload.get(key) is not None:
+                card[key] = normalized_payload.get(key)
+
+        card["name"] = agent_name
+        card["pit_type"] = pit_type
+        card["agent_id"] = agent_id
+        card["address"] = address or str(card.get("address") or "").strip()
+        normalized_card = state.normalize_card_for_pit(card, pit_type, agent_name=agent_name, address=card["address"])
+
+        previous_name = ""
+        previous_address = ""
+        with state.lock:
+            previous_name = str(state.agent_names_by_id.get(agent_id) or "").strip()
+            previous_address = str(state.registry.get(agent_id) or "").strip()
+            if previous_name and previous_name != agent_name and state.agent_ids.get(previous_name) == agent_id:
+                state.agent_ids.pop(previous_name, None)
+            if previous_name and previous_name != agent_name and previous_address and state.registry_by_name.get(previous_name) == previous_address:
+                state.registry_by_name.pop(previous_name, None)
+            state.agent_cards[agent_id] = normalized_card
+            state.pit_types[agent_id] = pit_type
+            state.agent_names_by_id[agent_id] = agent_name
+            state.agent_ids[agent_name] = agent_id
+            if card["address"]:
+                state.registry[agent_id] = card["address"]
+                state.registry_by_name[agent_name] = card["address"]
+            else:
+                state.registry.pop(agent_id, None)
+                state.registry_by_name.pop(agent_name, None)
+            state.last_active[agent_id] = time.time()
+
+        state.upsert_directory_entry(agent_id, agent_name, card["address"], pit_type, normalized_card)
+        if pit_type == "Pulser" or isinstance(normalized_payload.get("pulse_pulser_pairs"), list):
+            state.upsert_pulse_pulser_pairs(
+                agent_id,
+                agent_name,
+                normalized_card.get("pit_address") or card["address"] or "",
+                normalized_card,
+                pulse_pulser_pairs=normalized_payload.get("pulse_pulser_pairs"),
+            )
+        row = state._build_directory_row(agent_id, agent_name, card["address"], pit_type, normalized_card)
+        return row or {
+            "id": agent_id,
+            "agent_id": agent_id,
+            "name": agent_name,
+            "type": pit_type,
+            "address": card["address"],
+            "card": normalized_card,
         }
-        row = {
-            "id": phema.phema_id,
-            "name": phema.name,
-            "description": phema.description,
-            "owner": phema.owner,
-            "address": phema.resolved_address,
-            "tags": list(phema.tags),
-            "input_schema": dict(phema.input_schema) if registration_mode == "hosted" else {},
-            "sections": [section.to_dict() for section in phema.sections] if registration_mode == "hosted" else [],
-            "resolution_mode": phema.resolution_mode,
-            "meta": row_meta,
-            "created_at": existing.get("created_at") if existing else now,
-            "updated_at": now,
-        }
 
-        self._phema_cache[phema.phema_id] = dict(row)
-        if self.pool:
-            self._ensure_phemas_table()
-            persisted = self.pool._Insert(self.PHEMA_TABLE, row)
-            if persisted is False:
-                logger.warning("[Plaza] Failed persisting Phema %s to pool; keeping cached/registered copy", phema.phema_id)
+    def _delete_directory_entry(self, agent_id: str):
+        """Delete a generic directory entry."""
+        if not agent_id:
+            raise HTTPException(status_code=404, detail="Directory entry not found")
+        practice = self._get_plaza_practice()
+        if practice is None:
+            raise HTTPException(status_code=500, detail="Plaza practice is not loaded")
+        state = practice.state
 
-        self._sync_phema_registry(phema, row, previous_name=existing.get("name", "") if existing else "")
-        return self._normalize_phema_row(row) or row
+        existing_name = ""
+        existing_address = ""
+        with state.lock:
+            existing_name = str(state.agent_names_by_id.get(agent_id) or "").strip()
+            existing_address = str(state.registry.get(agent_id) or "").strip()
 
-    def _delete_phema(self, phema_id: str):
-        """Internal helper to delete the phema."""
-        existing = self._get_phema_row(phema_id)
-        if existing is None:
-            raise HTTPException(status_code=404, detail="Phema not found")
-        self._phema_cache.pop(phema_id, None)
-        if self.pool:
-            self._delete_pool_row(self.PHEMA_TABLE, phema_id)
-        self._remove_phema_registry(phema_id, phema_name=existing.get("name", ""))
+        if not existing_name and state.directory_pool:
+            try:
+                state.ensure_directory_table()
+                rows = state.directory_pool._GetTableData(state.DIRECTORY_TABLE, {"id": agent_id}) or []
+            except Exception:
+                rows = []
+            if rows:
+                row = rows[-1]
+                existing_name = str(row.get("name") or "").strip()
+                existing_address = str(row.get("address") or "").strip()
+
+        if not existing_name and agent_id not in state.agent_cards:
+            raise HTTPException(status_code=404, detail="Directory entry not found")
+
+        with state.lock:
+            if existing_name and state.agent_ids.get(existing_name) == agent_id:
+                state.agent_ids.pop(existing_name, None)
+            if existing_name and existing_address and state.registry_by_name.get(existing_name) == existing_address:
+                state.registry_by_name.pop(existing_name, None)
+            state.registry.pop(agent_id, None)
+            state.agent_cards.pop(agent_id, None)
+            state.pit_types.pop(agent_id, None)
+            state.agent_names_by_id.pop(agent_id, None)
+            state.last_active.pop(agent_id, None)
+
+        if state.directory_pool:
+            self._delete_pool_row(state.DIRECTORY_TABLE, agent_id)
 
     def _get_supabase_pool_config(self) -> Optional[Dict[str, str]]:
         """Internal helper to return the Supabase pool config."""

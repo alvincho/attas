@@ -102,8 +102,10 @@ def test_phemar_loads_config_registers_and_advertises_generate_practice(tmp_path
     assert len(sent_payloads) == 2
     assert sent_payloads[0]["url"] == "http://127.0.0.1:8011/register"
     assert sent_payloads[0]["payload"]["pit_type"] == "Agent"
-    assert sent_payloads[1]["url"] == "http://127.0.0.1:8011/api/phemas"
-    assert sent_payloads[1]["payload"]["phema"]["phema_id"] == "macro-brief"
+    assert sent_payloads[1]["url"] == "http://127.0.0.1:8011/api/directory/entries"
+    assert sent_payloads[1]["payload"]["entry"]["agent_id"] == "macro-brief"
+    assert sent_payloads[1]["payload"]["entry"]["pit_type"] == "Phema"
+    assert sent_payloads[1]["payload"]["entry"]["card"]["phema_id"] == "macro-brief"
     assert phemar.agent_id == "phemar-id-123"
 
     practice_by_id = {entry["id"]: entry for entry in phemar.agent_card["practices"]}

@@ -1,8 +1,9 @@
 """
-Generic pulse runtime helpers for `prompits.core`.
+Generic Plaza directory normalization helpers for `prompits.core.directory_runtime`.
 
-Prompits uses these helpers to normalize pulse metadata for Plaza directory records
-and runtime practice payloads without depending on application-specific packages.
+Prompits keeps the reusable normalization logic that turns runtime payloads into
+directory-friendly resource records. Higher layers can wrap these helpers with
+product-specific terminology such as pulses.
 """
 
 from __future__ import annotations
@@ -12,7 +13,7 @@ from typing import Any, Dict, Mapping, Optional
 
 
 JsonObject = Dict[str, Any]
-PULSE_RUNTIME_VERSION = "0.1.0"
+DIRECTORY_RUNTIME_VERSION = "0.1.0"
 
 
 def _slugify(value: Any) -> str:
@@ -85,7 +86,7 @@ def build_pulse_definition(
     interface["response_schema"] = response_schema
 
     definition: JsonObject = {
-        "pds_version": str(payload.get("pds_version") or PULSE_RUNTIME_VERSION),
+        "pds_version": str(payload.get("pds_version") or DIRECTORY_RUNTIME_VERSION),
         "resource_type": "pulse_definition",
         "id": pulse_id,
         "version": str(payload.get("version") or "1.0.0"),
@@ -138,7 +139,7 @@ def normalize_runtime_pulse_entry(
     runtime["interface"] = interface
     runtime["concept"] = dict(definition.get("concept") or {})
     runtime["resource_type"] = "pulse_definition"
-    runtime["pds_version"] = definition.get("pds_version", PULSE_RUNTIME_VERSION)
+    runtime["pds_version"] = definition.get("pds_version", DIRECTORY_RUNTIME_VERSION)
     runtime["status"] = runtime.get("status") or definition.get("status")
     runtime["pulse_class"] = runtime.get("pulse_class") or definition.get("pulse_class")
     return runtime
@@ -189,7 +190,7 @@ def normalize_pulse_pair_entry(
 
 
 __all__ = [
-    "PULSE_RUNTIME_VERSION",
+    "DIRECTORY_RUNTIME_VERSION",
     "JsonObject",
     "build_pulse_definition",
     "derive_pulse_id",

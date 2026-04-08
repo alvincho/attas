@@ -31,7 +31,6 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from prompits.agents.standby import StandbyAgent
-from prompits.core.init_schema import phemas_table_schema, phema_snapshots_table_schema
 from prompits.core.message import Message
 
 logger = logging.getLogger(__name__)
@@ -39,6 +38,7 @@ from prompits.core.pit import PitAddress
 from prompits.core.practice import Practice
 
 from phemacast.core.phema import Phema
+from phemacast.core.phema_schema import phemas_table_schema, phema_snapshots_table_schema
 
 
 ConfigInput = Union[str, Path, Mapping[str, Any]]
@@ -1594,12 +1594,25 @@ class Phemar(StandbyAgent):
             payload["sections"] = []
             payload["input_schema"] = {}
 
-        response = self._plaza_post("/api/phemas", json={"phema": payload})
+        response = self._plaza_post(
+            "/api/directory/entries",
+            json={
+                "entry": {
+                    "agent_id": resolved_phema.phema_id,
+                    "name": payload.get("name") or resolved_phema.name,
+                    "description": payload.get("description") or "",
+                    "owner": self.name,
+                    "address": payload.get("address") or "",
+                    "pit_type": "Phema",
+                    "card": payload,
+                }
+            },
+        )
         response_content = getattr(response, "content", None)
         data = response.json() if response_content or not hasattr(response, "content") else {}
         if response.status_code >= 400:
             raise HTTPException(status_code=response.status_code, detail=data.get("detail") or "Failed to register Phema on Plaza")
-        saved = data.get("phema") if isinstance(data, dict) else data
+        saved = data.get("entry") if isinstance(data, dict) else data
         normalized = self._normalize_plaza_phema_row(saved if isinstance(saved, dict) else payload)
         return normalized or payload
 
@@ -1613,7 +1626,7 @@ class Phemar(StandbyAgent):
         if not existing.get("editable"):
             raise HTTPException(status_code=403, detail="Only the owner Phemar can de-register this Plaza Phema")
 
-        response = self._plaza_request("delete", f"/api/phemas/{phema_id}")
+        response = self._plaza_request("delete", f"/api/directory/entries/{phema_id}")
         data = response.json() if response.content else {}
         if response.status_code >= 400:
             raise HTTPException(status_code=response.status_code, detail=data.get("detail") or "Failed to de-register Phema from Plaza")

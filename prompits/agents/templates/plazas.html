@@ -23,7 +23,6 @@
             --plaza-text-faint: var(--ui-text-faint, #8598b4);
             --plaza-schema: var(--ui-success, #10b981);
             --plaza-pulse: var(--ui-warning, #f59e0b);
-            --plaza-phema: var(--ui-accent, #0f766e);
             --plaza-agent: var(--ui-accent, #1f7aff);
             --plaza-danger: var(--ui-danger, #e45477);
             --plaza-warning: var(--ui-warning, #ef8f34);
@@ -827,12 +826,6 @@
             color: var(--plaza-pulse);
             border-color: rgba(245, 158, 11, 0.22);
             background: rgba(245, 158, 11, 0.11);
-        }
-
-        .type-pill.Phema {
-            color: var(--plaza-phema);
-            border-color: rgba(15, 118, 110, 0.22);
-            background: rgba(15, 118, 110, 0.11);
         }
 
         .type-pill.Agent,
@@ -2115,7 +2108,7 @@
         <ul class="nav-links">
             <li class="active" data-page="monitor" data-tooltip="Review the live Plaza directory, search nodes, and monitor heartbeat status."><span class="icon-grid"></span><span class="nav-label">Monitor</span></li>
             <li data-page="map" data-tooltip="See Plaza and agent relationships as a graph with draggable nodes."><span class="icon-grid"></span><span class="nav-label">Map</span></li>
-            <li data-page="editor" data-tooltip="Draft schemas, pulses, and Phemas in the local editor workspace."><span class="icon-layout"></span><span class="nav-label">Editor</span></li>
+            <li data-page="editor" data-tooltip="Draft schemas, pulses, and generic entries in the local editor workspace."><span class="icon-layout"></span><span class="nav-label">Editor</span></li>
             <li data-page="profile" data-tooltip="Review your account details and change your Plaza password."><span class="icon-piece"></span><span class="nav-label">Profile</span></li>
             <li data-page="keys" data-tooltip="Create named owner keys for your agents and saved AgentConfig launches."><span class="icon-piece"></span><span class="nav-label">Keys</span></li>
             <li data-page="users" data-tooltip="Manage sign-in state and role-based user access."><span class="icon-piece"></span><span class="nav-label">Users</span></li>
@@ -2145,8 +2138,8 @@
                             placeholder="Search nodes, owners, descriptions, or addresses">
                     </div>
                     <div class="toolbar-select-wrap">
-                        {% set pit_type_options = supported_pit_types if supported_pit_types is defined and supported_pit_types else ['Agent', 'Pulser', 'AgentConfig', 'Schema', 'Pulse', 'Phema', 'Party'] %}
-                        {% set ordered_monitor_types = ['Agent', 'AgentConfig', 'Schema', 'Pulse', 'Phema', 'Party'] %}
+                        {% set pit_type_options = supported_pit_types if supported_pit_types is defined and supported_pit_types else ['Agent', 'Pulser', 'AgentConfig', 'Schema', 'Pulse', 'Party'] %}
+                        {% set ordered_monitor_types = ['Agent', 'AgentConfig', 'Schema', 'Pulse', 'Party'] %}
                         <select id="type-filter" class="toolbar-select">
                             <option value="">All PIT types</option>
                             {% if 'Agent' in pit_type_options or 'Pulser' in pit_type_options %}
@@ -2195,11 +2188,10 @@
                     <div class="toolbar-actions">
                         <button class="ghost-btn" data-create-kind="Schema" data-tooltip="Start a new schema draft that can be saved locally or exported.">New Schema</button>
                         <button class="ghost-btn" data-create-kind="Pulse" data-tooltip="Create a new pulse definition for Plaza-aware runtimes.">New Pulse</button>
-                        <button class="ghost-btn" data-create-kind="Phema" data-tooltip="Create a new Phema and sync it back to the Plaza directory.">New Phema</button>
                         <button class="ghost-btn" data-create-kind="Custom" data-tooltip="Open a local draft for future artifact types or ad hoc JSON work.">New Custom</button>
                     </div>
                     <div class="toolbar-actions">
-                        <button id="save-draft-btn" class="primary-btn" data-tooltip="Save the current draft into browser storage and sync eligible Phemas.">Save Draft</button>
+                        <button id="save-draft-btn" class="primary-btn" data-tooltip="Save the current draft into browser storage.">Save Draft</button>
                         <button id="delete-draft-btn" class="ghost-btn">Delete</button>
                         <button id="export-draft-btn" class="ghost-btn">Export JSON</button>
                         <button id="reset-draft-btn" class="ghost-btn">Reset Draft</button>
@@ -2219,7 +2211,6 @@
                                 <button class="chip-btn active" data-kind-filter="All">All</button>
                                 <button class="chip-btn" data-kind-filter="Schema">Schema</button>
                                 <button class="chip-btn" data-kind-filter="Pulse">Pulse</button>
-                                <button class="chip-btn" data-kind-filter="Phema">Phema</button>
                                 <button class="chip-btn" data-kind-filter="AgentConfig">AgentConfig</button>
                                 <button class="chip-btn" data-kind-filter="Other">Other</button>
                             </div>
@@ -2230,10 +2221,10 @@
                     <section class="workspace-panel">
                         <div class="panel-title">
                             <h3>Workspace</h3>
-                            <span class="chip">Phema sync enabled</span>
+                            <span class="chip">Browser drafts</span>
                         </div>
                         <div class="draft-note">
-                            <div class="draft-caption">Drafts persist in browser storage. `Phema` drafts can also be saved into the Plaza directory; other artifact types remain local for now.</div>
+                            <div class="draft-caption">Drafts persist in browser storage so you can inspect or iterate on directory entries without Plaza owning higher-level artifact types.</div>
                         </div>
                         <div id="tab-strip" class="tab-strip"></div>
                         <div id="workspace-body"></div>
@@ -2655,45 +2646,6 @@
                     };
                 }
             },
-            Phema: {
-                label: 'Phema',
-                createModel(source) {
-                    const meta = clone(source.meta || {});
-                    const sections = Array.isArray(meta.sections) ? meta.sections : [];
-                    const tags = Array.isArray(meta.tags) ? meta.tags : (Array.isArray(source.card?.tags) ? source.card.tags : []);
-                    delete meta.sections;
-                    delete meta.tags;
-                    return {
-                        kind: 'Phema',
-                        name: source.name || 'Phema Draft',
-                        description: source.description || '',
-                        owner: source.owner || '',
-                        address: source.address || '',
-                        tags_json: prettyJson(tags),
-                        sections_json: prettyJson(sections),
-                        meta_json: prettyJson(meta)
-                    };
-                },
-                emptyModel() {
-                    return {
-                        kind: 'Phema',
-                        name: 'Phema Draft',
-                        description: '',
-                        owner: '',
-                        address: '',
-                        tags_json: prettyJson([]),
-                        sections_json: prettyJson([
-                            {
-                                name: 'Section 1',
-                                description: '',
-                                modifier: '',
-                                content: []
-                            }
-                        ]),
-                        meta_json: prettyJson({})
-                    };
-                }
-            },
             AgentConfig: {
                 label: 'AgentConfig',
                 createModel(source) {
@@ -2856,10 +2808,6 @@
 
             document.querySelectorAll('[data-create-kind]').forEach((button) => {
                 button.addEventListener('click', () => {
-                    if (button.dataset.createKind === 'Phema') {
-                        openPhemaEditor();
-                        return;
-                    }
                     createDraft(button.dataset.createKind);
                 });
             });
@@ -2879,11 +2827,6 @@
 
                 const openBtn = event.target.closest('[data-open-source]');
                 if (openBtn) {
-                    const source = findItem(openBtn.dataset.openSource);
-                    if (source?.kind === 'Phema') {
-                        openPhemaEditor(source.sourceKey);
-                        return;
-                    }
                     openDraftForSource(openBtn.dataset.openSource);
                     setActivePage('editor');
                     return;
@@ -2916,11 +2859,6 @@
 
                 const openBtn = event.target.closest('[data-open-source]');
                 if (!openBtn) return;
-                const source = findItem(openBtn.dataset.openSource);
-                if (source?.kind === 'Phema') {
-                    openPhemaEditor(source.sourceKey);
-                    return;
-                }
                 openDraftForSource(openBtn.dataset.openSource);
             });
 
@@ -4816,12 +4754,6 @@
             if (rawKind === 'pulser' || text.includes('pulser')) {
                 return { image: 'pulser.jpg', fallback: 'PU', alt: 'Pulser agent' };
             }
-            if (text.includes('phemar')) {
-                return { image: 'phemar.jpg', fallback: 'PH', alt: 'Phemar agent' };
-            }
-            if (text.includes('castr')) {
-                return { image: 'castr.jpg', fallback: 'CA', alt: 'Castr agent' };
-            }
             return { image: 'pulser.jpg', fallback: 'AG', alt: 'Agent' };
         }
 
@@ -4941,7 +4873,7 @@
                 : (agent.description || card.description || 'No description registered.');
             
             const activePulserCount = availablePulsers.filter((pulser) => popupHeartbeatState(Number(pulser.last_active || 0)) === 'active').length;
-            const nonHeartbeatStatusLabel = rawKind === 'Phema' ? (renderPhemaModeLabel(agent, card) || 'Registered') : 'Registered';
+            const nonHeartbeatStatusLabel = 'Registered';
             
             // Generate Tooltip Content
             const tooltipLines = [
@@ -7037,7 +6969,7 @@
 
             const filtered = state.items.filter((item) => {
                 const haystack = [item.name, item.description, item.owner, item.address, JSON.stringify(item.meta || {})].join(' ').toLowerCase();
-                const kind = ['Schema', 'Pulse', 'Phema', 'AgentConfig'].includes(item.kind) ? item.kind : 'Other';
+                const kind = ['Schema', 'Pulse', 'AgentConfig'].includes(item.kind) ? item.kind : 'Other';
                 if (state.editorKindFilter !== 'All' && kind !== state.editorKindFilter) return false;
                 if (query && !haystack.includes(query)) return false;
                 return true;
@@ -7104,7 +7036,7 @@
                     <div class="workspace-empty">
                         <div>
                             <h2 style="margin-bottom:0.75rem;">No draft open</h2>
-                            <p class="empty-note">Open a Schema, Pulse, Phema, or AgentConfig from the monitor, or create a blank draft for future extension types.</p>
+                            <p class="empty-note">Open a Schema, Pulse, AgentConfig, or other directory entry from the monitor, or create a blank draft for future extension types.</p>
                         </div>
                     </div>
                 `;
@@ -7209,26 +7141,6 @@
                 `;
             }
 
-            if (draft.kind === 'Phema') {
-                return `
-                    <div class="field-card full-span">
-                        <label>Tags JSON</label>
-                        <textarea class="json-editor" data-draft-id="${escapeHtml(draft.id)}" data-field="tags_json">${escapeHtml(draft.model.tags_json)}</textarea>
-                        ${errors.tags_json ? `<div class="error-text">${escapeHtml(errors.tags_json)}</div>` : ''}
-                    </div>
-                    <div class="field-card full-span">
-                        <label>Sections JSON</label>
-                        <textarea class="json-editor" data-draft-id="${escapeHtml(draft.id)}" data-field="sections_json">${escapeHtml(draft.model.sections_json)}</textarea>
-                        ${errors.sections_json ? `<div class="error-text">${escapeHtml(errors.sections_json)}</div>` : ''}
-                    </div>
-                    <div class="field-card full-span">
-                        <label>Extra Meta JSON</label>
-                        <textarea class="json-editor" data-draft-id="${escapeHtml(draft.id)}" data-field="meta_json">${escapeHtml(draft.model.meta_json)}</textarea>
-                        ${errors.meta_json ? `<div class="error-text">${escapeHtml(errors.meta_json)}</div>` : ''}
-                    </div>
-                `;
-            }
-
             if (draft.kind === 'AgentConfig') {
                 const summary = summarizeAgentConfigAccess({
                     remote_use_practice_policy: safeParseJson(draft.model.policy_json, {}),
@@ -7318,15 +7230,8 @@
             `;
         }
 
-        function openPhemaEditor(phemaId = '') {
-            const target = phemaId
-                ? `/phemas/editor/${encodeURIComponent(phemaId)}`
-                : '/phemas/editor';
-            window.open(target, '_blank', 'noopener');
-        }
-
         function createDraft(kind) {
-            const normalizedKind = kind === 'Schema' || kind === 'Pulse' || kind === 'Phema' ? kind : 'Custom';
+            const normalizedKind = kind === 'Schema' || kind === 'Pulse' ? kind : 'Custom';
             const definition = EDITOR_DEFINITIONS[normalizedKind] || EDITOR_DEFINITIONS.Custom;
             const id = `draft-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
             const draft = {
@@ -7476,31 +7381,6 @@
                 }
             }
 
-            if (draft.kind === 'Phema') {
-                try {
-                    const response = await authFetch('/api/phemas', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ phema: compiled.payload })
-                    });
-                    const data = await response.json();
-                    if (!response.ok) {
-                        throw new Error(data.detail || data.message || 'Failed to save Phema');
-                    }
-                    draft.sourceKey = data.phema?.phema_id || data.phema?.id || draft.sourceKey;
-                    draft.isNew = false;
-                    draft.dirty = false;
-                    draft.savedAt = data.phema?.updated_at || new Date().toISOString();
-                    await fetchStatus();
-                    syncDraftSnapshotFromSource(draft);
-                    renderAll();
-                    return;
-                } catch (error) {
-                    alert(error.message || 'Failed to save Phema');
-                    return;
-                }
-            }
-
             draft.dirty = false;
             draft.savedAt = new Date().toISOString();
             persistUiState();
@@ -7512,29 +7392,6 @@
         async function deleteActiveDraft() {
             const draft = getActiveDraft();
             if (!draft) return;
-
-            if (draft.kind === 'Phema' && !draft.isNew && draft.sourceKey) {
-                if (!confirm(`Delete Phema "${draft.model.name || draft.sourceKey}" from the Plaza directory?`)) {
-                    return;
-                }
-                try {
-                    const response = await authFetch(`/api/phemas/${encodeURIComponent(draft.sourceKey)}`, {
-                        method: 'DELETE'
-                    });
-                    const data = await response.json();
-                    if (!response.ok) {
-                        throw new Error(data.detail || data.message || 'Failed to delete Phema');
-                    }
-                    const draftId = draft.id;
-                    closeDraft(draftId);
-                    await fetchStatus();
-                    renderAll();
-                    return;
-                } catch (error) {
-                    alert(error.message || 'Failed to delete Phema');
-                    return;
-                }
-            }
 
             closeDraft(draft.id);
         }
@@ -7651,25 +7508,6 @@
                             input_schema: inputSchema || {},
                             output_schema: outputSchema || {}
                         }
-                    }
-                };
-            }
-
-            if (draft.kind === 'Phema') {
-                const tags = parseJsonArrayField(draft.model.tags_json, 'Tags JSON', errors, 'tags_json');
-                const sections = parseJsonArrayField(draft.model.sections_json, 'Sections JSON', errors, 'sections_json');
-                return {
-                    errors,
-                    payload: {
-                        phema_id: draft.sourceKey || undefined,
-                        name: draft.model.name,
-                        description: draft.model.description,
-                        owner: draft.model.owner,
-                        address: draft.model.address,
-                        pit_type: 'Phema',
-                        tags: tags || [],
-                        sections: sections || [],
-                        meta: meta || {}
                     }
                 };
             }
@@ -7794,43 +7632,6 @@
             const card = entry?.card || {};
             const raw = String(entry?.pit_type || card.pit_type || entry?.type || 'Agent').trim();
             return raw || 'Agent';
-        }
-
-        function renderPhemaModeBadge(entry, card = {}) {
-            const label = renderPhemaModeLabel(entry, card);
-            if (!label) return '';
-            return `<span class="chip">${escapeHtml(label)}</span>`;
-        }
-
-        function renderPhemaModeLabel(entry, card = {}) {
-            const entryMeta = entry?.meta && typeof entry.meta === 'object' ? entry.meta : {};
-            const cardMeta = card?.meta && typeof card.meta === 'object' ? card.meta : {};
-            let registrationMode = String(
-                entry?.registration_mode
-                || entryMeta.registration_mode
-                || cardMeta.registration_mode
-                || ''
-            ).trim().toLowerCase();
-            if (!registrationMode) {
-                const sections = Array.isArray(entryMeta.sections)
-                    ? entryMeta.sections
-                    : (Array.isArray(cardMeta.sections) ? cardMeta.sections : []);
-                const hasHostReference = Boolean(
-                    entryMeta.host_phemar_name
-                    || cardMeta.host_phemar_name
-                    || entryMeta.host_phemar_pit_address
-                    || cardMeta.host_phemar_pit_address
-                    || entryMeta.access_practice_id
-                    || cardMeta.access_practice_id
-                );
-                if (sections.length) {
-                    registrationMode = 'hosted';
-                } else if (hasHostReference) {
-                    registrationMode = 'info_only';
-                }
-            }
-            if (!registrationMode) return '';
-            return registrationMode === 'info_only' ? 'Info Only' : 'Hosted';
         }
 
         function resolveDirectCallState(entry, card = {}) {
