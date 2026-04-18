@@ -15,6 +15,9 @@ from calendar import monthrange
 from copy import deepcopy
 import json
 import os
+import subprocess
+import sys
+import tempfile
 import threading
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -32,6 +35,7 @@ from ads.jobcap import job_cap_entry_is_disabled
 from ads.runtime import build_id, normalize_string_list, parse_datetime_value, read_ads_config, utcnow_iso
 from ads.schema import (
     TABLE_DAILY_PRICE,
+    TABLE_JOB_ARCHIVE,
     TABLE_JOBS,
     TABLE_NEWS,
     TABLE_RAW_DATA,
@@ -41,6 +45,7 @@ from ads.schema import (
     TABLE_WORKER_HISTORY,
     TABLE_WORKERS,
     ads_table_schema_map,
+    job_archive_schema_dict,
     jobs_schema_dict,
     raw_data_schema_dict,
     worker_capabilities_schema_dict,
@@ -52,6 +57,7 @@ from prompits.core.schema import TableSchema
 
 
 BASE_DIR = Path(__file__).resolve().parent / "boss_ui"
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
 TABLE_SCHEDULED_JOBS = "ads_boss_scheduled_jobs"
 WEEKDAY_ORDER = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
 WEEKDAY_INDEX = {name: index for index, name in enumerate(WEEKDAY_ORDER)}
@@ -65,6 +71,23 @@ HERO_METRIC_TABLES = (
     ("sec_companyfacts", "SEC Companyfacts", TABLE_SEC_COMPANYFACTS),
     ("sec_submissions", "SEC Submissions", TABLE_SEC_SUBMISSIONS),
 )
+LOCAL_WORKER_MAX_BATCH = 5
+HIDDEN_OPERATOR_JOB_OPTIONS = {"daily job archive"}
+
+
+def _slug_text(value: Any, *, fallback: str) -> str:
+    """Return one URL-safe slug text."""
+    source = str(value or "").strip().lower()
+    slug_chars: list[str] = []
+    last_was_dash = False
+    for char in source:
+        if char.isalnum():
+            slug_chars.append(char)
+            last_was_dash = False
+        elif not last_was_dash:
+            slug_chars.append("-")
+            last_was_dash = True
+    return "".join(slug_chars).strip("-") or fallback
 
 
 def _pool_dialect(pool: Any) -> str:
@@ -99,6 +122,31 @@ def _sql_placeholder(pool: Any) -> str:
     return "%s" if _pool_dialect(pool) == "postgres" else "?"
 
 
+def _config_schedule_id(
+    value: Any,
+    *,
+    prefix: str,
+    fallback_name: Any = "",
+    fallback_capability: Any = "",
+) -> str:
+    """Return one stable id for a config-seeded schedule."""
+    explicit = str(value or "").strip()
+    if explicit:
+        return explicit
+    source = str(fallback_name or fallback_capability or "schedule").strip().lower()
+    slug_chars: list[str] = []
+    last_was_dash = False
+    for char in source:
+        if char.isalnum():
+            slug_chars.append(char)
+            last_was_dash = False
+        elif not last_was_dash:
+            slug_chars.append("-")
+            last_was_dash = True
+    slug = "".join(slug_chars).strip("-") or "schedule"
+    return f"{prefix}:{slug}"
+
+
 def _normalize_timestamp_text(value: Any) -> str:
     """Internal helper to normalize the timestamp text."""
     if value is None:
@@ -121,6 +169,7 @@ def scheduled_jobs_schema_dict() -> Dict[str, object]:
             "status": {"type": "string"},
             "dispatcher_address": {"type": "string"},
             "repeat_frequency": {"type": "string"},
+            "schedule_interval_minutes": {"type": "integer"},
             "schedule_timezone": {"type": "string"},
             "schedule_time": {"type": "string"},
             "schedule_times": {"type": "json"},
@@ -206,6 +255,19 @@ class BossJobControlRequest(BaseModel):
 
 class BossScheduleControlRequest(BaseModel):
     """Request model for boss schedule control payloads."""
+    action: str = Field(min_length=1)
+
+
+class BossLocalWorkerLaunchRequest(BaseModel):
+    """Request model for launching boss-managed local ADS workers."""
+    worker_type: str = Field(min_length=1)
+    count: int = 1
+    dispatcher_address: str = ""
+    plaza_url: str = ""
+
+
+class BossLocalWorkerControlRequest(BaseModel):
+    """Request model for boss-managed local ADS worker control."""
     action: str = Field(min_length=1)
 
 
@@ -299,7 +361,10 @@ class ADSBossAgent(StandbyAgent):
         self._schedule_thread: threading.Thread | None = None
         self._schedule_thread_lock = threading.Lock()
         self._schedule_issue_lock = threading.Lock()
+        self._local_worker_lock = threading.Lock()
+        self._local_workers: dict[str, dict[str, Any]] = {}
         self.ensure_schedule_tables()
+        self._ensure_config_schedules()
         self.templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
         self.app.mount("/boss-static", StaticFiles(directory=str(BASE_DIR / "static")), name="boss_static")
         self._setup_boss_routes()
@@ -396,6 +461,392 @@ class ADSBossAgent(StandbyAgent):
             "scheduler_poll_sec": self.scheduler_poll_sec,
         }
 
+    def _local_worker_runtime_root(self) -> Path:
+        """Return the boss-local runtime directory for launched ADS workers."""
+        root = Path(tempfile.gettempdir()) / "finmas_ads_boss" / _slug_text(self.name, fallback="ads-boss")
+        root.mkdir(parents=True, exist_ok=True)
+        return root
+
+    def _local_worker_configs_dir(self) -> Path:
+        """Return the config directory for launched ADS workers."""
+        path = self._local_worker_runtime_root() / "configs"
+        path.mkdir(parents=True, exist_ok=True)
+        return path
+
+    def _local_worker_logs_dir(self) -> Path:
+        """Return the log directory for launched ADS workers."""
+        path = self._local_worker_runtime_root() / "logs"
+        path.mkdir(parents=True, exist_ok=True)
+        return path
+
+    def _resolved_worker_template_path(self) -> Path | None:
+        """Return the configured worker template path."""
+        config_root = self.config_path.parent if isinstance(self.config_path, Path) else None
+        return self._resolve_config_relative_path(
+            self.ads_settings.get("worker_config_path"),
+            config_root=config_root,
+        )
+
+    def _worker_template_document(self) -> dict[str, Any]:
+        """Return the configured worker template document."""
+        path = self._resolved_worker_template_path()
+        if path is None or not path.exists():
+            return {}
+        return read_ads_config(path)
+
+    def _local_worker_catalog(self) -> list[dict[str, Any]]:
+        """Return the catalog of worker launch types exposed by the ADS boss."""
+        worker_config = self._worker_template_document()
+        worker_ads = worker_config.get("ads") if isinstance(worker_config.get("ads"), Mapping) else {}
+        option_entries = self._job_options_from_cap_entries(worker_ads.get("job_capabilities"))
+        if not option_entries:
+            option_entries = [dict(option) for option in self.job_options if isinstance(option, Mapping)]
+
+        catalog: list[dict[str, Any]] = []
+        if option_entries:
+            all_capabilities = [
+                str(entry.get("id") or entry.get("label") or "").strip()
+                for entry in option_entries
+                if str(entry.get("id") or entry.get("label") or "").strip()
+            ]
+            catalog.append(
+                {
+                    "id": "all-capabilities",
+                    "label": "All Capabilities",
+                    "description": "Launch one general ADS worker with every configured capability.",
+                    "capabilities": all_capabilities,
+                    "kind": "bundle",
+                }
+            )
+
+        seen_ids: set[str] = {entry["id"] for entry in catalog}
+        for entry in option_entries:
+            capability_name = str(entry.get("id") or entry.get("label") or "").strip()
+            if not capability_name:
+                continue
+            candidate_id = _slug_text(capability_name, fallback="worker")
+            if candidate_id in seen_ids:
+                suffix = 2
+                while f"{candidate_id}-{suffix}" in seen_ids:
+                    suffix += 1
+                candidate_id = f"{candidate_id}-{suffix}"
+            seen_ids.add(candidate_id)
+            catalog.append(
+                {
+                    "id": candidate_id,
+                    "label": capability_name,
+                    "description": str(entry.get("description") or f"Launch a dedicated {capability_name} worker.").strip(),
+                    "capabilities": [capability_name],
+                    "kind": "single",
+                }
+            )
+        return catalog
+
+    def _local_worker_type(self, worker_type_id: str) -> dict[str, Any]:
+        """Return one worker launch type by id."""
+        normalized = str(worker_type_id or "").strip().lower()
+        for entry in self._local_worker_catalog():
+            if str(entry.get("id") or "").strip().lower() == normalized:
+                return dict(entry)
+        raise ValueError(f"Unknown worker_type '{worker_type_id}'.")
+
+    def _next_local_worker_name(self, worker_type: Mapping[str, Any], worker_config: Mapping[str, Any]) -> str:
+        """Return the next stable worker name for one launch type."""
+        base_name = str(worker_config.get("name") or "ADSWorker").strip() or "ADSWorker"
+        prefix = f"{base_name}-{_slug_text(worker_type.get('id') or worker_type.get('label'), fallback='worker')}"
+        highest = 0
+        with self._local_worker_lock:
+            for session in self._local_workers.values():
+                session_name = str(session.get("worker_name") or "").strip()
+                if not session_name.startswith(f"{prefix}-"):
+                    continue
+                suffix = session_name[len(prefix) + 1:]
+                try:
+                    highest = max(highest, int(suffix))
+                except (TypeError, ValueError):
+                    continue
+        return f"{prefix}-{highest + 1}"
+
+    @staticmethod
+    def _close_local_worker_log_handle(session: Mapping[str, Any]) -> None:
+        """Close the open log handle for one local worker session when possible."""
+        handle = session.get("log_handle")
+        if handle is None:
+            return
+        try:
+            handle.close()
+        except Exception:
+            pass
+
+    def _refresh_local_worker_session(self, session: dict[str, Any]) -> dict[str, Any]:
+        """Refresh one launched local worker session from its subprocess state."""
+        process = session.get("process")
+        if process is None:
+            session["status"] = str(session.get("status") or "unknown").strip() or "unknown"
+            return session
+        return_code = process.poll()
+        if return_code is None:
+            session["pid"] = int(getattr(process, "pid", 0) or 0)
+            session["status"] = "stopping" if session.get("terminate_requested_at") else "running"
+            return session
+        session["pid"] = int(getattr(process, "pid", 0) or 0)
+        session["exit_code"] = int(return_code)
+        if not str(session.get("stopped_at") or "").strip():
+            session["stopped_at"] = utcnow_iso()
+        session["status"] = (
+            "terminated"
+            if session.get("terminate_requested_at")
+            else ("stopped" if int(return_code) == 0 else "failed")
+        )
+        self._close_local_worker_log_handle(session)
+        session["log_handle"] = None
+        return session
+
+    def _refresh_local_worker_sessions(self) -> list[dict[str, Any]]:
+        """Refresh and return all local worker sessions."""
+        with self._local_worker_lock:
+            sessions = list(self._local_workers.values())
+            for session in sessions:
+                self._refresh_local_worker_session(session)
+            return sessions
+
+    def _local_worker_session(self, session_id: str) -> dict[str, Any]:
+        """Return one launched local worker session by id."""
+        normalized = str(session_id or "").strip()
+        if not normalized:
+            raise ValueError("worker_id is required.")
+        with self._local_worker_lock:
+            session = self._local_workers.get(normalized)
+            if session is None:
+                raise LookupError(f"Local worker '{normalized}' was not found.")
+            self._refresh_local_worker_session(session)
+            return session
+
+    def _serialize_local_worker_session(self, session: Mapping[str, Any]) -> dict[str, Any]:
+        """Return the user-facing payload for one local worker session."""
+        worker_name = str(session.get("worker_name") or "").strip()
+        capabilities = normalize_string_list(session.get("capabilities"))
+        return {
+            "id": str(session.get("id") or "").strip(),
+            "worker_name": worker_name,
+            "worker_type": str(session.get("worker_type") or "").strip(),
+            "worker_type_label": str(session.get("worker_type_label") or worker_name or "Worker").strip(),
+            "capabilities": capabilities,
+            "dispatcher_address": str(session.get("dispatcher_address") or "").strip(),
+            "plaza_url": str(session.get("plaza_url") or "").strip(),
+            "config_path": str(session.get("config_path") or "").strip(),
+            "log_path": str(session.get("log_path") or "").strip(),
+            "pid": int(session.get("pid") or 0),
+            "status": str(session.get("status") or "unknown").strip() or "unknown",
+            "started_at": str(session.get("started_at") or "").strip(),
+            "stopped_at": str(session.get("stopped_at") or "").strip(),
+            "terminate_requested_at": str(session.get("terminate_requested_at") or "").strip(),
+            "exit_code": session.get("exit_code"),
+        }
+
+    def list_local_workers(self) -> dict[str, Any]:
+        """Return the launched local ADS workers and available launch types."""
+        sessions = [self._serialize_local_worker_session(session) for session in self._refresh_local_worker_sessions()]
+        sessions.sort(
+            key=lambda entry: (
+                str(entry.get("status") or "") not in {"running", "stopping"},
+                str(entry.get("worker_type_label") or ""),
+                str(entry.get("worker_name") or ""),
+            )
+        )
+        return {
+            "status": "success",
+            "catalog": self._local_worker_catalog(),
+            "workers": sessions,
+            "count": len(sessions),
+            "running": len([entry for entry in sessions if str(entry.get("status") or "") == "running"]),
+        }
+
+    def _build_local_worker_config(
+        self,
+        *,
+        session_id: str,
+        worker_name: str,
+        worker_type: Mapping[str, Any],
+        dispatcher_address: str,
+        plaza_url: str,
+    ) -> dict[str, Any]:
+        """Return one generated config document for a launched local worker."""
+        worker_config = deepcopy(self._worker_template_document())
+        if not worker_config:
+            raise ValueError("worker_config_path must point at a valid ADS worker config.")
+
+        worker_config["name"] = worker_name
+        worker_config.pop("port", None)
+        if plaza_url:
+            worker_config["plaza_url"] = plaza_url
+        elif "plaza_url" in worker_config:
+            worker_config["plaza_url"] = ""
+
+        worker_ads = dict(worker_config.get("ads") or {})
+        selected_capabilities = normalize_string_list(worker_type.get("capabilities"))
+        selected_lower = {capability.lower() for capability in selected_capabilities}
+        job_cap_entries = list(worker_ads.get("job_capabilities") or [])
+        if str(worker_type.get("kind") or "").strip().lower() != "bundle":
+            filtered_entries = [
+                dict(entry)
+                for entry in job_cap_entries
+                if isinstance(entry, Mapping)
+                and str(entry.get("name") or entry.get("job_name") or "").strip().lower() in selected_lower
+            ]
+            if filtered_entries:
+                job_cap_entries = filtered_entries
+        worker_ads["job_capabilities"] = job_cap_entries
+        normalized_caps = normalize_string_list(
+            [
+                str(entry.get("name") or entry.get("job_name") or "").strip()
+                for entry in job_cap_entries
+                if isinstance(entry, Mapping) and str(entry.get("name") or entry.get("job_name") or "").strip()
+            ]
+            or selected_capabilities
+        )
+        worker_ads["capabilities"] = normalized_caps
+        if dispatcher_address:
+            worker_ads["dispatcher_address"] = dispatcher_address
+        worker_ads.setdefault("auto_register", True)
+        worker_config["ads"] = worker_ads
+
+        agent_card = dict(worker_config.get("agent_card") or {})
+        meta = dict(agent_card.get("meta") or {})
+        meta["local_manager_session_id"] = session_id
+        meta["local_manager_name"] = self.name
+        meta["local_worker_type"] = str(worker_type.get("id") or "").strip()
+        meta["local_worker_type_label"] = str(worker_type.get("label") or worker_name).strip()
+        meta["configured_capabilities"] = normalized_caps
+        if dispatcher_address:
+            meta["dispatcher_address"] = dispatcher_address
+        agent_card["meta"] = meta
+        worker_config["agent_card"] = agent_card
+        return worker_config
+
+    def start_local_worker(self, request: BossLocalWorkerLaunchRequest) -> dict[str, Any]:
+        """Launch one or more boss-managed local ADS workers."""
+        worker_type = self._local_worker_type(request.worker_type)
+        try:
+            count = max(1, min(int(request.count), LOCAL_WORKER_MAX_BATCH))
+        except (TypeError, ValueError):
+            count = 1
+
+        dispatcher_address = str(request.dispatcher_address or self.dispatcher_address or "").strip()
+        plaza_url = self._normalize_url(str(request.plaza_url or self.plaza_url or ""))
+        worker_template = self._worker_template_document()
+        if not worker_template:
+            raise ValueError("worker_config_path must point at a valid ADS worker config.")
+
+        launched: list[dict[str, Any]] = []
+        create_agent_path = PROJECT_ROOT / "prompits" / "create_agent.py"
+        if not create_agent_path.exists():
+            raise RuntimeError("prompits/create_agent.py was not found.")
+
+        for _index in range(count):
+            session_id = build_id("ads-local-worker")
+            worker_name = self._next_local_worker_name(worker_type, worker_template)
+            config = self._build_local_worker_config(
+                session_id=session_id,
+                worker_name=worker_name,
+                worker_type=worker_type,
+                dispatcher_address=dispatcher_address,
+                plaza_url=plaza_url,
+            )
+            config_path = self._local_worker_configs_dir() / f"{_slug_text(session_id, fallback='worker')}.agent"
+            log_path = self._local_worker_logs_dir() / f"{_slug_text(session_id, fallback='worker')}.log"
+            config_path.write_text(json.dumps(config, indent=2) + "\n", encoding="utf-8")
+
+            log_handle = log_path.open("a", encoding="utf-8")
+            env = dict(os.environ)
+            env["PYTHONUNBUFFERED"] = "1"
+            try:
+                process = subprocess.Popen(
+                    [sys.executable, str(create_agent_path), "--config", str(config_path)],
+                    cwd=str(PROJECT_ROOT),
+                    stdout=log_handle,
+                    stderr=subprocess.STDOUT,
+                    env=env,
+                )
+            except Exception:
+                log_handle.close()
+                raise
+
+            session = {
+                "id": session_id,
+                "worker_name": worker_name,
+                "worker_type": str(worker_type.get("id") or "").strip(),
+                "worker_type_label": str(worker_type.get("label") or worker_name).strip(),
+                "capabilities": list(config.get("ads", {}).get("capabilities") or worker_type.get("capabilities") or []),
+                "dispatcher_address": dispatcher_address,
+                "plaza_url": plaza_url,
+                "config_path": str(config_path),
+                "log_path": str(log_path),
+                "started_at": utcnow_iso(),
+                "stopped_at": "",
+                "terminate_requested_at": "",
+                "exit_code": None,
+                "pid": int(getattr(process, "pid", 0) or 0),
+                "status": "launching",
+                "process": process,
+                "log_handle": log_handle,
+            }
+            with self._local_worker_lock:
+                self._local_workers[session_id] = session
+            launched.append(self._serialize_local_worker_session(self._refresh_local_worker_session(session)))
+
+        return {
+            "status": "success",
+            "workers": launched,
+            "count": len(launched),
+            "catalog": self._local_worker_catalog(),
+        }
+
+    def control_local_worker(self, session_id: str, request: BossLocalWorkerControlRequest) -> dict[str, Any]:
+        """Control one boss-managed local ADS worker."""
+        normalized_action = str(request.action or "").strip().lower()
+        if normalized_action != "terminate":
+            raise ValueError("action must be 'terminate'.")
+
+        session = self._local_worker_session(session_id)
+        process = session.get("process")
+        if process is None:
+            return {"status": "success", "worker": self._serialize_local_worker_session(session)}
+        if process.poll() is None:
+            session["terminate_requested_at"] = utcnow_iso()
+            process.terminate()
+            try:
+                process.wait(timeout=5.0)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait(timeout=5.0)
+        self._refresh_local_worker_session(session)
+        return {
+            "status": "success",
+            "worker": self._serialize_local_worker_session(session),
+        }
+
+    def get_local_worker_logs(self, session_id: str, *, limit: int = 200) -> dict[str, Any]:
+        """Return tailed logs for one boss-managed local ADS worker."""
+        session = self._local_worker_session(session_id)
+        try:
+            normalized_limit = max(1, min(int(limit), 1000))
+        except (TypeError, ValueError):
+            normalized_limit = 200
+        log_path = Path(str(session.get("log_path") or "").strip())
+        if log_path.exists():
+            lines = log_path.read_text(encoding="utf-8", errors="replace").splitlines()[-normalized_limit:]
+        else:
+            lines = []
+        return {
+            "status": "success",
+            "worker": self._serialize_local_worker_session(session),
+            "lines": lines,
+            "count": len(lines),
+            "limit": normalized_limit,
+            "text": "\n".join(lines),
+        }
+
     @staticmethod
     def _db_table_options() -> list[dict[str, str]]:
         """Internal helper to return the database table options."""
@@ -472,6 +923,8 @@ class ADSBossAgent(StandbyAgent):
             if not raw_name:
                 continue
             normalized = raw_name.lower()
+            if normalized in HIDDEN_OPERATOR_JOB_OPTIONS:
+                continue
             if normalized in seen:
                 continue
             seen.add(normalized)
@@ -510,6 +963,90 @@ class ADSBossAgent(StandbyAgent):
                 return options
 
         return [{"id": "IEX EOD", "label": "IEX EOD", "description": "Fetch IEX end-of-day prices."}]
+
+    def _configured_schedule_entries(self) -> list[dict[str, Any]]:
+        """Return config-backed ADS schedule definitions."""
+        entries = self.ads_settings.get("scheduled_jobs") or self.raw_config.get("scheduled_jobs") or []
+        if not isinstance(entries, list):
+            return []
+        normalized_entries: list[dict[str, Any]] = []
+        for entry in entries:
+            if not isinstance(entry, Mapping) or job_cap_entry_is_disabled(entry):
+                continue
+            normalized_entries.append(dict(entry))
+        return normalized_entries
+
+    def _build_schedule_record(self, payload: Mapping[str, Any], *, schedule_id: str = "") -> dict[str, Any]:
+        """Build one normalized ADS schedule row."""
+        now = utcnow_iso()
+        return {
+            "id": str(schedule_id or build_id("ads-boss-schedule")).strip() or build_id("ads-boss-schedule"),
+            "name": str(payload.get("name") or ""),
+            "status": "scheduled",
+            "dispatcher_address": str(payload.get("dispatcher_address") or ""),
+            "repeat_frequency": str(payload.get("repeat_frequency") or "once"),
+            "schedule_timezone": str(payload.get("schedule_timezone") or "UTC"),
+            "schedule_time": str(payload.get("schedule_time") or ""),
+            "schedule_times": list(payload.get("schedule_times") or []),
+            "schedule_weekdays": list(payload.get("schedule_weekdays") or []),
+            "schedule_day_of_month": payload.get("schedule_day_of_month"),
+            "schedule_days_of_month": list(payload.get("schedule_days_of_month") or []),
+            "required_capability": str(payload.get("required_capability") or ""),
+            "symbols": list(payload.get("symbols") or []),
+            "payload": payload.get("payload"),
+            "target_table": str(payload.get("target_table") or ""),
+            "source_url": str(payload.get("source_url") or ""),
+            "parse_rules": payload.get("parse_rules"),
+            "capability_tags": list(payload.get("capability_tags") or []),
+            "job_type": str(payload.get("job_type") or "collect"),
+            "priority": int(payload.get("priority") or 100),
+            "premium": bool(payload.get("premium")),
+            "metadata": dict(payload.get("metadata") or {}),
+            "scheduled_for": str(payload.get("scheduled_for") or ""),
+            "max_attempts": int(payload.get("max_attempts") or 3),
+            "dispatcher_job_id": "",
+            "issued_at": "",
+            "last_attempted_at": "",
+            "last_error": "",
+            "issue_attempts": 0,
+            "created_at": now,
+            "updated_at": now,
+        }
+
+    def _ensure_config_schedules(self) -> None:
+        """Ensure config-seeded ADS schedules exist once per schedule id."""
+        if self.pool is None:
+            return
+        for entry in self._configured_schedule_entries():
+            schedule_id = _config_schedule_id(
+                entry.get("id") or entry.get("schedule_id"),
+                prefix="ads-boss-schedule",
+                fallback_name=entry.get("name"),
+                fallback_capability=entry.get("required_capability"),
+            )
+            try:
+                self._get_schedule_row(schedule_id)
+                continue
+            except LookupError:
+                pass
+            except Exception as exc:
+                self.logger.warning("Failed checking ADS seeded schedule '%s': %s", schedule_id, exc)
+                continue
+
+            schedule_payload = dict(entry)
+            schedule_payload.pop("id", None)
+            schedule_payload.pop("schedule_id", None)
+            schedule_payload.pop("disabled", None)
+            try:
+                request = BossScheduleJobRequest.model_validate(schedule_payload)
+                normalized_payload = self._normalize_schedule_payload(request)
+                metadata = dict(normalized_payload.get("metadata") or {})
+                metadata.setdefault("seeded_from_config", True)
+                metadata.setdefault("config_schedule_id", schedule_id)
+                normalized_payload["metadata"] = metadata
+                self._save_schedule_row(self._build_schedule_record(normalized_payload, schedule_id=schedule_id))
+            except Exception as exc:
+                self.logger.warning("Skipping invalid ADS seeded schedule '%s': %s", schedule_id, exc)
 
     def ensure_schedule_tables(self) -> None:
         """Ensure the schedule tables exists."""
@@ -1297,6 +1834,43 @@ class ADSBossAgent(StandbyAgent):
             counts[status] = counts.get(status, 0) + 1
         return counts
 
+    def _fetch_dispatcher_job_rows(
+        self,
+        *,
+        dispatcher_address: str,
+        id_or_where: Any = None,
+        include_completed_archive: bool = False,
+    ) -> list[dict[str, Any]]:
+        """Fetch ADS job rows, optionally including the completed-job archive."""
+        rows = [
+            self._normalize_job_row(row)
+            for row in self._fetch_dispatcher_rows(
+                table_name=TABLE_JOBS,
+                table_schema=jobs_schema_dict(),
+                dispatcher_address=dispatcher_address,
+                id_or_where=id_or_where,
+            )
+        ]
+        if not include_completed_archive:
+            return rows
+        try:
+            archive_rows = [
+                self._normalize_job_row(row)
+                for row in self._fetch_dispatcher_rows(
+                    table_name=TABLE_JOB_ARCHIVE,
+                    table_schema=job_archive_schema_dict(),
+                    dispatcher_address=dispatcher_address,
+                    id_or_where=id_or_where,
+                )
+            ]
+        except Exception as exc:
+            if self._table_missing_error(exc, TABLE_JOB_ARCHIVE):
+                archive_rows = []
+            else:
+                raise
+        rows.extend(archive_rows)
+        return rows
+
     @staticmethod
     def _worker_health_status(worker: Mapping[str, Any], *, now: datetime) -> tuple[str, float | None]:
         """Internal helper to return the worker health status."""
@@ -1852,40 +2426,7 @@ class ADSBossAgent(StandbyAgent):
     def create_schedule(self, request: BossScheduleJobRequest) -> Dict[str, Any]:
         """Create the schedule."""
         payload = self._normalize_schedule_payload(request)
-        now = utcnow_iso()
-        record = {
-            "id": build_id("ads-boss-schedule"),
-            "name": str(payload.pop("name") or ""),
-            "status": "scheduled",
-            "dispatcher_address": str(payload.pop("dispatcher_address") or ""),
-            "repeat_frequency": str(payload.get("repeat_frequency") or "once"),
-            "schedule_timezone": str(payload.get("schedule_timezone") or "UTC"),
-            "schedule_time": str(payload.get("schedule_time") or ""),
-            "schedule_times": list(payload.get("schedule_times") or []),
-            "schedule_weekdays": list(payload.get("schedule_weekdays") or []),
-            "schedule_day_of_month": payload.get("schedule_day_of_month"),
-            "schedule_days_of_month": list(payload.get("schedule_days_of_month") or []),
-            "required_capability": str(payload.get("required_capability") or ""),
-            "symbols": list(payload.get("symbols") or []),
-            "payload": payload.get("payload"),
-            "target_table": str(payload.get("target_table") or ""),
-            "source_url": str(payload.get("source_url") or ""),
-            "parse_rules": payload.get("parse_rules"),
-            "capability_tags": list(payload.get("capability_tags") or []),
-            "job_type": str(payload.get("job_type") or "collect"),
-            "priority": int(payload.get("priority") or 100),
-            "premium": bool(payload.get("premium")),
-            "metadata": dict(payload.get("metadata") or {}),
-            "scheduled_for": str(payload.get("scheduled_for") or ""),
-            "max_attempts": int(payload.get("max_attempts") or 3),
-            "dispatcher_job_id": "",
-            "issued_at": "",
-            "last_attempted_at": "",
-            "last_error": "",
-            "issue_attempts": 0,
-            "created_at": now,
-            "updated_at": now,
-        }
+        record = self._build_schedule_record(payload)
         return {"status": "success", "schedule": self._save_schedule_row(record)}
 
     def issue_scheduled_job(self, schedule_id: str, *, force_now: bool = False) -> Dict[str, Any]:
@@ -2011,14 +2552,11 @@ class ADSBossAgent(StandbyAgent):
     ) -> Dict[str, Any]:
         """List the jobs via dispatcher."""
         resolved_dispatcher_address = self._resolve_dispatcher_address(dispatcher_address)
-        rows = [
-            self._normalize_job_row(row)
-            for row in self._fetch_dispatcher_rows(
-                table_name=TABLE_JOBS,
-                table_schema=jobs_schema_dict(),
-                dispatcher_address=resolved_dispatcher_address,
-            )
-        ]
+        normalized_status = str(status or "").strip().lower()
+        rows = self._fetch_dispatcher_job_rows(
+            dispatcher_address=resolved_dispatcher_address,
+            include_completed_archive=normalized_status in {"", "completed"},
+        )
         latest_rows_by_id: dict[str, dict[str, Any]] = {}
         for row in rows:
             row_id = str(row.get("id") or "").strip()
@@ -2029,7 +2567,6 @@ class ADSBossAgent(StandbyAgent):
                 latest_rows_by_id[row_id] = row
         rows = list(latest_rows_by_id.values())
 
-        normalized_status = str(status or "").strip().lower()
         normalized_capability = str(capability or "").strip().lower()
         normalized_search = str(search or "").strip().lower()
 
@@ -2078,15 +2615,11 @@ class ADSBossAgent(StandbyAgent):
         if not normalized_job_id:
             raise ValueError("job_id is required.")
 
-        job_rows = [
-            self._normalize_job_row(row)
-            for row in self._fetch_dispatcher_rows(
-                table_name=TABLE_JOBS,
-                table_schema=jobs_schema_dict(),
-                dispatcher_address=resolved_dispatcher_address,
-                id_or_where={"id": normalized_job_id},
-            )
-        ]
+        job_rows = self._fetch_dispatcher_job_rows(
+            dispatcher_address=resolved_dispatcher_address,
+            id_or_where={"id": normalized_job_id},
+            include_completed_archive=True,
+        )
         if not job_rows:
             raise LookupError(f"ADS job '{normalized_job_id}' was not found.")
         job_rows.sort(key=self._job_sort_tuple, reverse=True)
@@ -2185,14 +2718,10 @@ class ADSBossAgent(StandbyAgent):
         if not normalized_worker_id:
             raise ValueError("worker_id is required.")
 
-        rows = [
-            self._normalize_job_row(row)
-            for row in self._fetch_dispatcher_rows(
-                table_name=TABLE_JOBS,
-                table_schema=jobs_schema_dict(),
-                dispatcher_address=resolved_dispatcher_address,
-            )
-        ]
+        rows = self._fetch_dispatcher_job_rows(
+            dispatcher_address=resolved_dispatcher_address,
+            include_completed_archive=True,
+        )
         latest_rows_by_id: dict[str, dict[str, Any]] = {}
         for row in rows:
             row_id = str(row.get("id") or "").strip()
@@ -2290,14 +2819,10 @@ class ADSBossAgent(StandbyAgent):
         resolved_dispatcher_address = self._resolve_dispatcher_address(
             str(schedule.get("dispatcher_address") or "")
         )
-        rows = [
-            self._normalize_job_row(row)
-            for row in self._fetch_dispatcher_rows(
-                table_name=TABLE_JOBS,
-                table_schema=jobs_schema_dict(),
-                dispatcher_address=resolved_dispatcher_address,
-            )
-        ]
+        rows = self._fetch_dispatcher_job_rows(
+            dispatcher_address=resolved_dispatcher_address,
+            include_completed_archive=True,
+        )
         latest_rows_by_id: dict[str, dict[str, Any]] = {}
         for row in rows:
             row_id = str(row.get("id") or "").strip()
@@ -2749,6 +3274,60 @@ class ADSBossAgent(StandbyAgent):
                     self.get_monitor_snapshot,
                     dispatcher_address=dispatcher_address,
                 )
+            except ValueError as exc:
+                raise HTTPException(status_code=400, detail=str(exc)) from exc
+            except HTTPException:
+                raise
+            except Exception as exc:
+                raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+        @self.app.get("/api/workers/local")
+        async def boss_local_workers():
+            """Route handler for GET /api/workers/local."""
+            try:
+                return await run_in_threadpool(self.list_local_workers)
+            except ValueError as exc:
+                raise HTTPException(status_code=400, detail=str(exc)) from exc
+            except HTTPException:
+                raise
+            except Exception as exc:
+                raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+        @self.app.post("/api/workers/local")
+        async def boss_start_local_worker(request: BossLocalWorkerLaunchRequest):
+            """Route handler for POST /api/workers/local."""
+            try:
+                return await run_in_threadpool(self.start_local_worker, request)
+            except LookupError as exc:
+                raise HTTPException(status_code=404, detail=str(exc)) from exc
+            except ValueError as exc:
+                raise HTTPException(status_code=400, detail=str(exc)) from exc
+            except HTTPException:
+                raise
+            except Exception as exc:
+                raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+        @self.app.get("/api/workers/local/{worker_id}/logs")
+        async def boss_local_worker_logs(worker_id: str, limit: int = 200):
+            """Route handler for GET /api/workers/local/{worker_id}/logs."""
+            try:
+                return await run_in_threadpool(self.get_local_worker_logs, worker_id, limit=limit)
+            except LookupError as exc:
+                raise HTTPException(status_code=404, detail=str(exc)) from exc
+            except ValueError as exc:
+                raise HTTPException(status_code=400, detail=str(exc)) from exc
+            except HTTPException:
+                raise
+            except Exception as exc:
+                raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+        @self.app.post("/api/workers/local/{worker_id}/control")
+        async def boss_local_worker_control(worker_id: str, request: BossLocalWorkerControlRequest):
+            """Route handler for POST /api/workers/local/{worker_id}/control."""
+            try:
+                return await run_in_threadpool(self.control_local_worker, worker_id, request)
+            except LookupError as exc:
+                raise HTTPException(status_code=404, detail=str(exc)) from exc
             except ValueError as exc:
                 raise HTTPException(status_code=400, detail=str(exc)) from exc
             except HTTPException:

@@ -5,18 +5,23 @@
   const state = {
     current_page: initial.current_page || "issue",
     hero_metrics: initial.hero_metrics || null,
-    monitor_tab: "jobs",
+    monitor_tab: "dashboard",
     db_tab: "viewer",
     monitor_panel_collapsed: true,
     monitor_summary: initial.monitor_summary || null,
     job_options: initial.job_options || [],
     monitor_workers: [],
+    local_workers: [],
+    local_worker_catalog: [],
     worker_status_filter: "online",
     worker_job_modal_open: false,
     worker_job_modal_job_id: "",
     worker_history_modal_open: false,
     worker_history_modal_worker_id: "",
     worker_history_modal_worker_name: "",
+    worker_log_modal_open: false,
+    worker_log_modal_worker_id: "",
+    worker_log_modal_worker_name: "",
     schedule_history_modal_open: false,
     schedule_history_modal_schedule_id: "",
     schedule_history_modal_schedule_name: "",
@@ -576,9 +581,9 @@
 
   function statusTone(status) {
     const normalized = String(status || "").trim().toLowerCase();
-    if (["completed", "issued", "connected", "online", "working"].includes(normalized)) return "success";
+    if (["completed", "issued", "connected", "online", "working", "running"].includes(normalized)) return "success";
     if (["failed", "cancelled", "deleted", "error", "offline", "blocked", "attention", "unreachable"].includes(normalized)) return "error";
-    if (["claimed", "stopping", "paused", "retry", "unfinished", "issuing", "queued", "stale", "checking"].includes(normalized)) return "loading";
+    if (["claimed", "stopping", "paused", "retry", "unfinished", "issuing", "queued", "stale", "checking", "launching"].includes(normalized)) return "loading";
     return "muted";
   }
 
@@ -1316,6 +1321,190 @@
     `;
   }
 
+  function localWorkerDisplayHealth(session) {
+    const normalized = String(session?.status || "").trim().toLowerCase();
+    if (normalized === "running") return "online";
+    if (["launching", "stopping"].includes(normalized)) return "stale";
+    if (normalized === "failed") return "error";
+    return "offline";
+  }
+
+  function localWorkerSessionMaps() {
+    const byId = new Map();
+    const byName = new Map();
+    (Array.isArray(state.local_workers) ? state.local_workers : []).forEach((session) => {
+      const id = String(session?.id || "").trim();
+      const name = String(session?.worker_name || "").trim();
+      if (id) byId.set(id, session);
+      if (name) byName.set(name, session);
+    });
+    return { byId, byName };
+  }
+
+  function workerLocalSession(worker, maps = localWorkerSessionMaps()) {
+    const metadata = isPlainObject(worker?.metadata) ? worker.metadata : {};
+    const sessionId = String(metadata.local_manager_session_id || "").trim();
+    const workerName = String(worker?.name || "").trim();
+    return maps.byId.get(sessionId) || maps.byName.get(workerName) || null;
+  }
+
+  function workerTypeLabel(worker) {
+    const localSession = worker?.local_session || null;
+    if (localSession?.worker_type_label) return String(localSession.worker_type_label).trim() || "Managed Worker";
+    const metadata = isPlainObject(worker?.metadata) ? worker.metadata : {};
+    const configuredCaps = Array.isArray(metadata.configured_capabilities) ? metadata.configured_capabilities.filter(Boolean) : [];
+    const capabilities = configuredCaps.length
+      ? configuredCaps
+      : (Array.isArray(worker?.capabilities) ? worker.capabilities.filter(Boolean) : []);
+    if (capabilities.length === 1) return String(capabilities[0]).trim() || "Worker";
+    if (capabilities.length > 1) return "Multi-capability";
+    return "Unassigned";
+  }
+
+  function buildDashboardCapabilityGrid(dispatcher) {
+    const meta = byId("dashboard-capability-meta");
+    const grid = byId("dashboard-capability-grid");
+    if (!meta || !grid) return;
+    const capabilityCounts = Array.isArray(dispatcher?.capability_counts) ? dispatcher.capability_counts : [];
+    if (!capabilityCounts.length) {
+      meta.textContent = "Refresh the dispatcher to load crawler coverage by type.";
+      grid.innerHTML = '<div class="empty-state">Crawler activity will appear after the dispatcher returns ADS job counts.</div>';
+      return;
+    }
+    meta.textContent = `${capabilityCounts.length} crawler type${capabilityCounts.length === 1 ? "" : "s"} returned by the dispatcher.`;
+    grid.innerHTML = capabilityCounts.map((entry) => `
+      <article class="dashboard-capability-card">
+        <div class="dashboard-capability-head">
+          <div class="dashboard-capability-name">${escapeHtml(entry?.capability || "Unknown")}</div>
+          <span class="monitor-chip">${escapeHtml(String(entry?.total || 0))} total</span>
+        </div>
+        <div class="dashboard-capability-stats">
+          <span><strong>${escapeHtml(String(entry?.completed || 0))}</strong> done</span>
+          <span><strong>${escapeHtml(String(entry?.active || 0))}</strong> working</span>
+          <span><strong>${escapeHtml(String(entry?.queued || 0))}</strong> queued</span>
+          <span><strong>${escapeHtml(String(entry?.failed || 0))}</strong> failed</span>
+        </div>
+      </article>
+    `).join("");
+  }
+
+  function renderDashboardScheduleList(schedules) {
+    const list = byId("dashboard-schedule-list");
+    const meta = byId("dashboard-schedule-meta");
+    if (!list || !meta) return;
+    const items = Array.isArray(schedules) ? schedules : [];
+    meta.textContent = `${items.length} scheduled job${items.length === 1 ? "" : "s"} tracked by the boss.`;
+    if (!items.length) {
+      list.innerHTML = '<div class="empty-state">Create or sync schedules to monitor the boss release queue.</div>';
+      return;
+    }
+    list.innerHTML = items.map((schedule) => `
+      <section class="pulse-card schedule-card schedule-card-compact" data-schedule-id="${escapeHtml(schedule.id)}" data-schedule-name="${escapeHtml(schedule.name || schedule.required_capability || "Scheduled Job")}">
+        <div class="pulse-card-line">
+          <span class="pulse-card-title">${escapeHtml(schedule.name || schedule.required_capability || "Scheduled Job")}</span>
+          ${statusChipMarkup(schedule.status || "scheduled")}
+        </div>
+        <div class="pulse-card-subtitle">${escapeHtml(formatScheduleRule(schedule))}</div>
+        <div class="schedule-card-grid">
+          <div class="schedule-card-column">
+            <div class="schedule-card-detail"><strong>Next:</strong> ${escapeHtml(formatTimestamp(schedule.scheduled_for))}</div>
+            <div class="schedule-card-detail"><strong>Latest Job:</strong> ${escapeHtml(schedule.dispatcher_job_id ? shortJobId(schedule.dispatcher_job_id) : "Unset")}</div>
+          </div>
+          <div class="schedule-card-column">
+            <div class="schedule-card-detail"><strong>Symbols:</strong> ${escapeHtml((schedule.symbols || []).join(", ") || "None")}</div>
+            <div class="schedule-card-detail"><strong>Dispatcher:</strong> ${escapeHtml(schedule.dispatcher_address || "Unset")}</div>
+          </div>
+        </div>
+        <div class="schedule-card-actions">
+          <button type="button" class="ghost-btn" data-schedule-action="history">Job History</button>
+          <button type="button" class="ghost-btn" data-schedule-action="issue">Issue Now</button>
+          <button type="button" class="danger-btn" data-schedule-action="delete">Delete</button>
+        </div>
+      </section>
+    `).join("");
+  }
+
+  function renderLocalWorkerTypeOptions() {
+    const select = byId("local-worker-type");
+    if (!select) return;
+    const selected = select.value;
+    const catalog = Array.isArray(state.local_worker_catalog) ? state.local_worker_catalog : [];
+    if (!catalog.length) {
+      select.innerHTML = '<option value="">No worker types available</option>';
+      select.disabled = true;
+      updateLocalWorkerTypeSummary();
+      return;
+    }
+    select.disabled = false;
+    select.innerHTML = catalog.map((entry) => `
+      <option value="${escapeHtml(entry.id)}">${escapeHtml(entry.label)}</option>
+    `).join("");
+    if (catalog.some((entry) => entry.id === selected)) {
+      select.value = selected;
+    }
+    updateLocalWorkerTypeSummary();
+  }
+
+  function selectedLocalWorkerType() {
+    const select = byId("local-worker-type");
+    const selected = String(select?.value || "").trim();
+    return (Array.isArray(state.local_worker_catalog) ? state.local_worker_catalog : []).find((entry) => String(entry?.id || "").trim() === selected) || null;
+  }
+
+  function updateLocalWorkerTypeSummary() {
+    const shell = byId("local-worker-type-summary");
+    if (!shell) return;
+    const selected = selectedLocalWorkerType();
+    if (!selected) {
+      shell.textContent = "Choose a worker type to launch a new ADS crawler process.";
+      return;
+    }
+    const capabilities = Array.isArray(selected.capabilities) ? selected.capabilities.filter(Boolean) : [];
+    const parts = [
+      String(selected.description || "").trim(),
+      capabilities.length ? `Capabilities: ${capabilities.join(", ")}` : "",
+    ].filter(Boolean);
+    shell.textContent = parts.join(" | ") || "Launch a new ADS worker.";
+  }
+
+  function renderLocalWorkerRuntime() {
+    const meta = byId("local-worker-runtime-meta");
+    const list = byId("local-worker-runtime");
+    if (!meta || !list) return;
+    const sessions = Array.isArray(state.local_workers) ? state.local_workers : [];
+    const running = sessions.filter((session) => String(session?.status || "").trim() === "running").length;
+    meta.textContent = sessions.length
+      ? `${running} running · ${sessions.length} boss-managed worker session${sessions.length === 1 ? "" : "s"}`
+      : "No boss-managed worker sessions loaded yet.";
+    if (!sessions.length) {
+      list.innerHTML = '<div class="empty-state">Boss-managed workers will appear here after you launch them.</div>';
+      return;
+    }
+    list.innerHTML = sessions.map((session) => `
+      <section class="pulse-card local-worker-card" data-local-worker-id="${escapeHtml(session.id)}">
+        <div class="pulse-card-line">
+          <span class="pulse-card-title">${escapeHtml(session.worker_name || session.id || "Worker")}</span>
+          ${statusChipMarkup(session.status || "unknown")}
+        </div>
+        <div class="pulse-card-subtitle">${escapeHtml(session.worker_type_label || "Managed Worker")}</div>
+        <div class="schedule-card-grid">
+          <div class="schedule-card-column">
+            <div class="schedule-card-detail"><strong>PID:</strong> ${escapeHtml(String(session.pid || "Unset"))}</div>
+            <div class="schedule-card-detail"><strong>Started:</strong> ${escapeHtml(formatTimestamp(session.started_at))}</div>
+          </div>
+          <div class="schedule-card-column">
+            <div class="schedule-card-detail"><strong>Dispatcher:</strong> ${escapeHtml(session.dispatcher_address || "Unset")}</div>
+            <div class="schedule-card-detail"><strong>Capabilities:</strong> ${escapeHtml((session.capabilities || []).join(", ") || "Unset")}</div>
+          </div>
+        </div>
+        <div class="schedule-card-actions">
+          <button type="button" class="ghost-btn" data-worker-log="${escapeHtml(session.id)}" data-worker-log-name="${escapeHtml(session.worker_name || session.id || "Worker")}">View Logs</button>
+          <button type="button" class="danger-btn" data-local-worker-action="terminate" data-local-worker-id="${escapeHtml(session.id)}"${["running", "launching", "stopping"].includes(String(session.status || "").trim()) ? "" : " disabled"}>Terminate</button>
+        </div>
+      </section>
+    `).join("");
+  }
+
   function normalizeWorkerStatusFilter(value) {
     const normalized = String(value || "online").trim().toLowerCase();
     return ["online", "stale", "offline", "all"].includes(normalized) ? normalized : "online";
@@ -1401,11 +1590,46 @@
     const alerts = Array.isArray(dispatcher.alerts) ? dispatcher.alerts.filter(Boolean) : [];
     const jobCounts = isPlainObject(dispatcher.job_counts) ? dispatcher.job_counts : {};
     const workerCounts = isPlainObject(dispatcher.worker_counts) ? dispatcher.worker_counts : {};
+    buildDashboardCapabilityGrid(dispatcher);
+    renderLocalWorkerRuntime();
+
     const workerFilter = normalizeWorkerStatusFilter(byId("worker-status-filter")?.value || state.worker_status_filter);
     state.worker_status_filter = workerFilter;
+    const localSessionMaps = localWorkerSessionMaps();
+    const matchedLocalIds = new Set();
+    const combinedWorkers = workers.map((worker) => {
+      const localSession = workerLocalSession(worker, localSessionMaps);
+      if (localSession?.id) matchedLocalIds.add(localSession.id);
+      return Object.assign({}, worker, { local_session: localSession, local_only: false });
+    });
+    (Array.isArray(state.local_workers) ? state.local_workers : []).forEach((session) => {
+      if (matchedLocalIds.has(session.id)) return;
+      combinedWorkers.push({
+        id: `local:${session.id}`,
+        worker_id: "",
+        name: session.worker_name || session.id,
+        status: session.status,
+        health_status: localWorkerDisplayHealth(session),
+        address: "",
+        capabilities: Array.isArray(session.capabilities) ? session.capabilities : [],
+        active_jobs: [],
+        active_job_ids: [],
+        active_job_count: 0,
+        heartbeat_age_sec: null,
+        metadata: {
+          local_manager_session_id: session.id,
+          local_worker_type_label: session.worker_type_label,
+        },
+        local_session: session,
+        local_only: true,
+      });
+    });
     const filteredWorkers = workerFilter === "all"
-      ? workers
-      : workers.filter(worker => String(worker?.health_status || worker?.status || "unknown").trim().toLowerCase() === workerFilter);
+      ? combinedWorkers
+      : combinedWorkers.filter((worker) => {
+          const displayHealth = String(worker?.health_status || worker?.status || "unknown").trim().toLowerCase();
+          return displayHealth === workerFilter;
+        });
 
     overview.innerHTML = [
       {
@@ -1494,13 +1718,14 @@
       </section>
     `;
 
+    const managedCount = Array.isArray(state.local_workers) ? state.local_workers.length : 0;
     const filterLabel = workerFilter === "all" ? "showing all workers" : `showing ${workerFilter} only`;
-    workerMeta.textContent = `${totalWorkers} worker${totalWorkers === 1 ? "" : "s"} seen · ${activeWorkers} online · ${Number(workerCounts.stale || 0)} stale · ${Number(workerCounts.offline || 0)} offline · ${filterLabel}`;
-    if (!workers.length) {
+    workerMeta.textContent = `${combinedWorkers.length} worker${combinedWorkers.length === 1 ? "" : "s"} visible · ${activeWorkers} online from dispatcher · ${managedCount} boss-managed session${managedCount === 1 ? "" : "s"} · ${filterLabel}`;
+    if (!combinedWorkers.length) {
       workerList.innerHTML = `<div class="empty-state">${escapeHtml(
         connectionStatus === "not_configured"
           ? "Set a dispatcher address to load worker heartbeat data."
-          : "No worker heartbeat rows returned by the dispatcher yet."
+          : "No worker heartbeat rows or boss-managed worker sessions are available yet."
       )}</div>`;
       return;
     }
@@ -1514,78 +1739,142 @@
       return;
     }
 
-    workerList.innerHTML = filteredWorkers.map(worker => {
-      const workerId = worker.worker_id || worker.id || worker.name || "";
-      const workerName = worker.name || workerId || "Worker";
-      const capabilities = Array.isArray(worker.capabilities) ? worker.capabilities : [];
-      const activeJobs = resolveWorkerActiveJobs(worker);
-      const activeJobIds = activeJobs
-        .map((job, index) => String(job?.id || worker?.active_job_ids?.[index] || "").trim())
-        .filter(Boolean);
-      const healthStatus = String(worker.health_status || worker.status || "unknown").trim().toLowerCase() || "unknown";
-      return `
-        <section class="pulse-card worker-card">
-          <div class="worker-card-head">
-            <div>
-              <div class="worker-card-title">${escapeHtml(workerName)}</div>
+    const groupedWorkers = filteredWorkers.reduce((groups, worker) => {
+      const label = workerTypeLabel(worker);
+      if (!groups.has(label)) groups.set(label, []);
+      groups.get(label).push(worker);
+      return groups;
+    }, new Map());
+
+    const groupMarkup = Array.from(groupedWorkers.entries())
+      .sort((left, right) => compareText(left[0], right[0]))
+      .map(([label, groupWorkers]) => {
+        const cards = groupWorkers
+          .sort((left, right) => {
+            const leftStatus = String(left?.health_status || left?.status || "").trim().toLowerCase();
+            const rightStatus = String(right?.health_status || right?.status || "").trim().toLowerCase();
+            return (
+              compareText(leftStatus, rightStatus) ||
+              compareText(left?.name, right?.name)
+            );
+          })
+          .map((worker) => {
+            const workerId = worker.worker_id || "";
+            const workerName = worker.name || workerId || "Worker";
+            const capabilities = Array.isArray(worker.capabilities) ? worker.capabilities : [];
+            const activeJobs = resolveWorkerActiveJobs(worker);
+            const activeJobIds = activeJobs
+              .map((job, index) => String(job?.id || worker?.active_job_ids?.[index] || "").trim())
+              .filter(Boolean);
+            const healthStatus = String(worker.health_status || worker.status || "unknown").trim().toLowerCase() || "unknown";
+            const localSession = worker.local_session || null;
+            const pidLabel = localSession?.pid ? `PID ${localSession.pid}` : "";
+            const launchLabel = localSession?.started_at ? `Started ${formatRelativeTime(localSession.started_at)}` : "";
+            const localBadge = localSession ? '<span class="monitor-chip">Boss Managed</span>' : "";
+            return `
+              <section class="pulse-card worker-card">
+                <div class="worker-card-head">
+                  <div>
+                    <div class="worker-card-title">${escapeHtml(workerName)}</div>
+                    <div class="pulse-card-subtitle">${escapeHtml([pidLabel, launchLabel].filter(Boolean).join(" · ") || label)}</div>
+                  </div>
+                  <div class="worker-card-head-actions">
+                    ${localBadge}
+                    ${statusChipMarkup(localSession?.status || healthStatus)}
+                  </div>
+                </div>
+                <div class="worker-card-summary">
+                  <div class="worker-card-line">
+                    <span class="worker-card-inline-item">
+                      <span class="worker-card-inline-label">Address</span>
+                      <span class="worker-card-inline-value is-mono">${escapeHtml(worker.address || "Boss-managed runtime")}</span>
+                    </span>
+                  </div>
+                  <div class="worker-card-line worker-card-line-split">
+                    <span class="worker-card-inline-item">
+                      <span class="worker-card-inline-label">Active Jobs</span>
+                      <span class="worker-card-inline-value">${escapeHtml(workerActiveJobsPreview(activeJobs))}</span>
+                    </span>
+                    <span class="worker-card-inline-item">
+                      <span class="worker-card-inline-label">Heartbeat Age</span>
+                      <span class="worker-card-inline-value">${escapeHtml(formatSeconds(worker.heartbeat_age_sec))}</span>
+                    </span>
+                  </div>
+                </div>
+                <div class="worker-card-pills worker-card-actions-row">
+                  ${
+                    workerId
+                      ? `
+                        <button
+                          type="button"
+                          class="monitor-chip monitor-chip-button"
+                          data-worker-history="${escapeHtml(workerId)}"
+                          data-worker-name="${escapeHtml(workerName)}"
+                        >
+                          Work History
+                        </button>
+                      `
+                      : ""
+                  }
+                  ${
+                    localSession
+                      ? `
+                        <button
+                          type="button"
+                          class="monitor-chip monitor-chip-button"
+                          data-worker-log="${escapeHtml(localSession.id)}"
+                          data-worker-log-name="${escapeHtml(workerName)}"
+                        >
+                          View Logs
+                        </button>
+                        <button
+                          type="button"
+                          class="monitor-chip monitor-chip-button is-danger"
+                          data-local-worker-action="terminate"
+                          data-local-worker-id="${escapeHtml(localSession.id)}"
+                          ${["running", "launching", "stopping"].includes(String(localSession.status || "").trim()) ? "" : "disabled"}
+                        >
+                          Terminate
+                        </button>
+                      `
+                      : ""
+                  }
+                </div>
+                ${
+                  activeJobIds.length
+                    ? `<div class="worker-card-pills worker-card-actions-row">${activeJobs.map((job, index) => {
+                        const jobId = String(job?.id || activeJobIds[index] || "").trim();
+                        if (!jobId) return "";
+                        return `
+                          <button
+                            type="button"
+                            class="monitor-chip monitor-chip-button"
+                            data-worker-job-detail="${escapeHtml(jobId)}"
+                          >
+                            Job Detail · ${escapeHtml(workerActiveJobButtonLabel(job, index))}
+                          </button>
+                        `;
+                      }).join("")}</div>`
+                    : `<div class="worker-card-empty-row">No active worker jobs.</div>`
+                }
+                ${workerCapabilitiesMarkup(capabilities)}
+              </section>
+            `;
+          })
+          .join("");
+        return `
+          <section class="worker-type-group">
+            <div class="worker-type-group-head">
+              <h3>${escapeHtml(label)}</h3>
+              <span class="monitor-chip">${escapeHtml(String(groupWorkers.length))} worker${groupWorkers.length === 1 ? "" : "s"}</span>
             </div>
-            <div class="worker-card-head-actions">
-              ${
-                workerId
-                  ? `
-                    <button
-                      type="button"
-                      class="monitor-chip monitor-chip-button"
-                      data-worker-history="${escapeHtml(workerId)}"
-                      data-worker-name="${escapeHtml(workerName)}"
-                    >
-                      Work History
-                    </button>
-                  `
-                  : ""
-              }
-              ${statusChipMarkup(healthStatus)}
-            </div>
-          </div>
-          <div class="worker-card-summary">
-            <div class="worker-card-line">
-              <span class="worker-card-inline-item">
-                <span class="worker-card-inline-label">Address</span>
-                <span class="worker-card-inline-value is-mono">${escapeHtml(worker.address || "Unset")}</span>
-              </span>
-            </div>
-            <div class="worker-card-line worker-card-line-split">
-              <span class="worker-card-inline-item">
-                <span class="worker-card-inline-label">Active Jobs</span>
-                <span class="worker-card-inline-value">${escapeHtml(workerActiveJobsPreview(activeJobs))}</span>
-              </span>
-              <span class="worker-card-inline-item">
-                <span class="worker-card-inline-label">Heartbeat Age</span>
-                <span class="worker-card-inline-value">${escapeHtml(formatSeconds(worker.heartbeat_age_sec))}</span>
-              </span>
-            </div>
-          </div>
-          ${
-            activeJobIds.length
-              ? `<div class="worker-card-pills worker-card-actions-row">${activeJobs.map((job, index) => {
-                  const jobId = String(job?.id || activeJobIds[index] || "").trim();
-                  if (!jobId) return "";
-                  return `
-                    <button
-                      type="button"
-                      class="monitor-chip monitor-chip-button"
-                      data-worker-job-detail="${escapeHtml(jobId)}"
-                    >
-                      Job Detail · ${escapeHtml(workerActiveJobButtonLabel(job, index))}
-                    </button>
-                  `;
-                }).join("")}</div>`
-              : `<div class="worker-card-empty-row">No active worker jobs.</div>`
-          }
-          ${workerCapabilitiesMarkup(capabilities)}
-        </section>
-      `;
-    }).join("");
+            <div class="worker-type-group-grid">${cards}</div>
+          </section>
+        `;
+      })
+      .join("");
+
+    workerList.innerHTML = groupMarkup;
   }
 
   async function loadMonitorSummary() {
@@ -1615,8 +1904,28 @@
     }
   }
 
+  async function loadLocalWorkers() {
+    try {
+      const payload = await fetchJson("/api/workers/local");
+      state.local_workers = Array.isArray(payload.workers) ? payload.workers : [];
+      state.local_worker_catalog = Array.isArray(payload.catalog) ? payload.catalog : [];
+      renderLocalWorkerTypeOptions();
+      renderLocalWorkerRuntime();
+      renderMonitorSummary({
+        dispatcher: state.monitor_summary || {},
+        workers: state.monitor_workers || [],
+        dispatcher_address: currentDispatcherAddress(),
+      });
+    } catch (error) {
+      const meta = byId("local-worker-runtime-meta");
+      const list = byId("local-worker-runtime");
+      if (meta) meta.textContent = error.message || "Unable to load boss-managed workers.";
+      if (list) list.innerHTML = `<div class="empty-state">${escapeHtml(error.message || "Unable to load boss-managed workers.")}</div>`;
+    }
+  }
+
   async function loadMonitorPageData() {
-    await Promise.allSettled([loadMonitorSummary(), loadJobs()]);
+    await Promise.allSettled([loadMonitorSummary(), loadJobs(), loadSchedules(), loadLocalWorkers()]);
   }
 
   function syncMonitorModalOpenState() {
@@ -1625,6 +1934,7 @@
       Boolean(
         state.worker_job_modal_open
         || state.worker_history_modal_open
+        || state.worker_log_modal_open
         || state.schedule_history_modal_open
       )
     );
@@ -1657,6 +1967,21 @@
     state.worker_history_modal_worker_id = "";
     state.worker_history_modal_worker_name = "";
     setWorkerHistoryModalOpen(false);
+  }
+
+  function setWorkerLogModalOpen(isOpen) {
+    state.worker_log_modal_open = Boolean(isOpen);
+    const modal = byId("worker-log-modal");
+    if (modal) {
+      modal.hidden = !state.worker_log_modal_open;
+    }
+    syncMonitorModalOpenState();
+  }
+
+  function closeWorkerLogModal() {
+    state.worker_log_modal_worker_id = "";
+    state.worker_log_modal_worker_name = "";
+    setWorkerLogModalOpen(false);
   }
 
   function setScheduleHistoryModalOpen(isOpen) {
@@ -1735,6 +2060,104 @@
     state.worker_history_modal_worker_name = String(workerName || normalizedWorkerId).trim() || normalizedWorkerId;
     setWorkerHistoryModalOpen(true);
     await loadWorkerHistory(normalizedWorkerId, { workerName: state.worker_history_modal_worker_name });
+  }
+
+  function renderWorkerLogs(payload) {
+    const meta = byId("worker-log-modal-meta");
+    const body = byId("worker-log-modal-body");
+    if (!meta || !body) return;
+    const worker = isPlainObject(payload?.worker) ? payload.worker : {};
+    const lines = Array.isArray(payload?.lines) ? payload.lines : [];
+    const workerName = String(worker?.worker_name || state.worker_log_modal_worker_name || worker?.id || "Worker").trim();
+    meta.textContent = `${workerName} · showing ${lines.length} recent log line${lines.length === 1 ? "" : "s"}`;
+    if (!lines.length) {
+      body.innerHTML = `<div class="empty-state">No logs captured for ${escapeHtml(workerName)} yet.</div>`;
+      return;
+    }
+    body.innerHTML = `<pre class="worker-log-output">${escapeHtml(lines.join("\n"))}</pre>`;
+  }
+
+  async function loadWorkerLogs(workerId, options = {}) {
+    const normalizedWorkerId = String(workerId || "").trim();
+    if (!normalizedWorkerId) return;
+    const workerName = String(options.workerName || state.worker_log_modal_worker_name || normalizedWorkerId).trim();
+    state.worker_log_modal_worker_id = normalizedWorkerId;
+    state.worker_log_modal_worker_name = workerName;
+    const meta = byId("worker-log-modal-meta");
+    if (meta) meta.textContent = `Loading logs for ${workerName}...`;
+    const body = byId("worker-log-modal-body");
+    if (body) body.innerHTML = '<div class="empty-state">Loading worker logs...</div>';
+    try {
+      const payload = await fetchJson(`/api/workers/local/${encodeURIComponent(normalizedWorkerId)}/logs?limit=200`);
+      if (state.worker_log_modal_worker_id !== normalizedWorkerId) return;
+      renderWorkerLogs(payload);
+    } catch (error) {
+      if (state.worker_log_modal_worker_id !== normalizedWorkerId) return;
+      if (meta) meta.textContent = "Unable to load worker logs.";
+      if (body) body.innerHTML = `<div class="empty-state">${escapeHtml(error.message || "Unable to load worker logs.")}</div>`;
+    }
+  }
+
+  async function openWorkerLogModal(workerId, workerName = "") {
+    const normalizedWorkerId = String(workerId || "").trim();
+    if (!normalizedWorkerId) return;
+    state.worker_log_modal_worker_id = normalizedWorkerId;
+    state.worker_log_modal_worker_name = String(workerName || normalizedWorkerId).trim() || normalizedWorkerId;
+    setWorkerLogModalOpen(true);
+    await loadWorkerLogs(normalizedWorkerId, { workerName: state.worker_log_modal_worker_name });
+  }
+
+  async function controlLocalWorker(workerId, action) {
+    const normalizedWorkerId = String(workerId || "").trim();
+    if (!normalizedWorkerId) return;
+    if (String(action || "").trim().toLowerCase() === "terminate" && !window.confirm(`Terminate worker ${normalizedWorkerId}?`)) {
+      return;
+    }
+    const meta = byId("local-worker-meta");
+    if (meta) meta.textContent = `${humanizeKey(action)} in progress...`;
+    try {
+      await fetchJson(`/api/workers/local/${encodeURIComponent(normalizedWorkerId)}/control`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
+      await loadLocalWorkers();
+      await loadMonitorSummary();
+      if (state.worker_log_modal_open && state.worker_log_modal_worker_id === normalizedWorkerId) {
+        await loadWorkerLogs(normalizedWorkerId, { workerName: state.worker_log_modal_worker_name });
+      }
+      if (meta) meta.textContent = `${humanizeKey(action)} complete.`;
+    } catch (error) {
+      if (meta) meta.textContent = error.message || `Unable to ${action} worker.`;
+    }
+  }
+
+  async function handleLocalWorkerSubmit(event) {
+    event.preventDefault();
+    const meta = byId("local-worker-meta");
+    const type = String(byId("local-worker-type")?.value || "").trim();
+    const count = Number.parseInt(String(byId("local-worker-count")?.value || "1"), 10);
+    if (!type) {
+      if (meta) meta.textContent = "Choose a worker type before launching a new worker.";
+      return;
+    }
+    if (meta) meta.textContent = "Starting worker...";
+    try {
+      await fetchJson("/api/workers/local", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          worker_type: type,
+          count: Number.isFinite(count) ? count : 1,
+          dispatcher_address: currentDispatcherAddress(),
+        }),
+      });
+      if (meta) meta.textContent = "Worker launch requested.";
+      await loadLocalWorkers();
+      await loadMonitorSummary();
+    } catch (error) {
+      if (meta) meta.textContent = error.message || "Unable to start worker.";
+    }
   }
 
   function currentDispatcherAddress() {
@@ -1840,9 +2263,9 @@
   }
 
   function switchMonitorTab(tabId) {
-    const normalized = ["jobs", "dispatcher", "workers"].includes(String(tabId || "").trim().toLowerCase())
+    const normalized = ["dashboard", "workers"].includes(String(tabId || "").trim().toLowerCase())
       ? String(tabId || "").trim().toLowerCase()
-      : "jobs";
+      : "dashboard";
     state.monitor_tab = normalized;
     document.querySelectorAll("[data-monitor-tab]").forEach(button => {
       const isActive = button.getAttribute("data-monitor-tab") === normalized;
@@ -2247,44 +2670,47 @@
   function renderScheduleList(schedules) {
     const list = byId("schedule-list");
     const meta = byId("schedule-list-meta");
-    if (!list || !meta) return;
-    meta.textContent = `${schedules.length} schedule${schedules.length === 1 ? "" : "s"} found.`;
-    if (!schedules.length) {
-      list.innerHTML = '<div class="empty-state">No scheduled jobs saved yet.</div>';
-      return;
-    }
+    if (list && meta) {
+      meta.textContent = `${schedules.length} schedule${schedules.length === 1 ? "" : "s"} found.`;
+      if (!schedules.length) {
+        list.innerHTML = '<div class="empty-state">No scheduled jobs saved yet.</div>';
+        renderDashboardScheduleList(schedules);
+        return;
+      }
 
-    list.innerHTML = schedules.map(schedule => `
-      <section class="pulse-card schedule-card" data-schedule-id="${escapeHtml(schedule.id)}" data-schedule-name="${escapeHtml(schedule.name || schedule.required_capability || "Scheduled Job")}">
-        <div class="pulse-card-line">
-          <span class="pulse-card-title">${escapeHtml(schedule.name || schedule.required_capability || "Scheduled Job")}</span>
-          ${statusChipMarkup(schedule.status || "scheduled")}
-        </div>
-        <div class="pulse-card-subtitle">${escapeHtml(schedule.required_capability || "")}</div>
-        <div class="schedule-card-grid">
-          <div class="schedule-card-column">
-            <div class="schedule-card-detail"><strong>Rule:</strong> ${escapeHtml(formatScheduleRule(schedule))}</div>
-            <div class="schedule-card-detail"><strong>Next:</strong> ${escapeHtml(formatTimestamp(schedule.scheduled_for))}</div>
-            <div class="schedule-card-detail"><strong>Attempts:</strong> ${escapeHtml(String(schedule.issue_attempts || 0))}</div>
+      list.innerHTML = schedules.map(schedule => `
+        <section class="pulse-card schedule-card" data-schedule-id="${escapeHtml(schedule.id)}" data-schedule-name="${escapeHtml(schedule.name || schedule.required_capability || "Scheduled Job")}">
+          <div class="pulse-card-line">
+            <span class="pulse-card-title">${escapeHtml(schedule.name || schedule.required_capability || "Scheduled Job")}</span>
+            ${statusChipMarkup(schedule.status || "scheduled")}
           </div>
-          <div class="schedule-card-column">
-            <div class="schedule-card-detail"><strong>Symbols:</strong> ${escapeHtml((schedule.symbols || []).join(", ") || "None")}</div>
-            <div class="schedule-card-detail"><strong>Issued:</strong> ${escapeHtml(formatTimestamp(schedule.issued_at))}</div>
-            <div class="schedule-card-detail"><strong>Latest Job:</strong> ${escapeHtml(schedule.dispatcher_job_id ? shortJobId(schedule.dispatcher_job_id) : "Unset")}</div>
+          <div class="pulse-card-subtitle">${escapeHtml(schedule.required_capability || "")}</div>
+          <div class="schedule-card-grid">
+            <div class="schedule-card-column">
+              <div class="schedule-card-detail"><strong>Rule:</strong> ${escapeHtml(formatScheduleRule(schedule))}</div>
+              <div class="schedule-card-detail"><strong>Next:</strong> ${escapeHtml(formatTimestamp(schedule.scheduled_for))}</div>
+              <div class="schedule-card-detail"><strong>Attempts:</strong> ${escapeHtml(String(schedule.issue_attempts || 0))}</div>
+            </div>
+            <div class="schedule-card-column">
+              <div class="schedule-card-detail"><strong>Symbols:</strong> ${escapeHtml((schedule.symbols || []).join(", ") || "None")}</div>
+              <div class="schedule-card-detail"><strong>Issued:</strong> ${escapeHtml(formatTimestamp(schedule.issued_at))}</div>
+              <div class="schedule-card-detail"><strong>Latest Job:</strong> ${escapeHtml(schedule.dispatcher_job_id ? shortJobId(schedule.dispatcher_job_id) : "Unset")}</div>
+            </div>
+            <div class="schedule-card-column">
+              <div class="schedule-card-detail"><strong>Dispatcher:</strong> ${escapeHtml(schedule.dispatcher_address || "Unset")}</div>
+              <div class="schedule-card-detail"><strong>Updated:</strong> ${escapeHtml(formatTimestamp(schedule.updated_at))}</div>
+              <div class="schedule-card-detail"><strong>Note:</strong> ${escapeHtml(formatScheduleSummary(schedule))}</div>
+            </div>
           </div>
-          <div class="schedule-card-column">
-            <div class="schedule-card-detail"><strong>Dispatcher:</strong> ${escapeHtml(schedule.dispatcher_address || "Unset")}</div>
-            <div class="schedule-card-detail"><strong>Updated:</strong> ${escapeHtml(formatTimestamp(schedule.updated_at))}</div>
-            <div class="schedule-card-detail"><strong>Note:</strong> ${escapeHtml(formatScheduleSummary(schedule))}</div>
+          <div class="schedule-card-actions">
+            <button type="button" class="ghost-btn" data-schedule-action="history">Job History</button>
+            <button type="button" class="ghost-btn" data-schedule-action="issue">Issue Now</button>
+            <button type="button" class="danger-btn" data-schedule-action="delete">Delete</button>
           </div>
-        </div>
-        <div class="schedule-card-actions">
-          <button type="button" class="ghost-btn" data-schedule-action="history">Job History</button>
-          <button type="button" class="ghost-btn" data-schedule-action="issue">Issue Now</button>
-          <button type="button" class="danger-btn" data-schedule-action="delete">Delete</button>
-        </div>
-      </section>
-    `).join("");
+        </section>
+      `).join("");
+    }
+    renderDashboardScheduleList(schedules);
   }
 
   async function loadSchedules() {
@@ -2297,8 +2723,16 @@
     } catch (error) {
       setStatus("schedule-status-chip", "Error", "error");
       const list = byId("schedule-list");
+      const dashboardList = byId("dashboard-schedule-list");
+      const dashboardMeta = byId("dashboard-schedule-meta");
       if (list) {
         list.innerHTML = `<div class="empty-state">${escapeHtml(error.message || "Unable to load schedules.")}</div>`;
+      }
+      if (dashboardList) {
+        dashboardList.innerHTML = `<div class="empty-state">${escapeHtml(error.message || "Unable to load schedules.")}</div>`;
+      }
+      if (dashboardMeta) {
+        dashboardMeta.textContent = error.message || "Unable to load scheduled jobs.";
       }
     }
   }
@@ -2693,6 +3127,7 @@
     renderHeroMetrics(state.hero_metrics);
     updateHeroConnectButton(state.plaza_status);
     renderIssueParameters({ seedDefaults: true });
+    renderLocalWorkerTypeOptions();
 
     // 3. Navigation
     document.querySelectorAll("[data-page-link]").forEach(link => {
@@ -2771,9 +3206,30 @@
       }
       controlSchedule(card.getAttribute("data-schedule-id"), action);
     });
+    if (byId("dashboard-schedule-list")) byId("dashboard-schedule-list").addEventListener("click", (event) => {
+      const button = event.target.closest("[data-schedule-action]");
+      if (!button) return;
+      const card = event.target.closest("[data-schedule-id]");
+      if (!card) return;
+      const action = button.getAttribute("data-schedule-action");
+      if (action === "history") {
+        void openScheduleHistoryModal(
+          card.getAttribute("data-schedule-id"),
+          card.getAttribute("data-schedule-name")
+        );
+        return;
+      }
+      controlSchedule(card.getAttribute("data-schedule-id"), action);
+    });
 
     // 5. Monitoring
     if (byId("monitor-refresh")) byId("monitor-refresh").addEventListener("click", refreshMonitorView);
+    if (byId("local-worker-form")) byId("local-worker-form").addEventListener("submit", handleLocalWorkerSubmit);
+    if (byId("local-worker-type")) byId("local-worker-type").addEventListener("change", updateLocalWorkerTypeSummary);
+    if (byId("local-worker-refresh")) byId("local-worker-refresh").addEventListener("click", () => {
+      void loadLocalWorkers();
+      void loadMonitorSummary();
+    });
     if (byId("job-filter-status")) byId("job-filter-status").addEventListener("change", () => {
       void loadJobs();
     });
@@ -2802,12 +3258,45 @@
         void openWorkerJobDetailModal(button.getAttribute("data-worker-job-detail"));
         return;
       }
+      const logButton = event.target.closest("[data-worker-log]");
+      if (logButton) {
+        void openWorkerLogModal(
+          logButton.getAttribute("data-worker-log"),
+          logButton.getAttribute("data-worker-log-name")
+        );
+        return;
+      }
+      const localAction = event.target.closest("[data-local-worker-action]");
+      if (localAction) {
+        void controlLocalWorker(
+          localAction.getAttribute("data-local-worker-id"),
+          localAction.getAttribute("data-local-worker-action")
+        );
+        return;
+      }
       const historyButton = event.target.closest("[data-worker-history]");
       if (!historyButton) return;
       void openWorkerHistoryModal(
         historyButton.getAttribute("data-worker-history"),
         historyButton.getAttribute("data-worker-name")
       );
+    });
+    if (byId("local-worker-runtime")) byId("local-worker-runtime").addEventListener("click", (event) => {
+      const logButton = event.target.closest("[data-worker-log]");
+      if (logButton) {
+        void openWorkerLogModal(
+          logButton.getAttribute("data-worker-log"),
+          logButton.getAttribute("data-worker-log-name")
+        );
+        return;
+      }
+      const localAction = event.target.closest("[data-local-worker-action]");
+      if (localAction) {
+        void controlLocalWorker(
+          localAction.getAttribute("data-local-worker-id"),
+          localAction.getAttribute("data-local-worker-action")
+        );
+      }
     });
     if (byId("worker-status-filter")) byId("worker-status-filter").addEventListener("change", (event) => {
       state.worker_status_filter = normalizeWorkerStatusFilter(event.target.value);
@@ -2838,6 +3327,16 @@
     if (byId("worker-history-modal")) byId("worker-history-modal").addEventListener("click", (event) => {
       if (event.target.closest("[data-close-worker-history-modal='true']")) {
         closeWorkerHistoryModal();
+      }
+    });
+    if (byId("worker-log-refresh")) byId("worker-log-refresh").addEventListener("click", () => {
+      if (!state.worker_log_modal_worker_id) return;
+      void loadWorkerLogs(state.worker_log_modal_worker_id, { workerName: state.worker_log_modal_worker_name });
+    });
+    if (byId("worker-log-modal-close")) byId("worker-log-modal-close").addEventListener("click", closeWorkerLogModal);
+    if (byId("worker-log-modal")) byId("worker-log-modal").addEventListener("click", (event) => {
+      if (event.target.closest("[data-close-worker-log-modal='true']")) {
+        closeWorkerLogModal();
       }
     });
     if (byId("schedule-history-modal-body")) byId("schedule-history-modal-body").addEventListener("click", (event) => {
@@ -2950,6 +3449,7 @@
       if (event.key === "Escape") {
         if (state.worker_job_modal_open) closeWorkerJobModal();
         if (state.worker_history_modal_open) closeWorkerHistoryModal();
+        if (state.worker_log_modal_open) closeWorkerLogModal();
         if (state.schedule_history_modal_open) closeScheduleHistoryModal();
       }
     });

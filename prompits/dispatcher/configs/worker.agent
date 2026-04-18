@@ -31,7 +31,7 @@
         "disabled": false
       }
     ],
-    "poll_interval_sec": 10,
+    "poll_interval_sec": 0,
     "auto_register": true
   }
 }

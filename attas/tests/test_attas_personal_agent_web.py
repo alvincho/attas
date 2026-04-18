@@ -22,8 +22,8 @@ from fastapi.testclient import TestClient
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
-from attas.personal_agent.app import app
-from attas.personal_agent.plaza import _normalize_catalog, normalize_plaza_url
+from phemacast.personal_agent.app import app
+from phemacast.personal_agent.plaza import _normalize_catalog, normalize_plaza_url
 
 
 client = TestClient(app)
@@ -37,13 +37,10 @@ def test_personal_agent_root_renders_dashboard_shell():
     response = client.get("/")
 
     assert response.status_code == 200
-    assert "attas Personal Agent" in response.text
-    assert "New Workspace" in response.text
-    assert "New Browser Window" in response.text
-    assert "New Mind Map Window" in response.text
-    assert "Settings" in response.text
-    assert "Workspace Dock" in response.text
-    assert "personal_agent.js?v=" in response.text
+    assert "Phemacast Personal Agent" in response.text
+    assert '<div id="root"></div>' in response.text
+    assert "personal_agent.css?v=" in response.text
+    assert "personal_agent.jsx?v=" in response.text
 
 
 def test_personal_agent_dashboard_api_returns_expected_sections():
@@ -56,9 +53,7 @@ def test_personal_agent_dashboard_api_returns_expected_sections():
     assert response.status_code == 200
     payload = response.json()
 
-    assert payload["meta"]["application"] == "attas Personal Agent"
-    assert len(payload["watchlist"]) >= 4
-    assert len(payload["providers"]) >= 3
+    assert payload["meta"]["application"] == "Phemacast Personal Agent"
     assert len(payload["workspaces"]) >= 2
     assert len(payload["browser"]["bookmarks"]) >= 3
 
@@ -91,7 +86,7 @@ def test_personal_agent_plaza_catalog_proxy_returns_normalized_payload():
     Exercise the test_personal_agent_plaza_catalog_proxy_returns_normalized_payload
     regression scenario.
     """
-    with patch("attas.personal_agent.app.fetch_plaza_catalog", new=AsyncMock(return_value={
+    with patch("phemacast.personal_agent.app.fetch_plaza_catalog", new=AsyncMock(return_value={
         "status": "success",
         "connected": True,
         "plaza_url": "http://127.0.0.1:8011",
@@ -315,7 +310,7 @@ def test_personal_agent_plaza_run_proxy_returns_result():
     Exercise the test_personal_agent_plaza_run_proxy_returns_result regression
     scenario.
     """
-    with patch("attas.personal_agent.app.run_plaza_pulser_test", new=AsyncMock(return_value={
+    with patch("phemacast.personal_agent.app.run_plaza_pulser_test", new=AsyncMock(return_value={
         "status": "success",
         "result": {"range": 52},
     })):

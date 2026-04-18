@@ -46,7 +46,7 @@
         "type": "ads.rss_news:RSSNewsJobCap"
       }
     ],
-    "poll_interval_sec": 2,
+    "poll_interval_sec": 0,
     "yfinance_request_cooldown_sec": 120,
     "auto_register": false
   }

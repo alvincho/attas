@@ -335,8 +335,7 @@
 
                     <div class="monitor-tab-toolbar">
                         <div class="monitor-tab-row" role="tablist" aria-label="Monitor tabs">
-                            <button type="button" class="monitor-tab is-active" data-monitor-tab="jobs" aria-selected="true">Jobs</button>
-                            <button type="button" class="monitor-tab" data-monitor-tab="dispatcher" aria-selected="false">Dispatcher</button>
+                            <button type="button" class="monitor-tab is-active" data-monitor-tab="dashboard" aria-selected="true">Dashboard</button>
                             <button type="button" class="monitor-tab" data-monitor-tab="workers" aria-selected="false">Workers</button>
                         </div>
                         <div class="monitor-tab-actions">
@@ -344,7 +343,19 @@
                         </div>
                     </div>
 
-                    <div class="monitor-tab-panel is-active" data-monitor-panel="jobs">
+                    <div class="monitor-tab-panel is-active" data-monitor-panel="dashboard">
+                        <section class="panel">
+                            <div class="panel-head">
+                                <div>
+                                    <h2>Crawler Coverage</h2>
+                                    <div class="muted" id="dashboard-capability-meta">Refresh the dispatcher to load crawler coverage by type.</div>
+                                </div>
+                            </div>
+                            <div id="dashboard-capability-grid" class="dashboard-capability-grid">
+                                <div class="empty-state">Crawler activity will appear after the dispatcher returns ADS job counts.</div>
+                            </div>
+                        </section>
+
                         <div class="monitor-split">
                             <section class="panel">
                                 <div class="panel-head">
@@ -388,8 +399,13 @@
                                 </div>
                             </section>
                             <section class="panel">
-                                <div id="job-detail-meta" hidden>Select a job.</div>
-                                <span class="status" id="job-action-status-chip" hidden>Awaiting Selection</span>
+                                <div class="panel-head">
+                                    <div>
+                                        <h2>Current Job Detail</h2>
+                                        <div class="muted" id="job-detail-meta" hidden>Select a job.</div>
+                                    </div>
+                                    <span class="status" id="job-action-status-chip" hidden>Awaiting Selection</span>
+                                </div>
                                 <div class="toolbar job-action-bar" style="margin-bottom: 12px;">
                                     <button type="button" class="ghost-btn" id="job-pause" disabled>Pause Job</button>
                                     <button type="button" class="ghost-btn" id="job-stop" disabled>Stop Job</button>
@@ -401,27 +417,81 @@
                                 </div>
                             </section>
                         </div>
-                    </div>
-
-                    <div class="monitor-tab-panel" data-monitor-panel="dispatcher">
-                        <section class="panel">
-                            <div class="panel-head">
-                                <div>
-                                    <h2>Dispatcher Status</h2>
-                                    <div class="muted" id="dispatcher-summary-meta">No dispatcher status loaded yet.</div>
+                        <div class="monitor-split monitor-dashboard-bottom">
+                            <section class="panel">
+                                <div class="panel-head">
+                                    <div>
+                                        <h2>Dispatcher Status</h2>
+                                        <div class="muted" id="dispatcher-summary-meta">No dispatcher status loaded yet.</div>
+                                    </div>
                                 </div>
-                            </div>
-                            <div id="dispatcher-summary" class="monitor-detail-shell">
-                                <div class="empty-state">Refresh the floor to inspect dispatcher state.</div>
-                            </div>
-                        </section>
+                                <div id="dispatcher-summary" class="monitor-detail-shell">
+                                    <div class="empty-state">Refresh the floor to inspect dispatcher state.</div>
+                                </div>
+                            </section>
+
+                            <section class="panel">
+                                <div class="panel-head">
+                                    <div>
+                                        <h2>Scheduled Jobs</h2>
+                                        <div class="muted" id="dashboard-schedule-meta">No scheduled jobs loaded yet.</div>
+                                    </div>
+                                </div>
+                                <div id="dashboard-schedule-list" class="pulse-list schedule-list dashboard-schedule-list">
+                                    <div class="empty-state">Create or sync schedules to monitor the boss release queue.</div>
+                                </div>
+                            </section>
+                        </div>
                     </div>
 
                     <div class="monitor-tab-panel" data-monitor-panel="workers">
+                        <div class="monitor-split monitor-workers-top">
+                            <section class="panel worker-launch-panel">
+                                <div class="panel-head">
+                                    <div>
+                                        <h2>Start New Workers</h2>
+                                        <div class="muted" id="local-worker-meta">Launch boss-managed ADS workers and keep their logs attached to this console.</div>
+                                    </div>
+                                </div>
+                                <form id="local-worker-form" class="stack" style="margin-top: 20px;">
+                                    <div class="editor-grid">
+                                        <div class="field">
+                                            <label for="local-worker-type">Worker Type</label>
+                                            <select id="local-worker-type" name="local_worker_type"></select>
+                                        </div>
+                                        <div class="field">
+                                            <label for="local-worker-count">Count</label>
+                                            <input id="local-worker-count" name="local_worker_count" type="number" min="1" max="5" step="1" value="1">
+                                        </div>
+                                        <div class="field full-span">
+                                            <label>Selected Type</label>
+                                            <div id="local-worker-type-summary" class="worker-launch-summary">Choose a worker type to launch a new ADS crawler process.</div>
+                                        </div>
+                                    </div>
+                                    <div class="toolbar">
+                                        <button type="submit" class="primary-btn">Start Worker</button>
+                                        <button type="button" class="ghost-btn" id="local-worker-refresh">Refresh Worker Runtime</button>
+                                    </div>
+                                </form>
+                            </section>
+
+                            <section class="panel worker-runtime-panel">
+                                <div class="panel-head">
+                                    <div>
+                                        <h2>Managed Runtime</h2>
+                                        <div class="muted" id="local-worker-runtime-meta">No boss-managed worker sessions loaded yet.</div>
+                                    </div>
+                                </div>
+                                <div id="local-worker-runtime" class="pulse-list local-worker-runtime-list">
+                                    <div class="empty-state">Boss-managed workers will appear here after you launch them.</div>
+                                </div>
+                            </section>
+                        </div>
+
                         <section class="panel">
                             <div class="panel-head">
                                 <div>
-                                    <h2>Worker Roster</h2>
+                                    <h2>Worker Roster By Type</h2>
                                     <div class="muted" id="worker-status-meta">No worker heartbeat data loaded yet.</div>
                                 </div>
                                 <div class="worker-roster-head-actions">
@@ -470,6 +540,25 @@
                             </div>
                             <div id="worker-history-modal-body" class="job-detail-shell">
                                 <div class="empty-state">Choose a worker to inspect recent work history.</div>
+                            </div>
+                        </section>
+                    </div>
+
+                    <div id="worker-log-modal" class="monitor-modal-shell" hidden>
+                        <div class="monitor-modal-backdrop" data-close-worker-log-modal="true"></div>
+                        <section class="monitor-modal-dialog monitor-modal-dialog-wide" role="dialog" aria-modal="true" aria-labelledby="worker-log-modal-title">
+                            <div class="monitor-modal-head">
+                                <div>
+                                    <h3 id="worker-log-modal-title">Worker Logs</h3>
+                                    <div class="muted" id="worker-log-modal-meta">Select a boss-managed worker to inspect recent logs.</div>
+                                </div>
+                                <div class="monitor-modal-head-actions">
+                                    <button type="button" class="ghost-btn" id="worker-log-refresh">Refresh Logs</button>
+                                    <button type="button" class="ghost-btn monitor-modal-close" id="worker-log-modal-close" aria-label="Close worker logs">Close</button>
+                                </div>
+                            </div>
+                            <div id="worker-log-modal-body" class="worker-log-shell">
+                                <div class="empty-state">Choose a boss-managed worker to inspect recent logs.</div>
                             </div>
                         </section>
                     </div>

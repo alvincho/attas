@@ -226,6 +226,7 @@ def test_plaza_register_requests_run_concurrently():
 
         assert result_one["status"] == "registered"
         assert result_two["status"] == "registered"
+        assert _wait_until(lambda: len(intervals) == 2, timeout_sec=3)
         assert len(intervals) == 2
         assert {intervals[0][0], intervals[1][0]} == {"alpha", "beta"}
         assert max(intervals[0][1], intervals[1][1]) < min(intervals[0][2], intervals[1][2])

@@ -60,6 +60,117 @@ def test_personal_agent_source_keeps_map_phemar_return_handling_localized():
     assert "Reload App" in source
 
 
+def test_personal_agent_source_does_not_persist_live_plaza_catalogs():
+    """
+    Exercise the
+    test_personal_agent_source_does_not_persist_live_plaza_catalogs regression
+    scenario.
+    """
+    source = (Path(__file__).resolve().parents[1] / "personal_agent" / "static" / "personal_agent.jsx").read_text(encoding="utf-8")
+
+    assert "function serializeWorkspacesForStorage(workspaces)" in source
+    assert "delete cloned.browserCatalog;" in source
+    assert "delete cloned.mindMapCatalog;" in source
+    assert "workspaces: serializeWorkspacesForStorage(state.workspaces)," in source
+
+
+def test_personal_agent_source_resolves_browser_catalog_from_global_fallback():
+    """
+    Exercise the
+    test_personal_agent_source_resolves_browser_catalog_from_global_fallback
+    regression scenario.
+    """
+    source = (Path(__file__).resolve().parents[1] / "personal_agent" / "static" / "personal_agent.jsx").read_text(encoding="utf-8")
+
+    assert "function resolveBrowserCatalog(windowItem, preferences, globalCatalog = null)" in source
+    assert "const browserCatalog = resolveBrowserCatalog(windowItem, state.preferences, state.globalPlazaStatus);" in source
+    assert "const pulseOptions = collectCatalogPulses(browserCatalog);" in source
+    assert "const pulser = (browserCatalog?.pulsers || []).find((entry) => entry.agent_id === pane.pulserId) || null;" in source
+
+
+def test_personal_agent_source_uses_pane_config_save_cancel_header_controls():
+    """
+    Exercise the
+    test_personal_agent_source_uses_pane_config_save_cancel_header_controls
+    regression scenario.
+    """
+    source = (Path(__file__).resolve().parents[1] / "personal_agent" / "static" / "personal_agent.jsx").read_text(encoding="utf-8")
+
+    assert 'className="pane-config-header-actions"' in source
+    assert 'className="pane-config-plaza-url"' in source
+    assert 'className={paneConfigPlazaBusy ? "ghost-button pane-config-refresh-button active" : "ghost-button pane-config-refresh-button"}' in source
+    assert 'className="ghost-button pane-config-cancel-button" onClick={cancelPaneConfig}>Cancel</button>' in source
+    assert 'className="accent-button pane-config-save-button" onClick={savePaneConfig}>Save</button>' in source
+    assert "pane-config-close" not in source
+
+
+def test_personal_agent_source_does_not_reference_located_in_storage_plaza_refresh():
+    """
+    Exercise the
+    test_personal_agent_source_does_not_reference_located_in_storage_plaza_refresh
+    regression scenario.
+    """
+    source = (Path(__file__).resolve().parents[1] / "personal_agent" / "static" / "personal_agent.jsx").read_text(encoding="utf-8")
+
+    effect_start = source.index('if (normalizeFileSaveBackend(state.preferences.fileSaveBackend) !== "system_pulser") {')
+    effect_end = source.index("void refreshGlobalPlaza();", effect_start)
+    effect_block = source[effect_start:effect_end]
+
+    assert 'const plazaUrl = String(state.preferences.connectionPlazaUrl || "").trim();' in effect_block
+    assert 'const plazaUrl = String(located.windowItem.browserDefaults?.plazaUrl || state.preferences.connectionPlazaUrl || "").trim();' not in effect_block
+
+
+def test_personal_agent_source_uses_file_and_help_menu_bar_items():
+    """
+    Exercise the
+    test_personal_agent_source_uses_file_and_help_menu_bar_items regression
+    scenario.
+    """
+    source = (Path(__file__).resolve().parents[1] / "personal_agent" / "static" / "personal_agent.jsx").read_text(encoding="utf-8")
+
+    assert 'renderMenuBarDropdown("file", "File menu"' in source
+    assert 'renderMenuBarDropdown("help", "Help menu"' in source
+    assert 'ref={(node) => setMenuBarButtonRef("file", node)}' in source
+    assert 'ref={(node) => setMenuBarButtonRef("help", node)}' in source
+    assert 'return ReactDOM.createPortal(' in source
+    assert 'onClick={() => openWorkspaceDialogFromMenu("load")}' in source
+    assert 'onClick={() => openWorkspaceDialogFromMenu("save")}' in source
+    assert 'onClick={printWorkspaceFromMenu}' in source
+    assert 'onClick={openUserGuideFromMenu}' in source
+    assert '>New</button>' in source
+    assert '>Open</button>' in source
+    assert '>Save</button>' in source
+    assert '>Print</button>' in source
+    assert '>Settings</button>' in source
+    assert '>Document</button>' in source
+
+
+def test_personal_agent_source_uses_workspace_print_preview_dialog():
+    """
+    Exercise the
+    test_personal_agent_source_uses_workspace_print_preview_dialog regression
+    scenario.
+    """
+    source = (Path(__file__).resolve().parents[1] / "personal_agent" / "static" / "personal_agent.jsx").read_text(encoding="utf-8")
+    css = (Path(__file__).resolve().parents[1] / "personal_agent" / "static" / "personal_agent.css").read_text(encoding="utf-8")
+
+    print_menu_start = source.index("function printWorkspaceFromMenu() {")
+    print_menu_end = source.index("function closePrintDialog()", print_menu_start)
+    print_menu_block = source[print_menu_start:print_menu_end]
+
+    assert "function createPrintDialogState()" in source
+    assert 'next.printDialog = {' in print_menu_block
+    assert "window.print();" not in print_menu_block
+    assert 'function renderPrintDialog() {' in source
+    assert 'className="modal-backdrop print-dialog-backdrop"' in source
+    assert 'className="modal-shell print-dialog-shell"' in source
+    assert 'className="print-preview-sheet"' in source
+    assert "{renderPrintDialog()}" in source
+    assert ".print-dialog-shell {" in css
+    assert "body.print-preview-open #root > :not(.print-dialog-backdrop)" in css
+    assert ".print-preview-sheet {" in css
+
+
 def test_personal_agent_user_guide_page_renders_html_doc():
     """
     Exercise the test_personal_agent_user_guide_page_renders_html_doc regression
@@ -282,6 +393,9 @@ def test_personal_agent_source_exposes_plaza_access_settings():
     assert "Plaza Access" in source
     assert "/api/plaza/auth/signin" in source
     assert "/api/plaza/agent-keys" in source
+    assert "previousPlazaAccessUrlRef" in source
+    assert 'next.plazaAccess.authMessage = ""' in source
+    assert "supabase auth is unavailable for this plaza" in source.lower()
 
 
 def test_personal_agent_normalize_plaza_url_strips_known_endpoint_suffixes():

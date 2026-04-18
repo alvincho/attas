@@ -30,6 +30,7 @@ from fastapi.testclient import TestClient
 from yfinance.exceptions import YFPricesMissingError
 
 from ads.agents import ADSDispatcherAgent, ADSWorkerAgent
+from ads.archive_jobs import DailyJobArchiveJobCap
 from ads.examples.live_data_pipeline import LiveSECFinancialStatementsJobCap, LiveSECFundamentalsJobCap
 from ads.iex import IEXEODJobCap
 from ads.jobcap import JobCap, build_job_cap, build_job_cap_map, resolve_daily_price_start_date, subtract_years
@@ -43,6 +44,7 @@ from ads.schema import (
     TABLE_DAILY_PRICE,
     TABLE_FINANCIAL_STATEMENTS,
     TABLE_FUNDAMENTALS,
+    TABLE_JOB_ARCHIVE,
     TABLE_JOBS,
     TABLE_NEWS,
     TABLE_RAW_DATA,
@@ -541,7 +543,7 @@ def test_ads_dispatcher_preserves_error_history_across_retry_then_completion(tmp
     )
     assert complete_result["status"] == "success"
 
-    latest_rows = dispatcher._latest_job_rows(pool._GetTableData(TABLE_JOBS, job_id) or [])
+    latest_rows = dispatcher._latest_job_rows(pool._GetTableData(TABLE_JOB_ARCHIVE, job_id) or [])
     assert len(latest_rows) == 1
     latest_job = latest_rows[0]
     assert latest_job["status"] == "completed"
@@ -554,6 +556,7 @@ def test_ads_dispatcher_preserves_error_history_across_retry_then_completion(tmp
     assert latest_job["result_summary"]["error_history"][0]["exception"] == "ConnectionError"
     assert latest_job["result_summary"]["error_history"][0]["attempt"] == 1
     assert latest_job["result_summary"]["error_history"][0]["worker_id"] == "worker-a"
+    assert pool._GetTableData(TABLE_JOBS, job_id) == []
 
 
 def test_ads_dispatcher_get_job_ignores_stale_queued_snapshot_for_same_job_id(tmp_path):
@@ -1009,19 +1012,18 @@ def test_ads_dispatcher_serializes_concurrent_claims_for_same_job(tmp_path):
 
     submission = dispatcher.submit_job(required_capability="news", symbols=["AAPL"], payload={"symbol": "AAPL"})
     job_id = submission["job"]["id"]
-    original_get_table_data = dispatcher.pool._GetTableData
+    original_query_ready_job_candidates = dispatcher._query_ready_job_candidates
     first_job_read_started = threading.Event()
     release_first_job_read = threading.Event()
-    call_counter = {"job_reads": 0}
+    call_counter = {"candidate_queries": 0}
 
-    def blocked_get_table_data(table_name, id_or_where=None, table_schema=None):
-        """Handle blocked get table data."""
-        if table_name == TABLE_JOBS and id_or_where is None:
-            call_counter["job_reads"] += 1
-            if call_counter["job_reads"] == 1:
-                first_job_read_started.set()
-                assert release_first_job_read.wait(timeout=2.0)
-        return original_get_table_data(table_name, id_or_where, table_schema)
+    def blocked_query_ready_job_candidates(capabilities, *, limit=None):
+        """Handle blocked ready-job candidate query."""
+        call_counter["candidate_queries"] += 1
+        if call_counter["candidate_queries"] == 1:
+            first_job_read_started.set()
+            assert release_first_job_read.wait(timeout=2.0)
+        return original_query_ready_job_candidates(capabilities, limit=limit)
 
     results: dict[str, dict[str, Any]] = {}
     errors: list[Exception] = []
@@ -1034,9 +1036,9 @@ def test_ads_dispatcher_serializes_concurrent_claims_for_same_job(tmp_path):
             errors.append(exc)
 
     with patch.object(dispatcher, "register_worker", return_value={"status": "success"}), patch.object(
-        dispatcher.pool,
-        "_GetTableData",
-        side_effect=blocked_get_table_data,
+        dispatcher,
+        "_query_ready_job_candidates",
+        side_effect=blocked_query_ready_job_candidates,
     ):
         thread_a = threading.Thread(target=claim, args=("worker-a",), daemon=True)
         thread_b = threading.Thread(target=claim, args=("worker-b",), daemon=True)
@@ -1097,6 +1099,50 @@ def test_ads_dispatcher_ignores_result_after_job_already_completed_by_other_work
     assert latest_rows[0]["result_summary"]["completed_by"] == "worker-b"
 
 
+def test_ads_dispatcher_ignores_late_result_after_job_has_been_archived(tmp_path):
+    """
+    Exercise the test_ads_dispatcher_ignores_late_result_after_job_has_been_archived
+    regression scenario.
+    """
+    pool = SQLitePool("ads_dispatch", "ADS dispatch test pool", str(tmp_path / "dispatcher.sqlite"))
+    dispatcher = ADSDispatcherAgent(pool=pool)
+
+    submission = dispatcher.submit_job(required_capability="news", symbols=["AAPL"], payload={"symbol": "AAPL"})
+    job_id = submission["job"]["id"]
+    claimed = dispatcher.claim_job(worker_id="worker-a", capabilities=["news"])
+    claimed_job = JobDetail.model_validate(claimed["job"])
+    completed_at = utcnow_iso()
+    completed_job = claimed_job.model_copy(
+        update={
+            "status": "completed",
+            "claimed_by": "worker-b",
+            "updated_at": completed_at,
+            "completed_at": completed_at,
+            "result_summary": {"rows": 1, "completed_by": "worker-b"},
+        }
+    )
+    archive_row = completed_job.to_row()
+    archive_row["archived_at"] = completed_at
+    assert dispatcher.pool._Insert(TABLE_JOB_ARCHIVE, archive_row)
+    dispatcher._delete_job_row(TABLE_JOBS, job_id)
+
+    ignored = dispatcher.post_job_result(
+        JobResult(
+            job_id=job_id,
+            worker_id="worker-a",
+            status="completed",
+            result_summary={"rows": 99, "completed_by": "worker-a"},
+        )
+    )
+
+    assert ignored["ignored"] is True
+    latest_rows = dispatcher.pool._GetTableData(TABLE_JOB_ARCHIVE, job_id)
+    latest_rows.sort(key=lambda row: row["updated_at"], reverse=True)
+    assert latest_rows[0]["status"] == "completed"
+    assert latest_rows[0]["claimed_by"] == "worker-b"
+    assert latest_rows[0]["result_summary"]["completed_by"] == "worker-b"
+
+
 def test_ads_dispatcher_db_viewer_lists_tables_and_runs_read_only_queries():
     """
     Exercise the
@@ -1109,6 +1155,7 @@ def test_ads_dispatcher_db_viewer_lists_tables_and_runs_read_only_queries():
 
     tables = dispatcher.list_db_tables()
     assert any(table["name"] == TABLE_JOBS for table in tables["tables"])
+    assert any(table["name"] == TABLE_JOB_ARCHIVE for table in tables["tables"])
 
     preview = dispatcher.preview_db_table(TABLE_JOBS, limit=10)
     assert preview["table_name"] == TABLE_JOBS
@@ -2798,6 +2845,7 @@ def test_ads_example_worker_config_covers_advertised_capabilities():
     job_capabilities = build_job_cap_map(ads_config.get("job_capabilities") or [])
 
     assert set(job_capabilities.keys()) == advertised_capabilities
+    assert isinstance(job_capabilities["daily job archive"], DailyJobArchiveJobCap)
     assert isinstance(job_capabilities["us listed sec to security master"], USListedSecJobCap)
     assert isinstance(job_capabilities["us filing bulk"], USFilingBulkJobCap)
     assert isinstance(job_capabilities["us filing mapping"], USFilingMappingJobCap)
@@ -2805,7 +2853,7 @@ def test_ads_example_worker_config_covers_advertised_capabilities():
     assert isinstance(job_capabilities["yfinance us market eod"], YFinanceUSMarketEODJobCap)
     assert isinstance(job_capabilities["twse market eod"], TWSEMarketEODJobCap)
     assert isinstance(job_capabilities["rss news"], RSSNewsJobCap)
-    assert ads_config.get("yfinance_request_cooldown_sec") == 120
+    assert ads_config.get("yfinance_request_cooldown_sec") == 600
 
 
 def test_yfinance_rate_limit_starts_worker_cooldown():
@@ -2917,6 +2965,50 @@ def test_yfinance_timeout_starts_worker_cooldown():
     assert worker.advertised_capabilities() == ["twse market eod"]
 
 
+def test_ads_daily_job_archive_job_cap_moves_completed_jobs_to_archive(tmp_path):
+    """
+    Exercise the daily ADS archive-sweep job cap regression scenario.
+    """
+    pool = SQLitePool("ads_archive_pool", "ADS archive jobcap pool", str(tmp_path / "ads.sqlite"))
+    ensure_ads_tables(pool)
+
+    completed_job_id = "ads-job:completed-archive-me"
+    assert pool._Insert(
+        TABLE_JOBS,
+        {
+            "id": completed_job_id,
+            "status": "completed",
+            "required_capability": "rss news",
+            "payload": {"feed": "sec"},
+            "priority": 100,
+            "completed_at": "2026-04-13T01:59:00+00:00",
+            "created_at": "2026-04-13T01:55:00+00:00",
+            "updated_at": "2026-04-13T01:59:00+00:00",
+        },
+    )
+
+    cap = DailyJobArchiveJobCap()
+    cap.bind_worker(type("WorkerStub", (), {"pool": pool})())
+
+    result = cap.finish(
+        JobDetail(
+            id="ads-job:daily-archive-run",
+            required_capability="daily job archive",
+            status="claimed",
+            payload={"batch_size": 10},
+        )
+    )
+
+    assert result.status == "completed"
+    assert result.result_summary["archived_jobs"] == 1
+    assert result.result_summary["deleted_active_rows"] == 1
+    assert pool._GetTableData(TABLE_JOBS, completed_job_id) == []
+    archived_rows = pool._GetTableData(TABLE_JOB_ARCHIVE, completed_job_id)
+    assert len(archived_rows) == 1
+    assert archived_rows[0]["status"] == "completed"
+    assert archived_rows[0]["archived_at"]
+
+
 def test_ads_example_worker_config_omits_dispatcher_address():
     """
     Exercise the test_ads_example_worker_config_omits_dispatcher_address regression
@@ -2974,6 +3066,7 @@ def test_ads_example_configs_keep_job_caps_in_sync():
     )
 
     assert boss_job_caps == {
+        "daily job archive",
         "us listed sec to security master",
         "us filing bulk",
         "us filing mapping",

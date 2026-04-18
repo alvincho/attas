@@ -3196,19 +3196,21 @@ function normalizeWorkspaceDockedOrigin(workspace) {
 function normalizeWindowState(candidate, index, preferences, dashboard) {
   if (candidate?.type === "mind_map") {
     const base = createMindMapWindow(index, preferences, dashboard, candidate);
+    const mindMapState = normalizeMindMapState(candidate?.mindMapState, preferences, dashboard);
     return clampDockedWindowOrigin({
       ...base,
       ...(candidate || {}),
-      mindMapState: normalizeMindMapState(candidate?.mindMapState, preferences, dashboard),
-      mindMapCatalog: candidate?.mindMapCatalog || emptyCatalog(preferences.connectionPlazaUrl),
+      mindMapState,
+      mindMapCatalog: emptyCatalog(mindMapState.plazaUrl || preferences.connectionPlazaUrl),
     });
   }
   const base = createBrowserWindow(index, preferences, dashboard, candidate);
+  const browserDefaults = normalizeBrowserDefaults(candidate?.browserDefaults, preferences, dashboard);
   return clampDockedWindowOrigin({
     ...base,
     ...(candidate || {}),
-    browserDefaults: normalizeBrowserDefaults(candidate?.browserDefaults, preferences, dashboard),
-    browserCatalog: candidate?.browserCatalog || emptyCatalog(preferences.connectionPlazaUrl),
+    browserDefaults,
+    browserCatalog: emptyCatalog(browserDefaults.plazaUrl || preferences.connectionPlazaUrl),
     panes: Array.isArray(candidate?.panes)
       ? candidate.panes
         .filter((pane) => BROWSER_PANE_TYPES.some((entry) => entry.id === pane?.type))
@@ -3320,6 +3322,34 @@ function rebuildWorkspaceLayout(savedWorkspace, targetWorkspaceId, preferences, 
   });
 }
 
+function serializeWindowStateForStorage(windowItem) {
+  const cloned = cloneValue(windowItem || {});
+  if (cloned.type === "browser") {
+    delete cloned.browserCatalog;
+  }
+  if (cloned.type === "mind_map") {
+    delete cloned.mindMapCatalog;
+  }
+  return cloned;
+}
+
+function serializeWorkspacesForStorage(workspaces) {
+  return (Array.isArray(workspaces) ? workspaces : []).map((workspace) => ({
+    ...cloneValue(workspace || {}),
+    windows: Array.isArray(workspace?.windows)
+      ? workspace.windows.map((windowItem) => serializeWindowStateForStorage(windowItem))
+      : [],
+  }));
+}
+
+function createClosedPaneConfigState() {
+  return { open: false, windowId: "", paneId: "", reason: "" };
+}
+
+function createPrintDialogState() {
+  return { open: false, workspaceId: "", printing: false };
+}
+
 function workspaceShortLabel(name) {
   const parts = String(name || "").trim().split(/\s+/).filter(Boolean);
   if (!parts.length) {
@@ -3363,9 +3393,11 @@ function createMapPhemarInitialState(dashboard) {
     settingsOpen: false,
     settingsTab: "storage",
     settingsLlmSelectedId: preferences.llmDefaultConfigId || preferences.llmConfigs[0]?.id || "",
-    paneConfig: { open: false, windowId: "", paneId: "", reason: "" },
+    paneConfig: createClosedPaneConfigState(),
+    paneConfigSnapshot: null,
     snapshotDialog: { open: false, windowId: "", kind: "browser", mode: "save", name: "", selectedSnapshotId: "", error: "" },
     workspaceDialog: { open: false, mode: "save", name: "", selectedLayoutId: "", error: "" },
+    printDialog: createPrintDialogState(),
     diagramRunDialog: createDiagramRunDialogState(),
     operator: createOperatorConsoleState(preferences),
     globalPlazaStatus: emptyCatalog(preferences.connectionPlazaUrl),
@@ -3403,9 +3435,11 @@ function createInitialState() {
       settingsOpen: false,
       settingsTab: "profile",
       settingsLlmSelectedId: preferences.llmDefaultConfigId || preferences.llmConfigs[0]?.id || "",
-      paneConfig: { open: false, windowId: "", paneId: "", reason: "" },
+      paneConfig: createClosedPaneConfigState(),
+      paneConfigSnapshot: null,
       snapshotDialog: { open: false, windowId: "", kind: "browser", mode: "save", name: "", selectedSnapshotId: "", error: "" },
       workspaceDialog: { open: false, mode: "save", name: "", selectedLayoutId: "", error: "" },
+      printDialog: createPrintDialogState(),
       diagramRunDialog: createDiagramRunDialogState(),
       operator: createOperatorConsoleState(preferences),
       globalPlazaStatus: emptyCatalog(preferences.connectionPlazaUrl),
@@ -3436,9 +3470,11 @@ function createInitialState() {
       settingsOpen: false,
       settingsTab: "profile",
       settingsLlmSelectedId: preferences.llmDefaultConfigId || preferences.llmConfigs[0]?.id || "",
-      paneConfig: { open: false, windowId: "", paneId: "", reason: "" },
+      paneConfig: createClosedPaneConfigState(),
+      paneConfigSnapshot: null,
       snapshotDialog: { open: false, windowId: "", kind: "browser", mode: "save", name: "", selectedSnapshotId: "", error: "" },
       workspaceDialog: { open: false, mode: "save", name: "", selectedLayoutId: "", error: "" },
+      printDialog: createPrintDialogState(),
       diagramRunDialog: createDiagramRunDialogState(),
       operator: createOperatorConsoleState(preferences),
       globalPlazaStatus: emptyCatalog(preferences.connectionPlazaUrl),
@@ -3844,15 +3880,42 @@ function preferredCompatiblePulser(pulseOption) {
   return compatiblePulsers.find((entry) => Number(entry?.last_active || 0) > 0) || compatiblePulsers[0] || null;
 }
 
-function resolvePaneSourcePulse(windowItem, pane, preferences) {
-  const pulseOptions = collectCatalogPulses(windowItem?.browserCatalog || emptyCatalog(preferences?.connectionPlazaUrl));
+function catalogHasEntries(catalog) {
+  return Boolean(
+    (Array.isArray(catalog?.pulses) && catalog.pulses.length)
+    || (Array.isArray(catalog?.pulsers) && catalog.pulsers.length),
+  );
+}
+
+function resolveBrowserCatalog(windowItem, preferences, globalCatalog = null) {
+  const plazaUrl = windowItem?.browserDefaults?.plazaUrl || preferences?.connectionPlazaUrl || globalCatalog?.plazaUrl || globalCatalog?.plaza_url || "";
+  const browserCatalog = standardizeCatalogPayload(windowItem?.browserCatalog || emptyCatalog(plazaUrl), plazaUrl);
+  if (
+    catalogHasEntries(browserCatalog)
+    || String(browserCatalog?.status || "").trim().toLowerCase() === "loading"
+    || String(browserCatalog?.error || "").trim()
+  ) {
+    return browserCatalog;
+  }
+  const resolvedGlobalCatalog = standardizeCatalogPayload(globalCatalog || emptyCatalog(plazaUrl), plazaUrl);
+  if (
+    catalogHasEntries(resolvedGlobalCatalog)
+    && normalizePlazaUrl(resolvedGlobalCatalog.plazaUrl || resolvedGlobalCatalog.plaza_url || "") === normalizePlazaUrl(plazaUrl)
+  ) {
+    return resolvedGlobalCatalog;
+  }
+  return browserCatalog;
+}
+
+function resolvePaneSourcePulse(windowItem, pane, preferences, globalCatalog = null) {
+  const pulseOptions = collectCatalogPulses(resolveBrowserCatalog(windowItem, preferences, globalCatalog));
   const selectedPulse = findSelectedCatalogPulse(pulseOptions, pane);
   const selectedCompatiblePulser = findSelectedCompatiblePulser(selectedPulse, pane);
   return selectedCompatiblePulser?.pulse || selectedPulse || null;
 }
 
-function primePaneParameterState(windowItem, pane, preferences, { force = false } = {}) {
-  const sourcePulse = resolvePaneSourcePulse(windowItem, pane, preferences);
+function primePaneParameterState(windowItem, pane, preferences, globalCatalog = null, { force = false } = {}) {
+  const sourcePulse = resolvePaneSourcePulse(windowItem, pane, preferences, globalCatalog);
   if (!sourcePulse) {
     if (force) {
       pane.paramsExpanded = false;
@@ -5750,10 +5813,12 @@ function App() {
   const workspaceWorldRef = useRef({ workspaceId: "", offsetX: 0, offsetY: 0 });
   const paneInteractionRef = useRef(null);
   const browserPaneCanvasRefs = useRef({});
+  const menuBarButtonRefs = useRef({});
   const initialPhemaLoadRef = useRef(false);
   const storagePlazaRefreshRef = useRef("");
   const storageBucketRefreshRef = useRef("");
   const plazaAccessRefreshRef = useRef("");
+  const previousPlazaAccessUrlRef = useRef(normalizePlazaUrl(state.preferences.connectionPlazaUrl || ""));
   const latestStateRef = useRef(state);
 
   useEffect(() => {
@@ -5910,6 +5975,12 @@ function App() {
         next.plazaAccess.config = payload;
         next.plazaAccess.configStatus = "ready";
         next.plazaAccess.configError = "";
+        if (
+          payload?.auth_enabled
+          && /supabase auth is unavailable for this plaza/i.test(String(next.plazaAccess.authMessage || ""))
+        ) {
+          next.plazaAccess.authMessage = "";
+        }
       });
       return payload;
     } catch (error) {
@@ -6975,6 +7046,49 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
   }, [state.preferences.theme]);
 
   useEffect(() => {
+    document.body.classList.toggle("print-preview-open", Boolean(state.printDialog.open));
+    return () => {
+      document.body.classList.remove("print-preview-open");
+    };
+  }, [state.printDialog.open]);
+
+  useEffect(() => {
+    if (!state.printDialog.open || !state.printDialog.printing) {
+      return undefined;
+    }
+    let active = true;
+    const frameId = window.requestAnimationFrame(() => {
+      if (!active) {
+        return;
+      }
+      try {
+        window.print();
+      } catch (error) {
+        console.error("Unable to open the browser print dialog.", error);
+        updateState((next) => {
+          next.printDialog = createPrintDialogState();
+        });
+      }
+    });
+    function handleAfterPrint() {
+      if (!active) {
+        return;
+      }
+      active = false;
+      window.cancelAnimationFrame(frameId);
+      updateState((next) => {
+        next.printDialog = createPrintDialogState();
+      });
+    }
+    window.addEventListener("afterprint", handleAfterPrint);
+    return () => {
+      active = false;
+      window.cancelAnimationFrame(frameId);
+      window.removeEventListener("afterprint", handleAfterPrint);
+    };
+  }, [state.printDialog.open, state.printDialog.printing]);
+
+  useEffect(() => {
     saveStoredPlazaAuthSession(
       state.preferences.connectionPlazaUrl,
       currentPlazaAccessSession(state),
@@ -6984,6 +7098,34 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
     state.plazaAccess.session,
     state.plazaAccess.sessionPlazaUrl,
   ]);
+
+  useEffect(() => {
+    const normalizedPlazaUrl = normalizePlazaUrl(state.preferences.connectionPlazaUrl || "");
+    const previousPlazaUrl = previousPlazaAccessUrlRef.current;
+    if (previousPlazaUrl === normalizedPlazaUrl) {
+      return;
+    }
+    previousPlazaAccessUrlRef.current = normalizedPlazaUrl;
+    updateState((next) => {
+      const nextNormalizedPlazaUrl = normalizePlazaUrl(next.preferences.connectionPlazaUrl || "");
+      next.plazaAccess.config = null;
+      next.plazaAccess.configStatus = nextNormalizedPlazaUrl ? "idle" : "error";
+      next.plazaAccess.configError = nextNormalizedPlazaUrl ? "" : "Plaza URL is required.";
+      next.plazaAccess.authMessage = "";
+      next.plazaAccess.keys = [];
+      next.plazaAccess.keysStatus = "idle";
+      next.plazaAccess.keysError = "";
+      next.plazaAccess.keyMessage = "";
+      next.plazaAccess.keyReveal = null;
+      next.plazaAccess.pendingKeyId = "";
+      next.plazaAccess.pendingKeyAction = "";
+      if (normalizePlazaUrl(next.plazaAccess.sessionPlazaUrl || "") !== nextNormalizedPlazaUrl) {
+        clearPlazaAccessSession(next, "");
+        next.plazaAccess.configStatus = nextNormalizedPlazaUrl ? "idle" : "error";
+        next.plazaAccess.configError = nextNormalizedPlazaUrl ? "" : "Plaza URL is required.";
+      }
+    });
+  }, [state.preferences.connectionPlazaUrl]);
 
   useEffect(() => {
     const normalizedPlazaUrl = normalizePlazaUrl(state.preferences.connectionPlazaUrl || "");
@@ -7095,7 +7237,7 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
   useEffect(() => {
     saveStorage(STORAGE_KEYS.workspaces, {
       activeWorkspaceId: state.activeWorkspaceId,
-      workspaces: state.workspaces,
+      workspaces: serializeWorkspacesForStorage(state.workspaces),
     });
   }, [state.workspaces, state.activeWorkspaceId]);
 
@@ -7289,7 +7431,7 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
       return undefined;
     }
     function handlePointerDown(event) {
-      if (event.target.closest(".app-menu")) {
+      if (event.target.closest(".app-menu, .app-menu-dropdown")) {
         return;
       }
       updateState((next) => {
@@ -7299,6 +7441,23 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
     document.addEventListener("mousedown", handlePointerDown);
     return () => {
       document.removeEventListener("mousedown", handlePointerDown);
+    };
+  }, [state.menuBarMenuId]);
+
+  useEffect(() => {
+    if (!state.menuBarMenuId) {
+      return undefined;
+    }
+    function handleViewportChange() {
+      updateState((next) => {
+        next.menuBarMenuId = "";
+      });
+    }
+    window.addEventListener("resize", handleViewportChange);
+    window.addEventListener("scroll", handleViewportChange, true);
+    return () => {
+      window.removeEventListener("resize", handleViewportChange);
+      window.removeEventListener("scroll", handleViewportChange, true);
     };
   }, [state.menuBarMenuId]);
 
@@ -7709,11 +7868,11 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
     }
   }
 
-  function syncPaneWithCatalog(windowItem, pane) {
+  function syncPaneWithCatalog(windowItem, pane, preferences, globalCatalog = null) {
     if (!isDataPaneType(pane?.type)) {
       return;
     }
-    const catalog = windowItem.browserCatalog || emptyCatalog(windowItem.browserDefaults?.plazaUrl || "");
+    const catalog = resolveBrowserCatalog(windowItem, preferences, globalCatalog);
     const pulseCatalog = collectCatalogPulses(catalog);
     const selectedPulse = findSelectedCatalogPulse(pulseCatalog, pane);
     if (!selectedPulse) {
@@ -7846,7 +8005,7 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
     if (!located || located.windowItem.type !== "browser") {
       return;
     }
-    const plazaUrl = String(state.preferences.connectionPlazaUrl || "").trim();
+    const plazaUrl = String(located.windowItem.browserDefaults?.plazaUrl || state.preferences.connectionPlazaUrl || "").trim();
     updateState((next) => {
       const target = findWindowLocation(next, windowId).windowItem;
       target.browserCatalog = {
@@ -7863,7 +8022,7 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
           status: "ready",
           error: "",
         };
-        target.panes.forEach((pane) => syncPaneWithCatalog(target, pane));
+        target.panes.forEach((pane) => syncPaneWithCatalog(target, pane, next.preferences, payload));
         next.globalPlazaStatus = {
           ...payload,
           status: "ready",
@@ -8107,7 +8266,7 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
       const source = {
         windowLocation: located,
         mapState: pane.mindMapState || createDefaultMindMapState(state.preferences, state.dashboard),
-        catalog: windowItem.browserCatalog || emptyCatalog(state.preferences.connectionPlazaUrl),
+        catalog: resolveBrowserCatalog(windowItem, state.preferences, state.globalPlazaStatus),
         linkedPaneLocation: located,
       };
       updateState((next) => {
@@ -8146,7 +8305,8 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
       }
       return;
     }
-    syncPaneWithCatalog(windowItem, pane);
+    syncPaneWithCatalog(windowItem, pane, state.preferences, state.globalPlazaStatus);
+    const browserCatalog = resolveBrowserCatalog(windowItem, state.preferences, state.globalPlazaStatus);
     if (!pane.pulserId || !pane.pulseName) {
       updateState((next) => {
         const target = findPaneLocation(next, windowId, paneId).pane;
@@ -8160,7 +8320,7 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
       target.status = "loading";
       target.error = "";
     });
-    const pulser = (windowItem.browserCatalog?.pulsers || []).find((entry) => entry.agent_id === pane.pulserId) || null;
+    const pulser = (browserCatalog?.pulsers || []).find((entry) => entry.agent_id === pane.pulserId) || null;
     const pulse = (pulser?.supported_pulses || []).find((entry) => entry.pulse_name === pane.pulseName || entry.pulse_address === pane.pulseAddress) || null;
     const defaultParams = safeJsonParse(state.preferences.connectionDefaultParamsText || "{}", {});
     const paneParams = safeJsonParse(pane.paramsText || "{}", {});
@@ -8381,13 +8541,16 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
       }
 
       if (workspaceWindowIds.has(next.paneConfig.windowId)) {
-        next.paneConfig = { open: false, windowId: "", paneId: "", reason: "" };
+        clearPaneConfig(next);
       }
       if (workspaceWindowIds.has(next.snapshotDialog.windowId)) {
         next.snapshotDialog = { open: false, windowId: "", mode: "save", name: "", selectedSnapshotId: "", error: "" };
       }
       if (workspaceWindowIds.has(next.diagramRunDialog.windowId)) {
         next.diagramRunDialog = createDiagramRunDialogState();
+      }
+      if (next.printDialog.workspaceId === workspaceId) {
+        next.printDialog = createPrintDialogState();
       }
       if (next.activeWorkspaceId === workspaceId) {
         next.workspaceDialog = { open: false, mode: "save", name: "", selectedLayoutId: "", error: "" };
@@ -8513,7 +8676,7 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
         workspace.windows = workspace.windows.filter((entry) => entry.id !== windowId);
       });
       if (next.paneConfig.windowId === windowId) {
-        next.paneConfig = { open: false, windowId: "", paneId: "", reason: "" };
+        clearPaneConfig(next);
       }
       if (next.snapshotDialog.windowId === windowId) {
         next.snapshotDialog = { open: false, windowId: "", mode: "save", name: "", selectedSnapshotId: "", error: "" };
@@ -8633,7 +8796,7 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
       }
       located.windowItem.panes = located.windowItem.panes.filter((entry) => entry.id !== paneId);
       if (next.paneConfig.windowId === windowId && next.paneConfig.paneId === paneId) {
-        next.paneConfig = { open: false, windowId: "", paneId: "", reason: "" };
+        clearPaneConfig(next);
       }
     });
   }
@@ -8650,6 +8813,99 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
     });
   }
 
+  function setMenuBarButtonRef(menuId, node) {
+    if (node) {
+      menuBarButtonRefs.current[menuId] = node;
+      return;
+    }
+    delete menuBarButtonRefs.current[menuId];
+  }
+
+  function menuBarDropdownStyle(menuId) {
+    const button = menuBarButtonRefs.current[menuId];
+    if (!button || typeof window === "undefined") {
+      return undefined;
+    }
+    const rect = button.getBoundingClientRect();
+    const minWidth = Math.max(Math.round(rect.width), 240);
+    const viewportWidth = Math.max(window.innerWidth || 0, minWidth + 24);
+    const left = Math.max(12, Math.min(rect.left, viewportWidth - minWidth - 12));
+    return {
+      top: `${rect.bottom + 8}px`,
+      left: `${left}px`,
+      minWidth: `${minWidth}px`,
+    };
+  }
+
+  function renderMenuBarDropdown(menuId, ariaLabel, children) {
+    if (state.menuBarMenuId !== menuId || typeof document === "undefined") {
+      return null;
+    }
+    return ReactDOM.createPortal(
+      (
+        <div className="app-menu-dropdown" role="menu" aria-label={ariaLabel} style={menuBarDropdownStyle(menuId)}>
+          {children}
+        </div>
+      ),
+      document.body,
+    );
+  }
+
+  function clearPaneConfig(next) {
+    next.paneConfig = createClosedPaneConfigState();
+    next.paneConfigSnapshot = null;
+  }
+
+  function closeMenuBarMenu() {
+    updateState((next) => {
+      next.menuBarMenuId = "";
+    });
+  }
+
+  function openSettingsFromMenu(tab = "profile") {
+    updateState((next) => {
+      next.settingsOpen = true;
+      next.settingsTab = tab;
+      next.menuBarMenuId = "";
+    });
+  }
+
+  function openWorkspaceDialogFromMenu(mode) {
+    closeMenuBarMenu();
+    void openWorkspaceDialog(mode);
+  }
+
+  function printWorkspaceFromMenu() {
+    updateState((next) => {
+      next.menuBarMenuId = "";
+      next.printDialog = {
+        open: true,
+        workspaceId: next.activeWorkspaceId,
+        printing: false,
+      };
+    });
+  }
+
+  function closePrintDialog() {
+    updateState((next) => {
+      next.printDialog = createPrintDialogState();
+    });
+  }
+
+  function submitPrintDialog() {
+    updateState((next) => {
+      if (!next.printDialog.open) {
+        return;
+      }
+      next.printDialog.printing = true;
+    });
+  }
+
+  function openUserGuideFromMenu() {
+    openPersonalAgentUserGuide();
+    closeMenuBarMenu();
+  }
+
   function toggleSidebarFromMenu() {
     updateState((next) => {
       next.preferences.sidebarCollapsed = !next.preferences.sidebarCollapsed;
@@ -8659,11 +8915,13 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
 
   function openPaneConfig(windowId, paneId, reason = "") {
     const target = findPaneLocation(state, windowId, paneId);
-    setPaneFilterText(target?.pane?.pulseFilterText || "");
+    const paneSnapshot = target ? cloneValue(target.pane) : null;
+    const paneSnapshotFilterText = String(target?.pane?.pulseFilterText || "");
+    setPaneFilterText(paneSnapshotFilterText);
     updateState((next) => {
       const targetPane = findPaneLocation(next, windowId, paneId);
       if (targetPane && isDataPaneType(targetPane.pane.type)) {
-        primePaneParameterState(targetPane.windowItem, targetPane.pane, next.preferences);
+        primePaneParameterState(targetPane.windowItem, targetPane.pane, next.preferences, next.globalPlazaStatus);
       }
       if (next.paneConfig.open) {
         const current = findPaneLocation(next, next.paneConfig.windowId, next.paneConfig.paneId);
@@ -8672,10 +8930,16 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
         }
       }
       next.paneConfig = { open: true, windowId, paneId, reason };
+      next.paneConfigSnapshot = paneSnapshot ? {
+        windowId,
+        paneId,
+        pane: paneSnapshot,
+        pulseFilterText: paneSnapshotFilterText,
+      } : null;
     });
   }
 
-  function closePaneConfig() {
+  function savePaneConfig() {
     updateState((next) => {
       if (next.paneConfig.open) {
         const current = findPaneLocation(next, next.paneConfig.windowId, next.paneConfig.paneId);
@@ -8683,7 +8947,22 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
           current.pane.pulseFilterText = paneFilterText;
         }
       }
-      next.paneConfig = { open: false, windowId: "", paneId: "", reason: "" };
+      clearPaneConfig(next);
+    });
+  }
+
+  function cancelPaneConfig() {
+    const snapshot = state.paneConfigSnapshot;
+    setPaneFilterText(String(snapshot?.pulseFilterText || ""));
+    updateState((next) => {
+      const currentSnapshot = next.paneConfigSnapshot;
+      if (currentSnapshot) {
+        const located = findPaneLocation(next, currentSnapshot.windowId, currentSnapshot.paneId);
+        if (located) {
+          located.windowItem.panes[located.paneIndex] = cloneValue(currentSnapshot.pane);
+        }
+      }
+      clearPaneConfig(next);
     });
   }
 
@@ -9191,7 +9470,7 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
       const currentWorkspaceId = next.workspaces[workspaceIndex].id;
       next.workspaces[workspaceIndex] = rebuildWorkspaceLayout(snapshot.workspace, currentWorkspaceId, next.preferences, next.dashboard);
       next.preferences.defaultWorkspaceId = currentWorkspaceId;
-      next.paneConfig = { open: false, windowId: "", paneId: "", reason: "" };
+      clearPaneConfig(next);
       next.snapshotDialog = { open: false, windowId: "", mode: "save", name: "", selectedSnapshotId: "", error: "" };
       next.workspaceDialog = { open: false, mode: "save", name: "", selectedLayoutId: "", error: "" };
       next.paneMenuWindowId = "";
@@ -9214,7 +9493,7 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
         } else if (field === "pulseName") {
           located.pane.pulseAddress = "";
         }
-        syncPaneWithCatalog(located.windowItem, located.pane);
+        syncPaneWithCatalog(located.windowItem, located.pane, next.preferences, next.globalPlazaStatus);
       }
     });
   }
@@ -9248,12 +9527,12 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
       if (!located) {
         return;
       }
-      const pulseOptions = collectCatalogPulses(located.windowItem.browserCatalog || emptyCatalog(next.preferences.connectionPlazaUrl));
+      const pulseOptions = collectCatalogPulses(resolveBrowserCatalog(located.windowItem, next.preferences, next.globalPlazaStatus));
       const selectedPulse = pulseOptions.find((entry) => entry.key === pulseKey) || null;
       located.pane.pulseName = selectedPulse?.pulse_name || "";
       located.pane.pulseAddress = "";
-      syncPaneWithCatalog(located.windowItem, located.pane);
-      primePaneParameterState(located.windowItem, located.pane, next.preferences, { force: true });
+      syncPaneWithCatalog(located.windowItem, located.pane, next.preferences, next.globalPlazaStatus);
+      primePaneParameterState(located.windowItem, located.pane, next.preferences, next.globalPlazaStatus, { force: true });
     });
   }
 
@@ -9263,7 +9542,7 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
       if (!located) {
         return;
       }
-      const pulseOptions = collectCatalogPulses(located.windowItem.browserCatalog || emptyCatalog(next.preferences.connectionPlazaUrl));
+      const pulseOptions = collectCatalogPulses(resolveBrowserCatalog(located.windowItem, next.preferences, next.globalPlazaStatus));
       const selectedPulse = findSelectedCatalogPulse(pulseOptions, located.pane);
       if (!selectedPulse) {
         located.pane.pulserId = "";
@@ -9291,7 +9570,7 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
       located.pane.pulseName = pulse?.pulse_name || selectedPulse.pulse_name || "";
       located.pane.pulseAddress = pulse?.pulse_address || selectedPulse.pulse_address || "";
       located.pane.outputSchema = pulse?.output_schema || selectedPulse.output_schema || {};
-      primePaneParameterState(located.windowItem, located.pane, next.preferences, { force: true });
+      primePaneParameterState(located.windowItem, located.pane, next.preferences, next.globalPlazaStatus, { force: true });
     });
   }
 
@@ -9831,7 +10110,7 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
       if (reason === "closed" && located.windowItem.type === "mind_map") {
         located.workspace.windows = located.workspace.windows.filter((entry) => entry.id !== windowId);
         if (next.paneConfig.windowId === windowId) {
-          next.paneConfig = { open: false, windowId: "", paneId: "", reason: "" };
+          clearPaneConfig(next);
         }
         if (next.snapshotDialog.windowId === windowId) {
           next.snapshotDialog = { open: false, windowId: "", mode: "save", name: "", selectedSnapshotId: "", error: "" };
@@ -9900,6 +10179,273 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
       : "Plaza Offline";
   const workspacePlazaStatusDetail = state.globalPlazaStatus.error
     || `${state.globalPlazaStatus.pulserCount || 0} pulsers · ${state.globalPlazaStatus.pulseCount || 0} pulses`;
+  const menuBarPlazaStatusLabel = state.globalPlazaStatus.status === "loading"
+    ? "Checking"
+    : state.globalPlazaStatus.connected
+      ? "Online"
+      : "Mock Mode";
+  const printWorkspace = state.printDialog.open
+    ? findWorkspace(state, state.printDialog.workspaceId) || workspace
+    : workspace;
+
+  function printableWindowList(targetWorkspace) {
+    return (targetWorkspace?.windows || []).slice().sort((left, right) => (
+      (left.y || 0) - (right.y || 0)
+      || (left.x || 0) - (right.x || 0)
+      || (left.z || 0) - (right.z || 0)
+    ));
+  }
+
+  function printablePaneList(windowItem) {
+    return (windowItem?.panes || [])
+      .filter((pane) => BROWSER_PANE_TYPES.some((entry) => entry.id === pane.type))
+      .slice()
+      .sort((left, right) => (
+        (left.y || 0) - (right.y || 0)
+        || (left.x || 0) - (right.x || 0)
+        || (left.z || 0) - (right.z || 0)
+      ));
+  }
+
+  function renderPrintMindMapCanvas(map, variant = "pane") {
+    const previewClassName = variant === "window"
+      ? "pane-diagram-preview print-diagram-preview print-diagram-preview--window"
+      : "pane-diagram-preview print-diagram-preview";
+    const canvasClassName = map?.showGrid === false
+      ? "pane-diagram-canvas pane-diagram-canvas--grid-hidden"
+      : "pane-diagram-canvas";
+    return (
+      <div className={previewClassName}>
+        <div className={canvasClassName}>
+          {map?.edges?.length ? (
+            <svg className="pane-diagram-links" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+              {map.edges.map((edge) => {
+                const fromNode = map.nodes.find((entry) => entry.id === edge.from);
+                const toNode = map.nodes.find((entry) => entry.id === edge.to);
+                if (!fromNode || !toNode) {
+                  return null;
+                }
+                return <path key={edge.id} className="pane-diagram-link" d={connectionPath(fromNode, toNode, edge)} />;
+              })}
+            </svg>
+          ) : null}
+          {map?.nodes?.length ? map.nodes.slice(0, 20).map((node) => (
+            <div
+              key={node.id}
+              className={`pane-diagram-node pane-diagram-node--${node.type}`}
+              style={{
+                left: `${clamp(Number(node.x || 0), 0, 84)}%`,
+                top: `${clamp(Number(node.y || 0), 0, 86)}%`,
+                width: `${clamp(Number(node.w || 18), 12, 32)}%`,
+                height: `${clamp(Number(node.h || 12), 8, 24)}%`,
+              }}
+            >
+              <span>{node.title || "Shape"}</span>
+            </div>
+          )) : (
+            <div className="pane-diagram-empty">
+              <strong>Diagram pane</strong>
+              <span>Open the editor to start mapping ideas.</span>
+            </div>
+          )}
+        </div>
+        <div className="pane-diagram-meta">
+          <span>{map?.nodes?.length || 0} shapes</span>
+          <span>{map?.edges?.length || 0} links</span>
+        </div>
+      </div>
+    );
+  }
+
+  function renderPrintOperatorPane(windowItem, pane) {
+    const operator = pane.operatorState || createOperatorConsoleState(state.preferences);
+    const counts = operatorSummaryCounts(operator);
+    const tickets = operator.tickets.slice(0, 6);
+    return (
+      <div className="print-operator-panel">
+        <div className="print-operator-summary">
+          <span className="print-operator-chip"><strong>{counts.total}</strong><small>Works</small></span>
+          <span className="print-operator-chip"><strong>{counts.assigned}</strong><small>Assigned</small></span>
+          <span className="print-operator-chip"><strong>{counts.attention}</strong><small>Attention</small></span>
+          <span className="print-operator-chip"><strong>{counts.destinations}</strong><small>Ready</small></span>
+        </div>
+        {operator.error ? <div className="form-error">{operator.error}</div> : null}
+        {tickets.length ? (
+          <div className="print-operator-list">
+            {tickets.map((ticket) => {
+              const ticketId = operatorTicketId(ticket);
+              const executionStatus = String(ticket?.execution_state?.status || ticket?.result_summary?.status || "queued").trim().toLowerCase();
+              const title = String(ticket?.ticket?.title || ticket?.work_item?.title || ticket?.work_item?.required_capability || ticketId || "Managed work").trim();
+              const workerName = String(ticket?.worker_assignment?.worker_name || ticket?.worker_assignment?.worker_id || "Unassigned").trim();
+              return (
+                <article key={ticketId || title} className="print-operator-item">
+                  <div className="print-pane-head">
+                    <strong>{title}</strong>
+                    <span className={statusPillClass(executionStatus)}>{labelizeStatus(executionStatus)}</span>
+                  </div>
+                  <div className="print-pane-meta">
+                    <span>{compactText(ticket?.work_item?.required_capability || "Capability not recorded", 88)}</span>
+                    <span>{`Worker: ${workerName}`}</span>
+                    <span>{`Updated: ${formatTimestamp(ticket?.ticket?.updated_at || ticket?.execution_state?.updated_at || ticket?.execution_state?.completed_at)}`}</span>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="pane-empty small">
+            {operator.bossUrl ? "No managed work yet." : "Boss URL not configured."}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  function renderPrintBrowserPane(windowItem, pane) {
+    const browserCatalog = resolveBrowserCatalog(windowItem, state.preferences, state.globalPlazaStatus);
+    const pulser = (browserCatalog?.pulsers || []).find((entry) => (
+      (pane.pulserId && entry.agent_id === pane.pulserId)
+      || (pane.pulserAddress && entry.agent_address === pane.pulserAddress)
+      || (pane.pulserName && (entry.pulser_name === pane.pulserName || entry.name === pane.pulserName || entry.agent_name === pane.pulserName))
+    )) || null;
+    const pulserLabel = String(
+      pulser?.pulser_name
+      || pulser?.name
+      || pulser?.agent_name
+      || pane.pulserName
+      || pane.pulserId
+      || pane.pulserAddress
+      || "",
+    ).trim();
+    const isMindMapPane = pane.type === "mind_map";
+    const isOperatorPane = isOperatorPaneType(pane.type);
+    const value = !isOperatorPane && pane.result !== null ? getDisplayValue(pane) : null;
+    const paneMap = isMindMapPane ? normalizeMindMapState(pane.mindMapState, state.preferences, state.dashboard) : null;
+    const effectivePaneStatus = isOperatorPane ? String(pane.operatorState?.status || "idle") : pane.status;
+    const paneMeta = [
+      pane.pulseName || pane.pulseAddress ? `Pulse: ${pane.pulseName || pane.pulseAddress}` : "",
+      pulserLabel ? `Pulser: ${pulserLabel}` : "",
+      pane.displayFormat ? `Format: ${pane.displayFormat === "chart" ? `${pane.displayFormat} · ${pane.chartType}` : pane.displayFormat}` : "",
+    ].filter(Boolean);
+
+    let bodyContent = null;
+    if (pane.error) {
+      bodyContent = <div className="pane-empty error">{pane.error}</div>;
+    } else if (isOperatorPane) {
+      bodyContent = renderPrintOperatorPane(windowItem, pane);
+    } else if (isMindMapPane) {
+      bodyContent = renderPrintMindMapCanvas(paneMap);
+    } else if (value === null) {
+      bodyContent = (
+        <div className="pane-empty small">
+          {pane.pulseName || pane.pulseAddress ? "Ready to print after running this pane." : "Select a pulse to populate this pane."}
+        </div>
+      );
+    } else {
+      bodyContent = <ValueRenderer key={`print:${pane.id}:${pane.displayFormat}:${pane.chartType}`} value={value} format={pane.displayFormat} chartType={pane.chartType} />;
+    }
+
+    return (
+      <article key={pane.id} className={`print-pane-card print-pane-card--${effectivePaneStatus}${isOperatorPane ? " print-pane-card--managed-work" : ""}`}>
+        <div className="print-pane-head">
+          <strong>{pane.title}</strong>
+          <span className={statusPillClass(effectivePaneStatus)}>{labelizeStatus(effectivePaneStatus)}</span>
+        </div>
+        {paneMeta.length ? (
+          <div className="print-pane-meta">
+            {paneMeta.map((entry) => <span key={entry}>{entry}</span>)}
+          </div>
+        ) : null}
+        {pane.plazaDescription || pane.description ? (
+          <p className="print-pane-copy">{compactText(pane.plazaDescription || pane.description, 220)}</p>
+        ) : null}
+        <div className="print-pane-body">
+          {bodyContent}
+        </div>
+      </article>
+    );
+  }
+
+  function renderPrintBrowserWindow(windowItem) {
+    const visiblePanes = printablePaneList(windowItem);
+    const symbol = String(windowItem.browserDefaults?.symbol || "").trim();
+    return (
+      <section className="print-window" key={windowItem.id}>
+        <div className="print-window-head">
+          <div>
+            <p className="eyebrow">Workspace Browser</p>
+            <h4>{windowItem.title || "Research Browser"}</h4>
+          </div>
+          <div className="print-window-meta">
+            {symbol ? <span>{`Symbol: ${symbol}`}</span> : null}
+            <span>{`${visiblePanes.length} pane${visiblePanes.length === 1 ? "" : "s"}`}</span>
+          </div>
+        </div>
+        {visiblePanes.length ? (
+          <div className="print-pane-grid">
+            {visiblePanes.map((pane) => renderPrintBrowserPane(windowItem, pane))}
+          </div>
+        ) : (
+          <div className="pane-empty wide workspace-empty">No panes in this browser window.</div>
+        )}
+      </section>
+    );
+  }
+
+  function renderPrintMindMapWindow(windowItem) {
+    const resolved = resolveMindMapSource(state, windowItem.id);
+    const map = resolved?.mapState;
+    return (
+      <section className="print-window" key={windowItem.id}>
+        <div className="print-window-head">
+          <div>
+            <p className="eyebrow">Workspace Diagram</p>
+            <h4>{windowItem.title || "Diagram"}</h4>
+          </div>
+          <div className="print-window-meta">
+            <span>{`${map?.nodes?.length || 0} shapes`}</span>
+            <span>{`${map?.edges?.length || 0} links`}</span>
+          </div>
+        </div>
+        {map ? renderPrintMindMapCanvas(map, "window") : <div className="pane-empty small">Diagram source unavailable.</div>}
+      </section>
+    );
+  }
+
+  function renderPrintableWorkspace(targetWorkspace) {
+    const workspaceWindows = printableWindowList(targetWorkspace);
+    const totalPaneCount = workspaceWindows.reduce((count, windowItem) => (
+      count + (windowItem.type === "browser" ? printablePaneList(windowItem).length : 1)
+    ), 0);
+    return (
+      <div className="print-preview-sheet">
+        <header className="print-preview-head">
+          <div>
+            <p className="eyebrow">Workspace Print Preview</p>
+            <h3>{targetWorkspace?.name || "Workspace"}</h3>
+            <p className="print-preview-copy">
+              Clean preview of the current workspace content with the floating shell, resize grips, and action buttons removed for paper output.
+            </p>
+          </div>
+          <div className="print-preview-meta">
+            <span>{`${workspaceWindows.length} window${workspaceWindows.length === 1 ? "" : "s"}`}</span>
+            <span>{`${totalPaneCount} pane${totalPaneCount === 1 ? "" : "s"}`}</span>
+            <span>{state.preferences.profileDisplayName || "Personal Agent"}</span>
+            <span>{new Date().toLocaleString()}</span>
+          </div>
+        </header>
+        <div className="print-preview-stack">
+          {workspaceWindows.length ? workspaceWindows.map((windowItem) => (
+            windowItem.type === "browser"
+              ? renderPrintBrowserWindow(windowItem)
+              : renderPrintMindMapWindow(windowItem)
+          )) : (
+            <div className="pane-empty wide workspace-empty">No windows in this workspace yet.</div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   function renderBrowserPane(windowItem, pane) {
     const editing = windowItem.browserPageMode === "edit";
@@ -11159,7 +11705,8 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
       return null;
     }
     const { windowItem, pane } = located;
-    const pulseOptions = collectCatalogPulses(windowItem.browserCatalog || emptyCatalog(state.preferences.connectionPlazaUrl));
+    const browserCatalog = resolveBrowserCatalog(windowItem, state.preferences, state.globalPlazaStatus);
+    const pulseOptions = collectCatalogPulses(browserCatalog);
     const filterText = String(deferredPaneFilterText || "").trim().toLowerCase();
     const filteredPulseOptions = filterText
       ? pulseOptions.filter((pulse) => `${pulse.pulse_name || ""}\n${pulse.plazaDescription || pulse.description || ""}`.toLowerCase().includes(filterText))
@@ -11179,7 +11726,7 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
       ? mindMapRunReadiness(
           normalizeMindMapState(pane.mindMapState, state.preferences, state.dashboard),
           state.preferences.connectionPlazaUrl,
-          windowItem.browserCatalog || emptyCatalog(state.preferences.connectionPlazaUrl),
+          browserCatalog,
         )
       : null;
     const paneStatusLabel = isOperatorPane
@@ -11222,9 +11769,25 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
         : pane.status === "loading"
           ? "pane-config-status loading"
           : "pane-config-status";
+    const paneConfigPlazaUrl = normalizePlazaUrl(
+      browserCatalog?.plazaUrl || browserCatalog?.plaza_url || windowItem.browserDefaults?.plazaUrl || state.preferences.connectionPlazaUrl || "",
+    );
+    const paneConfigPlazaStatusClass = browserCatalog?.connected
+      ? "status-pill ready"
+      : browserCatalog?.status === "loading"
+        ? "status-pill loading"
+        : "status-pill offline";
+    const paneConfigPlazaStatusLabel = browserCatalog?.status === "loading"
+      ? "Checking"
+      : browserCatalog?.connected
+        ? "Online"
+        : "Offline";
+    const paneConfigPlazaStatusDetail = browserCatalog?.error
+      || `${browserCatalog?.pulserCount || 0} pulsers · ${browserCatalog?.pulseCount || 0} pulses`;
+    const paneConfigPlazaBusy = browserCatalog?.status === "loading";
 
     return (
-      <div className="modal-backdrop" onClick={closePaneConfig}>
+      <div className="modal-backdrop" onClick={cancelPaneConfig}>
         <div className="modal-shell pane-config-shell" onClick={(event) => event.stopPropagation()}>
           <div className="modal-grid pane-config-grid">
             <div className="pane-config-header wide">
@@ -11234,7 +11797,23 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
                 onChange={(event) => updatePaneField(windowItem.id, pane.id, "title", event.target.value)}
                 placeholder="Pane Title"
               />
-              <button className="ghost-button pane-config-close" onClick={closePaneConfig}>Close</button>
+              <div className="pane-config-header-actions">
+                <span className="pane-config-plaza-url" title={paneConfigPlazaUrl || "Plaza URL not set"}>
+                  {paneConfigPlazaUrl || "No Plaza URL"}
+                </span>
+                <span className={paneConfigPlazaStatusClass} title={paneConfigPlazaStatusDetail}>
+                  {paneConfigPlazaStatusLabel}
+                </span>
+                <button
+                  className={paneConfigPlazaBusy ? "ghost-button pane-config-refresh-button active" : "ghost-button pane-config-refresh-button"}
+                  onClick={() => refreshBrowserCatalog(windowItem.id)}
+                  disabled={!paneConfigPlazaUrl || paneConfigPlazaBusy}
+                >
+                  {paneConfigPlazaBusy ? "Refreshing Plaza..." : "Refresh Plaza"}
+                </button>
+                <button className="ghost-button pane-config-cancel-button" onClick={cancelPaneConfig}>Cancel</button>
+                <button className="accent-button pane-config-save-button" onClick={savePaneConfig}>Save</button>
+              </div>
             </div>
             {isOperatorPane ? (
               <>
@@ -11610,6 +12189,57 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
             <button className="ghost-button" onClick={closeWorkspaceDialog}>Cancel</button>
             <button className="accent-button" onClick={submitWorkspaceDialog}>
               {state.workspaceDialog.mode === "save" ? "Save Workspace" : "Load Workspace"}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  function renderPrintDialog() {
+    if (!state.printDialog.open) {
+      return null;
+    }
+    const targetWorkspace = printWorkspace;
+    const workspaceWindows = printableWindowList(targetWorkspace);
+    const totalPaneCount = workspaceWindows.reduce((count, windowItem) => (
+      count + (windowItem.type === "browser" ? printablePaneList(windowItem).length : 1)
+    ), 0);
+    return (
+      <div className="modal-backdrop print-dialog-backdrop" onClick={state.printDialog.printing ? undefined : closePrintDialog}>
+        <div className="modal-shell print-dialog-shell" onClick={(event) => event.stopPropagation()}>
+          <div className="modal-head">
+            <div>
+              <p className="eyebrow">Workspace File</p>
+              <h3>Print Workspace</h3>
+            </div>
+            <button className="ghost-button" onClick={closePrintDialog} disabled={state.printDialog.printing}>Close</button>
+          </div>
+          <div className="print-dialog-layout">
+            <aside className="print-dialog-sidebar">
+              <div className="connection-card wide">
+                <strong>{targetWorkspace?.name || "Workspace"}</strong>
+                <span>{`${workspaceWindows.length} window${workspaceWindows.length === 1 ? "" : "s"}`}</span>
+                <span>{`${totalPaneCount} pane${totalPaneCount === 1 ? "" : "s"} ready for preview and print`}</span>
+              </div>
+              <div className="connection-card wide">
+                <strong>Output</strong>
+                <span>Workspace content only</span>
+                <span>Frames, resize handles, toolbar controls, and action buttons stay out of the preview and the printed page.</span>
+              </div>
+              <div className="connection-card wide print-preview-note">
+                <strong>Preview</strong>
+                <span>Use the browser print dialog after pressing Print to choose your paper size and destination.</span>
+              </div>
+            </aside>
+            <div className="print-preview-frame">
+              {renderPrintableWorkspace(targetWorkspace)}
+            </div>
+          </div>
+          <div className="modal-actions">
+            <button className="ghost-button" onClick={closePrintDialog} disabled={state.printDialog.printing}>Cancel</button>
+            <button className="accent-button" onClick={submitPrintDialog} disabled={!targetWorkspace || state.printDialog.printing}>
+              {state.printDialog.printing ? "Opening Print..." : "Print"}
             </button>
           </div>
         </div>
@@ -12823,16 +13453,52 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
         <main className="stage">
           <header className="menu-bar shell-panel">
             <div className="menu-group">
-              <button className="ghost-button" onClick={createWorkspace}>New Workspace</button>
-              <button className="ghost-button" onClick={() => createBrowser("docked")}>New Browser Window</button>
-              <button className="ghost-button" onClick={() => createMindMap("docked")}>Open MapPhemar</button>
-              <button className="ghost-button" onClick={openPersonalAgentUserGuide}>User Guide</button>
-              <button className="accent-button" onClick={() => updateState((next) => { next.settingsOpen = true; })}>Settings</button>
+              <div className="app-menu">
+                <button
+                  type="button"
+                  ref={(node) => setMenuBarButtonRef("file", node)}
+                  className={state.menuBarMenuId === "file" ? "ghost-button app-menu-trigger active" : "ghost-button app-menu-trigger"}
+                  onClick={() => toggleMenuBarMenu("file")}
+                  aria-haspopup="menu"
+                  aria-expanded={state.menuBarMenuId === "file"}
+                >
+                  <span>File</span>
+                  <span className="app-menu-caret" aria-hidden="true">{state.menuBarMenuId === "file" ? "^" : "v"}</span>
+                </button>
+                {renderMenuBarDropdown("file", "File menu", (
+                  <>
+                    <button type="button" className="ghost-button app-menu-item" onClick={createWorkspace} role="menuitem">New</button>
+                    <button type="button" className="ghost-button app-menu-item" onClick={() => openWorkspaceDialogFromMenu("load")} role="menuitem">Open</button>
+                    <button type="button" className="ghost-button app-menu-item" onClick={() => openWorkspaceDialogFromMenu("save")} role="menuitem">Save</button>
+                    <button type="button" className="ghost-button app-menu-item" onClick={printWorkspaceFromMenu} role="menuitem">Print</button>
+                    <button type="button" className="ghost-button app-menu-item" onClick={() => openSettingsFromMenu()} role="menuitem">Settings</button>
+                  </>
+                ))}
+              </div>
+              <div className="app-menu">
+                <button
+                  type="button"
+                  ref={(node) => setMenuBarButtonRef("help", node)}
+                  className={state.menuBarMenuId === "help" ? "ghost-button app-menu-trigger active" : "ghost-button app-menu-trigger"}
+                  onClick={() => toggleMenuBarMenu("help")}
+                  aria-haspopup="menu"
+                  aria-expanded={state.menuBarMenuId === "help"}
+                >
+                  <span>Help</span>
+                  <span className="app-menu-caret" aria-hidden="true">{state.menuBarMenuId === "help" ? "^" : "v"}</span>
+                </button>
+                {renderMenuBarDropdown("help", "Help menu", (
+                  <button type="button" className="ghost-button app-menu-item" onClick={openUserGuideFromMenu} role="menuitem">Document</button>
+                ))}
+              </div>
             </div>
-            <div className="menu-status">
-              <span className={state.globalPlazaStatus.connected ? "status-pill ready" : state.globalPlazaStatus.status === "loading" ? "status-pill loading" : "status-pill"}>
-                {state.globalPlazaStatus.status === "loading" ? "Checking Plaza" : state.globalPlazaStatus.connected ? "Plaza Ready" : "Local Mock Mode"}
+            <div className="menu-bar-actions">
+              <span className={workspacePlazaStatusClass} title={workspacePlazaStatusDetail}>
+                {menuBarPlazaStatusLabel}
               </span>
+              <button type="button" className={state.globalPlazaStatus.status === "loading" ? "ghost-button menu-refresh-button active" : "ghost-button menu-refresh-button"} onClick={refreshGlobalPlaza}>
+                {state.globalPlazaStatus.status === "loading" ? "Refreshing Plaza..." : "Refresh Plaza"}
+              </button>
             </div>
           </header>
 
@@ -12856,12 +13522,6 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
                   </div>
                   <div className="workspace-toolbar-actions">
                     <button className="ghost-button" onClick={() => createBrowser("docked")}>Add Browser</button>
-                    <span className={workspacePlazaStatusClass} title={workspacePlazaStatusDetail}>
-                      {workspacePlazaStatusLabel}
-                    </span>
-                    <button className={state.globalPlazaStatus.status === "loading" ? "ghost-button active" : "ghost-button"} onClick={refreshGlobalPlaza}>
-                      {state.globalPlazaStatus.status === "loading" ? "Refreshing Plaza..." : "Refresh Plaza"}
-                    </button>
                     <button className={workspaceIsRefreshing ? "ghost-button active" : "ghost-button"} onClick={() => refreshWorkspace(state.activeWorkspaceId)} disabled={workspaceIsRefreshing}>
                       {workspaceIsRefreshing ? "Refreshing..." : "Refresh"}
                     </button>
@@ -12967,6 +13627,7 @@ function normalizeDockedWindowBounds(windowItem, metrics, preferredBounds = null
       {renderSnapshotModal()}
       {renderPhemaDialog()}
       {renderWorkspaceDialog()}
+      {renderPrintDialog()}
       {renderDiagramRunDialog()}
 
       {activeWindowList().filter((entry) => entry.mode === "external").map((windowItem) => (

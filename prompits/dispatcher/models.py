@@ -14,7 +14,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Mapping
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 JOB_TIMESTAMP_FIELDS = (
@@ -23,6 +23,22 @@ JOB_TIMESTAMP_FIELDS = (
     "completed_at",
     "created_at",
     "updated_at",
+)
+
+JOB_TEXT_FIELDS = (
+    "id",
+    "job_type",
+    "status",
+    "required_capability",
+    "target_table",
+    "source_url",
+    "claimed_by",
+    "error",
+)
+
+JOB_DICT_FIELDS = (
+    "metadata",
+    "result_summary",
 )
 
 
@@ -66,6 +82,26 @@ class JobDetail(BaseModel):
     created_at: str = ""
     updated_at: str = ""
 
+    @field_validator(*JOB_TEXT_FIELDS, mode="before")
+    @classmethod
+    def _normalize_text_fields(cls, value: Any) -> str:
+        """Normalize nullable job text fields to plain strings."""
+        if value is None:
+            return ""
+        if isinstance(value, str):
+            return value
+        return str(value)
+
+    @field_validator(*JOB_DICT_FIELDS, mode="before")
+    @classmethod
+    def _normalize_dict_fields(cls, value: Any) -> Dict[str, Any]:
+        """Normalize nullable mapping fields to plain dictionaries."""
+        if value is None:
+            return {}
+        if isinstance(value, Mapping):
+            return dict(value)
+        return dict(value)
+
     @classmethod
     def from_row(cls, value: Mapping[str, Any] | "JobDetail" | None) -> "JobDetail":
         """Build an instance from row."""
@@ -103,6 +139,16 @@ class JobResult(BaseModel):
     result_summary: Dict[str, Any] = Field(default_factory=dict)
     error: str = ""
     target_table: str = ""
+
+    @field_validator("result_summary", mode="before")
+    @classmethod
+    def _normalize_result_summary(cls, value: Any) -> Dict[str, Any]:
+        """Normalize nullable result-summary payloads to plain dictionaries."""
+        if value is None:
+            return {}
+        if isinstance(value, Mapping):
+            return dict(value)
+        return dict(value)
 
     @classmethod
     def from_value(cls, value: Mapping[str, Any] | "JobResult" | None) -> "JobResult":

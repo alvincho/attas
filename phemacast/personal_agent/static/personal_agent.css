@@ -728,14 +728,18 @@ body[data-app-mode="map_phemar"]::before {
 
 .menu-bar {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
   gap: 10px;
-  padding: 10px 14px;
+  padding: 8px 10px;
+  position: relative;
+  z-index: 60;
+  overflow: visible;
 }
 
 .menu-group,
 .menu-status,
+.menu-bar-actions,
 .workspace-pills,
 .window-toolbar-group,
 .pane-mode-row,
@@ -751,11 +755,71 @@ body[data-app-mode="map_phemar"]::before {
   align-items: center;
 }
 
+.menu-bar-actions {
+  margin-left: auto;
+}
+
 .menu-bar .ghost-button,
 .menu-bar .accent-button {
-  padding: 8px 12px;
-  border-radius: 14px;
-  font-size: 0.9rem;
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 11px;
+  border-radius: 12px;
+  font-size: 0.84rem;
+}
+
+.menu-bar .status-pill {
+  padding: 6px 10px;
+  border-radius: 12px;
+  font-size: 0.66rem;
+}
+
+.app-menu {
+  position: relative;
+  z-index: 1;
+}
+
+.app-menu-trigger {
+  min-width: 76px;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.82rem;
+}
+
+.app-menu-caret {
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.74rem;
+}
+
+.app-menu-dropdown {
+  position: fixed;
+  min-width: 240px;
+  max-width: min(280px, calc(100vw - 40px));
+  max-height: min(420px, calc(100vh - 120px));
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: linear-gradient(180deg, var(--panel), var(--panel-strong));
+  backdrop-filter: blur(18px);
+  box-shadow: var(--shadow);
+  z-index: 1200;
+  overflow-y: auto;
+}
+
+.app-menu-item {
+  width: 100%;
+  justify-content: flex-start;
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: 12px;
+}
+
+.menu-refresh-button {
+  white-space: nowrap;
 }
 
 .workspace-shell {
@@ -1238,6 +1302,14 @@ body[data-app-mode="map_phemar"]::before {
   align-items: center;
 }
 
+.pane-config-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+  align-items: center;
+}
+
 .pane-config-title-input {
   width: 100%;
   padding: 12px 14px;
@@ -1253,9 +1325,39 @@ body[data-theme="paper"] .pane-config-title-input {
   background: rgba(112, 89, 58, 0.05);
 }
 
-.pane-config-close,
+.pane-config-plaza-url {
+  max-width: min(360px, 42vw);
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: rgba(0, 0, 0, 0.08);
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+body[data-theme="paper"] .pane-config-plaza-url {
+  background: rgba(112, 89, 58, 0.05);
+}
+
+.pane-config-header .status-pill {
+  padding: 6px 10px;
+  border-radius: 12px;
+  font-size: 0.66rem;
+}
+
+.pane-config-refresh-button,
+.pane-config-cancel-button,
+.pane-config-save-button,
 .pane-config-run-button {
-  min-height: 48px;
+  min-height: 44px;
 }
 
 .field--get-data {
@@ -2749,6 +2851,260 @@ body[data-theme="paper"] .field select {
   font-size: 0.86rem;
 }
 
+.print-dialog-shell {
+  width: min(1440px, 100%);
+}
+
+.print-dialog-layout {
+  display: grid;
+  grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
+  gap: 18px;
+  margin-top: 18px;
+  min-height: 0;
+}
+
+.print-dialog-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.print-preview-frame {
+  min-height: 68vh;
+  padding: 16px;
+  border-radius: 24px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.03);
+  overflow: auto;
+}
+
+.print-preview-sheet {
+  width: min(1120px, 100%);
+  margin: 0 auto;
+  padding: 32px;
+  border-radius: 28px;
+  background: #fffdf8;
+  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.16);
+  --bg: #fffdf8;
+  --bg-soft: rgba(255, 252, 244, 0.98);
+  --panel: rgba(255, 252, 246, 0.98);
+  --panel-strong: rgba(247, 239, 227, 0.98);
+  --line: rgba(104, 79, 48, 0.14);
+  --line-strong: rgba(104, 79, 48, 0.28);
+  --text: #261d17;
+  --muted: #786859;
+  --accent: #a66b31;
+  --accent-soft: rgba(166, 107, 49, 0.12);
+  --accent-2: #0f7c83;
+  --danger: #b85244;
+  --success: #4c8e34;
+}
+
+.print-preview-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: end;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+.print-preview-head h3,
+.print-window-head h4 {
+  margin: 6px 0 0;
+  font-family: var(--serif);
+}
+
+.print-preview-head h3 {
+  font-size: 2rem;
+}
+
+.print-preview-copy {
+  margin: 10px 0 0;
+  max-width: 72ch;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.print-preview-meta,
+.print-window-meta,
+.print-pane-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.print-preview-meta,
+.print-window-meta {
+  justify-content: flex-end;
+  align-items: center;
+  color: var(--muted);
+  font-size: 0.76rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.print-preview-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin-top: 20px;
+}
+
+.print-window {
+  padding: 20px;
+  border-radius: 22px;
+  border: 1px solid var(--line);
+  background: linear-gradient(180deg, var(--panel), var(--panel-strong));
+  box-shadow: 0 14px 34px rgba(47, 34, 18, 0.08);
+}
+
+.print-window-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.print-window-head h4 {
+  font-size: 1.34rem;
+}
+
+.print-pane-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+.print-pane-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 220px;
+  padding: 16px;
+  border-radius: 20px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.66);
+}
+
+.print-pane-card--managed-work {
+  background: color-mix(in srgb, var(--accent-soft) 34%, white);
+}
+
+.print-pane-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.print-pane-head strong {
+  font-size: 1rem;
+}
+
+.print-pane-head .status-pill {
+  flex-shrink: 0;
+}
+
+.print-pane-meta {
+  color: var(--muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.print-pane-copy {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+  font-size: 0.9rem;
+}
+
+.print-pane-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+}
+
+.print-preview-sheet .value-pre {
+  margin: 0;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: rgba(82, 60, 29, 0.05);
+  color: var(--text);
+}
+
+.print-preview-sheet .value-inline,
+.print-preview-sheet .value-group {
+  color: var(--text);
+}
+
+.print-preview-sheet .structured-list,
+.print-preview-sheet .chart-shell,
+.print-preview-sheet .table-shell,
+.print-preview-sheet .preview-card,
+.print-preview-sheet .connection-card,
+.print-preview-sheet .pane-empty {
+  border-color: var(--line);
+}
+
+.print-preview-sheet .pane-empty {
+  background: rgba(255, 255, 255, 0.54);
+}
+
+.print-operator-panel,
+.print-operator-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.print-operator-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.print-operator-chip {
+  padding: 10px 12px;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.54);
+  text-align: center;
+}
+
+.print-operator-chip strong {
+  display: block;
+  font-size: 1.14rem;
+}
+
+.print-operator-chip small {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.print-operator-item {
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.54);
+}
+
+.print-diagram-preview .pane-diagram-canvas {
+  min-height: 260px;
+}
+
+.print-diagram-preview--window .pane-diagram-canvas {
+  min-height: 360px;
+}
+
 .diagram-run-step-list {
   display: flex;
   flex-direction: column;
@@ -3300,6 +3656,94 @@ body[data-theme="paper"] .field select {
   }
 }
 
+@page {
+  margin: 0.55in;
+}
+
+@media print {
+  html,
+  body {
+    background: #fff !important;
+    color: #111 !important;
+    overflow: visible !important;
+  }
+
+  body::before,
+  body.print-preview-open .app-menu-dropdown {
+    display: none !important;
+  }
+
+  body.print-preview-open #root > :not(.print-dialog-backdrop) {
+    display: none !important;
+  }
+
+  body.print-preview-open #root .print-dialog-backdrop {
+    position: static;
+    inset: auto;
+    display: block;
+    padding: 0;
+    background: transparent;
+    backdrop-filter: none;
+  }
+
+  body.print-preview-open #root .print-dialog-shell {
+    width: auto;
+    max-height: none;
+    overflow: visible;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  body.print-preview-open #root .print-dialog-shell > .modal-head,
+  body.print-preview-open #root .print-dialog-shell > .modal-actions,
+  body.print-preview-open #root .print-dialog-sidebar {
+    display: none !important;
+  }
+
+  body.print-preview-open #root .print-dialog-layout {
+    display: block;
+    margin: 0;
+  }
+
+  body.print-preview-open #root .print-preview-frame {
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    overflow: visible;
+  }
+
+  body.print-preview-open #root .print-preview-sheet {
+    width: auto;
+    margin: 0;
+    padding: 0;
+    border-radius: 0;
+    background: #fff;
+    box-shadow: none;
+  }
+
+  body.print-preview-open #root .print-window,
+  body.print-preview-open #root .print-pane-card,
+  body.print-preview-open #root .print-operator-item {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    box-shadow: none;
+  }
+
+  body.print-preview-open #root .print-window + .print-window {
+    margin-top: 16pt;
+  }
+
+  body.print-preview-open #root .print-window,
+  body.print-preview-open #root .print-pane-card,
+  body.print-preview-open #root .print-operator-item,
+  body.print-preview-open #root .print-preview-sheet .value-pre {
+    background: transparent;
+  }
+}
+
 @media (max-width: 760px) {
   .doc-shell {
     width: min(100vw - 24px, 1100px);
@@ -3336,6 +3780,36 @@ body[data-theme="paper"] .field select {
   .settings-grid,
   .modal-grid {
     grid-template-columns: 1fr;
+  }
+
+  .print-dialog-layout,
+  .print-preview-head,
+  .print-window-head {
+    grid-template-columns: 1fr;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .print-preview-frame {
+    min-height: auto;
+    padding: 10px;
+  }
+
+  .print-preview-sheet {
+    padding: 20px;
+  }
+
+  .print-preview-meta,
+  .print-window-meta {
+    justify-content: flex-start;
+  }
+
+  .print-pane-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .print-operator-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .field,
@@ -3377,6 +3851,14 @@ body[data-theme="paper"] .field select {
 
   .pane-config-header {
     grid-template-columns: 1fr;
+  }
+
+  .pane-config-header-actions {
+    justify-content: flex-start;
+  }
+
+  .pane-config-plaza-url {
+    max-width: 100%;
   }
 
   .operator-console-head,

@@ -15,6 +15,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from importlib import import_module, util as importlib_util
+import os
 from typing import Any, Callable, Dict, Iterable, Mapping
 from urllib.parse import urlparse
 
@@ -110,6 +111,32 @@ def _coerce_config_bool(value: Any) -> bool:
     return bool(value)
 
 
+def _resolve_env_reference(value: Any) -> Any:
+    """Resolve nested env-backed config fragments for job-cap kwargs."""
+    if isinstance(value, Mapping):
+        keys = {str(key) for key in value.keys()}
+        if keys and keys.issubset({"env", "name", "value", "fallback"}):
+            env_name = value.get("env") or value.get("name")
+            fallback = value.get("value", value.get("fallback"))
+            if env_name:
+                resolved = os.getenv(str(env_name))
+                if resolved not in (None, ""):
+                    return resolved
+            return None if fallback is None else str(fallback)
+        return {key: _resolve_env_reference(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_resolve_env_reference(item) for item in value]
+    if isinstance(value, tuple):
+        return tuple(_resolve_env_reference(item) for item in value)
+    if isinstance(value, str):
+        trimmed = value.strip()
+        if trimmed.startswith("env:"):
+            return os.getenv(trimmed[4:].strip())
+        if trimmed.startswith("${") and trimmed.endswith("}"):
+            return os.getenv(trimmed[2:-1].strip())
+    return value
+
+
 def job_cap_entry_is_disabled(entry: Any) -> bool:
     """Handle job cap entry is disabled."""
     if not isinstance(entry, Mapping):
@@ -167,6 +194,10 @@ class JobCap(ABC):
             "name": self.name,
             "callable": self.source or getattr(self.fn, "__name__", ""),
         }
+
+    def advertised_capabilities(self) -> list[str]:
+        """Return the capabilities this job cap should advertise right now."""
+        return [self.name]
 
     def bind_worker(self, worker: Any) -> "JobCap":
         """Bind the worker."""
@@ -257,7 +288,7 @@ def build_job_cap(entry: Mapping[str, Any] | JobCap | str) -> JobCap:
     if isinstance(type_value, str) and type_value.strip():
         cap_type = _import_job_cap_type(type_value)
         kwargs = {
-            key: value
+            key: _resolve_env_reference(value)
             for key, value in entry.items()
             if key not in {"name", "capability", "type", "class", "job_cap_type", "disabled"}
         }

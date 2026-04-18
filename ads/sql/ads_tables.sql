@@ -24,6 +24,55 @@ create table if not exists ads_jobs (
     updated_at timestamptz
 );
 
+create table if not exists ads_jobs_archive (
+    id text primary key,
+    job_type text,
+    status text,
+    required_capability text,
+    capability_tags jsonb,
+    symbols jsonb,
+    payload jsonb,
+    target_table text,
+    source_url text,
+    parse_rules jsonb,
+    priority integer default 100,
+    premium boolean default false,
+    metadata jsonb,
+    scheduled_for timestamptz,
+    claimed_by text,
+    claimed_at timestamptz,
+    completed_at timestamptz,
+    result_summary jsonb,
+    error text,
+    attempts integer default 0,
+    max_attempts integer default 3,
+    created_at timestamptz,
+    updated_at timestamptz,
+    archived_at timestamptz
+);
+
+create index if not exists ads_jobs_status_idx
+    on ads_jobs ((lower(coalesce(status, ''))));
+
+create index if not exists ads_jobs_ready_order_idx
+    on ads_jobs (priority, created_at, id)
+    where lower(coalesce(status, '')) in ('queued', 'retry', 'unfinished');
+
+create index if not exists ads_jobs_ready_schedule_idx
+    on ads_jobs (scheduled_for, priority, created_at, id)
+    where lower(coalesce(status, '')) in ('queued', 'retry', 'unfinished');
+
+create index if not exists ads_jobs_ready_capability_idx
+    on ads_jobs ((lower(coalesce(required_capability, ''))), priority, created_at, id)
+    where lower(coalesce(status, '')) in ('queued', 'retry', 'unfinished');
+
+create index if not exists ads_jobs_claimed_worker_idx
+    on ads_jobs (claimed_by, (lower(coalesce(status, ''))))
+    where coalesce(claimed_by, '') <> '';
+
+create index if not exists ads_jobs_archive_completed_idx
+    on ads_jobs_archive (completed_at desc, archived_at desc);
+
 create table if not exists ads_worker_capabilities (
     id text primary key,
     worker_id text,

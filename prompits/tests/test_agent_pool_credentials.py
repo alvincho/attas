@@ -641,6 +641,33 @@ def test_agent_heartbeat_schedules_reconnect_once_while_waiting_for_token(caplog
     assert "Skipping heartbeat, no valid token." not in caplog.text
 
 
+def test_remote_use_practice_audit_logs_at_debug_level(caplog):
+    """
+    Exercise the test_remote_use_practice_audit_logs_at_debug_level regression
+    scenario.
+    """
+    agent = StandbyAgent(name="audit-agent")
+    agent.remote_use_practice_audit = {"emit_logs": True, "persist": False}
+
+    with caplog.at_level(logging.DEBUG, logger="prompits.agents.base"):
+        agent._record_remote_practice_audit(
+            request_id="req-123",
+            direction="outbound",
+            event="request",
+            practice_id="demo-practice",
+            peer_agent_id="peer-456",
+            outcome="allowed",
+            policy_allowed=True,
+            policy_reason="matched allow rule",
+        )
+
+    matching_records = [
+        record for record in caplog.records if "Remote UsePractice audit request_id=req-123" in record.getMessage()
+    ]
+    assert matching_records
+    assert matching_records[-1].levelno == logging.DEBUG
+
+
 def test_agent_heartbeat_switches_to_reconnect_mode_when_plaza_is_starting():
     """
     Exercise the

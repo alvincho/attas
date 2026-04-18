@@ -22,6 +22,7 @@
   ],
   "ads": {
     "capabilities": [
+      "Daily Job Archive",
       "US Listed Sec to security master",
       "US Filing Bulk",
       "US Filing Mapping",
@@ -31,6 +32,11 @@
       "rss news"
     ],
     "job_capabilities": [
+      {
+        "name": "Daily Job Archive",
+        "type": "ads.archive_jobs:DailyJobArchiveJobCap",
+        "disabled": false
+      },
       {
         "name": "US Listed Sec to security master",
         "type": "ads.us_listed:USListedSecJobCap",
@@ -67,7 +73,7 @@
         "disabled": false
       }
     ],
-    "poll_interval_sec": 10,
+    "poll_interval_sec": 0,
     "yfinance_request_cooldown_sec": 600,
     "auto_register": true
   }

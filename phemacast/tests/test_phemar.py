@@ -93,7 +93,10 @@ def test_phemar_loads_config_registers_and_advertises_generate_practice(tmp_path
             }
         )
 
-    with patch("prompits.agents.base.requests.post", side_effect=fake_post):
+    with patch("prompits.agents.base.requests.get", return_value=FakeResponse([], status_code=200)), patch(
+        "prompits.agents.base.requests.post",
+        side_effect=fake_post,
+    ):
         phemar = Phemar.from_config(config_path)
 
     assert phemar.name == "MacroPhemar"

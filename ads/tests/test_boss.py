@@ -17,6 +17,8 @@ import os
 import sys
 import time
 from datetime import datetime, timedelta, timezone
+import json
+from pathlib import Path
 from unittest.mock import patch
 
 from fastapi import HTTPException
@@ -25,11 +27,12 @@ from fastapi.testclient import TestClient
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
-from ads.boss import ADSBossAgent, BossDbQueryRequest, BossDbTableRequest, BossScheduleJobRequest
+from ads.boss import ADSBossAgent, BossDbQueryRequest, BossDbTableRequest, BossScheduleJobRequest, TABLE_SCHEDULED_JOBS
 from ads.models import JobResult
 from ads.runtime import parse_datetime_value, read_ads_config
 from ads.schema import (
     TABLE_DAILY_PRICE,
+    TABLE_JOB_ARCHIVE,
     TABLE_JOBS,
     TABLE_NEWS,
     TABLE_RAW_DATA,
@@ -47,6 +50,72 @@ def build_client(tmp_path, *, dispatcher_address: str = "http://127.0.0.1:8060")
     """Build the client."""
     pool = SQLitePool("ads_boss_pool", "ADS boss test pool", str(tmp_path / "boss.sqlite"))
     agent = ADSBossAgent(pool=pool, dispatcher_address=dispatcher_address)
+    return agent, TestClient(agent.app)
+
+
+class FakePopen:
+    """Minimal subprocess double for ADS boss worker-launch tests."""
+
+    def __init__(self, pid: int = 4242):
+        self.pid = pid
+        self._returncode = None
+
+    def poll(self):
+        """Return the current fake process exit code."""
+        return self._returncode
+
+    def terminate(self):
+        """Simulate a graceful terminate."""
+        self._returncode = 0
+
+    def wait(self, timeout=None):
+        """Return the final exit code."""
+        return self._returncode
+
+    def kill(self):
+        """Simulate a forced kill."""
+        self._returncode = -9
+
+
+def build_client_with_worker_template(tmp_path):
+    """Build one ADS boss test client with a local worker template config."""
+    worker_config_path = tmp_path / "worker.agent"
+    worker_config_path.write_text(
+        json.dumps(
+            {
+                "name": "ADSWorker",
+                "host": "127.0.0.1",
+                "plaza_url": "http://127.0.0.1:8011",
+                "ads": {
+                    "job_capabilities": [
+                        {"name": "RSS News", "type": "ads.rss_news:RSSNewsJobCap"},
+                        {"name": "TWSE Market EOD", "type": "ads.twse:TWSEMarketEODJobCap"},
+                    ],
+                    "capabilities": ["rss news", "twse market eod"],
+                    "auto_register": True,
+                },
+            },
+            indent=2,
+        ) + "\n",
+        encoding="utf-8",
+    )
+    boss_config_path = tmp_path / "boss.agent"
+    boss_config_path.write_text(
+        json.dumps(
+            {
+                "name": "ADSBoss",
+                "host": "127.0.0.1",
+                "ads": {
+                    "dispatcher_address": "http://127.0.0.1:8060",
+                    "worker_config_path": "worker.agent",
+                },
+            },
+            indent=2,
+        ) + "\n",
+        encoding="utf-8",
+    )
+    pool = SQLitePool("ads_boss_pool", "ADS boss test pool", str(tmp_path / "boss.sqlite"))
+    agent = ADSBossAgent(pool=pool, config_path=boss_config_path)
     return agent, TestClient(agent.app)
 
 
@@ -115,6 +184,81 @@ def test_ads_boss_monitor_page_renders_dispatcher_and_worker_status(tmp_path):
     assert "Latest Time" in response.text
     assert "Current Job Detail" in response.text
     assert "Work History" in response.text
+
+
+def test_ads_boss_monitor_page_renders_management_console_sections(tmp_path):
+    """Exercise the ADS management console monitor layout."""
+    _agent, client = build_client(tmp_path)
+
+    response = client.get("/monitor")
+
+    assert response.status_code == 200
+    assert "Dashboard" in response.text
+    assert "Crawler Coverage" in response.text
+    assert "Start New Workers" in response.text
+    assert "Managed Runtime" in response.text
+    assert "Worker Roster By Type" in response.text
+    assert "Worker Logs" in response.text
+
+
+def test_ads_boss_local_worker_endpoints_launch_and_list_sessions(tmp_path):
+    """Exercise boss-managed local worker launch and listing."""
+    _agent, client = build_client_with_worker_template(tmp_path)
+    fake_process = FakePopen(pid=7331)
+
+    with patch("ads.boss.subprocess.Popen", return_value=fake_process):
+        response = client.post("/api/workers/local", json={"worker_type": "rss-news", "count": 1})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["count"] == 1
+    worker = payload["workers"][0]
+    assert worker["worker_type"] == "rss-news"
+    assert worker["worker_type_label"] == "RSS News"
+    assert worker["status"] == "running"
+    generated_config = json.loads(Path(worker["config_path"]).read_text(encoding="utf-8"))
+    assert generated_config["name"].startswith("ADSWorker-rss-news-")
+    assert generated_config["ads"]["dispatcher_address"] == "http://127.0.0.1:8060"
+    assert [entry["name"] for entry in generated_config["ads"]["job_capabilities"]] == ["RSS News"]
+    assert generated_config["agent_card"]["meta"]["local_manager_session_id"] == worker["id"]
+
+    list_response = client.get("/api/workers/local")
+    assert list_response.status_code == 200
+    listed = list_response.json()
+    assert listed["count"] == 1
+    assert listed["workers"][0]["id"] == worker["id"]
+    catalog_ids = {entry["id"] for entry in listed["catalog"]}
+    assert "all-capabilities" in catalog_ids
+    assert "rss-news" in catalog_ids
+    assert "twse-market-eod" in catalog_ids
+
+
+def test_ads_boss_local_worker_logs_and_terminate(tmp_path):
+    """Exercise log tailing and terminate for boss-managed local workers."""
+    _agent, client = build_client_with_worker_template(tmp_path)
+    fake_process = FakePopen(pid=8448)
+
+    with patch("ads.boss.subprocess.Popen", return_value=fake_process):
+        launch_response = client.post("/api/workers/local", json={"worker_type": "rss-news", "count": 1})
+
+    assert launch_response.status_code == 200
+    worker = launch_response.json()["workers"][0]
+    with open(worker["log_path"], "a", encoding="utf-8") as fh:
+        fh.write("line-one\nline-two\n")
+
+    logs_response = client.get(f"/api/workers/local/{worker['id']}/logs?limit=1")
+    assert logs_response.status_code == 200
+    logs_payload = logs_response.json()
+    assert logs_payload["lines"] == ["line-two"]
+
+    terminate_response = client.post(
+        f"/api/workers/local/{worker['id']}/control",
+        json={"action": "terminate"},
+    )
+    assert terminate_response.status_code == 200
+    terminated = terminate_response.json()["worker"]
+    assert terminated["status"] == "terminated"
+    assert terminated["exit_code"] == 0
 
 
 def test_ads_boss_monitor_summary_reports_not_configured_without_dispatcher(tmp_path):
@@ -473,6 +617,8 @@ def test_ads_boss_worker_history_lists_recent_jobs_for_worker(tmp_path):
                 }
             )
             return rows
+        if table_name == TABLE_JOB_ARCHIVE:
+            return []
         if table_name == TABLE_WORKERS:
             return [
                 {
@@ -512,6 +658,8 @@ def test_ads_boss_worker_history_returns_worker_heartbeat_history(tmp_path):
         """Return the fake fetch dispatcher rows."""
         assert dispatcher_address == "http://127.0.0.1:9070"
         if table_name == TABLE_JOBS:
+            return []
+        if table_name == TABLE_JOB_ARCHIVE:
             return []
         if table_name == TABLE_WORKERS:
             return [
@@ -581,6 +729,9 @@ def test_ads_boss_job_detail_includes_latest_heartbeat_message(tmp_path):
                     "updated_at": now.isoformat(),
                 }
             ]
+        if table_name == TABLE_JOB_ARCHIVE:
+            assert id_or_where == {"id": "ads-job:1"}
+            return []
         if table_name == TABLE_RAW_DATA:
             assert id_or_where == {"job_id": "ads-job:1"}
             return []
@@ -638,6 +789,8 @@ def test_ads_boss_schedule_history_lists_related_jobs(tmp_path):
         assert dispatcher_address == "http://127.0.0.1:9070"
         assert id_or_where is None
         if table_name == TABLE_JOBS:
+            return []
+        if table_name == TABLE_JOB_ARCHIVE:
             return [
                 {
                     "id": "ads-job:recent",
@@ -1857,6 +2010,10 @@ def test_ads_boss_jobs_api_reads_list_and_detail_from_live_dispatcher(tmp_path):
                 result_summary={"rows": 0},
             )
         )
+        assert dispatcher.pool._GetTableData(TABLE_JOBS, job_id) == []
+        archived_rows = dispatcher.pool._GetTableData(TABLE_JOB_ARCHIVE, job_id)
+        assert len(archived_rows) == 1
+        assert archived_rows[0]["status"] == "completed"
 
         jobs_response = client.get("/api/jobs")
         assert jobs_response.status_code == 200
@@ -1942,6 +2099,57 @@ def test_ads_boss_process_due_schedules_issues_job_to_live_dispatcher(tmp_path):
         assert schedule_rows[0]["dispatcher_job_id"]
     finally:
         stop_servers([(dispatcher_server, dispatcher_thread)])
+
+
+def test_ads_boss_seeds_configured_daily_archive_schedule_once(tmp_path):
+    """
+    Exercise the ADS config-seeded daily archive schedule regression scenario.
+    """
+    pool = SQLitePool("ads_boss_pool", "ADS boss test pool", str(tmp_path / "boss.sqlite"))
+    config = {
+        "ads": {
+            "scheduled_jobs": [
+                {
+                    "id": "ads-boss-schedule:daily-job-archive",
+                    "name": "Daily Job Archive (3AM)",
+                    "required_capability": "Daily Job Archive",
+                    "repeat_frequency": "daily",
+                    "schedule_timezone": "Asia/Shanghai",
+                    "schedule_times": ["03:00"],
+                    "priority": 80,
+                    "payload": {"batch_size": 1000},
+                }
+            ]
+        }
+    }
+
+    agent = ADSBossAgent(
+        pool=pool,
+        dispatcher_address="http://127.0.0.1:9070",
+        config=config,
+    )
+
+    seeded = agent._get_schedule_row("ads-boss-schedule:daily-job-archive")
+    assert seeded["name"] == "Daily Job Archive (3AM)"
+    assert seeded["required_capability"] == "Daily Job Archive"
+    assert seeded["repeat_frequency"] == "daily"
+    assert seeded["schedule_timezone"] == "Asia/Shanghai"
+    assert seeded["schedule_time"] == "03:00"
+    assert seeded["schedule_times"] == ["03:00"]
+    assert seeded["priority"] == 80
+    assert seeded["payload"] == {"batch_size": 1000}
+    assert seeded["metadata"]["seeded_from_config"] is True
+    assert seeded["metadata"]["config_schedule_id"] == "ads-boss-schedule:daily-job-archive"
+    assert parse_datetime_value(seeded["scheduled_for"]) > datetime.min.replace(tzinfo=timezone.utc)
+    assert len(pool._GetTableData(TABLE_SCHEDULED_JOBS, "ads-boss-schedule:daily-job-archive")) == 1
+
+    ADSBossAgent(
+        pool=pool,
+        dispatcher_address="http://127.0.0.1:9070",
+        config=config,
+    )
+
+    assert len(pool._GetTableData(TABLE_SCHEDULED_JOBS, "ads-boss-schedule:daily-job-archive")) == 1
 
 
 def test_ads_boss_recurring_schedule_advances_after_issue(tmp_path):

@@ -61,6 +61,7 @@ from prompits.dispatcher.runtime import (
 )
 from prompits.dispatcher.schema import (
     CAPABILITY_TO_TABLE,
+    TABLE_JOB_ARCHIVE,
     TABLE_JOBS,
     TABLE_RAW_PAYLOADS,
     TABLE_RESULT_ROWS,
@@ -76,9 +77,11 @@ DISPATCHER_DIRECT_TOKEN = "dispatcher-local-direct-token"
 DISPATCHER_PARTY = "Prompits"
 WORKER_HEARTBEAT_INTERVAL_SEC = 15.0
 WORKER_JOB_TIMEOUT_SEC = 180.0
+WORKER_NO_CAPABILITIES_BACKOFF_SEC = 30.0
 FAILED_REISSUE_PRIORITY = 1000
 STALE_RECOVERY_INTERVAL_SEC = 30.0
 JOB_CLAIM_CANDIDATE_LIMIT = 200
+ARCHIVE_COMPLETED_BATCH_SIZE = 1000
 _MANAGED_WORK_METADATA_KEY = "managed_work"
 _POSTGRES_ENV_VARS = (
     "POSTGRES_DSN",
@@ -568,6 +571,7 @@ class DispatcherAgent(StandbyAgent):
         meta = dict(card.get("meta") or {})
         meta["dispatcher_tables"] = [
             TABLE_JOBS,
+            TABLE_JOB_ARCHIVE,
             TABLE_WORKERS,
             TABLE_WORKER_HISTORY,
             TABLE_RESULT_ROWS,
@@ -607,6 +611,14 @@ class DispatcherAgent(StandbyAgent):
             )
         except (TypeError, ValueError):
             self.job_claim_candidate_limit = JOB_CLAIM_CANDIDATE_LIMIT
+        self.archive_completed_jobs = bool(dispatcher_settings.get("archive_completed_jobs", False))
+        try:
+            self.archive_completed_batch_size = max(
+                int(dispatcher_settings.get("archive_completed_batch_size", ARCHIVE_COMPLETED_BATCH_SIZE)),
+                1,
+            )
+        except (TypeError, ValueError):
+            self.archive_completed_batch_size = ARCHIVE_COMPLETED_BATCH_SIZE
         self.ensure_tables()
         self.add_practice(SubmitDispatcherJobPractice())
         self.add_practice(RegisterDispatcherWorkerPractice())
@@ -629,6 +641,16 @@ class DispatcherAgent(StandbyAgent):
     def ensure_tables(self) -> None:
         """Ensure the tables exists."""
         ensure_dispatcher_tables(self.pool)
+        if self.archive_completed_jobs:
+            archived_total = self._archive_legacy_completed_jobs(
+                batch_size=self.archive_completed_batch_size,
+            )
+            if archived_total > 0:
+                self.logger.info(
+                    "Archived %s legacy completed dispatcher jobs into %s.",
+                    archived_total,
+                    TABLE_JOB_ARCHIVE,
+                )
 
     @staticmethod
     def _latest_job_rows(rows: Any) -> list[dict[str, Any]]:
@@ -668,6 +690,8 @@ class DispatcherAgent(StandbyAgent):
     def _should_record_worker_history(self, *, event_type: str = "heartbeat") -> bool:
         """Return whether the value should record worker history."""
         normalized_event_type = str(event_type or "heartbeat").strip().lower() or "heartbeat"
+        if normalized_event_type == "heartbeat":
+            return False
         if normalized_event_type == "poll" and not self.record_poll_history:
             return False
         return True
@@ -764,9 +788,18 @@ class DispatcherAgent(StandbyAgent):
         except Exception as exc:
             self.logger.warning("Ready job candidate query failed; falling back to full scan: %s", exc)
         else:
-            for row in candidate_rows:
-                if isinstance(row, Mapping) and job_is_ready(row) and job_matches_capabilities(row, capabilities):
-                    return dict(row)
+            latest_candidate_rows = self._latest_job_rows(candidate_rows)
+            for row in sorted(latest_candidate_rows, key=job_sort_key):
+                if not isinstance(row, Mapping):
+                    continue
+                row_id = str(row.get("id") or "").strip()
+                current_row = dict(row)
+                if row_id:
+                    current_rows = self._latest_job_rows(self.pool._GetTableData(TABLE_JOBS, row_id) or [])
+                    if current_rows:
+                        current_row = dict(current_rows[0])
+                if job_is_ready(current_row) and job_matches_capabilities(current_row, capabilities):
+                    return current_row
             if not truncated:
                 return None
             self.logger.debug(
@@ -782,6 +815,155 @@ class DispatcherAgent(StandbyAgent):
         if not ready_rows:
             return None
         return dict(sorted(ready_rows, key=job_sort_key)[0])
+
+    def _get_job_rows_by_id(
+        self,
+        job_id: str,
+        *,
+        include_archive: bool = False,
+    ) -> tuple[list[dict[str, Any]], str]:
+        """Return the latest dispatcher job rows for one job id."""
+        normalized_job_id = str(job_id or "").strip()
+        if not normalized_job_id:
+            return [], ""
+        table_names = [TABLE_JOBS]
+        if include_archive:
+            table_names.append(TABLE_JOB_ARCHIVE)
+        for table_name in table_names:
+            if table_name != TABLE_JOBS and not self.pool._TableExists(table_name):
+                continue
+            rows = self._latest_job_rows(self.pool._GetTableData(table_name, normalized_job_id) or [])
+            if rows:
+                return rows, table_name
+        return [], ""
+
+    def _persist_job_state(
+        self,
+        job: JobDetail,
+        *,
+        table_name: str = TABLE_JOBS,
+        archived_at: str = "",
+    ) -> bool:
+        """Persist one dispatcher job state row into the requested table."""
+        row = job.to_row()
+        if table_name == TABLE_JOB_ARCHIVE:
+            row["archived_at"] = str(archived_at or row.get("completed_at") or utcnow_iso())
+        return bool(self.pool._Insert(table_name, row))
+
+    def _delete_job_row(self, table_name: str, job_id: str) -> None:
+        """Delete one dispatcher job row by id."""
+        normalized_job_id = str(job_id or "").strip()
+        if not normalized_job_id:
+            return
+        self._delete_job_rows(table_name, [normalized_job_id])
+
+    def _delete_job_rows(self, table_name: str, job_ids: Sequence[str]) -> None:
+        """Delete one or more dispatcher job rows by id."""
+        normalized_job_ids = [
+            str(job_id or "").strip()
+            for job_id in job_ids
+            if str(job_id or "").strip()
+        ]
+        if not normalized_job_ids:
+            return
+        placeholder = _sql_placeholder(self.pool)
+        table_ref = _qualified_sql_table(self.pool, table_name)
+        id_column = _quote_sql_identifier("id")
+        with self.pool.lock:
+            cursor = self._db_cursor()
+            cursor.execute(
+                f"DELETE FROM {table_ref} WHERE {id_column} IN ({', '.join([placeholder] * len(normalized_job_ids))})",
+                normalized_job_ids,
+            )
+            conn = getattr(self.pool, "conn", None)
+            if conn is not None and hasattr(conn, "commit"):
+                conn.commit()
+
+    def _archive_completed_job(self, job: JobDetail) -> JobDetail:
+        """Move one completed dispatcher job into the archive table."""
+        if str(job.status or "").strip().lower() != "completed" or not self.archive_completed_jobs:
+            return job
+        ensure_dispatcher_tables(self.pool, [TABLE_JOB_ARCHIVE])
+        archived_at = utcnow_iso()
+        if not self._persist_job_state(job, table_name=TABLE_JOB_ARCHIVE, archived_at=archived_at):
+            raise RuntimeError(_persistence_error_message(self.pool, "Failed to archive completed dispatcher job."))
+        self._delete_job_row(TABLE_JOBS, str(job.id or ""))
+        archived_row = dict(job.to_row())
+        archived_row["archived_at"] = archived_at
+        return JobDetail.from_row(archived_row)
+
+    def _archive_legacy_completed_jobs(self, *, batch_size: int = ARCHIVE_COMPLETED_BATCH_SIZE) -> int:
+        """Move already-completed active jobs into the archive table in bounded batches."""
+        if not self.archive_completed_jobs:
+            return 0
+        ensure_dispatcher_tables(self.pool, [TABLE_JOB_ARCHIVE])
+        normalized_batch_size = max(int(batch_size or ARCHIVE_COMPLETED_BATCH_SIZE), 1)
+        archived_total = 0
+        while True:
+            batch_rows = self._query_completed_active_job_rows(limit=normalized_batch_size)
+            if not batch_rows:
+                break
+            archived_at = utcnow_iso()
+            archive_rows = []
+            archived_ids: list[str] = []
+            for row in batch_rows:
+                normalized_id = str(row.get("id") or "").strip()
+                if not normalized_id:
+                    continue
+                archive_rows.append(
+                    {
+                        **JobDetail.from_row(row).to_row(),
+                        "archived_at": archived_at,
+                    }
+                )
+                archived_ids.append(normalized_id)
+            if not archive_rows or not archived_ids:
+                break
+            if not self.pool._InsertMany(TABLE_JOB_ARCHIVE, archive_rows):
+                raise RuntimeError(
+                    _persistence_error_message(
+                        self.pool,
+                        "Failed to archive legacy completed dispatcher jobs.",
+                    )
+                )
+            self._delete_job_rows(TABLE_JOBS, archived_ids)
+            archived_total += len(archived_ids)
+            if len(archived_ids) < normalized_batch_size:
+                break
+        return archived_total
+
+    def _query_completed_active_job_rows(self, *, limit: int = ARCHIVE_COMPLETED_BATCH_SIZE) -> list[dict[str, Any]]:
+        """Return a bounded batch of completed rows still present in the active queue."""
+        normalized_limit = max(int(limit or ARCHIVE_COMPLETED_BATCH_SIZE), 1)
+        placeholder = _sql_placeholder(self.pool)
+        table_ref = _qualified_sql_table(self.pool, TABLE_JOBS)
+        status_column = _quote_sql_identifier("status")
+        completed_at_column = _quote_sql_identifier("completed_at")
+        updated_at_column = _quote_sql_identifier("updated_at")
+        created_at_column = _quote_sql_identifier("created_at")
+        id_column = _quote_sql_identifier("id")
+        sql = (
+            f"SELECT * FROM {table_ref} "
+            f"WHERE LOWER(COALESCE({status_column}, '')) = {placeholder} "
+            f"ORDER BY "
+            f"CASE WHEN {completed_at_column} IS NULL THEN 1 ELSE 0 END ASC, "
+            f"{completed_at_column} ASC, "
+            f"CASE WHEN {updated_at_column} IS NULL THEN 1 ELSE 0 END ASC, "
+            f"{updated_at_column} ASC, "
+            f"CASE WHEN {created_at_column} IS NULL THEN 1 ELSE 0 END ASC, "
+            f"{created_at_column} ASC, "
+            f"{id_column} ASC "
+            f"LIMIT {placeholder}"
+        )
+        with self.pool.lock:
+            cursor = self._db_cursor()
+            cursor.execute(sql, ["completed", normalized_limit])
+            columns = [desc[0] for desc in cursor.description or []]
+            raw_rows = cursor.fetchall()
+        return [
+            {column: _decode_db_value(value) for column, value in zip(columns, row)}
+            for row in raw_rows
+        ]
 
     def _append_worker_history(self, *, record: Mapping[str, Any], event_type: str = "heartbeat") -> None:
         """Internal helper to append the worker history."""
@@ -858,29 +1040,49 @@ class DispatcherAgent(StandbyAgent):
             metadata["recovery"] = recovery
 
             previous_summary = row.get("result_summary")
-            updated_job = JobDetail.from_row(row).model_copy(
-                update={
-                    "status": "unfinished",
-                    "updated_at": recorded_at,
-                    "completed_at": "",
-                    "claimed_by": "",
-                    "claimed_at": "",
-                    "error": reason,
-                    "metadata": metadata,
-                    "result_summary": _merge_unfinished_job_summary(
-                        previous_summary,
-                        worker_id=claimed_by,
-                        worker_name=str(worker_row.get("name") or ""),
-                        reason=reason,
-                        previous_status=current_status,
-                        progress=heartbeat.get("progress"),
-                        environment=(worker_row.get("metadata") or {}).get("environment")
-                        if isinstance(worker_row.get("metadata"), Mapping)
-                        else {},
-                        recorded_at=recorded_at,
-                    ),
-                }
-            )
+            if current_status == "stopping":
+                stopped_summary = coerce_json_object(previous_summary)
+                stopped_summary["stopped"] = True
+                stopped_summary["stopped_due_to_stale_worker"] = True
+                stopped_summary["stopped_at"] = recorded_at
+                stopped_summary["stopped_worker_id"] = claimed_by
+                stopped_summary["last_error"] = reason
+                updated_job = JobDetail.from_row(row).model_copy(
+                    update={
+                        "status": "stopped",
+                        "updated_at": recorded_at,
+                        "completed_at": recorded_at,
+                        "claimed_by": "",
+                        "claimed_at": "",
+                        "error": reason,
+                        "metadata": metadata,
+                        "result_summary": stopped_summary,
+                    }
+                )
+            else:
+                updated_job = JobDetail.from_row(row).model_copy(
+                    update={
+                        "status": "unfinished",
+                        "updated_at": recorded_at,
+                        "completed_at": "",
+                        "claimed_by": "",
+                        "claimed_at": "",
+                        "error": reason,
+                        "metadata": metadata,
+                        "result_summary": _merge_unfinished_job_summary(
+                            previous_summary,
+                            worker_id=claimed_by,
+                            worker_name=str(worker_row.get("name") or ""),
+                            reason=reason,
+                            previous_status=current_status,
+                            progress=heartbeat.get("progress"),
+                            environment=(worker_row.get("metadata") or {}).get("environment")
+                            if isinstance(worker_row.get("metadata"), Mapping)
+                            else {},
+                            recorded_at=recorded_at,
+                        ),
+                    }
+                )
             if not self.pool._Insert(TABLE_JOBS, updated_job.to_row()):
                 raise RuntimeError(_persistence_error_message(self.pool, "Failed to mark stale job as unfinished."))
             recovered_count += 1
@@ -960,6 +1162,8 @@ class DispatcherAgent(StandbyAgent):
             return False
         result_summary = dict(job.result_summary or {}) if isinstance(job.result_summary, Mapping) else {}
         if bool(result_summary.get("force_terminated")):
+            return False
+        if bool(result_summary.get("suppress_failed_reissue")) or bool(result_summary.get("do_not_reissue")):
             return False
         metadata = dict(job.metadata or {}) if isinstance(job.metadata, Mapping) else {}
         controls = dict(metadata.get("control") or {}) if isinstance(metadata.get("control"), Mapping) else {}
@@ -1127,7 +1331,7 @@ class DispatcherAgent(StandbyAgent):
         """Post the job result."""
         result = coerce_job_result(job_result or kwargs)
         job_id = result.job_id
-        rows = self._latest_job_rows(self.pool._GetTableData(TABLE_JOBS, job_id) or [])
+        rows, source_table = self._get_job_rows_by_id(job_id, include_archive=True)
         if not rows:
             raise ValueError(f"Dispatcher job '{job_id}' was not found.")
 
@@ -1136,7 +1340,7 @@ class DispatcherAgent(StandbyAgent):
         current_status = str(job.status or "").strip().lower()
         current_claimed_by = str(job.claimed_by or "").strip()
         reported_worker_id = str(result.worker_id or "").strip()
-        if current_status in {"unfinished", "completed", "failed", "stopped", "cancelled", "deleted"}:
+        if source_table == TABLE_JOB_ARCHIVE or current_status in {"unfinished", "completed", "failed", "stopped", "cancelled", "deleted"}:
             return {
                 "status": "success",
                 "ignored": True,
@@ -1332,6 +1536,9 @@ class DispatcherAgent(StandbyAgent):
         if self._should_reissue_failed_job(updated_job):
             reissued_job = self._reissue_failed_job(updated_job)
 
+        if str(updated_job.status or "").strip().lower() == "completed":
+            updated_job = self._archive_completed_job(updated_job)
+
         return {
             "status": "success",
             "job": updated_job.to_payload(),
@@ -1379,12 +1586,13 @@ class DispatcherAgent(StandbyAgent):
         if normalized_action not in {"pause", "delete", "stop", "resume", "cancel", "force_terminate"}:
             raise ValueError("action must be one of: pause, stop, resume, cancel, delete, force_terminate.")
 
-        rows = self._latest_job_rows(self.pool._GetTableData(TABLE_JOBS, normalized_job_id) or [])
+        rows, source_table = self._get_job_rows_by_id(normalized_job_id, include_archive=True)
         if not rows:
             raise ValueError(f"Dispatcher job '{normalized_job_id}' was not found.")
 
         rows.sort(key=_job_state_sort_key, reverse=True)
         job = JobDetail.from_row(rows[0])
+        archived_at = str(rows[0].get("archived_at") or "")
         current_status = str(job.status or "").strip().lower()
         effective_action = normalized_action
         next_status = current_status
@@ -1496,7 +1704,8 @@ class DispatcherAgent(StandbyAgent):
                 "result_summary": result_summary,
             }
         )
-        if not self.pool._Insert(TABLE_JOBS, updated_job.to_row()):
+        destination_table = source_table or TABLE_JOBS
+        if not self._persist_job_state(updated_job, table_name=destination_table, archived_at=archived_at):
             raise RuntimeError(
                 _persistence_error_message(self.pool, f"Failed to {normalized_action} dispatcher job '{normalized_job_id}'.")
             )
@@ -1688,6 +1897,14 @@ class DispatcherWorkerAgent(StandbyAgent):
             resolved_heartbeat_interval = max(float(resolved_heartbeat_interval), 1.0)
         except (TypeError, ValueError):
             resolved_heartbeat_interval = WORKER_HEARTBEAT_INTERVAL_SEC
+        resolved_no_capabilities_backoff = dispatcher_settings.get(
+            "no_claimable_capabilities_backoff_sec",
+            WORKER_NO_CAPABILITIES_BACKOFF_SEC,
+        )
+        try:
+            resolved_no_capabilities_backoff = max(float(resolved_no_capabilities_backoff), 0.1)
+        except (TypeError, ValueError):
+            resolved_no_capabilities_backoff = WORKER_NO_CAPABILITIES_BACKOFF_SEC
         resolved_auto_register = bool(
             auto_register if auto_register is not None else dispatcher_settings.get("auto_register", False)
         )
@@ -1732,6 +1949,7 @@ class DispatcherWorkerAgent(StandbyAgent):
         self.unavailable_job_capabilities = dict(resolved_job_cap_result.unavailable)
         self.poll_interval_sec = resolved_poll_interval
         self.heartbeat_interval_sec = resolved_heartbeat_interval
+        self.no_claimable_capabilities_backoff_sec = resolved_no_capabilities_backoff
         self.worker_id = build_id("dispatcher-worker")
         self.worker_session_started_at = utcnow_iso()
         self.worker_environment = self._build_worker_environment_snapshot(config=config, config_path=config_path)
@@ -2079,13 +2297,13 @@ class DispatcherWorkerAgent(StandbyAgent):
             poll_thread.start()
             if self.dispatcher_address:
                 self.logger.info(
-                    "Starting worker poll loop against %s every %.1fs.",
+                    "Starting worker poll loop against %s with %.1fs idle backoff.",
                     self.dispatcher_address,
                     self.poll_interval_sec,
                 )
             else:
                 self.logger.info(
-                    "Starting worker poll loop with Plaza-based dispatcher discovery every %.1fs.",
+                    "Starting worker poll loop with Plaza-based dispatcher discovery and %.1fs idle backoff.",
                     self.poll_interval_sec,
                 )
             return True
@@ -2139,12 +2357,15 @@ class DispatcherWorkerAgent(StandbyAgent):
         """Internal helper for poll loop."""
         interval = max(float(self.poll_interval_sec), 0.1)
         while not self._poll_stop_event.is_set():
+            should_wait = True
+            wait_interval = interval
             try:
-                self.logger.info("Polling dispatcher for matching jobs...")
-                self.run_once()
+                result = self.run_once()
+                should_wait = self._should_wait_after_poll_result(result)
+                wait_interval = self._poll_wait_interval_sec(result, default_sec=interval)
             except Exception as exc:
                 self.logger.exception("Worker poll iteration failed: %s", exc)
-            if self._poll_stop_event.wait(interval):
+            if should_wait and self._poll_stop_event.wait(wait_interval):
                 break
 
     def _heartbeat_loop(self) -> None:
@@ -2164,7 +2385,25 @@ class DispatcherWorkerAgent(StandbyAgent):
 
     def advertised_capabilities(self) -> list[str]:
         """Handle advertised capabilities for the dispatcher worker agent."""
-        return list(self.capabilities)
+        advertised: list[str] = []
+        seen: set[str] = set()
+        for capability_name in self.capabilities:
+            normalized_name = str(capability_name or "").strip().lower()
+            capability = self.job_capabilities.get(normalized_name)
+            if capability is not None:
+                resolve_advertised = getattr(capability, "advertised_capabilities", None)
+                resolved = (
+                    normalize_capabilities(resolve_advertised())
+                    if callable(resolve_advertised)
+                    else normalize_capabilities([normalized_name])
+                )
+            else:
+                resolved = normalize_capabilities([normalized_name])
+            for resolved_name in resolved:
+                if resolved_name and resolved_name not in seen:
+                    seen.add(resolved_name)
+                    advertised.append(resolved_name)
+        return advertised
 
     def register_capabilities(self) -> Dict[str, Any]:
         """Register the capabilities."""
@@ -2175,13 +2414,27 @@ class DispatcherWorkerAgent(StandbyAgent):
         dispatcher_address = self._resolve_dispatcher_address()
         if not dispatcher_address:
             return {"status": "pending", "job": None, "error": "Dispatcher is not available yet."}
+        advertised_capabilities = self.advertised_capabilities()
+        if not advertised_capabilities:
+            backoff_sec = max(float(self.no_claimable_capabilities_backoff_sec), 0.1)
+            self._reset_progress(
+                phase="idle",
+                message=f"Waiting {backoff_sec:.0f}s for claimable dispatcher capabilities.",
+            )
+            return {
+                "status": "idle",
+                "job": None,
+                "error": "No claimable dispatcher capabilities are available right now.",
+                "backoff_sec": backoff_sec,
+            }
+        self.logger.info("Polling dispatcher for matching jobs...")
         response = self.UsePractice(
             "dispatcher-get-job",
             {
                 "worker_id": self._worker_identity(),
                 "name": self.name,
                 "address": self.agent_card.get("address") or f"http://{self.host}:{self.port}",
-                "capabilities": self.advertised_capabilities(),
+                "capabilities": advertised_capabilities,
                 "metadata": self._worker_metadata(),
                 "plaza_url": self.plaza_url or "",
             },
@@ -2193,6 +2446,15 @@ class DispatcherWorkerAgent(StandbyAgent):
         if isinstance(job, JobDetail):
             self.logger.info("Claimed dispatcher job %s for capability '%s'.", job.id, job.required_capability)
         else:
+            normalized_status = str(payload.get("status") or "").strip().lower()
+            if normalized_status == "success":
+                backoff_sec = max(float(self.no_claimable_capabilities_backoff_sec), 0.1)
+                self._reset_progress(
+                    phase="idle",
+                    message=f"Waiting {backoff_sec:.0f}s for the next dispatcher job.",
+                )
+                payload["status"] = "idle"
+                payload["backoff_sec"] = backoff_sec
             self.logger.info("No matching dispatcher job available.")
         return payload
 
@@ -2369,12 +2631,33 @@ class DispatcherWorkerAgent(StandbyAgent):
             result_summary={"value": result},
         )
 
+    @staticmethod
+    def _should_wait_after_poll_result(result: Any) -> bool:
+        """Return whether the worker should back off before the next poll."""
+        if not isinstance(result, Mapping):
+            return True
+        normalized_status = str(result.get("status") or "").strip().lower()
+        return normalized_status in {"", "idle", "pending", "waiting_for_hire"}
+
+    def _poll_wait_interval_sec(self, result: Any, *, default_sec: float) -> float:
+        """Return the wait interval before the next poll."""
+        fallback = max(float(default_sec), 0.1)
+        if not isinstance(result, Mapping):
+            return fallback
+        raw_backoff = result.get("backoff_sec")
+        try:
+            return max(float(raw_backoff), 0.1) if raw_backoff is not None else fallback
+        except (TypeError, ValueError):
+            return fallback
+
     def run_once(self, handler: Optional[Callable[[JobDetail], Any]] = None) -> Dict[str, Any]:
         """Run the once."""
         self.register_capabilities()
         response = self.request_job()
         job = response.get("job") if isinstance(response, Mapping) else None
         if not isinstance(job, JobDetail):
+            if isinstance(response, Mapping):
+                return dict(response)
             self._reset_progress(phase="idle", message="Waiting for the next job.")
             return {"status": "idle", "job": None}
 
@@ -2496,7 +2779,8 @@ class DispatcherWorkerAgent(StandbyAgent):
                 break
             if iterations is not None and completed_iterations >= int(iterations):
                 break
-            self.run_once(handler=handler)
+            result = self.run_once(handler=handler)
             completed_iterations += 1
-            time.sleep(max(interval, 0.1))
+            if self._should_wait_after_poll_result(result):
+                time.sleep(self._poll_wait_interval_sec(result, default_sec=interval))
         return completed_iterations

@@ -2296,6 +2296,10 @@
     const frequency = String(schedule.repeat_frequency || "once").trim().toLowerCase();
     const scheduleTimes = scheduleTimesForRule(schedule);
     const timeLabel = scheduleTimes.length ? scheduleTimes.join(", ") : "--:--";
+    const scheduleIntervalMinutes = Number.parseInt(
+      String(schedule.schedule_interval_minutes || schedule.metadata?.schedule_interval_minutes || ""),
+      10
+    );
     if (frequency === "daily") {
       return `Daily at ${timeLabel} (${schedule.schedule_timezone || "UTC"})`;
     }
@@ -2306,6 +2310,10 @@
     if (frequency === "monthly") {
       const days = scheduleDaysForRule(schedule);
       return `Monthly on days ${days.length ? days.join(", ") : "?"} at ${timeLabel} (${schedule.schedule_timezone || "UTC"})`;
+    }
+    if (frequency === "interval") {
+      const startAt = schedule.metadata?.interval_start_at || schedule.scheduled_for;
+      return `Every ${Number.isInteger(scheduleIntervalMinutes) ? scheduleIntervalMinutes : "?"} minutes from ${formatTimestamp(startAt)} (${schedule.schedule_timezone || "UTC"})`;
     }
     return `Once at ${formatTimestamp(schedule.scheduled_for)}`;
   }
@@ -2335,15 +2343,24 @@
     setStatus("schedule-status-chip", "Saving", "loading");
     try {
       const repeatFrequency = currentScheduleRepeatFrequency();
-      const scheduleTimes = repeatFrequency === "once" ? [] : collectScheduleTimes();
+      const scheduleTimes = (repeatFrequency === "once" || repeatFrequency === "interval") ? [] : collectScheduleTimes();
       const scheduleDaysOfMonth = repeatFrequency === "monthly" ? collectScheduleDaysOfMonth() : [];
+      const rawScheduleIntervalMinutes = byId("schedule-interval-minutes")?.value || "";
+      const scheduleIntervalMinutes = repeatFrequency === "interval"
+        ? Number.parseInt(rawScheduleIntervalMinutes, 10)
+        : null;
       const rawScheduleAt = byId("schedule-at")?.value || "";
       const scheduleAt = rawScheduleAt ? new Date(rawScheduleAt) : null;
-      if (repeatFrequency === "once" && (!scheduleAt || Number.isNaN(scheduleAt.getTime()))) {
+      if ((repeatFrequency === "once" || repeatFrequency === "interval") && (!scheduleAt || Number.isNaN(scheduleAt.getTime()))) {
         throw new Error("Run At is required for one-time schedules.");
       }
       if (repeatFrequency !== "once" && !scheduleTimes.length) {
-        throw new Error("At least one Run Time is required for repeating schedules.");
+        if (repeatFrequency !== "interval") {
+          throw new Error("At least one Run Time is required for repeating schedules.");
+        }
+      }
+      if (repeatFrequency === "interval" && (!Number.isInteger(scheduleIntervalMinutes) || scheduleIntervalMinutes < 1)) {
+        throw new Error("Interval Minutes must be a whole number greater than 0.");
       }
       if (repeatFrequency === "weekly" && !collectScheduleWeekdays().length) {
         throw new Error("Select at least one day of week for weekly schedules.");
@@ -2363,6 +2380,7 @@
         schedule_weekdays: collectScheduleWeekdays(),
         schedule_day_of_month: scheduleDaysOfMonth[0] || null,
         schedule_days_of_month: scheduleDaysOfMonth,
+        schedule_interval_minutes: scheduleIntervalMinutes,
         scheduled_for: scheduleAt && !Number.isNaN(scheduleAt.getTime()) ? scheduleAt.toISOString() : "",
         targets: (byId("schedule-symbols")?.value || "").split(",").map(s => s.trim()).filter(Boolean),
         payload: JSON.parse(byId("schedule-payload-json")?.value || "{}"),
