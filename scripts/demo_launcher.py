@@ -1543,7 +1543,7 @@ def available_demo_ids() -> list[str]:
 def resolve_demo_spec(demo_id: str, env: dict[str, str] | None = None) -> DemoSpec:
     """Resolve one demo ID into a concrete manifest."""
     normalized = _safe_slug(demo_id)
-    runtime_env = dict(env or os.environ)
+    runtime_env = dict(os.environ if env is None else env)
     spec: DemoSpec | None = None
     if normalized == "hello-plaza":
         spec = _hello_plaza_spec()

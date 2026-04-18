@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Prompits | Neural Registry</title>
+    <title>Prompits | Plaza Registry</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600&family=Manrope:wght@400;500;600;700;800&display=swap"
@@ -47,20 +47,25 @@
         }
 
         .sidebar-header {
-            justify-content: space-between;
+            position: relative;
+            justify-content: center;
             gap: 0.85rem;
         }
 
         .sidebar-brand {
             display: flex;
             align-items: center;
-            gap: 0.75rem;
+            justify-content: center;
+            width: 100%;
             min-width: 0;
+            padding-inline: 0.75rem 1.5rem;
         }
 
-        .sidebar-wordmark {
+        .sidebar-header .sidebar-wordmark {
             min-width: 0;
             overflow: hidden;
+            color: var(--accent-color);
+            text-align: center;
             transition: opacity 0.18s ease, transform 0.18s ease;
         }
 
@@ -1160,6 +1165,255 @@
             padding: 1rem;
         }
 
+        .pulse-test-panel,
+        .pulse-test-launcher {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .pulse-test-header,
+        .pulse-test-actions {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .pulse-test-title {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            min-width: 0;
+        }
+
+        .pulse-test-title strong {
+            color: var(--text-primary);
+            font-size: 1rem;
+        }
+
+        .pulse-test-launcher {
+            background:
+                linear-gradient(135deg, rgba(31, 122, 255, 0.08), rgba(99, 213, 255, 0.12)),
+                linear-gradient(180deg, rgba(250, 253, 255, 0.96), rgba(242, 249, 255, 0.88));
+        }
+
+        .pulse-test-preview {
+            max-height: 150px;
+            overflow: auto;
+            border-radius: 12px;
+            border: 1px solid rgba(31, 122, 255, 0.12);
+            background: rgba(255, 255, 255, 0.78);
+            padding: 0.8rem 0.9rem;
+            margin: 0;
+            color: #274467;
+            font-family: var(--font-mono);
+            font-size: 0.78rem;
+            line-height: 1.55;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .pulse-test-source-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 0.75rem;
+            align-items: end;
+        }
+
+        .pulse-test-source-row .editor-select {
+            width: 100%;
+        }
+
+        body.pulse-test-modal-open {
+            overflow: hidden;
+        }
+
+        .pulse-test-modal-backdrop {
+            position: fixed;
+            inset: 0;
+            z-index: 80;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.25rem;
+            background: rgba(12, 25, 46, 0.42);
+            backdrop-filter: blur(12px);
+        }
+
+        .pulse-test-modal-card {
+            width: min(1180px, calc(100vw - 2rem));
+            height: min(86vh, 900px);
+            min-width: min(760px, calc(100vw - 2rem));
+            min-height: 520px;
+            max-width: calc(100vw - 2rem);
+            max-height: calc(100vh - 2rem);
+            overflow: auto;
+            resize: both;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            border-radius: 18px;
+            border: 1px solid rgba(31, 122, 255, 0.18);
+            background:
+                linear-gradient(160deg, rgba(255, 255, 255, 0.98), rgba(240, 248, 255, 0.94));
+            box-shadow: 0 30px 80px rgba(10, 36, 72, 0.28);
+            padding: 1.1rem;
+        }
+
+        .pulse-test-modal-grid {
+            display: grid;
+            grid-template-columns: minmax(260px, 1fr) minmax(0, 2fr);
+            gap: 1rem;
+            align-items: stretch;
+            flex: 1;
+            min-height: 0;
+            transition: grid-template-columns 0.18s ease;
+        }
+
+        .pulse-test-modal-card[data-left-collapsed="true"] .pulse-test-modal-grid {
+            grid-template-columns: 0 minmax(0, 1fr);
+            column-gap: 0;
+        }
+
+        .pulse-test-modal-section {
+            border-radius: 14px;
+            border: 1px solid rgba(31, 122, 255, 0.13);
+            background: rgba(255, 255, 255, 0.76);
+            padding: 1rem;
+            min-width: 0;
+            min-height: 0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .pulse-test-modal-setup {
+            transition: opacity 0.16s ease, padding 0.16s ease, border-width 0.16s ease;
+        }
+
+        .pulse-test-modal-card[data-left-collapsed="true"] .pulse-test-modal-setup {
+            opacity: 0;
+            padding: 0;
+            border-width: 0;
+            pointer-events: none;
+        }
+
+        .pulse-test-modal-section .json-editor {
+            height: min(17vh, 170px);
+            min-height: 80px;
+            max-height: 25%;
+            overflow: auto;
+            resize: vertical;
+        }
+
+        .pulse-test-modal-setup .pulse-compare-list {
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            flex: 1;
+            align-content: start;
+            gap: 0.28rem 0.55rem;
+            min-height: 100px;
+            overflow: auto;
+            padding-right: 0.15rem;
+        }
+
+        .pulse-test-modal-results .pulse-comparison-result {
+            flex: 1;
+            min-height: 0;
+            overflow: auto;
+        }
+
+        .pulse-compare-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+            gap: 0.75rem;
+        }
+
+        .pulse-compare-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.38rem;
+            min-width: 0;
+            padding: 0.12rem 0;
+            color: var(--text-primary);
+        }
+
+        .pulse-compare-item input {
+            flex: 0 0 auto;
+            margin: 0;
+            accent-color: var(--accent-color);
+        }
+
+        .pulse-compare-name {
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-weight: 600;
+            line-height: 1.25;
+        }
+
+        .pulse-comparison-result {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .pulse-comparison-table-wrap {
+            overflow-x: auto;
+            border: 1px solid rgba(31, 122, 255, 0.14);
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.84);
+        }
+
+        .pulse-comparison-table {
+            width: 100%;
+            min-width: 560px;
+            border-collapse: collapse;
+        }
+
+        .pulse-comparison-table th,
+        .pulse-comparison-table td {
+            border-bottom: 1px solid rgba(31, 122, 255, 0.12);
+            padding: 0.75rem 0.85rem;
+            text-align: left;
+            vertical-align: top;
+            font-size: 0.84rem;
+            line-height: 1.45;
+            word-break: break-word;
+        }
+
+        .pulse-comparison-table th {
+            background: rgba(244, 250, 255, 0.78);
+            color: var(--text-primary);
+            font-weight: 700;
+        }
+
+        .pulse-comparison-table th:first-child,
+        .pulse-comparison-table td:first-child {
+            min-width: 180px;
+        }
+
+        @media (max-width: 900px) {
+            .pulse-test-modal-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .pulse-test-modal-card[data-left-collapsed="true"] .pulse-test-modal-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .pulse-test-modal-card[data-left-collapsed="true"] .pulse-test-modal-setup {
+                display: none;
+            }
+
+            .pulse-test-source-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
         #settings-page .editor-grid {
             max-width: none;
             margin: 0;
@@ -2098,8 +2352,7 @@
     <nav class="sidebar">
         <div class="sidebar-header">
             <div class="sidebar-brand">
-                <div class="logo-icon"></div>
-                <h3 class="sidebar-wordmark">at<span>tas</span></h3>
+                <h3 class="sidebar-wordmark">attas</h3>
             </div>
             <button id="sidebar-toggle-btn" class="sidebar-toggle" type="button" aria-label="Collapse left panel" aria-expanded="true" data-tooltip="Collapse left panel">
                 <span class="sidebar-toggle-icon" aria-hidden="true"></span>
@@ -2107,11 +2360,11 @@
         </div>
         <ul class="nav-links">
             <li class="active" data-page="monitor" data-tooltip="Review the live Plaza directory, search nodes, and monitor heartbeat status."><span class="icon-grid"></span><span class="nav-label">Monitor</span></li>
-            <li data-page="map" data-tooltip="See Plaza and agent relationships as a graph with draggable nodes."><span class="icon-grid"></span><span class="nav-label">Map</span></li>
-            <li data-page="editor" data-tooltip="Draft schemas, pulses, and generic entries in the local editor workspace."><span class="icon-layout"></span><span class="nav-label">Editor</span></li>
+            <li data-page="map" data-admin-nav="1" data-tooltip="See Plaza and agent relationships as a graph with draggable nodes."><span class="icon-grid"></span><span class="nav-label">Map</span></li>
+            <li data-page="editor" data-admin-nav="1" data-tooltip="Draft schemas, pulses, and generic entries in the local editor workspace."><span class="icon-layout"></span><span class="nav-label">Editor</span></li>
             <li data-page="profile" data-tooltip="Review your account details and change your Plaza password."><span class="icon-piece"></span><span class="nav-label">Profile</span></li>
             <li data-page="keys" data-tooltip="Create named owner keys for your agents and saved AgentConfig launches."><span class="icon-piece"></span><span class="nav-label">Keys</span></li>
-            <li data-page="users" data-tooltip="Manage sign-in state and role-based user access."><span class="icon-piece"></span><span class="nav-label">Users</span></li>
+            <li data-page="users" data-admin-nav="1" data-tooltip="Manage sign-in state and role-based user access."><span class="icon-piece"></span><span class="nav-label">Users</span></li>
             <li data-page="settings" data-tooltip="Configure global sitewide typography and styling."><span class="icon-layout"></span><span class="nav-label">Settings</span></li>
         </ul>
         <div class="sidebar-footer">
@@ -2124,7 +2377,7 @@
             <div class="page-shell">
                 <header class="page-header">
                     <div class="header-info">
-                        <h1>Neural <span>Registry</span></h1>
+                        <h1>Plaza <span>Registry</span></h1>
                         <p class="subtitle">Plaza monitor, searchable directory, and live drafting handoff</p>
                     </div>
                     <div class="header-actions">
@@ -2139,19 +2392,16 @@
                     </div>
                     <div class="toolbar-select-wrap">
                         {% set pit_type_options = supported_pit_types if supported_pit_types is defined and supported_pit_types else ['Agent', 'Pulser', 'AgentConfig', 'Schema', 'Pulse', 'Party'] %}
-                        {% set ordered_monitor_types = ['Agent', 'AgentConfig', 'Schema', 'Pulse', 'Party'] %}
+                        {% set ordered_monitor_types = ['Agent', 'Pulser', 'AgentConfig', 'Schema', 'Pulse', 'Party'] %}
                         <select id="type-filter" class="toolbar-select">
                             <option value="">All PIT types</option>
-                            {% if 'Agent' in pit_type_options or 'Pulser' in pit_type_options %}
-                            <option value="Agent">Agent</option>
-                            {% endif %}
                             {% for pit_type in ordered_monitor_types %}
-                            {% if pit_type != 'Agent' and pit_type in pit_type_options %}
+                            {% if pit_type in pit_type_options %}
                             <option value="{{ pit_type }}">{{ pit_type }}</option>
                             {% endif %}
                             {% endfor %}
                             {% for pit_type in pit_type_options %}
-                            {% if pit_type not in ['Agent', 'Pulser'] and pit_type not in ordered_monitor_types %}
+                            {% if pit_type not in ordered_monitor_types %}
                             <option value="{{ pit_type }}">{{ pit_type }}</option>
                             {% endif %}
                             {% endfor %}
@@ -2163,7 +2413,7 @@
                     </label>
                     <div class="toolbar-actions">
                         <button id="launch-agent-btn" class="ghost-btn" data-tooltip="Open the popup flow to launch a new agent or relaunch a saved AgentConfig.">Launch Agent</button>
-                        <button id="refresh-btn" class="primary-btn" data-tooltip="Refresh the Plaza directory and heartbeat-derived availability."><span class="icon-refresh"></span> Sync Nodes</button>
+                        <button id="refresh-btn" class="primary-btn" data-tooltip="Refresh the Plaza directory and heartbeat-derived availability."><span class="icon-refresh"></span> Refresh Registry</button>
                     </div>
                 </section>
 
@@ -2560,6 +2810,8 @@
         </section>
     </main>
 
+    <div id="pulse-test-modal-root"></div>
+
     <script>
         const HEARTBEAT_ACTIVE_WINDOW_SEC = 60;
         const STORAGE_KEYS = {
@@ -2575,8 +2827,15 @@
             drafts: 'plaza.ui.drafts',
             activeDraftId: 'plaza.ui.activeDraftId',
             authSession: 'plaza.ui.authSession',
-            authMode: 'plaza.ui.authMode'
+            authMode: 'plaza.ui.authMode',
+            currentUser: 'plaza.ui.currentUser',
+            plazasCache: 'plaza.ui.plazasCache',
+            mapLayouts: 'plaza.ui.mapLayouts'
         };
+        const DEFAULT_MONITOR_TYPES = {{ (supported_pit_types if supported_pit_types is defined and supported_pit_types else ['Agent', 'Pulser', 'AgentConfig', 'Schema', 'Pulse', 'Party']) | tojson }};
+        const ORDERED_MONITOR_TYPES = ['Agent', 'Pulser', 'AgentConfig', 'Schema', 'Pulse', 'Party'];
+        const ADMIN_ONLY_PAGES = new Set(['map', 'editor']);
+        const AGENT_RUNTIME_TYPES = new Set(['Agent', 'Pulser', 'Phemar', 'Castr']);
 
         const EDITOR_DEFINITIONS = {
             Schema: {
@@ -2615,12 +2874,44 @@
                 label: 'Pulse',
                 createModel(source) {
                     const meta = clone(source.meta || {});
-                    const inputSchema = meta.input_schema || {};
-                    const outputSchema = meta.output_schema || {};
+                    const rawInputSchema = meta.input_schema || {};
+                    const rawOutputSchema = meta.output_schema || {};
                     const pulseAddress = meta.pulse_address || '';
+                    const sourcePulsers = dedupePulserSummaries([
+                        ...(Array.isArray(source.availablePulsers) ? source.availablePulsers : []),
+                        ...(Array.isArray(source.raw?.available_pulsers) ? source.raw.available_pulsers : []),
+                    ]);
+                    const pulseDefinition = normalizePulseDefinitionShape({
+                        ...meta,
+                        name: source.name || meta.pulse_name || meta.name,
+                        description: source.description || meta.description,
+                        pulse_address: pulseAddress || source.address || '',
+                    });
+                    const inputSchema = Object.keys(rawInputSchema || {}).length ? rawInputSchema : pulseDefinition.input_schema || {};
+                    const outputSchema = Object.keys(rawOutputSchema || {}).length ? rawOutputSchema : pulseDefinition.output_schema || {};
+                    const firstPulser = sourcePulsers[0] || null;
+                    const firstPulserDefinition = firstPulser
+                        ? resolvePulserDefinition(
+                            firstPulser,
+                            source.name || pulseDefinition.pulse_name || '',
+                            pulseAddress || source.address || '',
+                            pulseDefinition.pulse_id || ''
+                        )
+                        : {};
+                    const firstPulserTestData = firstPulser ? derivePulserTestPayload(firstPulserDefinition) : {};
+                    const fallbackTestData = Object.keys(pulseDefinition.test_data || {}).length
+                        ? pulseDefinition.test_data
+                        : pulseDefinition.resolved_test_data || {};
+                    const testData = Object.keys(firstPulserTestData || {}).length ? firstPulserTestData : fallbackTestData;
                     delete meta.input_schema;
                     delete meta.output_schema;
                     delete meta.pulse_address;
+                    delete meta.test_data;
+                    delete meta.resolved_test_data;
+                    if (meta.pulse_definition && typeof meta.pulse_definition === 'object' && !Array.isArray(meta.pulse_definition)) {
+                        delete meta.pulse_definition.test_data;
+                        delete meta.pulse_definition.resolved_test_data;
+                    }
                     return {
                         kind: 'Pulse',
                         name: source.name || 'Pulse Draft',
@@ -2630,6 +2921,8 @@
                         pulse_address: pulseAddress,
                         input_schema_json: prettyJson(inputSchema),
                         output_schema_json: prettyJson(outputSchema),
+                        test_data_json: prettyJson(testData),
+                        test_data_pulser_key: firstPulser ? pulserSummaryKey(firstPulser) : '',
                         meta_json: prettyJson(meta)
                     };
                 },
@@ -2643,6 +2936,8 @@
                         pulse_address: 'plaza://pulse/new_pulse',
                         input_schema_json: prettyJson({}),
                         output_schema_json: prettyJson({}),
+                        test_data_json: prettyJson({}),
+                        test_data_pulser_key: '',
                         meta_json: prettyJson({})
                     };
                 }
@@ -2765,7 +3060,7 @@
             document.getElementById('jump-editor-btn').addEventListener('click', () => setActivePage('editor'));
             document.getElementById('back-monitor-btn').addEventListener('click', () => setActivePage('monitor'));
             document.getElementById('launch-agent-btn').addEventListener('click', () => openAgentLaunchWindow({ sourceKey: '', source: null }));
-            document.getElementById('refresh-btn').addEventListener('click', fetchStatus);
+            document.getElementById('refresh-btn').addEventListener('click', () => fetchStatus({ showBusy: true }));
             document.getElementById('back-monitor-from-map-btn').addEventListener('click', () => setActivePage('monitor'));
             document.getElementById('refresh-map-btn').addEventListener('click', fetchStatus);
 
@@ -2883,6 +3178,81 @@
                 updateDraftField(draftId, field, target.value);
             });
 
+            document.getElementById('workspace-body').addEventListener('click', (event) => {
+                const openPulseTestButton = event.target.closest('[data-open-pulse-test-modal]');
+                if (openPulseTestButton) {
+                    openPulseTestDataModal(openPulseTestButton.dataset.openPulseTestModal || '');
+                    return;
+                }
+
+                const seedButton = event.target.closest('[data-seed-pulse-test-data]');
+                if (seedButton) {
+                    seedPulseTestData(seedButton.dataset.seedPulseTestData || '');
+                    return;
+                }
+
+                const selectButton = event.target.closest('[data-select-pulse-pulsers]');
+                if (selectButton) {
+                    selectPulseComparisonPulsers(selectButton);
+                    return;
+                }
+
+                const runButton = event.target.closest('[data-run-pulse-comparison]');
+                if (runButton) {
+                    runPulseEditorComparison(runButton);
+                }
+            });
+
+            document.getElementById('pulse-test-modal-root').addEventListener('input', (event) => {
+                const target = event.target.closest('[data-pulse-modal-params]');
+                if (!target) return;
+                updateDraftField(target.dataset.pulseModalParams || '', 'test_data_json', target.value);
+            });
+
+            document.getElementById('pulse-test-modal-root').addEventListener('change', (event) => {
+                const pulserSelect = event.target.closest('[data-pulse-test-pulser-select]');
+                if (!pulserSelect) return;
+                setPulseTestPulserSelection(pulserSelect.dataset.pulseTestPulserSelect || '', pulserSelect.value || '');
+            });
+
+            document.getElementById('pulse-test-modal-root').addEventListener('click', (event) => {
+                if (event.target.classList.contains('pulse-test-modal-backdrop') || event.target.closest('button[data-pulse-test-modal-close]')) {
+                    closePulseTestDataModal();
+                    return;
+                }
+
+                const toggleSetupButton = event.target.closest('[data-toggle-pulse-test-left]');
+                if (toggleSetupButton) {
+                    togglePulseTestLeftPanel(toggleSetupButton);
+                    return;
+                }
+
+                const seedButton = event.target.closest('[data-seed-pulse-test-data]');
+                if (seedButton) {
+                    seedPulseTestData(seedButton.dataset.seedPulseTestData || '');
+                    return;
+                }
+
+                const selectButton = event.target.closest('[data-select-pulse-pulsers]');
+                if (selectButton) {
+                    selectPulseComparisonPulsers(selectButton);
+                    return;
+                }
+
+                const runButton = event.target.closest('[data-run-pulse-modal-comparison]');
+                if (runButton) {
+                    runPulseEditorComparison(runButton);
+                }
+            });
+
+            document.addEventListener('keydown', (event) => {
+                if (event.key !== 'Escape') return;
+                const modalRoot = document.getElementById('pulse-test-modal-root');
+                if (modalRoot?.dataset.openPulseDraftId) {
+                    closePulseTestDataModal();
+                }
+            });
+
             document.getElementById('auth-mode-signin').addEventListener('click', () => setAuthMode('signin'));
             document.getElementById('auth-mode-signup').addEventListener('click', () => setAuthMode('signup'));
             document.getElementById('auth-form').addEventListener('submit', handleAuthSubmit);
@@ -2913,6 +3283,28 @@
             return allowedPages.has(page) ? page : 'monitor';
         }
 
+        function isAdminUser() {
+            return String(state.currentUser?.role || '').trim().toLowerCase() === 'admin';
+        }
+
+        function shouldHideAdminNav() {
+            return !!state.currentUser?.role && !isAdminUser();
+        }
+
+        function syncRoleBasedUi() {
+            const hideAdminNav = shouldHideAdminNav();
+            document.querySelectorAll('[data-admin-nav]').forEach((item) => {
+                item.classList.toggle('hidden', hideAdminNav);
+            });
+            const jumpEditorBtn = document.getElementById('jump-editor-btn');
+            if (jumpEditorBtn) {
+                jumpEditorBtn.classList.toggle('hidden', hideAdminNav);
+            }
+            if (hideAdminNav && ADMIN_ONLY_PAGES.has(state.activePage)) {
+                setActivePage('monitor', { skipRoleGate: true });
+            }
+        }
+
         function applySidebarState() {
             document.body.classList.toggle('sidebar-collapsed', !!state.sidebarCollapsed);
             const toggleBtn = document.getElementById('sidebar-toggle-btn');
@@ -2937,11 +3329,28 @@
             return !!state.authSession?.access_token;
         }
 
+        function hasStoredAuthSession() {
+            return !!(state.authSession?.access_token || state.authSession?.refresh_token);
+        }
+
+        function readStoredJson(key, fallback = null) {
+            const raw = localStorage.getItem(key);
+            if (!raw) return fallback;
+            try {
+                return JSON.parse(raw);
+            } catch (_) {
+                return fallback;
+            }
+        }
+
         function clearProtectedUiData() {
             state.plazas = [];
             state.items = [];
             state.agentKeys = [];
             state.agentKeyReveal = null;
+            state.mapLayouts = {};
+            localStorage.removeItem(STORAGE_KEYS.plazasCache);
+            localStorage.removeItem(STORAGE_KEYS.mapLayouts);
         }
 
         function restoreUiState() {
@@ -2961,30 +3370,43 @@
             state.activeDraftId = localStorage.getItem(STORAGE_KEYS.activeDraftId) || '';
             state.authMode = localStorage.getItem(STORAGE_KEYS.authMode) || 'signin';
 
-            const rawDrafts = localStorage.getItem(STORAGE_KEYS.drafts);
-            if (rawDrafts) {
-                try {
-                    const parsed = JSON.parse(rawDrafts);
-                    if (Array.isArray(parsed)) state.drafts = parsed;
-                } catch (_) {
-                    state.drafts = [];
-                }
-            }
+            const parsedDrafts = readStoredJson(STORAGE_KEYS.drafts, []);
+            state.drafts = Array.isArray(parsedDrafts) ? parsedDrafts : [];
 
-            const rawSession = localStorage.getItem(STORAGE_KEYS.authSession);
-            if (rawSession) {
-                try {
-                    state.authSession = JSON.parse(rawSession);
-                } catch (_) {
-                    state.authSession = null;
-                }
+            const parsedSession = readStoredJson(STORAGE_KEYS.authSession, null);
+            state.authSession = parsedSession && typeof parsedSession === 'object' && !Array.isArray(parsedSession)
+                ? parsedSession
+                : null;
+
+            if (hasStoredAuthSession()) {
+                const parsedUser = readStoredJson(STORAGE_KEYS.currentUser, null);
+                state.currentUser = parsedUser && typeof parsedUser === 'object' && !Array.isArray(parsedUser)
+                    ? parsedUser
+                    : null;
+
+                const parsedMapLayouts = readStoredJson(STORAGE_KEYS.mapLayouts, {});
+                state.mapLayouts = parsedMapLayouts && typeof parsedMapLayouts === 'object' && !Array.isArray(parsedMapLayouts)
+                    ? parsedMapLayouts
+                    : {};
+
+                const cachedPlazas = readStoredJson(STORAGE_KEYS.plazasCache, []);
+                state.plazas = Array.isArray(cachedPlazas) ? cachedPlazas : [];
+                state.items = flattenItems(state.plazas);
+            } else {
+                state.currentUser = null;
+                state.mapLayouts = {};
+                state.plazas = [];
+                state.items = [];
             }
 
             document.getElementById('monitor-search').value = state.monitorSearch;
             document.getElementById('users-search').value = state.usersSearch;
-            document.getElementById('type-filter').value = state.typeFilter;
+            syncTypeFilterOptions();
             document.getElementById('show-inactive').checked = state.showInactive;
             document.getElementById('editor-search').value = state.editorSearch;
+            if (state.items.length) {
+                reconcileDraftSources();
+            }
             consumeAuthFlash();
         }
 
@@ -3006,10 +3428,29 @@
             } else {
                 localStorage.removeItem(STORAGE_KEYS.authSession);
             }
+            if (hasStoredAuthSession() && state.currentUser) {
+                localStorage.setItem(STORAGE_KEYS.currentUser, JSON.stringify(state.currentUser));
+            } else {
+                localStorage.removeItem(STORAGE_KEYS.currentUser);
+            }
+            if (hasStoredAuthSession() && state.mapLayouts && Object.keys(state.mapLayouts).length) {
+                localStorage.setItem(STORAGE_KEYS.mapLayouts, JSON.stringify(state.mapLayouts));
+            } else {
+                localStorage.removeItem(STORAGE_KEYS.mapLayouts);
+            }
+        }
+
+        function persistRegistryCache() {
+            if (hasStoredAuthSession()) {
+                localStorage.setItem(STORAGE_KEYS.plazasCache, JSON.stringify(Array.isArray(state.plazas) ? state.plazas : []));
+            } else {
+                localStorage.removeItem(STORAGE_KEYS.plazasCache);
+            }
         }
 
         function clearUiAuthState(message = '') {
             authRefreshPromise = null;
+            clearProtectedUiData();
             state.authSession = null;
             state.currentUser = null;
             state.users = [];
@@ -3076,7 +3517,10 @@
         }
 
         function setActivePage(page, options = {}) {
-            const requestedPage = normalizeUiPage(page);
+            let requestedPage = normalizeUiPage(page);
+            if (!options.skipRoleGate && shouldHideAdminNav() && ADMIN_ONLY_PAGES.has(requestedPage)) {
+                requestedPage = 'monitor';
+            }
             if (isProtectedPage(requestedPage)) {
                 state.postAuthPage = requestedPage;
             }
@@ -3107,6 +3551,7 @@
             if (state.activePage === 'settings') {
                 loadSiteSettings();
             }
+            syncRoleBasedUi();
             persistUiState();
         }
 
@@ -3243,10 +3688,17 @@
         });
         document.getElementById('save-site-settings-btn').onclick = saveSiteSettings;
 
-        async function fetchStatus() {
+        async function fetchStatus(options = {}) {
             const container = document.getElementById('monitor-plazas');
+            const refreshBtn = document.getElementById('refresh-btn');
+            const showBusy = !!options.showBusy && !!refreshBtn;
+            const originalRefreshLabel = refreshBtn ? refreshBtn.innerHTML : '';
             if (!state.plazas.length) {
                 container.innerHTML = '<div class="empty-state-card"><div><div class="loader" style="display:block;margin:0 auto 1rem;"></div><p class="empty-note">Syncing Plaza monitor...</p></div></div>';
+            }
+            if (showBusy) {
+                refreshBtn.disabled = true;
+                refreshBtn.innerHTML = '<span class="icon-refresh"></span> Refreshing...';
             }
 
             try {
@@ -3255,10 +3707,16 @@
                 if (data.status !== 'success') throw new Error(data.message || 'Unexpected response');
                 state.plazas = Array.isArray(data.plazas) ? data.plazas : [];
                 state.items = flattenItems(state.plazas);
+                persistRegistryCache();
                 reconcileDraftSources();
                 renderAll();
             } catch (error) {
                 container.innerHTML = `<div class="error-box">Failed to sync Plaza monitor: ${escapeHtml(error.message)}</div>`;
+            } finally {
+                if (showBusy) {
+                    refreshBtn.disabled = false;
+                    refreshBtn.innerHTML = originalRefreshLabel;
+                }
             }
         }
 
@@ -3298,6 +3756,44 @@
             return Array.from(deduped.values()).sort((a, b) => a.name.localeCompare(b.name));
         }
 
+        function collectMonitorKinds() {
+            const kinds = new Set();
+            (DEFAULT_MONITOR_TYPES || []).forEach((kind) => {
+                const normalized = normalizeKind(kind);
+                if (normalized) kinds.add(normalized);
+            });
+            if (state.typeFilter) {
+                kinds.add(normalizeKind(state.typeFilter));
+            }
+            state.items.forEach((item) => {
+                const normalized = normalizeKind(item.kind);
+                if (normalized) kinds.add(normalized);
+            });
+            return Array.from(kinds).sort(compareMonitorKinds);
+        }
+
+        function compareMonitorKinds(left, right) {
+            const leftIndex = ORDERED_MONITOR_TYPES.indexOf(left);
+            const rightIndex = ORDERED_MONITOR_TYPES.indexOf(right);
+            if (leftIndex !== -1 || rightIndex !== -1) {
+                if (leftIndex === -1) return 1;
+                if (rightIndex === -1) return -1;
+                return leftIndex - rightIndex;
+            }
+            return String(left || '').localeCompare(String(right || ''), undefined, { sensitivity: 'base' });
+        }
+
+        function syncTypeFilterOptions() {
+            const select = document.getElementById('type-filter');
+            if (!select) return;
+            const options = collectMonitorKinds();
+            select.innerHTML = [
+                '<option value="">All PIT types</option>',
+                ...options.map((kind) => `<option value="${escapeAttribute(kind)}">${escapeHtml(kind)}</option>`)
+            ].join('');
+            select.value = state.typeFilter || '';
+        }
+
         function reconcileDraftSources() {
             state.drafts = state.drafts.map((draft) => {
                 if (!draft.sourceKey || draft.isNew) return draft;
@@ -3326,6 +3822,8 @@
         }
 
         function renderAll() {
+            syncRoleBasedUi();
+            syncTypeFilterOptions();
             renderMonitor();
             renderMap();
             renderEditorCatalog();
@@ -3559,11 +4057,15 @@
 
             try {
                 const response = await authFetch('/api/ui_auth/me');
+                const data = await readJsonResponse(response);
                 if (!response.ok) {
-                    const data = await response.json();
-                    throw new Error(data.detail || 'Failed to load current user');
+                    const message = formatUiError(data.detail || data.message || data, 'Failed to load current user');
+                    if (response.status === 401 || response.status === 403) {
+                        clearUiAuthState(message || 'Session expired. Please sign in again.');
+                        return null;
+                    }
+                    throw new Error(message);
                 }
-                const data = await response.json();
                 state.currentUser = data.user || null;
                 persistUiState();
                 renderProfilePage();
@@ -3571,8 +4073,11 @@
                 renderUsersPage();
                 return state.currentUser;
             } catch (error) {
-                clearUiAuthState(formatUiError(error?.message || error, 'Session expired. Please sign in again.'));
-                return null;
+                state.authMessage = formatUiError(error?.message || error, 'Signed in, but failed to refresh your profile.');
+                renderProfilePage();
+                renderAgentKeysPage();
+                renderUsersPage();
+                return state.currentUser || null;
             }
         }
 
@@ -4725,6 +5230,7 @@
                 window.removeEventListener('pointermove', move);
                 window.removeEventListener('pointerup', up);
                 window.removeEventListener('pointercancel', up);
+                persistUiState();
             };
 
             const up = () => cleanup();
@@ -4835,7 +5341,7 @@
                 JSON.stringify(card.meta || {})
             ].join(' ').toLowerCase();
 
-            if (state.typeFilter && kind !== state.typeFilter) return false;
+            if (state.typeFilter && !matchesMonitorTypeFilter(kind, state.typeFilter)) return false;
             if (tracksHeartbeat(kind) && !state.showInactive && agent.last_active && heartbeatState(agent.last_active) === 'inactive') return false;
             if (query && !haystack.includes(query)) return false;
             return true;
@@ -7018,27 +7524,34 @@
                 return;
             }
 
-            list.innerHTML = filtered.map((item) => `
-                <article class="catalog-item">
-                    <div class="catalog-item-header">
-                        <span class="type-pill ${escapeHtml(item.kind)}">${escapeHtml(item.kind)}</span>
-                        ${item.kind === 'AgentConfig'
-                            ? `
-                                <div class="editor-actions">
-                                    <button class="ghost-btn" data-open-source="${escapeHtml(item.sourceKey)}">Policy</button>
-                                    <button class="ghost-btn" data-open-agent-launch="${escapeHtml(item.sourceKey)}">Launch</button>
-                                </div>
-                            `
-                            : `<button class="ghost-btn" data-open-source="${escapeHtml(item.sourceKey)}">Open</button>`}
-                    </div>
-                    <div class="catalog-name">${escapeHtml(item.name)}</div>
-                    <div class="catalog-meta">${escapeHtml(item.description || 'No description registered.')}</div>
-                    <div class="node-meta-line">
-                        ${item.owner ? `<span class="chip">${escapeHtml(item.owner)}</span>` : ''}
-                        ${item.plazaName ? `<span class="chip">${escapeHtml(item.plazaName)}</span>` : ''}
-                    </div>
-                </article>
-            `).join('');
+            list.innerHTML = filtered.map((item) => {
+                const availablePulserCount = availablePulserCountForItem(item);
+                const pulserCountChip = item.kind === 'Pulse'
+                    ? `<span class="chip">${availablePulserCount} available pulser${availablePulserCount === 1 ? '' : 's'}</span>`
+                    : '';
+                return `
+                    <article class="catalog-item">
+                        <div class="catalog-item-header">
+                            <span class="type-pill ${escapeHtml(item.kind)}">${escapeHtml(item.kind)}</span>
+                            ${item.kind === 'AgentConfig'
+                                ? `
+                                    <div class="editor-actions">
+                                        <button class="ghost-btn" data-open-source="${escapeHtml(item.sourceKey)}">Policy</button>
+                                        <button class="ghost-btn" data-open-agent-launch="${escapeHtml(item.sourceKey)}">Launch</button>
+                                    </div>
+                                `
+                                : `<button class="ghost-btn" data-open-source="${escapeHtml(item.sourceKey)}">Open</button>`}
+                        </div>
+                        <div class="catalog-name">${escapeHtml(item.name)}</div>
+                        <div class="catalog-meta">${escapeHtml(item.description || 'No description registered.')}</div>
+                        <div class="node-meta-line">
+                            ${item.owner ? `<span class="chip">${escapeHtml(item.owner)}</span>` : ''}
+                            ${item.plazaName ? `<span class="chip">${escapeHtml(item.plazaName)}</span>` : ''}
+                            ${pulserCountChip}
+                        </div>
+                    </article>
+                `;
+            }).join('');
         }
 
         function renderTabStrip() {
@@ -7155,6 +7668,7 @@
 
             if (draft.kind === 'Pulse') {
                 return `
+                    ${renderPulseTestDataLauncher(draft, errors)}
                     <div class="field-card full-span">
                         <label>Pulse Address</label>
                         <input class="editor-input" data-draft-id="${escapeHtml(draft.id)}" data-field="pulse_address" value="${escapeAttribute(draft.model.pulse_address)}">
@@ -7222,6 +7736,522 @@
                     ${errors.meta_json ? `<div class="error-text">${escapeHtml(errors.meta_json)}</div>` : ''}
                 </div>
             `;
+        }
+
+        function buildPulseDraftDefinition(draft) {
+            if (!draft || draft.kind !== 'Pulse') return {};
+            const meta = safeParseJson(draft.model.meta_json, {});
+            const inputSchema = safeParseJson(draft.model.input_schema_json, {});
+            const outputSchema = safeParseJson(draft.model.output_schema_json, {});
+            const testData = safeParseJson(draft.model.test_data_json, {});
+            const definition = normalizePulseDefinitionShape({
+                ...meta,
+                name: draft.model.name || meta.name || meta.pulse_name || '',
+                pulse_name: draft.model.name || meta.pulse_name || meta.name || '',
+                description: draft.model.description || meta.description || '',
+                pulse_address: draft.model.pulse_address || meta.pulse_address || draft.model.address || '',
+                input_schema: inputSchema && typeof inputSchema === 'object' && !Array.isArray(inputSchema) ? inputSchema : {},
+                output_schema: outputSchema && typeof outputSchema === 'object' && !Array.isArray(outputSchema) ? outputSchema : {},
+                test_data: testData && typeof testData === 'object' && !Array.isArray(testData) ? testData : {},
+            });
+            definition.pulse_name = draft.model.name || definition.pulse_name;
+            definition.name = definition.pulse_name;
+            definition.description = draft.model.description || definition.description;
+            definition.pulse_address = draft.model.pulse_address || definition.pulse_address;
+            definition.input_schema = inputSchema && typeof inputSchema === 'object' && !Array.isArray(inputSchema) ? inputSchema : {};
+            definition.output_schema = outputSchema && typeof outputSchema === 'object' && !Array.isArray(outputSchema) ? outputSchema : {};
+            definition.test_data = testData && typeof testData === 'object' && !Array.isArray(testData) ? testData : {};
+            return definition;
+        }
+
+        function pulserSummaryKey(pulser = {}) {
+            return String(
+                pulser.agent_id
+                || pulser.pulser_id
+                || pulser.name
+                || pulser.pulser_name
+                || pulser.address
+                || pulser.pulser_address
+                || ''
+            ).trim().toLowerCase();
+        }
+
+        function dedupePulserSummaries(pulsers = []) {
+            const deduped = new Map();
+            (Array.isArray(pulsers) ? pulsers : []).forEach((pulser) => {
+                if (!pulser || typeof pulser !== 'object') return;
+                const key = pulserSummaryKey(pulser);
+                if (!key) return;
+                const existing = deduped.get(key);
+                if (!existing || Number(pulser.last_active || 0) > Number(existing.last_active || 0)) {
+                    deduped.set(key, pulser);
+                }
+            });
+            return Array.from(deduped.values()).sort((left, right) => String(left.name || '').localeCompare(String(right.name || '')));
+        }
+
+        function pulseDefinitionsMatch(left = {}, right = {}) {
+            if (matchesPulseDefinition(right, left.pulse_name, left.pulse_address, left.pulse_id)) return true;
+            if (matchesPulseDefinition(left, right.pulse_name, right.pulse_address, right.pulse_id)) return true;
+            const leftName = normalizePulseAliasToken(left.pulse_name || left.name || left.title || '');
+            const rightName = normalizePulseAliasToken(right.pulse_name || right.name || right.title || '');
+            return Boolean(leftName && rightName && leftName === rightName);
+        }
+
+        function directPulsersForPulseItem(item) {
+            if (!item || item.kind !== 'Pulse') return [];
+            return dedupePulserSummaries([
+                ...(Array.isArray(item.availablePulsers) ? item.availablePulsers : []),
+                ...(Array.isArray(item.raw?.available_pulsers) ? item.raw.available_pulsers : []),
+            ]);
+        }
+
+        function availablePulsersForPulseItem(item) {
+            const directPulsers = directPulsersForPulseItem(item);
+            if (!item || item.kind !== 'Pulse' || directPulsers.length) return directPulsers;
+
+            const itemDefinition = resolvePulseSummaryDefinition(
+                item,
+                directPulsers,
+                item.name,
+                item.meta?.pulse_address || item.address || ''
+            );
+            const matchingPulsers = [];
+            state.items.forEach((candidate) => {
+                if (candidate.kind !== 'Pulse' || candidate.sourceKey === item.sourceKey) return;
+                const candidatePulsers = directPulsersForPulseItem(candidate);
+                if (!candidatePulsers.length) return;
+                const candidateDefinition = resolvePulseSummaryDefinition(
+                    candidate,
+                    candidatePulsers,
+                    candidate.name,
+                    candidate.meta?.pulse_address || candidate.address || ''
+                );
+                if (pulseDefinitionsMatch(itemDefinition, candidateDefinition)) {
+                    matchingPulsers.push(...candidatePulsers);
+                }
+            });
+            return dedupePulserSummaries(matchingPulsers);
+        }
+
+        function availablePulserCountForItem(item) {
+            return item?.kind === 'Pulse' ? availablePulsersForPulseItem(item).length : 0;
+        }
+
+        function availablePulsersForPulseDraft(draft) {
+            const directSource = draft?.sourceKey ? findItem(draft.sourceKey) : null;
+            const directPulsers = [
+                ...(Array.isArray(directSource?.availablePulsers) ? directSource.availablePulsers : []),
+                ...(Array.isArray(directSource?.raw?.available_pulsers) ? directSource.raw.available_pulsers : []),
+                ...(Array.isArray(draft?.sourceSnapshot?.raw?.available_pulsers) ? draft.sourceSnapshot.raw.available_pulsers : []),
+            ];
+            if (directPulsers.length) return dedupePulserSummaries(directPulsers);
+
+            const draftDefinition = buildPulseDraftDefinition(draft);
+            const matchingPulsers = [];
+            state.items.forEach((item) => {
+                if (item.kind !== 'Pulse') return;
+                const availablePulsers = Array.isArray(item.availablePulsers)
+                    ? item.availablePulsers
+                    : Array.isArray(item.raw?.available_pulsers)
+                        ? item.raw.available_pulsers
+                        : [];
+                if (!availablePulsers.length) return;
+                const itemDefinition = resolvePulseSummaryDefinition(
+                    item,
+                    availablePulsers,
+                    item.name,
+                    item.meta?.pulse_address || item.address || ''
+                );
+                if (pulseDefinitionsMatch(draftDefinition, itemDefinition)) {
+                    matchingPulsers.push(...availablePulsers);
+                }
+            });
+            return dedupePulserSummaries(matchingPulsers);
+        }
+
+        function renderPulseComparisonPulserRows(draft, availablePulsers = []) {
+            const pulseDefinition = buildPulseDraftDefinition(draft);
+            return availablePulsers.map((pulser) => {
+                const definition = resolvePulserDefinition(
+                    pulser,
+                    pulseDefinition.pulse_name || draft.model.name || '',
+                    pulseDefinition.pulse_address || draft.model.pulse_address || '',
+                    pulseDefinition.pulse_id || ''
+                );
+                const practice = selectPulsePractices(pulser.practices)[0] || {};
+                const isCallable = Boolean(practice.id || !Array.isArray(pulser.practices) || !pulser.practices.length);
+                const practiceId = practice.id || 'get_pulse_data';
+                const rowPulseName = definition.pulse_name || definition.name || pulseDefinition.pulse_name || draft.model.name || '';
+                const rowPulseAddress = definition.pulse_address || pulseDefinition.pulse_id || pulseDefinition.pulse_address || draft.model.pulse_address || '';
+                const outputSchema = definition.output_schema || pulseDefinition.output_schema || {};
+                return `
+                    <label class="pulse-compare-item" data-pulse-compare-pulser="1" data-pulser-heartbeat-state="active" data-pulser-id="${escapeAttribute(pulser.agent_id || pulser.pulser_id || '')}" data-pulser-name="${escapeAttribute(pulser.name || pulser.pulser_name || '')}" data-pulser-address="${escapeAttribute(pulser.address || pulser.pulser_address || '')}" data-practice-id="${escapeAttribute(practiceId)}" data-pulse-name="${escapeAttribute(rowPulseName)}" data-pulse-address="${escapeAttribute(rowPulseAddress)}" data-pulse-output-schema="${escapeAttribute(JSON.stringify(outputSchema || {}))}">
+                        <input type="checkbox" ${isCallable ? 'checked' : 'disabled'}>
+                        <span class="pulse-compare-name" title="${escapeAttribute(pulser.name || pulser.pulser_name || 'Unnamed Pulser')}">${escapeHtml(pulser.name || pulser.pulser_name || 'Unnamed Pulser')}</span>
+                    </label>
+                `;
+            }).join('');
+        }
+
+        function isEmptyJsonObjectText(value = '') {
+            const text = String(value || '').trim();
+            if (!text) return true;
+            try {
+                const parsed = JSON.parse(text);
+                return Boolean(parsed && typeof parsed === 'object' && !Array.isArray(parsed) && !Object.keys(parsed).length);
+            } catch (_) {
+                return false;
+            }
+        }
+
+        function selectedPulseTestPulserKey(draft, availablePulsers = []) {
+            const currentKey = String(draft?.model?.test_data_pulser_key || '').trim();
+            if (currentKey && availablePulsers.some((pulser) => pulserSummaryKey(pulser) === currentKey)) {
+                return currentKey;
+            }
+            return availablePulsers.length ? pulserSummaryKey(availablePulsers[0]) : '';
+        }
+
+        function findPulseTestPulser(draft, pulserKey = '', availablePulsers = null) {
+            const pulsers = Array.isArray(availablePulsers) ? availablePulsers : availablePulsersForPulseDraft(draft);
+            const key = String(pulserKey || selectedPulseTestPulserKey(draft, pulsers) || '').trim();
+            return pulsers.find((pulser) => pulserSummaryKey(pulser) === key) || pulsers[0] || null;
+        }
+
+        function pulseTestPayloadFromPulser(draft, pulser) {
+            if (!draft || !pulser) return {};
+            const pulseDefinition = buildPulseDraftDefinition(draft);
+            const pulserDefinition = resolvePulserDefinition(
+                pulser,
+                pulseDefinition.pulse_name || draft.model.name || '',
+                pulseDefinition.pulse_address || draft.model.pulse_address || '',
+                pulseDefinition.pulse_id || ''
+            );
+            return derivePulserTestPayload(pulserDefinition);
+        }
+
+        function renderPulseTestPulserOptions(draft, availablePulsers = []) {
+            const selectedKey = selectedPulseTestPulserKey(draft, availablePulsers);
+            return availablePulsers.map((pulser) => {
+                const key = pulserSummaryKey(pulser);
+                const label = pulser.name || pulser.pulser_name || pulser.agent_id || pulser.pulser_id || 'Unnamed Pulser';
+                return `<option value="${escapeAttribute(key)}" ${key === selectedKey ? 'selected' : ''}>${escapeHtml(label)}</option>`;
+            }).join('');
+        }
+
+        function ensurePulseTestDataFromPulser(draft, availablePulsers = []) {
+            const selectedKey = selectedPulseTestPulserKey(draft, availablePulsers);
+            if (!selectedKey) return false;
+            const pulser = findPulseTestPulser(draft, selectedKey, availablePulsers);
+            if (!pulser) return false;
+            if (!draft.model.test_data_pulser_key) {
+                draft.model.test_data_pulser_key = selectedKey;
+                persistUiState();
+            }
+            if (!isEmptyJsonObjectText(draft.model.test_data_json)) return false;
+            const payload = pulseTestPayloadFromPulser(draft, pulser);
+            if (!payload || typeof payload !== 'object' || Array.isArray(payload) || !Object.keys(payload).length) {
+                return false;
+            }
+            draft.model.test_data_json = prettyJson(payload);
+            draft.model.test_data_pulser_key = pulserSummaryKey(pulser);
+            draft.dirty = true;
+            persistUiState();
+            renderTabStrip();
+            renderWorkspaceBody();
+            renderInspector();
+            return true;
+        }
+
+        function setPulseTestPulserSelection(draftId, pulserKey) {
+            const draft = state.drafts.find((entry) => entry.id === draftId);
+            if (!draft || draft.kind !== 'Pulse') return;
+            draft.model.test_data_pulser_key = pulserKey || '';
+            persistUiState();
+        }
+
+        function renderPulseTestDataLauncher(draft, errors = {}) {
+            const availablePulsers = availablePulsersForPulseDraft(draft);
+            const activeCount = availablePulsers.filter((pulser) => popupHeartbeatState(Number(pulser.last_active || 0)) === 'active').length;
+            const hasJsonErrors = Boolean(errors.input_schema_json || errors.output_schema_json || errors.test_data_json);
+            const testData = String(draft.model.test_data_json || prettyJson({}));
+            const preview = testData.length > 900 ? `${testData.slice(0, 900)}\n...` : testData;
+            const availabilityLabel = activeCount
+                ? `${activeCount} active / ${availablePulsers.length} available pulser${availablePulsers.length === 1 ? '' : 's'}`
+                : `${availablePulsers.length} available pulser${availablePulsers.length === 1 ? '' : 's'}`;
+
+            return `
+                <div class="field-card full-span pulse-test-launcher" data-draft-id="${escapeAttribute(draft.id)}">
+                    <div class="pulse-test-header">
+                        <div class="pulse-test-title">
+                            <label>Test Data</label>
+                            <strong>${escapeHtml(availabilityLabel)}</strong>
+                        </div>
+                        <button class="primary-btn" type="button" data-open-pulse-test-modal="${escapeAttribute(draft.id)}">Open Test Data</button>
+                    </div>
+                    <pre class="pulse-test-preview">${escapeHtml(preview)}</pre>
+                    ${hasJsonErrors ? '<div class="error-text">Fix the pulse JSON fields before running a comparison.</div>' : ''}
+                </div>
+            `;
+        }
+
+        function renderPulseTestDataModal(draft, errors = {}) {
+            const availablePulsers = availablePulsersForPulseDraft(draft);
+            const activeCount = availablePulsers.filter((pulser) => popupHeartbeatState(Number(pulser.last_active || 0)) === 'active').length;
+            const hasJsonErrors = Boolean(errors.input_schema_json || errors.output_schema_json || errors.test_data_json);
+            const pulserRows = renderPulseComparisonPulserRows(draft, availablePulsers);
+            const pulserOptions = renderPulseTestPulserOptions(draft, availablePulsers);
+            const availabilityLabel = activeCount
+                ? `${activeCount} active / ${availablePulsers.length} available`
+                : `${availablePulsers.length} available`;
+
+            return `
+                <div class="pulse-test-modal-backdrop">
+                    <section class="pulse-test-modal-card" role="dialog" aria-modal="true" aria-labelledby="pulse-test-modal-title" data-left-collapsed="false">
+                        <div class="pulse-test-header">
+                            <div class="pulse-test-title">
+                                <label id="pulse-test-modal-title">Test Data</label>
+                                <strong>${escapeHtml(draft.model.name || 'Pulse Draft')}</strong>
+                            </div>
+                            <div class="pulse-test-actions">
+                                <span class="chip">${escapeHtml(availabilityLabel)} pulser${availablePulsers.length === 1 ? '' : 's'}</span>
+                                <button class="ghost-btn" type="button" aria-expanded="true" data-toggle-pulse-test-left="1">Hide Setup</button>
+                                <button class="ghost-btn" type="button" aria-label="Close test data dialog" data-pulse-test-modal-close="1">&times;</button>
+                            </div>
+                        </div>
+
+                        <div class="pulse-test-modal-grid" data-pulse-comparison-panel="1" data-draft-id="${escapeAttribute(draft.id)}">
+                            <section class="pulse-test-modal-section pulse-test-modal-setup">
+                                <div class="pulse-test-source-row">
+                                    <label>
+                                        Parameters Pulser
+                                        <select class="editor-select" data-pulse-test-pulser-select="${escapeAttribute(draft.id)}" ${availablePulsers.length ? '' : 'disabled'}>
+                                            ${pulserOptions || '<option value="">No available pulsers</option>'}
+                                        </select>
+                                    </label>
+                                    <button class="ghost-btn" type="button" data-seed-pulse-test-data="${escapeAttribute(draft.id)}" ${availablePulsers.length ? '' : 'disabled'}>Seed From Pulser</button>
+                                </div>
+                                <label>Parameters JSON</label>
+                                <textarea class="json-editor" data-pulse-modal-params="${escapeAttribute(draft.id)}">${escapeHtml(draft.model.test_data_json || prettyJson({}))}</textarea>
+                                ${errors.test_data_json ? `<div class="error-text">${escapeHtml(errors.test_data_json)}</div>` : ''}
+                                <div class="pulse-test-header">
+                                    <div class="pulse-test-title">
+                                        <label>Available Pulsers</label>
+                                        <strong>${escapeHtml(availabilityLabel)}</strong>
+                                    </div>
+                                    <div class="pulse-test-actions">
+                                        <button class="ghost-btn" type="button" data-select-pulse-pulsers="all">All</button>
+                                        <button class="primary-btn" type="button" data-run-pulse-modal-comparison="${escapeAttribute(draft.id)}" ${availablePulsers.length && !hasJsonErrors ? '' : 'disabled'}>Run Comparison</button>
+                                    </div>
+                                </div>
+                                ${availablePulsers.length
+                                    ? `<div class="pulse-compare-list">${pulserRows}</div>`
+                                    : '<div class="empty-note">No available pulser is registered for this pulse yet.</div>'}
+                                ${hasJsonErrors ? '<div class="error-text">Fix the pulse JSON fields before running a comparison.</div>' : ''}
+                            </section>
+
+                            <section class="pulse-test-modal-section pulse-test-modal-results">
+                                <div class="pulse-test-title">
+                                    <label>Results</label>
+                                    <strong>Comparison Output</strong>
+                                </div>
+                                <div class="pulse-comparison-result" data-pulse-comparison-result>
+                                    <div class="empty-note">No comparison run yet.</div>
+                                </div>
+                            </section>
+                        </div>
+                    </section>
+                </div>
+            `;
+        }
+
+        function openPulseTestDataModal(draftId) {
+            const draft = state.drafts.find((entry) => entry.id === draftId);
+            if (!draft || draft.kind !== 'Pulse') return;
+            const modalRoot = document.getElementById('pulse-test-modal-root');
+            const availablePulsers = availablePulsersForPulseDraft(draft);
+            ensurePulseTestDataFromPulser(draft, availablePulsers);
+            const compiled = compileDraft(draft);
+            modalRoot.dataset.openPulseDraftId = draft.id;
+            modalRoot.innerHTML = renderPulseTestDataModal(draft, compiled.errors);
+            document.body.classList.add('pulse-test-modal-open');
+            requestAnimationFrame(() => {
+                modalRoot.querySelector('[data-pulse-modal-params]')?.focus();
+            });
+        }
+
+        function closePulseTestDataModal() {
+            const modalRoot = document.getElementById('pulse-test-modal-root');
+            if (!modalRoot?.dataset.openPulseDraftId) return;
+            modalRoot.innerHTML = '';
+            delete modalRoot.dataset.openPulseDraftId;
+            document.body.classList.remove('pulse-test-modal-open');
+            renderWorkspaceBody();
+            renderInspector();
+        }
+
+        function togglePulseTestLeftPanel(button) {
+            const card = button.closest('.pulse-test-modal-card');
+            if (!card) return;
+            const isCollapsed = card.dataset.leftCollapsed === 'true';
+            card.dataset.leftCollapsed = isCollapsed ? 'false' : 'true';
+            button.textContent = isCollapsed ? 'Hide Setup' : 'Show Setup';
+            button.setAttribute('aria-expanded', isCollapsed ? 'true' : 'false');
+        }
+
+        function seedPulseTestData(draftId) {
+            const draft = state.drafts.find((entry) => entry.id === draftId);
+            if (!draft || draft.kind !== 'Pulse') return;
+            const modalRoot = document.getElementById('pulse-test-modal-root');
+            const shouldRefreshModal = modalRoot?.dataset.openPulseDraftId === draftId;
+            const selectedKey = modalRoot?.querySelector('[data-pulse-test-pulser-select]')?.value || draft.model.test_data_pulser_key || '';
+            const pulser = findPulseTestPulser(draft, selectedKey);
+            if (!pulser) return;
+            draft.model.test_data_json = prettyJson(pulseTestPayloadFromPulser(draft, pulser));
+            draft.model.test_data_pulser_key = pulserSummaryKey(pulser);
+            draft.dirty = true;
+            persistUiState();
+            renderTabStrip();
+            renderWorkspaceBody();
+            renderInspector();
+            if (shouldRefreshModal) {
+                openPulseTestDataModal(draftId);
+            }
+        }
+
+        function selectPulseComparisonPulsers(button) {
+            const panel = button.closest('[data-pulse-comparison-panel]');
+            if (!panel) return;
+            const mode = button.dataset.selectPulsePulsers || 'active';
+            panel.querySelectorAll('[data-pulse-compare-pulser]').forEach((row) => {
+                const checkbox = row.querySelector('input[type="checkbox"]');
+                if (!checkbox || checkbox.disabled) return;
+                checkbox.checked = mode === 'all' || row.dataset.pulserHeartbeatState === 'active';
+            });
+        }
+
+        function setPulseComparisonProgress(row, status, message) {
+            const progressNode = row?.querySelector('[data-comparison-progress]');
+            if (!progressNode) return;
+            progressNode.dataset.comparisonProgress = status || 'idle';
+            progressNode.textContent = message || 'Ready';
+        }
+
+        function flattenComparisonResult(value, prefix = '', target = {}) {
+            if (Array.isArray(value)) {
+                target[prefix || 'value'] = JSON.stringify(value);
+                return target;
+            }
+            if (value && typeof value === 'object') {
+                const entries = Object.entries(value);
+                if (!entries.length) {
+                    target[prefix || 'value'] = '{}';
+                    return target;
+                }
+                entries.forEach(([key, nested]) => {
+                    const nextPrefix = prefix ? `${prefix}.${key}` : key;
+                    flattenComparisonResult(nested, nextPrefix, target);
+                });
+                return target;
+            }
+            target[prefix || 'value'] = value;
+            return target;
+        }
+
+        function renderPulseComparisonTable(results) {
+            const normalized = results.map((entry) => ({
+                name: entry.name,
+                flat: flattenComparisonResult(entry.result || {})
+            }));
+            const fields = Array.from(new Set(normalized.flatMap((entry) => Object.keys(entry.flat)))).sort();
+            if (!fields.length) {
+                return '<div class="empty-note">Selected pulsers returned no structured fields.</div>';
+            }
+            const headerCells = normalized.map((entry) => `<th>${escapeHtml(entry.name || 'Pulser')}</th>`).join('');
+            const rows = fields.map((field) => {
+                const valueCells = normalized.map((entry) => `<td>${escapeHtml(entry.flat[field] ?? '')}</td>`).join('');
+                return `<tr><th>${escapeHtml(field)}</th>${valueCells}</tr>`;
+            }).join('');
+            return `<div class="pulse-comparison-table-wrap"><table class="pulse-comparison-table"><thead><tr><th>Field</th>${headerCells}</tr></thead><tbody>${rows}</tbody></table></div>`;
+        }
+
+        async function runPulseEditorComparison(button) {
+            const draftId = button.dataset.runPulseComparison || button.dataset.runPulseModalComparison || button.closest('[data-pulse-comparison-panel]')?.dataset.draftId || '';
+            const draft = state.drafts.find((entry) => entry.id === draftId);
+            const panel = button.closest('[data-pulse-comparison-panel]');
+            const resultNode = panel?.querySelector('[data-pulse-comparison-result]');
+            if (!draft || !panel || !resultNode) return;
+
+            let parsedInput = {};
+            try {
+                parsedInput = JSON.parse(draft.model.test_data_json || '{}');
+            } catch (error) {
+                resultNode.innerHTML = `<div class="error-box">${escapeHtml(`Parameters JSON must be valid JSON. ${error.message}`)}</div>`;
+                return;
+            }
+            if (!parsedInput || typeof parsedInput !== 'object' || Array.isArray(parsedInput)) {
+                resultNode.innerHTML = '<div class="error-box">Parameters JSON must be a JSON object.</div>';
+                return;
+            }
+
+            const selectedRows = Array.from(panel.querySelectorAll('[data-pulse-compare-pulser]')).filter((row) => row.querySelector('input[type="checkbox"]')?.checked);
+            if (!selectedRows.length) {
+                resultNode.innerHTML = '<div class="empty-note">Select at least one pulser for comparison.</div>';
+                return;
+            }
+
+            panel.querySelectorAll('[data-pulse-compare-pulser]').forEach((row) => {
+                const selected = row.querySelector('input[type="checkbox"]')?.checked;
+                setPulseComparisonProgress(row, selected ? 'running' : 'idle', selected ? 'Queued' : 'Not selected');
+            });
+            button.disabled = true;
+            resultNode.innerHTML = '<div class="empty-note">Running comparison across selected pulsers...</div>';
+
+            const results = await Promise.all(selectedRows.map(async (row) => {
+                let outputSchema = {};
+                try {
+                    outputSchema = JSON.parse(row.dataset.pulseOutputSchema || '{}');
+                } catch (_) {
+                    outputSchema = {};
+                }
+
+                try {
+                    setPulseComparisonProgress(row, 'running', 'Requesting data...');
+                    const response = await authFetch('/api/pulsers/test', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            pulser_id: row.dataset.pulserId || '',
+                            pulser_name: row.dataset.pulserName || '',
+                            pulser_address: row.dataset.pulserAddress || '',
+                            practice_id: row.dataset.practiceId || 'get_pulse_data',
+                            pulse_name: row.dataset.pulseName || draft.model.name || '',
+                            pulse_address: row.dataset.pulseAddress || draft.model.pulse_address || '',
+                            output_schema: outputSchema,
+                            input: parsedInput,
+                        })
+                    });
+                    const data = await response.json();
+                    if (!response.ok) {
+                        throw new Error(data.detail || data.message || 'Pulser comparison failed');
+                    }
+                    setPulseComparisonProgress(row, 'success', 'Completed');
+                    return {
+                        name: row.dataset.pulserName || 'Pulser',
+                        result: data.result ?? data,
+                    };
+                } catch (error) {
+                    setPulseComparisonProgress(row, 'error', error.message || 'Request failed');
+                    return {
+                        name: row.dataset.pulserName || 'Pulser',
+                        result: { error: error.message || 'Request failed' },
+                    };
+                }
+            }));
+
+            resultNode.innerHTML = renderPulseComparisonTable(results);
+            button.disabled = false;
         }
 
         function renderInspector() {
@@ -7530,6 +8560,24 @@
             if (draft.kind === 'Pulse') {
                 const inputSchema = parseJsonField(draft.model.input_schema_json, 'Input schema JSON', errors, 'input_schema_json');
                 const outputSchema = parseJsonField(draft.model.output_schema_json, 'Output schema JSON', errors, 'output_schema_json');
+                const testData = parseJsonField(draft.model.test_data_json, 'Pulser parameter JSON', errors, 'test_data_json');
+                const normalizedTestData = testData && typeof testData === 'object' && !Array.isArray(testData) ? testData : {};
+                if (testData && (typeof testData !== 'object' || Array.isArray(testData))) {
+                    errors.test_data_json = 'Pulser parameter JSON must be a JSON object.';
+                }
+                const pulseMeta = {
+                    ...(meta || {}),
+                    pulse_address: draft.model.pulse_address,
+                    input_schema: inputSchema || {},
+                    output_schema: outputSchema || {},
+                    test_data: normalizedTestData,
+                };
+                if (pulseMeta.pulse_definition && typeof pulseMeta.pulse_definition === 'object' && !Array.isArray(pulseMeta.pulse_definition)) {
+                    pulseMeta.pulse_definition = {
+                        ...pulseMeta.pulse_definition,
+                        test_data: normalizedTestData,
+                    };
+                }
                 return {
                     errors,
                     payload: {
@@ -7538,12 +8586,7 @@
                         owner: draft.model.owner,
                         address: draft.model.address,
                         pit_type: 'Pulse',
-                        meta: {
-                            ...(meta || {}),
-                            pulse_address: draft.model.pulse_address,
-                            input_schema: inputSchema || {},
-                            output_schema: outputSchema || {}
-                        }
+                        meta: pulseMeta
                     }
                 };
             }
@@ -7664,6 +8707,19 @@
             return normalized || 'Agent';
         }
 
+        function isAgentGroupKind(kind) {
+            const normalized = normalizeKind(kind);
+            return AGENT_RUNTIME_TYPES.has(normalized);
+        }
+
+        function matchesMonitorTypeFilter(kind, filterValue) {
+            const normalizedKind = normalizeKind(kind);
+            const normalizedFilter = normalizeKind(filterValue);
+            if (!normalizedFilter) return true;
+            if (normalizedFilter === 'Agent') return isAgentGroupKind(normalizedKind);
+            return normalizedKind === normalizedFilter;
+        }
+
         function rawPitType(entry) {
             const card = entry?.card || {};
             const raw = String(entry?.pit_type || card.pit_type || entry?.type || 'Agent').trim();
@@ -7707,7 +8763,7 @@
 
         function tracksHeartbeat(kind) {
             const normalized = normalizeKind(kind);
-            return normalized === 'Agent' || normalized === 'Pulser';
+            return AGENT_RUNTIME_TYPES.has(normalized);
         }
 
         function normalizeMeta(meta) {

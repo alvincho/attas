@@ -1261,7 +1261,7 @@ class BaseAgent(Pit, ABC):
         }
 
         if self.remote_use_practice_audit.get("emit_logs"):
-            self.logger.info(
+            self.logger.debug(
                 "Remote UsePractice audit request_id=%s direction=%s event=%s practice=%s peer=%s outcome=%s allowed=%s reason=%s",
                 row["request_id"],
                 row["direction"],

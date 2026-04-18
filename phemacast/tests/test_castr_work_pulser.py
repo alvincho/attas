@@ -162,6 +162,7 @@ def test_castr_work_pulser_can_be_hired_by_manager_and_run_map_castr(tmp_path):
         name="MapManager",
         host="127.0.0.1",
         port=8270,
+        agent_card={"address": "http://127.0.0.1:8270"},
         pool=manager_pool,
         auto_register=False,
     )

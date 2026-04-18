@@ -851,6 +851,57 @@ button:disabled {
     font-size: 0.82rem;
 }
 
+.schedule-card-compact {
+    gap: 12px;
+}
+
+.dashboard-capability-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.dashboard-capability-card {
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 14px 16px;
+    background:
+        radial-gradient(circle at top right, rgba(14, 165, 233, 0.08), transparent 42%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.98));
+    box-shadow: 0 14px 28px -26px rgba(15, 23, 42, 0.45);
+}
+
+.dashboard-capability-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.dashboard-capability-name {
+    font-size: 0.95rem;
+    font-weight: 800;
+    line-height: 1.25;
+    color: var(--text);
+}
+
+.dashboard-capability-stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px 12px;
+    margin-top: 14px;
+    font-size: 0.82rem;
+    color: var(--muted);
+}
+
+.dashboard-capability-stats strong {
+    display: block;
+    font-family: "Fraunces", serif;
+    font-size: 1.05rem;
+    line-height: 1;
+    color: var(--text);
+}
+
 .monitor-panel-head-actions {
     display: flex;
     align-items: center;
@@ -1094,6 +1145,11 @@ button:disabled {
     background: rgba(15, 23, 42, 0.06);
 }
 
+.monitor-chip-button.is-danger {
+    border-color: rgba(153, 27, 27, 0.22);
+    color: var(--danger);
+}
+
 .monitor-alert-list {
     display: flex;
     flex-direction: column;
@@ -1112,12 +1168,40 @@ button:disabled {
 }
 
 .worker-roster {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
     max-height: 620px;
     overflow: auto;
     padding-right: 4px;
+}
+
+.worker-type-group {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.worker-type-group-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.worker-type-group-head h3 {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 800;
+    line-height: 1.2;
+    color: var(--text);
+}
+
+.worker-type-group-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
 }
 
 .worker-roster-head-actions {
@@ -1289,6 +1373,24 @@ button:disabled {
     line-height: 1.45;
 }
 
+.worker-launch-summary {
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 12px 14px;
+    background: linear-gradient(180deg, rgba(248, 250, 252, 0.96), rgba(255, 255, 255, 0.98));
+    color: var(--muted);
+    line-height: 1.5;
+    min-height: 3.5rem;
+}
+
+.local-worker-runtime-list {
+    max-height: 360px;
+}
+
+.local-worker-card {
+    gap: 10px;
+}
+
 .monitor-modal-shell {
     position: fixed;
     inset: 0;
@@ -1322,6 +1424,10 @@ button:disabled {
     padding: 18px;
 }
 
+.monitor-modal-dialog-wide {
+    width: min(1180px, 100%);
+}
+
 .monitor-modal-head {
     display: flex;
     align-items: flex-start;
@@ -1342,6 +1448,14 @@ button:disabled {
     flex: 0 0 auto;
 }
 
+.monitor-modal-head-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
 body.monitor-modal-open {
     overflow: hidden;
 }
@@ -1356,6 +1470,14 @@ body.monitor-modal-open {
 
 .monitor-split .pulse-list {
     max-height: 520px;
+}
+
+.monitor-dashboard-bottom {
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+}
+
+.monitor-workers-top {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
 }
 
 .db-workbench-body {
@@ -1413,6 +1535,26 @@ body.monitor-modal-open {
     flex-direction: column;
     gap: 12px;
     min-height: 200px;
+}
+
+.worker-log-shell {
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: #020617;
+    min-height: 320px;
+    max-height: 62vh;
+    overflow: auto;
+}
+
+.worker-log-output {
+    margin: 0;
+    padding: 16px;
+    color: #e2e8f0;
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    word-break: break-word;
 }
 
 .job-detail-card {
@@ -1791,6 +1933,10 @@ body.is-db-col-resizing * {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
+    .dashboard-capability-grid {
+        grid-template-columns: 1fr;
+    }
+
     .editor-grid,
     .monitor-top-grid,
     .monitor-split,
@@ -1798,7 +1944,7 @@ body.is-db-col-resizing * {
         grid-template-columns: 1fr;
     }
 
-    .worker-roster {
+    .worker-type-group-grid {
         grid-template-columns: 1fr;
     }
 
@@ -1806,6 +1952,10 @@ body.is-db-col-resizing * {
     .monitor-detail-grid,
     .schedule-card-grid {
         grid-template-columns: 1fr;
+    }
+
+    .dashboard-capability-stats {
+        grid-template-columns: 1fr 1fr;
     }
 
     .worker-card-line,

@@ -17,12 +17,12 @@ import time
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Union
 
-from attas.pds import normalize_runtime_pulse_entry
 from fastapi.staticfiles import StaticFiles
 from prompits.agents.standby import StandbyAgent
 from prompits.core.message import Message
 from prompits.core.pit import PitAddress
 
+from phemacast.core.pulse_runtime import normalize_runtime_pulse_entry
 from phemacast.practices.pulser import GetPulseDataPractice
 
 

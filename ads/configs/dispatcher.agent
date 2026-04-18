@@ -24,6 +24,10 @@
   "ads": {
     "job_capabilities": [
       {
+        "name": "Daily Job Archive",
+        "description": "Sweep completed ADS jobs out of the active queue into ads_jobs_archive."
+      },
+      {
         "name": "US Listed Sec to security master",
         "description": "Refresh the U.S. listed security master from Nasdaq Trader symbol directories."
       },

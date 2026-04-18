@@ -534,6 +534,8 @@ body[data-page="db"]       .page-content[data-page-id="db"] {
 }
 
 #schedule-job-form[data-repeat-frequency="once"] .schedule-rule-once,
+#schedule-job-form[data-repeat-frequency="interval"] .schedule-rule-once,
+#schedule-job-form[data-repeat-frequency="interval"] .schedule-rule-interval,
 #schedule-job-form[data-repeat-frequency="daily"] .schedule-rule-repeat,
 #schedule-job-form[data-repeat-frequency="weekly"] .schedule-rule-repeat,
 #schedule-job-form[data-repeat-frequency="weekly"] .schedule-rule-weekly,

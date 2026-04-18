@@ -19,9 +19,8 @@ def test_run_plaza_local_defaults_to_public_local_example():
     """
     script = (ROOT / "run_plaza_local.sh").read_text(encoding="utf-8")
 
-    assert 'DEFAULT_LOCAL_CONFIG="prompits/examples/plaza.agent"' in script
-    assert 'PROMPITS_PORT="${PROMPITS_PORT:-8211}"' in script
-    assert 'PROMPITS_PUBLIC_URL="${PROMPITS_PUBLIC_URL:-http://127.0.0.1:8211}"' in script
+    assert "exec python3 -m prompits.cli up desk" in script
+    assert 'exec python3 -m prompits.cli "$@"' in script
 
 
 def test_public_readme_links_smoke_script_and_contributing_guide():

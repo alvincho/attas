@@ -25,6 +25,10 @@
     "worker_config_path": "worker.agent",
     "job_capabilities": [
       {
+        "name": "Daily Job Archive",
+        "description": "Sweep completed ADS jobs out of the active queue into ads_jobs_archive."
+      },
+      {
         "name": "US Listed Sec to security master",
         "description": "Refresh the U.S. listed security master from Nasdaq Trader symbol directories."
       },
@@ -78,6 +82,20 @@
             "help": "Add, remove, or edit the feeds this job should collect."
           }
         ]
+      }
+    ],
+    "scheduled_jobs": [
+      {
+        "id": "ads-boss-schedule:daily-job-archive",
+        "name": "Daily Job Archive (3AM)",
+        "required_capability": "Daily Job Archive",
+        "repeat_frequency": "daily",
+        "schedule_timezone": "Asia/Shanghai",
+        "schedule_times": ["03:00"],
+        "priority": 80,
+        "payload": {
+          "batch_size": 1000
+        }
       }
     ],
     "auto_register": false

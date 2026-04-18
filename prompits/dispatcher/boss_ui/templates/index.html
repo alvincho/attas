@@ -202,6 +202,7 @@
                                     <label for="schedule-repeat-frequency">Repeat Frequency</label>
                                     <select id="schedule-repeat-frequency" name="schedule_repeat_frequency">
                                         <option value="once">Once</option>
+                                        <option value="interval">Every N Minutes</option>
                                         <option value="daily">Daily</option>
                                         <option value="weekly">Weekly</option>
                                         <option value="monthly">Monthly</option>
@@ -218,6 +219,11 @@
                                 <div class="field full-span schedule-rule-field schedule-rule-once">
                                     <label for="schedule-at">Run At</label>
                                     <input id="schedule-at" name="schedule_at" type="datetime-local">
+                                </div>
+                                <div class="field schedule-rule-field schedule-rule-interval">
+                                    <label for="schedule-interval-minutes">Interval Minutes</label>
+                                    <input id="schedule-interval-minutes" name="schedule_interval_minutes" type="number" min="1" step="1" placeholder="10" inputmode="numeric">
+                                    <div class="field-note">For interval schedules, the boss will issue the job every N minutes starting from the Run At time.</div>
                                 </div>
                                 <div class="field full-span schedule-rule-field schedule-rule-repeat">
                                     <label for="schedule-times">Run Times</label>

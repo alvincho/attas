@@ -14,13 +14,11 @@ import json
 import logging
 import requests
 from typing import Any, Dict, Optional
-from dotenv import load_dotenv
 from fastapi import Request, HTTPException
 from fastapi.templating import Jinja2Templates
 from starlette.concurrency import run_in_threadpool
 from prompits.core.pit import PitAddress
 
-load_dotenv()
 from phemacast.agents.pulser import Pulser, validate_pulser_config_test_parameters
 from prompits.practices.embeddings import EmbeddingPractice
 

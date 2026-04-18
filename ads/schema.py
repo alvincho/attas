@@ -18,6 +18,7 @@ from prompits.core.schema import TableSchema
 
 
 TABLE_JOBS = "ads_jobs"
+TABLE_JOB_ARCHIVE = "ads_jobs_archive"
 TABLE_WORKERS = "ads_worker_capabilities"
 TABLE_WORKER_HISTORY = "ads_worker_history"
 TABLE_SECURITY_MASTER = "ads_security_master"
@@ -77,6 +78,19 @@ def jobs_schema_dict() -> Dict[str, object]:
             "created_at": {"type": "datetime"},
             "updated_at": {"type": "datetime"},
         },
+    }
+
+
+def job_archive_schema_dict() -> Dict[str, object]:
+    """Handle job archive schema dict."""
+    schema = jobs_schema_dict()
+    archive_row_schema = dict(schema["rowSchema"])
+    archive_row_schema["archived_at"] = {"type": "datetime"}
+    return {
+        **schema,
+        "name": TABLE_JOB_ARCHIVE,
+        "description": "Archived completed ADS jobs kept out of the active queue hot path.",
+        "rowSchema": archive_row_schema,
     }
 
 
@@ -343,6 +357,7 @@ def ads_table_schema_map() -> Dict[str, TableSchema]:
     """Return the ADS table schema map."""
     return {
         TABLE_JOBS: TableSchema(jobs_schema_dict()),
+        TABLE_JOB_ARCHIVE: TableSchema(job_archive_schema_dict()),
         TABLE_WORKERS: TableSchema(worker_capabilities_schema_dict()),
         TABLE_WORKER_HISTORY: TableSchema(worker_history_schema_dict()),
         TABLE_SECURITY_MASTER: TableSchema(security_master_schema_dict()),
@@ -377,6 +392,8 @@ def ensure_ads_tables(pool, tables: Iterable[str] | None = None) -> None:
         return
     schema_map = ads_table_schema_map()
     table_names = list(tables or schema_map.keys())
+    if TABLE_JOBS in table_names and TABLE_JOB_ARCHIVE not in table_names:
+        table_names.append(TABLE_JOB_ARCHIVE)
     if any(table_name in SYMBOL_CHILD_TABLES for table_name in table_names) and TABLE_SECURITY_MASTER not in table_names:
         table_names = [TABLE_SECURITY_MASTER, *table_names]
     for table_name in table_names:
@@ -387,6 +404,9 @@ def ensure_ads_tables(pool, tables: Iterable[str] | None = None) -> None:
             pool._CreateTable(table_name, schema)
     if TABLE_JOBS in table_names:
         _ensure_ads_jobs_table_integrity(pool)
+        _ensure_ads_jobs_indexes(pool)
+    if TABLE_JOB_ARCHIVE in table_names:
+        _ensure_ads_job_archive_indexes(pool)
     if TABLE_SECURITY_MASTER in table_names:
         _ensure_ads_security_master_table_integrity(pool)
     for table_name in SYMBOL_CHILD_TABLES:
@@ -469,6 +489,99 @@ def _ensure_ads_jobs_table_integrity(pool) -> None:
         cursor = pool.conn.cursor()
         cursor.execute(f"DROP TABLE IF EXISTS {backup_table}")
         pool.conn.commit()
+
+
+def _ensure_ads_jobs_indexes(pool) -> None:
+    """Create secondary indexes that keep ADS job-queue reads fast."""
+    dialect = _pool_dialect(pool)
+    if not pool or not pool._TableExists(TABLE_JOBS):
+        return
+    if dialect == "postgres":
+        if not all(hasattr(pool, attribute) for attribute in ("_quoted_table_name", "_quote_identifier", "_Query")):
+            return
+        quoted_table_name = pool._quoted_table_name(TABLE_JOBS)
+        status_expr = f"lower(coalesce({pool._quote_identifier('status')}, ''))"
+        capability_expr = f"lower(coalesce({pool._quote_identifier('required_capability')}, ''))"
+        priority_column = pool._quote_identifier("priority")
+        scheduled_for_column = pool._quote_identifier("scheduled_for")
+        created_at_column = pool._quote_identifier("created_at")
+        id_column = pool._quote_identifier("id")
+        claimed_by_column = pool._quote_identifier("claimed_by")
+        pool._Query(
+            "CREATE INDEX IF NOT EXISTS ads_jobs_status_idx "
+            f"ON {quoted_table_name} (({status_expr}))"
+        )
+        pool._Query(
+            "CREATE INDEX IF NOT EXISTS ads_jobs_ready_order_idx "
+            f"ON {quoted_table_name} ({priority_column}, {created_at_column}, {id_column}) "
+            f"WHERE {status_expr} IN ('queued', 'retry', 'unfinished')"
+        )
+        pool._Query(
+            "CREATE INDEX IF NOT EXISTS ads_jobs_ready_schedule_idx "
+            f"ON {quoted_table_name} ({scheduled_for_column}, {priority_column}, {created_at_column}, {id_column}) "
+            f"WHERE {status_expr} IN ('queued', 'retry', 'unfinished')"
+        )
+        pool._Query(
+            "CREATE INDEX IF NOT EXISTS ads_jobs_ready_capability_idx "
+            f"ON {quoted_table_name} (({capability_expr}), {priority_column}, {created_at_column}, {id_column}) "
+            f"WHERE {status_expr} IN ('queued', 'retry', 'unfinished')"
+        )
+        pool._Query(
+            "CREATE INDEX IF NOT EXISTS ads_jobs_claimed_worker_idx "
+            f"ON {quoted_table_name} ({claimed_by_column}, ({status_expr})) "
+            f"WHERE coalesce({claimed_by_column}, '') <> ''"
+        )
+        return
+    if dialect == "sqlite":
+        status_expr = "lower(coalesce(status, ''))"
+        capability_expr = "lower(coalesce(required_capability, ''))"
+        pool._Query(
+            "CREATE INDEX IF NOT EXISTS ads_jobs_status_idx "
+            f"ON {TABLE_JOBS} ({status_expr})"
+        )
+        pool._Query(
+            "CREATE INDEX IF NOT EXISTS ads_jobs_ready_order_idx "
+            f"ON {TABLE_JOBS} (priority, created_at, id) "
+            f"WHERE {status_expr} IN ('queued', 'retry', 'unfinished')"
+        )
+        pool._Query(
+            "CREATE INDEX IF NOT EXISTS ads_jobs_ready_schedule_idx "
+            f"ON {TABLE_JOBS} (scheduled_for, priority, created_at, id) "
+            f"WHERE {status_expr} IN ('queued', 'retry', 'unfinished')"
+        )
+        pool._Query(
+            "CREATE INDEX IF NOT EXISTS ads_jobs_ready_capability_idx "
+            f"ON {TABLE_JOBS} ({capability_expr}, priority, created_at, id) "
+            f"WHERE {status_expr} IN ('queued', 'retry', 'unfinished')"
+        )
+        pool._Query(
+            "CREATE INDEX IF NOT EXISTS ads_jobs_claimed_worker_idx "
+            f"ON {TABLE_JOBS} (claimed_by, {status_expr}) "
+            "WHERE coalesce(claimed_by, '') <> ''"
+        )
+
+
+def _ensure_ads_job_archive_indexes(pool) -> None:
+    """Create secondary indexes that keep ADS archive reads bounded."""
+    dialect = _pool_dialect(pool)
+    if not pool or not pool._TableExists(TABLE_JOB_ARCHIVE):
+        return
+    if dialect == "postgres":
+        if not all(hasattr(pool, attribute) for attribute in ("_quoted_table_name", "_quote_identifier", "_Query")):
+            return
+        quoted_table_name = pool._quoted_table_name(TABLE_JOB_ARCHIVE)
+        completed_at_column = pool._quote_identifier("completed_at")
+        archived_at_column = pool._quote_identifier("archived_at")
+        pool._Query(
+            "CREATE INDEX IF NOT EXISTS ads_jobs_archive_completed_idx "
+            f"ON {quoted_table_name} ({completed_at_column} DESC, {archived_at_column} DESC)"
+        )
+        return
+    if dialect == "sqlite":
+        pool._Query(
+            "CREATE INDEX IF NOT EXISTS ads_jobs_archive_completed_idx "
+            f"ON {TABLE_JOB_ARCHIVE} (completed_at DESC, archived_at DESC)"
+        )
 
 
 def _ensure_ads_daily_price_indexes(pool) -> None:

@@ -49,6 +49,7 @@ private/
 /ads/storage/
 /storage/castr_work_storage/
 /storage/notebooklm_exports/
+/.codex-local-state-backups/
 /pypi-starters/
 /social/
 /output

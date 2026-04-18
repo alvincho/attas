@@ -32,7 +32,11 @@ except ImportError:  # pragma: no cover - older psycopg builds
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-load_dotenv(REPO_ROOT / ".env", override=False)
+
+
+def _load_dotenv_for_server() -> None:
+    """Load local .env values for MCP server execution without polluting imports."""
+    load_dotenv(REPO_ROOT / ".env", override=False)
 
 SERVER_NAME = "postgresql"
 DEFAULT_QUERY_LIMIT = 200
@@ -515,6 +519,7 @@ def postgres_execute(
 
 def main() -> None:
     """Run the main entry point."""
+    _load_dotenv_for_server()
     server.run("stdio")
 
 

@@ -71,7 +71,7 @@ def test_demo_file_diagrams_execute_against_reference_ta_pulser(filename: str, i
 
     def fake_post(url, json=None, timeout=None):
         """Handle fake post."""
-        assert url == "http://127.0.0.1:8011/api/pulsers/test"
+        assert url == "http://127.0.0.1:8241/api/pulsers/test"
         assert isinstance(json, dict)
         pulse_name = json["pulse_name"]
         calls.append(pulse_name)

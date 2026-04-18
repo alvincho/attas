@@ -228,6 +228,34 @@ def test_plaza_ui_no_longer_advertises_phema_specific_editor():
         assert removed_route.status_code == 404
 
 
+def test_plaza_pulse_editor_exposes_test_data_comparison_tools():
+    """Exercise the Plaza Pulse editor test-data and pulser comparison UI."""
+    pool = InMemoryPool()
+    agent = PlazaAgent(host="127.0.0.1", port=8011, pool=pool)
+    agent.add_practice(PlazaPractice())
+
+    with TestClient(agent.app) as client:
+        root = client.get("/")
+        assert root.status_code == 200
+        assert "Test Data" in root.text
+        assert "Parameters Pulser" in root.text
+        assert "Parameters JSON" in root.text
+        assert "Seed From Pulser" in root.text
+        assert "Seed From Schema" not in root.text
+        assert "Available Pulsers" in root.text
+        assert "Results" in root.text
+        assert 'id="pulse-test-modal-root"' in root.text
+        assert 'data-open-pulse-test-modal' in root.text
+        assert 'data-pulse-test-pulser-select' in root.text
+        assert 'data-toggle-pulse-test-left' in root.text
+        assert 'data-run-pulse-modal-comparison' in root.text
+        assert "function ensurePulseTestDataFromPulser(" in root.text
+        assert "function togglePulseTestLeftPanel(" in root.text
+        assert "function openPulseTestDataModal(" in root.text
+        assert "function runPulseEditorComparison(" in root.text
+        assert "function availablePulserCountForItem(" in root.text
+
+
 def test_plaza_directory_api_accepts_custom_types_without_predefinition():
     """Exercise the generic directory entry registration regression scenario."""
     pool = InMemoryPool()

@@ -60,6 +60,7 @@ from ads.runtime import (
 from ads.schema import (
     CAPABILITY_TO_TABLE,
     SYMBOL_CHILD_TABLES,
+    TABLE_JOB_ARCHIVE,
     TABLE_JOBS,
     TABLE_RAW_DATA,
     TABLE_SECURITY_MASTER,
@@ -75,6 +76,7 @@ ADS_DIRECT_TOKEN = "ads-local-direct-token"
 ADS_PARTY = "ADS"
 ADS_WORKER_HEARTBEAT_INTERVAL_SEC = 15.0
 ADS_WORKER_JOB_TIMEOUT_SEC = 180.0
+ADS_JOB_CLAIM_CANDIDATE_LIMIT = 200
 _POSTGRES_ENV_VARS = (
     "POSTGRES_DSN",
     "DATABASE_URL",
@@ -536,6 +538,7 @@ class ADSDispatcherAgent(StandbyAgent):
         meta = dict(card.get("meta") or {})
         meta["ads_tables"] = [
             TABLE_JOBS,
+            TABLE_JOB_ARCHIVE,
             TABLE_WORKERS,
             TABLE_WORKER_HISTORY,
             *CAPABILITY_TO_TABLE.values(),
@@ -557,6 +560,13 @@ class ADSDispatcherAgent(StandbyAgent):
         )
 
         self.ads_settings = ads_settings
+        try:
+            self.job_claim_candidate_limit = max(
+                int(ads_settings.get("job_claim_candidate_limit", ADS_JOB_CLAIM_CANDIDATE_LIMIT)),
+                1,
+            )
+        except (TypeError, ValueError):
+            self.job_claim_candidate_limit = ADS_JOB_CLAIM_CANDIDATE_LIMIT
         self._job_claim_lock = threading.Lock()
         self.ensure_tables()
         self.add_practice(SubmitAdsJobPractice())
@@ -622,6 +632,191 @@ class ADSDispatcherAgent(StandbyAgent):
                 normalized_row["worker_id"] = worker_id
                 latest_rows_by_id[worker_id] = normalized_row
         return list(latest_rows_by_id.values())
+
+    def _nonempty_json_value_sql(self, column_sql: str) -> str:
+        """Internal helper for nonempty JSON value SQL."""
+        if _pool_dialect(self.pool) == "postgres":
+            return (
+                f"({column_sql} IS NOT NULL AND {column_sql} <> '[]'::jsonb "
+                f"AND {column_sql} <> '{{}}'::jsonb)"
+            )
+        return f"({column_sql} IS NOT NULL AND TRIM({column_sql}) NOT IN ('', '[]', '{{}}'))"
+
+    def _query_ready_job_candidates(
+        self,
+        capabilities: Any,
+        *,
+        limit: int | None = None,
+    ) -> tuple[list[dict[str, Any]], bool]:
+        """Internal helper to query the ready ADS job candidates."""
+        normalized_limit = max(int(limit or self.job_claim_candidate_limit or ADS_JOB_CLAIM_CANDIDATE_LIMIT), 1)
+        fetch_limit = normalized_limit + 1
+        placeholder = _sql_placeholder(self.pool)
+        table_ref = _qualified_sql_table(self.pool, TABLE_JOBS)
+        status_column = _quote_sql_identifier("status")
+        scheduled_column = _quote_sql_identifier("scheduled_for")
+        attempts_column = _quote_sql_identifier("attempts")
+        max_attempts_column = _quote_sql_identifier("max_attempts")
+        required_capability_column = _quote_sql_identifier("required_capability")
+        capability_tags_column = _quote_sql_identifier("capability_tags")
+        priority_column = _quote_sql_identifier("priority")
+        created_at_column = _quote_sql_identifier("created_at")
+        id_column = _quote_sql_identifier("id")
+
+        statuses = ("queued", "retry", "unfinished")
+        params: list[Any] = list(statuses)
+        conditions = [
+            f"LOWER(COALESCE({status_column}, '')) IN ({', '.join([placeholder] * len(statuses))})"
+        ]
+        if _pool_dialect(self.pool) == "postgres":
+            conditions.append(f"({scheduled_column} IS NULL OR {scheduled_column} <= {placeholder})")
+            params.append(datetime.now(timezone.utc))
+            conditions.append(
+                f"COALESCE({attempts_column}, 0) < GREATEST(COALESCE({max_attempts_column}, 1), 1)"
+            )
+        else:
+            conditions.append(
+                f"({scheduled_column} IS NULL OR {scheduled_column} = '' OR {scheduled_column} <= {placeholder})"
+            )
+            params.append(datetime.now(timezone.utc).isoformat())
+            conditions.append(
+                f"COALESCE({attempts_column}, 0) < "
+                f"CASE WHEN COALESCE({max_attempts_column}, 1) < 1 THEN 1 ELSE COALESCE({max_attempts_column}, 1) END"
+            )
+
+        normalized_capabilities = normalize_capabilities(capabilities)
+        if "*" not in normalized_capabilities:
+            executable_capabilities = [capability for capability in normalized_capabilities if capability]
+            if executable_capabilities:
+                capability_conditions = [
+                    f"LOWER(COALESCE({required_capability_column}, '')) "
+                    f"IN ({', '.join([placeholder] * len(executable_capabilities))})",
+                    f"COALESCE({required_capability_column}, '') = ''",
+                    self._nonempty_json_value_sql(capability_tags_column),
+                ]
+                params.extend(executable_capabilities)
+            else:
+                capability_conditions = [f"COALESCE({required_capability_column}, '') = ''"]
+            conditions.append("(" + " OR ".join(capability_conditions) + ")")
+
+        params.append(fetch_limit)
+        sql = (
+            f"SELECT * FROM {table_ref} "
+            f"WHERE {' AND '.join(conditions)} "
+            f"ORDER BY {priority_column} ASC, {created_at_column} ASC, {id_column} ASC "
+            f"LIMIT {placeholder}"
+        )
+        with self.pool.lock:
+            cursor = self._db_cursor()
+            cursor.execute(sql, params)
+            columns = [desc[0] for desc in cursor.description or []]
+            raw_rows = cursor.fetchall()
+        truncated = len(raw_rows) > normalized_limit
+        rows = [
+            {column: _decode_db_value(value) for column, value in zip(columns, row)}
+            for row in raw_rows[:normalized_limit]
+        ]
+        return rows, truncated
+
+    def _next_ready_job_row(self, capabilities: Any) -> dict[str, Any] | None:
+        """Internal helper to return the next ready ADS job row."""
+        try:
+            candidate_rows, truncated = self._query_ready_job_candidates(capabilities)
+        except Exception as exc:
+            self.logger.warning("Ready ADS job candidate query failed; falling back to full scan: %s", exc)
+        else:
+            latest_candidate_rows = self._latest_job_rows(candidate_rows)
+            for row in sorted(latest_candidate_rows, key=job_sort_key):
+                if not isinstance(row, Mapping):
+                    continue
+                row_id = str(row.get("id") or "").strip()
+                current_row = dict(row)
+                if row_id:
+                    current_rows = self._latest_job_rows(self.pool._GetTableData(TABLE_JOBS, row_id) or [])
+                    if current_rows:
+                        current_row = dict(current_rows[0])
+                if job_is_ready(current_row) and job_matches_capabilities(current_row, capabilities):
+                    return current_row
+            if not truncated:
+                return None
+            self.logger.debug(
+                "Ready ADS job candidate query hit the scan limit without a match; falling back to full scan."
+            )
+
+        latest_rows = self._latest_job_rows(self.pool._GetTableData(TABLE_JOBS) or [])
+        ready_rows = [
+            row
+            for row in latest_rows
+            if isinstance(row, Mapping) and job_is_ready(row) and job_matches_capabilities(row, capabilities)
+        ]
+        if not ready_rows:
+            return None
+        return dict(sorted(ready_rows, key=job_sort_key)[0])
+
+    def _get_job_rows_by_id(
+        self,
+        job_id: str,
+        *,
+        include_archive: bool = False,
+    ) -> tuple[list[dict[str, Any]], str]:
+        """Return the latest ADS job rows for one job id."""
+        normalized_job_id = str(job_id or "").strip()
+        if not normalized_job_id:
+            return [], ""
+        table_names = [TABLE_JOBS]
+        if include_archive:
+            table_names.append(TABLE_JOB_ARCHIVE)
+        for table_name in table_names:
+            if table_name != TABLE_JOBS and not self.pool._TableExists(table_name):
+                continue
+            rows = self._latest_job_rows(self.pool._GetTableData(table_name, normalized_job_id) or [])
+            if rows:
+                return rows, table_name
+        return [], ""
+
+    def _persist_job_state(
+        self,
+        job: JobDetail,
+        *,
+        table_name: str = TABLE_JOBS,
+        archived_at: str = "",
+    ) -> bool:
+        """Persist one ADS job state row into the requested table."""
+        row = job.to_row()
+        if table_name == TABLE_JOB_ARCHIVE:
+            row["archived_at"] = str(archived_at or row.get("completed_at") or utcnow_iso())
+        return bool(self.pool._Insert(table_name, row))
+
+    def _delete_job_row(self, table_name: str, job_id: str) -> None:
+        """Delete one ADS job row by id."""
+        normalized_job_id = str(job_id or "").strip()
+        if not normalized_job_id:
+            return
+        placeholder = _sql_placeholder(self.pool)
+        table_ref = _qualified_sql_table(self.pool, table_name)
+        id_column = _quote_sql_identifier("id")
+        with self.pool.lock:
+            cursor = self._db_cursor()
+            cursor.execute(
+                f"DELETE FROM {table_ref} WHERE {id_column} = {placeholder}",
+                [normalized_job_id],
+            )
+            conn = getattr(self.pool, "conn", None)
+            if conn is not None and hasattr(conn, "commit"):
+                conn.commit()
+
+    def _archive_completed_job(self, job: JobDetail) -> JobDetail:
+        """Move one completed ADS job into the archive table."""
+        if str(job.status or "").strip().lower() != "completed":
+            return job
+        ensure_ads_tables(self.pool, [TABLE_JOB_ARCHIVE])
+        archived_at = utcnow_iso()
+        if not self._persist_job_state(job, table_name=TABLE_JOB_ARCHIVE, archived_at=archived_at):
+            raise RuntimeError(_persistence_error_message(self.pool, "Failed to archive completed ADS job."))
+        self._delete_job_row(TABLE_JOBS, str(job.id or ""))
+        archived_row = dict(job.to_row())
+        archived_row["archived_at"] = archived_at
+        return JobDetail.from_row(archived_row)
 
     def _append_worker_history(
         self,
@@ -851,18 +1046,11 @@ class ADSDispatcherAgent(StandbyAgent):
         )
 
         with self._job_claim_lock:
-            rows = self._latest_job_rows(self.pool._GetTableData(TABLE_JOBS) or [])
-            ready_rows = [
-                row
-                for row in rows
-                if isinstance(row, Mapping)
-                and job_is_ready(row)
-                and job_matches_capabilities(row, executable_capabilities)
-            ]
-            if not ready_rows:
+            next_job_row = self._next_ready_job_row(executable_capabilities)
+            if not next_job_row:
                 return {"status": "success", "job": None}
 
-            job = JobDetail.from_row(sorted(ready_rows, key=job_sort_key)[0])
+            job = JobDetail.from_row(next_job_row)
             now = utcnow_iso()
             claim_result_summary = dict(job.result_summary or {}) if isinstance(job.result_summary, Mapping) else {}
             if "unfinished" in claim_result_summary:
@@ -913,7 +1101,7 @@ class ADSDispatcherAgent(StandbyAgent):
         """Post the job result."""
         result = coerce_job_result(job_result or kwargs)
         job_id = result.job_id
-        rows = self._latest_job_rows(self.pool._GetTableData(TABLE_JOBS, job_id) or [])
+        rows, source_table = self._get_job_rows_by_id(job_id, include_archive=True)
         if not rows:
             raise ValueError(f"ADS job '{job_id}' was not found.")
 
@@ -922,7 +1110,7 @@ class ADSDispatcherAgent(StandbyAgent):
         current_status = str(job.status or "").strip().lower()
         current_claimed_by = str(job.claimed_by or "").strip()
         reported_worker_id = str(result.worker_id or "").strip()
-        if current_status in {"unfinished", "completed", "failed", "stopped", "cancelled", "deleted"}:
+        if source_table == TABLE_JOB_ARCHIVE or current_status in {"unfinished", "completed", "failed", "stopped", "cancelled", "deleted"}:
             return {
                 "status": "success",
                 "ignored": True,
@@ -1078,6 +1266,9 @@ class ADSDispatcherAgent(StandbyAgent):
             if not self.pool._Insert(TABLE_RAW_DATA, raw_record):
                 raise RuntimeError(_persistence_error_message(self.pool, "Failed to persist raw ADS payload."))
 
+        if str(updated_job.status or "").strip().lower() == "completed":
+            updated_job = self._archive_completed_job(updated_job)
+
         return {
             "status": "success",
             "job": updated_job.to_payload(),
@@ -1124,12 +1315,13 @@ class ADSDispatcherAgent(StandbyAgent):
         if normalized_action not in {"pause", "delete", "stop", "resume", "cancel", "force_terminate"}:
             raise ValueError("action must be one of: pause, stop, resume, cancel, delete, force_terminate.")
 
-        rows = self._latest_job_rows(self.pool._GetTableData(TABLE_JOBS, normalized_job_id) or [])
+        rows, source_table = self._get_job_rows_by_id(normalized_job_id, include_archive=True)
         if not rows:
             raise ValueError(f"ADS job '{normalized_job_id}' was not found.")
 
         rows.sort(key=_job_state_sort_key, reverse=True)
         job = JobDetail.from_row(rows[0])
+        archived_at = str(rows[0].get("archived_at") or "")
         current_status = str(job.status or "").strip().lower()
         effective_action = normalized_action
         next_status = current_status
@@ -1253,7 +1445,8 @@ class ADSDispatcherAgent(StandbyAgent):
                 "metadata": metadata,
             }
         )
-        if not self.pool._Insert(TABLE_JOBS, updated_job.to_row()):
+        destination_table = source_table or TABLE_JOBS
+        if not self._persist_job_state(updated_job, table_name=destination_table, archived_at=archived_at):
             raise RuntimeError(
                 _persistence_error_message(
                     self.pool,

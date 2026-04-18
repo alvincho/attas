@@ -37,6 +37,7 @@ from prompits.dispatcher.agents import (
 from prompits.dispatcher.jobcap import job_cap_entry_is_disabled
 from prompits.dispatcher.runtime import normalize_string_list, parse_datetime_value, read_dispatcher_config, utcnow_iso
 from prompits.dispatcher.schema import (
+    TABLE_JOB_ARCHIVE,
     TABLE_JOBS,
     TABLE_RAW_PAYLOADS,
     TABLE_RESULT_ROWS,
@@ -72,6 +73,31 @@ DISPATCHER_DISCOVERY_PRACTICES = (
 )
 
 
+def _config_schedule_id(
+    value: Any,
+    *,
+    prefix: str,
+    fallback_name: Any = "",
+    fallback_capability: Any = "",
+) -> str:
+    """Return one stable id for a config-seeded schedule."""
+    explicit = str(value or "").strip()
+    if explicit:
+        return explicit
+    source = str(fallback_name or fallback_capability or "schedule").strip().lower()
+    slug_chars: list[str] = []
+    last_was_dash = False
+    for char in source:
+        if char.isalnum():
+            slug_chars.append(char)
+            last_was_dash = False
+        elif not last_was_dash:
+            slug_chars.append("-")
+            last_was_dash = True
+    slug = "".join(slug_chars).strip("-") or "schedule"
+    return f"{prefix}:{slug}"
+
+
 def scheduled_jobs_schema_dict() -> Dict[str, object]:
     """Handle scheduled jobs schema dict."""
     return {
@@ -84,6 +110,7 @@ def scheduled_jobs_schema_dict() -> Dict[str, object]:
             "status": {"type": "string"},
             "dispatcher_address": {"type": "string"},
             "repeat_frequency": {"type": "string"},
+            "schedule_interval_minutes": {"type": "integer"},
             "schedule_timezone": {"type": "string"},
             "schedule_time": {"type": "string"},
             "schedule_times": {"type": "json"},
@@ -146,6 +173,7 @@ class BossScheduleJobRequest(BossSubmitJobRequest):
     schedule_weekdays: list[str] = Field(default_factory=list)
     schedule_day_of_month: int | None = None
     schedule_days_of_month: list[int] = Field(default_factory=list)
+    schedule_interval_minutes: int | None = None
     scheduled_for: str = ""
 
 
@@ -265,6 +293,7 @@ class DispatcherBossAgent(StandbyAgent):
         self.templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
         self.app.mount("/boss-static", StaticFiles(directory=str(BASE_DIR / "static")), name="boss_static")
         self.ensure_schedule_tables()
+        self._ensure_config_schedules()
         self._setup_scheduler_events()
         self._setup_routes()
 
@@ -319,7 +348,28 @@ class DispatcherBossAgent(StandbyAgent):
     def _normalize_repeat_frequency(value: Any) -> str:
         """Internal helper to normalize the repeat frequency."""
         normalized = str(value or "once").strip().lower()
-        return normalized if normalized in {"once", "daily", "weekly", "monthly"} else "once"
+        return normalized if normalized in {"once", "daily", "weekly", "monthly", "interval"} else "once"
+
+    @staticmethod
+    def _normalize_schedule_interval_minutes(value: Any) -> int | None:
+        """Normalize one repeating interval length in minutes."""
+        if value in (None, "", 0):
+            return None
+        try:
+            parsed = int(value)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("schedule_interval_minutes must be between 1 and 10080.") from exc
+        if parsed < 1 or parsed > 10080:
+            raise ValueError("schedule_interval_minutes must be between 1 and 10080.")
+        return parsed
+
+    @staticmethod
+    def _has_legacy_interval_metadata(metadata: Mapping[str, Any], interval_minutes: int | None) -> bool:
+        """Detect legacy interval schedules that predate explicit repeat-frequency storage."""
+        if interval_minutes is None:
+            return False
+        interval_start_at = parse_datetime_value(metadata.get("interval_start_at"))
+        return interval_start_at > datetime.min.replace(tzinfo=timezone.utc)
 
     @staticmethod
     def _normalize_schedule_timezone(value: Any) -> str:
@@ -526,6 +576,27 @@ class DispatcherBossAgent(StandbyAgent):
         raise ValueError("Unable to compute next monthly occurrence.")
 
     @classmethod
+    def _next_interval_occurrence(
+        cls,
+        *,
+        interval_minutes: int,
+        start_at: datetime,
+        after: datetime,
+    ) -> datetime:
+        """Return the next interval occurrence strictly after the reference time."""
+        normalized_interval = cls._normalize_schedule_interval_minutes(interval_minutes)
+        if normalized_interval is None:
+            raise ValueError("schedule_interval_minutes is required when repeat_frequency is interval.")
+        normalized_start = start_at.astimezone(timezone.utc) if start_at.tzinfo else start_at.replace(tzinfo=timezone.utc)
+        normalized_after = after.astimezone(timezone.utc) if after.tzinfo else after.replace(tzinfo=timezone.utc)
+        if normalized_start > normalized_after:
+            return normalized_start
+        interval_seconds = normalized_interval * 60
+        elapsed_seconds = max((normalized_after - normalized_start).total_seconds(), 0)
+        intervals_elapsed = int(elapsed_seconds // interval_seconds) + 1
+        return normalized_start + timedelta(minutes=normalized_interval * intervals_elapsed)
+
+    @classmethod
     def _compute_next_occurrence(
         cls,
         *,
@@ -534,6 +605,8 @@ class DispatcherBossAgent(StandbyAgent):
         schedule_times: list[str],
         weekdays: list[str],
         days_of_month: list[int],
+        interval_minutes: int | None = None,
+        start_at: datetime | None = None,
         after: datetime | None = None,
     ) -> str:
         """Internal helper for compute next occurrence."""
@@ -557,6 +630,14 @@ class DispatcherBossAgent(StandbyAgent):
                 schedule_times=schedule_times,
                 timezone_name=timezone_name,
                 days_of_month=days_of_month,
+                after=reference_time,
+            ).isoformat()
+        if normalized_frequency == "interval":
+            if start_at is None:
+                raise ValueError("scheduled_for is required when repeat_frequency is interval.")
+            return cls._next_interval_occurrence(
+                interval_minutes=interval_minutes or 0,
+                start_at=start_at,
                 after=reference_time,
             ).isoformat()
         raise ValueError(f"Unsupported repeat_frequency '{normalized_frequency}'.")
@@ -618,9 +699,30 @@ class DispatcherBossAgent(StandbyAgent):
         schedule_days_of_month = self._normalize_schedule_days_of_month(
             request.schedule_days_of_month or request.schedule_day_of_month
         )
+        schedule_interval_minutes = self._normalize_schedule_interval_minutes(request.schedule_interval_minutes)
 
         if repeat_frequency == "once":
             payload["scheduled_for"] = self._normalize_schedule_timestamp(payload.get("scheduled_for"))
+            schedule_times = []
+            schedule_weekdays = []
+            schedule_days_of_month = []
+            schedule_interval_minutes = None
+        elif repeat_frequency == "interval":
+            interval_start_at = self._normalize_schedule_timestamp(payload.get("scheduled_for"))
+            metadata = dict(payload.get("metadata") or {})
+            metadata["interval_start_at"] = interval_start_at
+            if schedule_interval_minutes is not None:
+                metadata["schedule_interval_minutes"] = schedule_interval_minutes
+            payload["metadata"] = metadata
+            payload["scheduled_for"] = self._compute_next_occurrence(
+                repeat_frequency=repeat_frequency,
+                timezone_name=schedule_timezone,
+                schedule_times=[],
+                weekdays=[],
+                days_of_month=[],
+                interval_minutes=schedule_interval_minutes,
+                start_at=parse_datetime_value(interval_start_at),
+            )
             schedule_times = []
             schedule_weekdays = []
             schedule_days_of_month = []
@@ -642,6 +744,7 @@ class DispatcherBossAgent(StandbyAgent):
         payload["schedule_weekdays"] = schedule_weekdays
         payload["schedule_day_of_month"] = schedule_days_of_month[0] if schedule_days_of_month else None
         payload["schedule_days_of_month"] = schedule_days_of_month
+        payload["schedule_interval_minutes"] = schedule_interval_minutes
         payload["name"] = self._build_schedule_name(
             request.name,
             str(payload.get("required_capability") or ""),
@@ -702,6 +805,104 @@ class DispatcherBossAgent(StandbyAgent):
             if options:
                 return options
         return []
+
+    def _configured_schedule_entries(self) -> list[dict[str, Any]]:
+        """Return config-backed dispatcher schedule definitions."""
+        candidate_lists = [
+            self.dispatcher_settings.get("scheduled_jobs"),
+            self.raw_config.get("scheduled_jobs"),
+            self.agent_meta.get("scheduled_jobs"),
+        ]
+        agent_card = self.raw_config.get("agent_card")
+        if isinstance(agent_card, Mapping):
+            candidate_lists.append(agent_card.get("scheduled_jobs"))
+            card_meta = agent_card.get("meta")
+            if isinstance(card_meta, Mapping):
+                candidate_lists.append(card_meta.get("scheduled_jobs"))
+        for entries in candidate_lists:
+            if not isinstance(entries, list):
+                continue
+            normalized_entries: list[dict[str, Any]] = []
+            for entry in entries:
+                if not isinstance(entry, Mapping) or job_cap_entry_is_disabled(entry):
+                    continue
+                normalized_entries.append(dict(entry))
+            if normalized_entries:
+                return normalized_entries
+        return []
+
+    def _build_schedule_record(self, payload: Mapping[str, Any], *, schedule_id: str = "") -> dict[str, Any]:
+        """Build one normalized dispatcher schedule row."""
+        now = utcnow_iso()
+        return {
+            "id": str(schedule_id or f"dispatcher-boss-schedule:{time.time_ns()}").strip()
+            or f"dispatcher-boss-schedule:{time.time_ns()}",
+            "name": str(payload.get("name") or ""),
+            "status": "scheduled",
+            "dispatcher_address": str(payload.get("dispatcher_address") or ""),
+            "repeat_frequency": str(payload.get("repeat_frequency") or "once"),
+            "schedule_timezone": str(payload.get("schedule_timezone") or "UTC"),
+            "schedule_time": str(payload.get("schedule_time") or ""),
+            "schedule_times": list(payload.get("schedule_times") or []),
+            "schedule_weekdays": list(payload.get("schedule_weekdays") or []),
+            "schedule_day_of_month": payload.get("schedule_day_of_month"),
+            "schedule_days_of_month": list(payload.get("schedule_days_of_month") or []),
+            "required_capability": str(payload.get("required_capability") or ""),
+            "targets": list(payload.get("targets") or []),
+            "payload": payload.get("payload"),
+            "target_table": str(payload.get("target_table") or ""),
+            "source_url": str(payload.get("source_url") or ""),
+            "parse_rules": payload.get("parse_rules"),
+            "capability_tags": list(payload.get("capability_tags") or []),
+            "job_type": str(payload.get("job_type") or "run"),
+            "priority": int(payload.get("priority") or 100),
+            "premium": bool(payload.get("premium")),
+            "metadata": dict(payload.get("metadata") or {}),
+            "scheduled_for": str(payload.get("scheduled_for") or ""),
+            "max_attempts": int(payload.get("max_attempts") or 3),
+            "dispatcher_job_id": "",
+            "issued_at": "",
+            "last_attempted_at": "",
+            "last_error": "",
+            "issue_attempts": 0,
+            "created_at": now,
+            "updated_at": now,
+        }
+
+    def _ensure_config_schedules(self) -> None:
+        """Ensure config-seeded dispatcher schedules exist once per schedule id."""
+        if self.pool is None:
+            return
+        for entry in self._configured_schedule_entries():
+            schedule_id = _config_schedule_id(
+                entry.get("id") or entry.get("schedule_id"),
+                prefix="dispatcher-boss-schedule",
+                fallback_name=entry.get("name"),
+                fallback_capability=entry.get("required_capability"),
+            )
+            try:
+                self._get_schedule_row(schedule_id)
+                continue
+            except LookupError:
+                pass
+            except Exception as exc:
+                self.logger.warning("Failed checking seeded dispatcher schedule '%s': %s", schedule_id, exc)
+                continue
+
+            schedule_payload = dict(entry)
+            schedule_payload.pop("id", None)
+            schedule_payload.pop("schedule_id", None)
+            schedule_payload.pop("disabled", None)
+            try:
+                request = BossScheduleJobRequest.model_validate(schedule_payload)
+                normalized_payload = self._normalize_schedule_payload(request)
+                metadata = dict(normalized_payload.get("metadata") or {})
+                metadata.setdefault("seeded_from_config", True)
+                metadata.setdefault("config_schedule_id", schedule_id)
+                normalized_payload["metadata"] = metadata
+                self._save_schedule_row(self._build_schedule_record(normalized_payload, schedule_id=schedule_id))
+            except Exception as exc:
+                self.logger.warning("Skipping invalid seeded dispatcher schedule '%s': %s", schedule_id, exc)
 
     def _setup_scheduler_events(self) -> None:
         """Internal helper to set up the scheduler events."""
@@ -1316,6 +1517,53 @@ class DispatcherBossAgent(StandbyAgent):
             "metrics": metrics,
         }
 
+    @staticmethod
+    def _table_missing_error(exc: Exception, table_name: str) -> bool:
+        """Return whether one exception looks like a missing-table error."""
+        detail = str(getattr(exc, "detail", "") or "")
+        message = f"{detail} {exc}".lower()
+        normalized_table_name = str(table_name or "").strip().lower()
+        if not normalized_table_name:
+            return False
+        return normalized_table_name in message and (
+            "no such table" in message
+            or "does not exist" in message
+            or "undefined table" in message
+            or "relation" in message
+        )
+
+    def _fetch_dispatcher_job_rows(
+        self,
+        *,
+        dispatcher_address: str,
+        include_completed_archive: bool = False,
+        max_pages: int = 100,
+    ) -> list[dict[str, Any]]:
+        """Fetch dispatcher job rows, optionally including archived completed jobs."""
+        rows = [
+            self._normalize_job_row(row)
+            for row in self._iter_dispatcher_table_rows(dispatcher_address, TABLE_JOBS, page_size=500, max_pages=max_pages)
+        ]
+        if not include_completed_archive:
+            return rows
+        try:
+            archive_rows = [
+                self._normalize_job_row(row)
+                for row in self._iter_dispatcher_table_rows(
+                    dispatcher_address,
+                    TABLE_JOB_ARCHIVE,
+                    page_size=500,
+                    max_pages=max_pages,
+                )
+            ]
+        except Exception as exc:
+            if self._table_missing_error(exc, TABLE_JOB_ARCHIVE):
+                archive_rows = []
+            else:
+                raise
+        rows.extend(archive_rows)
+        return rows
+
     def _hero_metrics_summary(self, *, dispatcher_address: str) -> Dict[str, Any]:
         """Internal helper to return the hero metrics summary."""
         if self.hero_metric_configs:
@@ -1395,8 +1643,19 @@ class DispatcherBossAgent(StandbyAgent):
         normalized_search = self._lower(search)
         filtered = []
         needs_deep_scan = bool(normalized_status or normalized_capability or normalized_search)
-        rows = (
-            self._iter_dispatcher_table_rows(dispatcher_address, TABLE_JOBS, page_size=500, max_pages=100 if needs_deep_scan else 1)
+        include_completed_archive = not normalized_status or normalized_status == "completed"
+        rows = self._fetch_dispatcher_job_rows(
+            dispatcher_address=dispatcher_address,
+            include_completed_archive=include_completed_archive,
+            max_pages=100 if needs_deep_scan else 1,
+        )
+        rows.sort(
+            key=lambda row: (
+                parse_datetime_value(row.get("updated_at") or row.get("completed_at") or row.get("created_at")),
+                parse_datetime_value(row.get("completed_at") or row.get("created_at")),
+                str(row.get("id") or ""),
+            ),
+            reverse=True,
         )
         for row in rows:
             row = self._normalize_job_row(row)
@@ -1423,8 +1682,12 @@ class DispatcherBossAgent(StandbyAgent):
         normalized_job_id = str(job_id or "").strip()
         job = next(
             (
-                self._normalize_job_row(row)
-                for row in self._iter_dispatcher_table_rows(dispatcher_address, TABLE_JOBS, page_size=500, max_pages=100)
+                row
+                for row in self._fetch_dispatcher_job_rows(
+                    dispatcher_address=dispatcher_address,
+                    include_completed_archive=True,
+                    max_pages=100,
+                )
                 if str(row.get("id") or "") == normalized_job_id
             ),
             None,
@@ -1560,6 +1823,23 @@ class DispatcherBossAgent(StandbyAgent):
             if isinstance(normalized.get("metadata"), Mapping)
             else {}
         )
+        normalized["schedule_interval_minutes"] = DispatcherBossAgent._normalize_schedule_interval_minutes(
+            normalized.get("schedule_interval_minutes") or normalized["metadata"].get("schedule_interval_minutes")
+        )
+        if (
+            normalized["repeat_frequency"] == "once"
+            and DispatcherBossAgent._has_legacy_interval_metadata(
+                normalized["metadata"],
+                normalized["schedule_interval_minutes"],
+            )
+        ):
+            normalized["repeat_frequency"] = "interval"
+            if normalized["status"] == "issued":
+                normalized["status"] = "scheduled"
+        if normalized["repeat_frequency"] == "interval" and normalized["schedule_interval_minutes"] is not None:
+            normalized["metadata"]["schedule_interval_minutes"] = normalized["schedule_interval_minutes"]
+        elif normalized["repeat_frequency"] != "interval":
+            normalized["schedule_interval_minutes"] = None
         normalized["scheduled_for"] = str(normalized.get("scheduled_for") or "").strip()
         try:
             normalized["max_attempts"] = max(int(normalized.get("max_attempts") or 3), 1)
@@ -1617,6 +1897,7 @@ class DispatcherBossAgent(StandbyAgent):
         normalized = self._normalize_schedule_row(row)
         storage_row = dict(normalized)
         storage_row.pop("symbols", None)
+        storage_row.pop("schedule_interval_minutes", None)
         for field_name in SCHEDULE_TIMESTAMP_FIELDS:
             value = storage_row.get(field_name)
             if isinstance(value, str) and not value.strip():
@@ -1688,40 +1969,7 @@ class DispatcherBossAgent(StandbyAgent):
     def create_schedule(self, request: BossScheduleJobRequest) -> Dict[str, Any]:
         """Create the schedule."""
         payload = self._normalize_schedule_payload(request)
-        now = utcnow_iso()
-        record = {
-            "id": f"dispatcher-boss-schedule:{time.time_ns()}",
-            "name": str(payload.pop("name") or ""),
-            "status": "scheduled",
-            "dispatcher_address": str(payload.pop("dispatcher_address") or ""),
-            "repeat_frequency": str(payload.get("repeat_frequency") or "once"),
-            "schedule_timezone": str(payload.get("schedule_timezone") or "UTC"),
-            "schedule_time": str(payload.get("schedule_time") or ""),
-            "schedule_times": list(payload.get("schedule_times") or []),
-            "schedule_weekdays": list(payload.get("schedule_weekdays") or []),
-            "schedule_day_of_month": payload.get("schedule_day_of_month"),
-            "schedule_days_of_month": list(payload.get("schedule_days_of_month") or []),
-            "required_capability": str(payload.get("required_capability") or ""),
-            "targets": list(payload.get("targets") or []),
-            "payload": payload.get("payload"),
-            "target_table": str(payload.get("target_table") or ""),
-            "source_url": str(payload.get("source_url") or ""),
-            "parse_rules": payload.get("parse_rules"),
-            "capability_tags": list(payload.get("capability_tags") or []),
-            "job_type": str(payload.get("job_type") or "run"),
-            "priority": int(payload.get("priority") or 100),
-            "premium": bool(payload.get("premium")),
-            "metadata": dict(payload.get("metadata") or {}),
-            "scheduled_for": str(payload.get("scheduled_for") or ""),
-            "max_attempts": int(payload.get("max_attempts") or 3),
-            "dispatcher_job_id": "",
-            "issued_at": "",
-            "last_attempted_at": "",
-            "last_error": "",
-            "issue_attempts": 0,
-            "created_at": now,
-            "updated_at": now,
-        }
+        record = self._build_schedule_record(payload)
         return {"status": "success", "schedule": self._save_schedule_row(record)}
 
     def issue_scheduled_job(self, schedule_id: str, *, force_now: bool = False) -> Dict[str, Any]:
@@ -1770,6 +2018,8 @@ class DispatcherBossAgent(StandbyAgent):
                     schedule_times=list(schedule.get("schedule_times") or []),
                     weekdays=list(schedule.get("schedule_weekdays") or []),
                     days_of_month=list(schedule.get("schedule_days_of_month") or []),
+                    interval_minutes=schedule.get("schedule_interval_minutes"),
+                    start_at=parse_datetime_value(schedule.get("scheduled_for")),
                     after=datetime.now(timezone.utc),
                 )
             issued["updated_at"] = now
@@ -1839,10 +2089,11 @@ class DispatcherBossAgent(StandbyAgent):
             raise ValueError("schedule_id is required.")
 
         resolved_dispatcher_address = self._resolve_dispatcher_address(str(schedule.get("dispatcher_address") or ""))
-        rows = [
-            self._normalize_job_row(row)
-            for row in self._iter_dispatcher_table_rows(resolved_dispatcher_address, TABLE_JOBS, page_size=500, max_pages=100)
-        ]
+        rows = self._fetch_dispatcher_job_rows(
+            dispatcher_address=resolved_dispatcher_address,
+            include_completed_archive=True,
+            max_pages=100,
+        )
         latest_rows_by_id: dict[str, dict[str, Any]] = {}
         for row in rows:
             row_id = str(row.get("id") or "").strip()

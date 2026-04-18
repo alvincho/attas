@@ -31,7 +31,10 @@ except ImportError:  # pragma: no cover - optional local convenience
 from prompits.agents.standby import StandbyAgent
 from prompits.core.message import Message
 
-if load_dotenv is not None:
+def _load_dotenv_for_cli():
+    """Load local .env values for CLI execution without polluting imports."""
+    if load_dotenv is None:
+        return
     project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
     load_dotenv(os.path.join(project_root, ".env"))
     load_dotenv()
@@ -547,6 +550,8 @@ def build_agent(config):
 
 def main():
     """Run the main entry point."""
+    _load_dotenv_for_cli()
+
     parser = argparse.ArgumentParser(description="Create and Run a Distributed Agent.")
     parser.add_argument("--name", help="Name of the agent")
     parser.add_argument("--role", help="Role of the agent")

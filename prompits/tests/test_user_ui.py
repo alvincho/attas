@@ -35,16 +35,29 @@ async def test_user_agent_dashboard(setup_plaza_and_user):
     # 1. Verify Plaza-hosted UI root loads
     resp = client.get("/")
     assert resp.status_code == 200, "Plaza UI HTML failed to load."
-    assert "Neural Registry" in resp.text, "Plaza UI HTML missing core templates."
+    assert "Plaza Registry" in resp.text, "Plaza UI HTML missing core templates."
+    assert 'class="logo-icon"' not in resp.text, "Legacy sidebar logo should be removed from Plaza UI."
+    assert 'class="sidebar-wordmark">attas</h3>' in resp.text, "Sidebar wordmark should render as a single readable attas label."
     assert "Plaza <span>Map</span>" in resp.text, "Plaza map page heading missing from Plaza UI."
     assert 'data-page="map"' in resp.text, "Map navigation entry missing from Plaza UI."
+    assert 'data-admin-nav="1"' in resp.text, "Admin-only sidebar markers should be present in Plaza UI."
     assert 'data-page="profile"' in resp.text, "Profile navigation entry missing from Plaza UI."
     assert "Account <span>Profile</span>" in resp.text, "Profile page heading missing from Plaza UI."
     assert 'data-draggable="true"' in resp.text, "Map agent nodes are not draggable in Plaza UI."
     assert "Schema &amp; Pulse" in resp.text, "Editor workspace heading missing from Plaza UI."
-    assert '<option value="Agent">Agent</option>' in resp.text, "Type filter is missing the grouped Agent option."
+    assert "Refresh Registry" in resp.text, "Monitor refresh action should use the updated Registry label."
+    assert '<option value="Agent">Agent</option>' in resp.text, "Type filter is missing the Agent option."
     assert '<option value="AgentConfig">AgentConfig</option>' in resp.text, "Type filter is missing the AgentConfig option."
-    assert '<option value="Pulser">Pulser</option>' not in resp.text, "Pulser should be grouped under Agent in the monitor filter."
+    assert '<option value="Pulser">Pulser</option>' in resp.text, "Type filter is missing the Pulser option."
+    assert "function syncTypeFilterOptions()" in resp.text, "Type filter should repopulate itself from live registry kinds."
+    assert "function syncRoleBasedUi()" in resp.text, "Role-based sidebar hiding should be present in Plaza UI."
+    assert "function matchesMonitorTypeFilter(" in resp.text, "Agent filter should support grouped runtime PIT matching."
+    assert "const AGENT_RUNTIME_TYPES = new Set(['Agent', 'Pulser', 'Phemar', 'Castr'])" in resp.text, "Agent grouping should include Phemar but exclude non-runtime types like Phema."
+    assert "Refreshing..." in resp.text, "Registry refresh busy label should be present in Plaza UI."
+    assert "plaza.ui.currentUser" in resp.text, "Current signed-in user should be cached for browser refresh recovery."
+    assert "plaza.ui.plazasCache" in resp.text, "Last Plaza registry snapshot should be cached for browser refresh recovery."
+    assert "plaza.ui.mapLayouts" in resp.text, "Map node positions should be cached across browser refreshes."
+    assert "function persistRegistryCache()" in resp.text, "Registry cache persistence helper should be present in Plaza UI."
     print("Plaza root UI loaded successfully.")
     
     # 2. Verify Plaza-hosted status endpoint exposes registry entries without UserAgent mediation
