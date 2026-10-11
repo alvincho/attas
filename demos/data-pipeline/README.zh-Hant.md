@@ -1,4 +1,4 @@
-# 資料流水線
+# 資料管線
 
 ## 翻譯版本
 
@@ -14,30 +14,30 @@
 
 ## 此示範展示了什麼
 
-- 一個用於數據收集任務的分派隊列
-- 一個正在輪詢匹配能力的 worker
+- 一個用於資料收集任務的分派佇列
+- 一個正在輪詢符合能力的 worker
 - 儲存在本地 SQLite 中的標準化 ADS 表
 - 一個用於發布和監控任務的 boss UI
-- 一個重新展示已收集數據的 pulser
-- 一條將內置的 live collectors 替換為您自己的來源適配器的路徑
+- 一個重新展示已收集資料的 pulser
+- 一條將內建的 live collectors 替換為您自己的來源適配器的路徑
 
 ## 為什麼此 Demo 在即時收集器中使用 SQLite
 
-`ads/configs/` 中的生產級 ADS 配置旨在用於共享的 PostgreSQL 部署。
+`ads/configs/` 中的生產級 ADS 設定旨在用於共享的 PostgreSQL 部署。
 
 此 Demo 保留了即時收集器，但簡化了儲存端：
 
-- SQLite 讓設置保持在本地且簡單
-- worker 和 dispatcher 共用一個本地 ADS 資料庫檔案，這使得即時 SEC 批量階段與 pulser 讀取的同一個 demo 存儲保持相容
-- 架構依然清晰可見，因此開發者稍後可以遷移到生產級配置
-- 部分作業會調用公開網路來源，因此首次運行的耗時取決於網路條件和來源的響應速度
+- SQLite 讓設定保持在本地且簡單
+- worker 和 dispatcher 共用一個本地 ADS 資料庫檔案，這使得即時 SEC 批次階段與 pulser 讀取的同一個 demo 儲存保持相容
+- 架構依然清晰可見，因此開發者稍後可以遷移到生產級設定
+- 部分作業會呼叫公開網路來源，因此首次執行的耗時取決於網路條件和來源的響應速度
 
 ## 此資料夾中的檔案
 
-- `dispatcher.agent`: 以 SQLite 為後端的 ADS dispatcher 配置
-- `worker.agent`: 以 SQLite 為後端的 ADS worker 配置
+- `dispatcher.agent`: 以 SQLite 為後端的 ADS dispatcher 設定
+- `worker.agent`: 以 SQLite 為後端的 ADS worker 設定
 - `pulser.agent`: 讀取 demo 資料儲存庫的 ADS pulser
-- `boss.agent`: 用於發布作業的 boss UI 配置
+- `boss.agent`: 用於發布作業的 boss UI 設定
 - `start-dispatcher.sh`: 啟動 dispatcher
 - `start-worker.sh`: 啟動 worker
 - `start-pulser.sh`: 啟動 pulser
@@ -69,7 +69,7 @@ pip install -r requirements.txt
 
 這會從單個終端機啟動 dispatcher、worker、pulser 和 boss UI，開啟瀏覽器指南頁面，並自動開啟 boss plus pulser UI。
 
-如果您希望啟動器僅保留在終端機中，請設置 `DEMO_OPEN_BROWSER=0`。
+如果您希望啟動器僅保留在終端機中，請設定 `DEMO_OPEN_BROWSER=0`。
 
 ## 平台快速入門
 
@@ -94,7 +94,7 @@ py -3 -m venv .venv
 .venv\Scripts\python.exe -m scripts.demo_launcher data-pipeline
 ```
 
-如果瀏覽器分頁沒有自動開啟，請保持啟動器運行，並在 Windows 瀏覽器中開啟列印出的 `guide=` URL。
+如果瀏覽器分頁沒有自動開啟，請保持啟動器執行，並在 Windows 瀏覽器中開啟列印出的 `guide=` URL。
 
 ## 快速入門
 
@@ -137,7 +137,7 @@ py -3 -m venv .venv
 
 - boss UI 啟動於 `http://127.0.0.1:9063`
 
-## 首次運行指南
+## 首次執行指南
 
 開啟：
 
@@ -146,17 +146,17 @@ py -3 -m venv .venv
 在 boss UI 中，依序提交以下作業：
 
 1. `security_master`
-   此作業會從 Nasdaq Trader 重新整理完整的美國上市股票範圍，因此不需要 symbol 負載。
+   此作業會從 Nasdaq Trader 重新整理完整的美國上市股票範圍，因此不需要 symbol 承載。
 2. `daily_prime`
-   使用 `AAPL` 的預設負載。
+   使用 `AAPL` 的預設承載。
 3. `fundamentals`
-   使用 `AAPL` 的預設負載。
+   使用 `AAPL` 的預設承載。
 4. `financial_statements`
-   使用 `AAPL` 的預設負載。
+   使用 `AAPL` 的預設承載。
 5. `news`
    使用預設的 SEC、CFTC 和 BLS RSS feed 列表。
 
-當出現時，請使用預設的負載模板。`security_master`、`daily_price` 和 `news` 通常會很快完成。第一個由 SEC 支持的 `fundamentals` 或 `financial_statements` 運行可能需要較長時間，因為它在映射請求的公司之前，會先重新整理 `demos/data-pipeline/storage/sec_edgar/` 下的 SEC 快取存檔。
+當出現時，請使用預設的承載範本。`security_master`、`daily_price` 和 `news` 通常會很快完成。第一個由 SEC 支援的 `fundamentals` 或 `financial_statements` 執行可能需要較長時間，因為它在映射請求的公司之前，會先重新整理 `demos/data-pipeline/storage/sec_edgar/` 下的 SEC 快取存檔。
 
 接著開啟：
 
@@ -172,7 +172,7 @@ py -3 -m venv .venv
 4. 執行 `financial_statements` 並使用 `{"symbol":"AAPL","statement_type":"income_statement","limit":3}`
 5. 執行 `news_article` 並使用 `{"number_of_articles":3}`
 
-這讓使用者了解整個 ADS 迴圈：boss UI 發出作業，worker 收集行，SQLite 儲存標準化數據，而 `ADSPulser` 透過可查詢的 pulses 呈現結果。
+這讓使用者了解整個 ADS 迴圈：boss UI 發出作業，worker 收集行，SQLite 儲存標準化資料，而 `ADSPulser` 透過可查詢的 pulses 呈現結果。
 
 ## 為 ADSPulser 新增您自己的資料來源
 
@@ -195,7 +195,7 @@ py -3 -m venv .venv
 - `ads_news` -> `news_article`
 - `ads_raw_data_collected` -> `raw_collection_payload`
 
-### 範例：新增自定義新聞稿饋送
+### 範例：新增自訂新聞稿饋送
 
 該儲存庫現在包含一個可呼叫的範例於此：
 
@@ -244,7 +244,7 @@ py -3 -m venv .venv
 - 原始輸入仍保留在作業的原始酬載（raw payload）中
 - `ADSPulser` 透過現有的 `news_article` pulse 回傳新文章
 
-### 第二個範例：新增自定義價格饋送
+### 第二個範例：新增自訂價格饋送
 
 如果您的來源與價格的關聯性比新聞更近，同樣的模式也適用於：
 ```json
@@ -263,8 +263,8 @@ py -3 -m venv .venv
 在這種情況下，通常的流程是：
 
 1. 為新的正規化資料列新增或選擇一個儲存表
-2. 在 pulser 配置中新增一個支援的Pulse條目
-3. 擴展 `ADSPulser.fetch_pulse_payload()`，使Pulse能夠知道如何讀取並塑形儲存的資料列
+2. 在 pulser 設定中新增一個支援的Pulse條目
+3. 擴充 `ADSPulser.fetch_pulse_payload()`，使Pulse能夠知道如何讀取並塑形儲存的資料列
 
 如果您仍在設計 Schema，請先從儲存原始 Payload 開始，並首先透過 `raw_collection_payload` 進行檢查。這樣可以在您決定最終正規化資料表的結構時，保持來源整合的進度。
 
@@ -286,13 +286,13 @@ py -3 -m venv .venv
 
 例如：
 
-- `ads.examples.custom_sources:demo_press_release_cap` 展示了如何將自定義文章饋送匯入 `ads_news`
-- `ads.essentials.custom_sources:demo_alt_price_cap` 展示了如何將自定義價格來源匯入 `ads_daily_price`
-- `ads/configs/worker.agent` 中的生產環境配置展示了 SEC、YFinance、TWSE 和 RSS 的 live 功能是如何連接的
+- `ads.examples.custom_sources:demo_press_release_cap` 展示了如何將自訂文章饋送匯入 `ads_news`
+- `ads.essentials.custom_sources:demo_alt_price_cap` 展示了如何將自訂價格來源匯入 `ads_daily_price`
+- `ads/configs/worker.agent` 中的生產環境設定展示了 SEC、YFinance、TWSE 和 RSS 的 live 功能是如何連接的
 
 ### 從 SQLite 遷移到共享 PostgreSQL
 
-一旦本地示範證明了工作流程的可行性，請將此示範配置與以下路徑中的生產風格配置進行比較：
+一旦本地示範證明了工作流程的可行性，請將此示範設定與以下路徑中的生產風格設定進行比較：
 
 - `ads/configs/dispatcher.agent`
 - `ads/configs/worker.agent`
@@ -302,27 +302,27 @@ py -3 -m venv .venv
 主要的區別在於連接池（pool）的定義：
 
 - 此示範使用 `SQLitePool`
-- 生產風格的配置使用 `PostgresPool`
+- 生產風格的設定使用 `PostgresPool`
 
 ## 疑難排解
 
-### 工作保持在隊列中
+### 工作保持在佇列中
 
 請檢查這三件事：
 
-- 分派器終端仍在運行
-- 工作人員終端仍在運行
+- 分派器終端機仍在執行
+- 工作人員終端機仍在執行
 - Boss UI 中的工作能力名稱與 Worker 廣告的名稱相符
 
 ### Boss UI 已載入但看起來是空的
 
-請確保 boss 配置仍指向：
+請確保 boss 設定仍指向：
 
 - `dispatcher_address = http://127.0.0.1:9060`
 
 ### 您想要進行一次乾淨的執行，或者需要移除舊的模擬資料列
 
-在重新開始之前，請停止 demo 程序並移除 `demos/data-pipeline/storage/`。
+在重新開始之前，請停止 demo 程式並移除 `demos/data-pipeline/storage/`。
 
 ## 停止 Demo
 

@@ -14,16 +14,16 @@
 
 ## 狀態
 
-Prompits 目前仍是一個實驗性框架。它適用於本地開發、演示、研究原型以及內部基礎設施探索。在獨立的打包與發佈流程最終確定之前，請將 API、配置結構和內建實踐視為開發中狀態。
+Prompits 目前仍是一個實驗性框架。它適用於本地開發、示範、研究原型以及內部基礎設施探索。在獨立的打包與發佈流程最終確定之前，請將 API、設定結構和內建實踐視為開發中狀態。
 
 ## Prompits 提供的功能
 
-- 一個託管 FastAPI 應用程式、掛載實踐（practices）並管理 Plaza 連線的 `BaseAgent` 運行時。
+- 一個託管 FastAPI 應用程式、掛載實踐（practices）並管理 Plaza 連線的 `BaseAgent` 執行時。
 - 用於工作代理（worker agents）、Plaza 協調器（coordinators）以及面向瀏覽器的用戶代理（user agents）的具體代理角色。
-- 一種 `Practice` 抽象，用於實現聊天、LLM 執行、嵌入（embeddings）、Plaza 協調和池（pool）操作等功能。
+- 一種 `Practice` 抽象，用於實作聊天、LLM 執行、嵌入（embeddings）、Plaza 協調和池（pool）操作等功能。
 - 一種具有檔案系統、SQLite 和 Supabase 後端的 `Pool` 抽象。
-- 一個身份與發現層，代理可以在此進行註冊、身份驗證、更新令牌、心跳檢測、搜尋和轉發訊息。
-- 透過 `UsePractice(...)` 進行直接的遠端實踐調用，並具備由 Plaza 支持的調用者驗證。
+- 一個身份與發現層，代理可以在此進行註冊、身份驗證、更新權杖、心跳偵測、搜尋和轉發訊息。
+- 透過 `UsePractice(...)` 進行直接的遠端實踐呼叫，並具備由 Plaza 支援的呼叫者驗證。
 
 ## 架構
 ```mermaid
@@ -46,23 +46,23 @@ flowchart LR
 
 ### 執行時模型
 
-1. 每個代理程式啟動一個 FastAPI 應用程式，並掛載內建及配置的實作（practices）。
+1. 每個代理程式啟動一個 FastAPI 應用程式，並掛載內建及設定的實作（practices）。
 2. 非 Plaza 代理程式向 Plaza 註冊並接收：
    - 一個穩定的 `agent_id`
    - 一個持久的 `api_key`
    - 用於 Plaza 請求的短期 bearer token
 3. 代理程式將 Plaza 憑證持久化到其主要池中，並在重啟時重複使用。
-4. Plaza 維持一個可搜尋的代理程式卡片與存活元數據目錄。
+4. Plaza 維持一個可搜尋的代理程式卡片與存活元資料目錄。
 5. 代理程式可以：
    - 向已發現的對等節點發送訊息
    - 透過 Plaza 進行轉發
-   - 在進行呼叫者驗證的情況下，調用另一個代理程式上的實作
+   - 在進行呼叫者驗證的情況下，呼叫另一個代理程式上的實作
 
 ## 核心概念
 
 ### Agent
 
-Agent 是一個具有 HTTP API、一個或多個 practice 以及至少一個已配置 pool 的長期運行程序。在目前的實作中，主要的具體 Agent 類型為：
+Agent 是一個具有 HTTP API、一個或多個 practice 以及至少一個已設定 pool 的長期執行程式。在目前的實作中，主要的具體 Agent 類型為：
 
 - `BaseAgent`: 共用的執行引擎
 - `StandbyAgent`: 通用工作代理
@@ -71,14 +71,14 @@ Agent 是一個具有 HTTP API、一個或多個 practice 以及至少一個已�
 
 ### 練習
 
-練習是一種掛載的能力。它將元數據發佈到代理卡中，並可以公開 HTTP 端點和直接執行邏輯。
+練習是一種掛載的能力。它將元資料發佈到代理卡中，並可以公開 HTTP 端點和直接執行邏輯。
 
 此儲存庫中的範例：
 
 - 內建 `mailbox`：通用代理程式的預設訊息傳入機制
 - `EmbeddingsPractice`: 嵌入生成
-- `PlazaPractice`: 註冊、續期、身分驗證、搜尋、心跳檢測、轉發
-- 從配置的池中自動掛載池操作實踐
+- `PlazaPractice`: 註冊、續期、身分驗證、搜尋、心跳偵測、轉發
+- 從設定的池中自動掛載池操作實踐
 
 ### 資源池
 
@@ -88,7 +88,7 @@ Pool 是由 agents 與 Plaza 使用的持久化層。
 - `SQLitePool`: 單節點關聯式儲存
 - `SupabasePool`: 託管的 Postgres/PostgREST 整合
 
-第一個配置的池是主要池。它用於代理憑證持久化和練習元數據，此外還可以掛載其他池以用於其他用例。
+第一個設定的池是主要池。它用於代理憑證持久化和練習元資料，此外還可以掛載其他池以用於其他用例。
 
 ### Plaza
 
@@ -106,18 +106,18 @@ Plaza 的職責包括：
 - 在代理之間轉發訊息
 - 暴露用於監控的 UI 端點
 
-### 訊息與遠端實作調用
+### 訊息與遠端實作呼叫
 
 Prompits 支援兩種溝通風格：
 
 - 以訊息風格傳遞至同儕實作或通訊端點
-- 透過 `UsePractice(...)` 和 `/use_practice/{practice_id}` 進行遠端實作調用
+- 透過 `UsePractice(...)` 和 `/use_practice/{practice_id}` 進行遠端實作呼叫
 
-第二種路徑是更具結構化的方式。調用者包含其 `PitAddress` 以及 Plaza 權杖或共享的直接權杖。接收者在執行實作前會驗證該身份。
+第二種路徑是更具結構化的方式。呼叫者包含其 `PitAddress` 以及 Plaza 權杖或共享的直接權杖。接收者在執行實作前會驗證該身份。
 
 計畫中的 `prompits` 功能包括：
 
-- 為遠端 `UsePractice(...)` 調用提供更強大的 Plaza 支援身份驗證與權限檢查
+- 為遠端 `UsePractice(...)` 呼叫提供更強大的 Plaza 支援身份驗證與權限檢查
 - 一種執行前的流程，讓代理程式可以在 `UsePractice(...)` 執行前協商成本、確認付款條款並完成付款
 - 為跨代理程式協作提供更清晰的信任與經濟邊界
 
@@ -137,7 +137,7 @@ docs/
 
 ## 安裝
 
-此工作區目前從原始碼執行 Prompits。最簡單的設置方式是使用虛擬環境並直接安裝依賴項目。
+此工作區目前從原始碼執行 Prompits。最簡單的設定方式是使用虛擬環境並直接安裝相依套件。
 ```bash
 cd /path/to/FinMAS
 python3 -m venv .venv
@@ -146,14 +146,14 @@ pip install --upgrade pip
 pip install fastapi "uvicorn[standard]" requests httpx pydantic python-dotenv jsonschema jinja2 pytest
 ```
 
-選用依賴項目：
+選用相依套件：
 
 - 如果您想使用 `SupabasePool`，請執行 `pip install supabase`
-- 如果您想進行本地 llm pulser 演示或使用嵌入（embeddings），則需要一個正在運行的 Ollama 實例
+- 如果您想進行本地 llm pulser 示範或使用嵌入（embeddings），則需要一個正在執行的 Ollama 實例
 
 ## 快速入門
 
-[`prompits/examples/`](./examples/README.md) 中的範例配置是專為本地原始碼檢出而設計，且僅使用 `FileSystemPool`。
+[`prompits/examples/`](./examples/README.md) 中的範例設定是專為本地原始碼檢出而設計，且僅使用 `FileSystemPool`。
 
 ### 1. 啟動 Plaza
 ```bash
@@ -169,7 +169,7 @@ python3 prompits/create_agent.py --config prompits/examples/plaza.agent
 python3 prompits/create_agent.py --config prompits/examples/worker.agent
 ```
 
-Worker 在啟動時會自動向 Plaza 進行註冊，將其憑證持久化在本地文件系統池中，並公開預設的 `mailbox` 端點。
+Worker 在啟動時會自動向 Plaza 進行註冊，將其憑證持久化在本地檔案系統池中，並公開預設的 `mailbox` 端點。
 
 ### 3. 啟動面向瀏覽器的 User Agent
 
@@ -203,7 +203,7 @@ Prompits 代理程式使用 JSON 檔案進行組態，通常使用 `.agent` 字�
 | `plaza_url` | 否 | 非 Plaza 代理程式的 Plaza 基本 URL |
 | `role` | 否 | 用於代理程式卡片的角色字串 |
 | `tags` | 否 | 可搜尋的卡片標籤 |
-| `agent_card` | 否 | 合併到生成卡片中的額外卡片元數據 |
+| `agent_card` | 否 | 合併到生成卡片中的額外卡片元資料 |
 | `pools` | 是 | 已組態的池後端非空列表 |
 | `practices` | 否 | 動態載入的實作類別 |
 | `plaza` | 否 | Plaza 特定選項，例如 `init_files` |
@@ -242,7 +242,7 @@ Prompits 代理程式使用 JSON 檔案進行組態，通常使用 `.agent` 字�
 
 - `AgentConfig` 並未儲存在專用的 `agent_configs` 資料表中。
 - `AgentConfig` 在 `plaza_directory` 中以 `type = "AgentConfig"` 的形式註冊為 Plaza 目錄條目。
-- 儲存的 `AgentConfig` 負載在持久化之前必須經過清理。請勿持久化僅限於運行時的欄位，例如 `uuid`、`id`、`ip`、`ip_radius`、`host`、`port`、`address`、`pit_address`、`plaza_url`、`plaza_urls`、`agent_id`、`api_key` 或 bearer-token 欄位。
+- 儲存的 `AgentConfig` 承載在持久化之前必須經過清理。請勿持久化僅限於執行時的欄位，例如 `uuid`、`id`、`ip`、`ip_radius`、`host`、`port`、`address`、`pit_address`、`plaza_url`、`plaza_urls`、`agent_id`、`api_key` 或 bearer-token 欄位。
 - 請勿為 `AgentConfig` 重新引入獨立的 `agent_configs` 資料表或「先讀後寫」的儲存流程。Plaza 目錄註冊即為預期的單一事實來源。
 
 ## 內建 HTTP 介面
@@ -315,7 +315,7 @@ pytest prompits/tests -q
 
 ## 開源定位
 
-與早期的公開 `alvincho/prompits` 儲存庫相比，目前的實作較少涉及抽象術語，而更多是關於一個可運行的基礎設施介面：
+與早期的公開 `alvincho/prompits` 儲存庫相比，目前的實作較少涉及抽象術語，而更多是關於一個可執行的基礎設施介面：
 
 - 基於 FastAPI 的具體代理，而非僅僅是概念性的架構
 - 真實憑證持久化與 Plaza token 續期
@@ -323,13 +323,13 @@ pytest prompits/tests -q
 - 具備驗證功能的直接遠端實作執行
 - 用於 Plaza 檢查的內建 UI 端點
 
-這使得此代碼庫成為開源發佈的更強大基礎，特別是如果您將 Prompits 呈現為：
+這使得此程式碼庫成為開源發佈的更強大基礎，特別是如果您將 Prompits 呈現為：
 
 - 多代理系統的基礎設施層
 - 一個用於探索、身分、路由與實作執行的框架
-- 一個可供高階代理系統在其之上構建的基礎運行時
+- 一個可供高階代理系統在其之上建構的基礎執行時
 
 ## 進階閱讀
 
 - [詳細概念與類別參考](../docs/CONCEPTS_AND_CLASSES.md)
-- [範例配置](./examples/README.md)
+- [範例設定](./examples/README.md)

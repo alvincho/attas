@@ -1,4 +1,4 @@
-# LLM Pulser 演示
+# LLM Pulser 示範
 
 ## 翻譯版本
 
@@ -15,12 +15,12 @@
 ## 此資料夾中的檔案
 
 - `plaza.agent`: 用於兩種 LLM pulser 變體的本地 Plaza
-- `openai.pulser`: OpenAI 支援的 pulser 配置
-- `ollama.pulser`: 以 Ollama 為後端的 pulser 配置
+- `openai.pulser`: OpenAI 支援的 pulser 設定
+- `ollama.pulser`: 以 Ollama 為後端的 pulser 設定
 - `start-plaza.sh`: 啟動 Plaza
 - `start-openai-pulser.sh`: 啟動 OpenAI demo pulser
 - `start-ollama-pulser.sh`: 啟動 Ollama demo pulser
-- `run-demo.sh`: 從一個終端機啟動完整演示，並打開瀏覽器指南以及所選的 pulser UI
+- `run-demo.sh`: 從一個終端機啟動完整示範，並打開瀏覽器指南以及所選的 pulser UI
 
 ## 單一指令啟動
 
@@ -37,7 +37,7 @@ DEMO_LLM_PROVIDER=openai ./demos/pulsers/llm/run-demo.sh
 DEMO_LLM_PROVIDER=ollama ./demos/pulsers/llm/run-demo.sh
 ```
 
-如果您希望啟動器僅保留在終端機中，請設置 `DEMO_OPEN_BROWSER=0`。
+如果您希望啟動器僅保留在終端機中，請設定 `DEMO_OPEN_BROWSER=0`。
 
 ## 平台快速入門
 
@@ -62,7 +62,7 @@ py -3 -m venv .venv
 .venv\Scripts\python.exe -m scripts.demo_launcher llm
 ```
 
-如果瀏覽器分頁沒有自動開啟，請保持啟動器運行，並在 Windows 瀏覽器中開啟列印出的 `guide=` URL。
+如果瀏覽器分頁沒有自動開啟，請保持啟動器執行，並在 Windows 瀏覽器中開啟列印出的 `guide=` URL。
 
 ## 快速入門
 
@@ -96,7 +96,7 @@ export OPENAI_API_KEY=your-key-here
 - pulser 會在 `http://127.0.0.1:8262` 啟動
 - 它會向 `http://127.0.0.1:8261` 的 Plaza 進行註冊
 
-建議的測試負載：
+建議的測試承載：
 ```json
 {
   "prompt": "Summarize why pulse interfaces are useful in one short paragraph.",
@@ -113,7 +113,7 @@ curl -sS http://127.0.0.1:8262/api/test-pulse \
 
 ## 選項 2: Ollama
 
-請確保 Ollama 正在本地運行，且配置的模型可用：
+請確保 Ollama 正在本地執行，且設定的模型可用：
 ```bash
 ollama serve
 ollama pull qwen3:8b
@@ -145,7 +145,7 @@ curl -sS http://127.0.0.1:8263/api/test-pulse \
 
 此 UI 讓您可以：
 
-- 檢查 pulser 配置
+- 檢查 pulser 設定
 - 執行 `llm_chat`
 - 載入模型列表
 - 使用本地提供者時檢查 Ollama 模型資訊
@@ -153,7 +153,7 @@ curl -sS http://127.0.0.1:8263/api/test-pulse \
 ## 應注意的事項
 
 - 同一個 pulse 合約可以建立在雲端或本地推論之上
-- 在 OpenAI 與 Ollama 之間切換主要涉及配置，而非介面重新設計
+- 在 OpenAI 與 Ollama 之間切換主要涉及設定，而非介面重新設計
 - 這是用於解釋該儲存庫中由 pulser 支援的 LLM 工具的最簡單示範
 
 ## 打造您自己的版本

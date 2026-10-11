@@ -1,4 +1,4 @@
-# Prompits 範例配置
+# Prompits 範例設定
 
 ## 翻譯版本
 
@@ -27,11 +27,11 @@ python3 prompits/create_agent.py --config prompits/examples/worker.agent
 python3 prompits/create_agent.py --config prompits/examples/user.agent
 ```
 
-然後訪問 `http://127.0.0.1:8214/`。
+然後造訪 `http://127.0.0.1:8214/`。
 
 ## 儲存
 
-範例配置將本地狀態寫入：
+範例設定將本地狀態寫入：
 ```text
 prompits/examples/storage/
 ```

@@ -1,4 +1,4 @@
-# ADS Pulser 演示
+# ADS Pulser 示範
 
 ## 翻譯版本
 
@@ -15,8 +15,8 @@
 ## 此示範涵蓋的內容
 
 - `ADSPulser` 如何建立在標準化的 ADS 表格之上
-- 調度器 (dispatcher) 與工作器 (worker) 的活動如何轉化為 pulser 可見的數據
-- 您自己的收集器 (collectors) 如何將數據寫入 ADS 表格，並透過現有的 pulses 呈現出來
+- 調度器 (dispatcher) 與工作器 (worker) 的活動如何轉化為 pulser 可見的資料
+- 您自己的收集器 (collectors) 如何將資料寫入 ADS 表格，並透過現有的 pulses 呈現出來
 
 ## 設定
 
@@ -61,7 +61,7 @@ py -3 -m venv .venv
 .venv\Scripts\python.exe -m scripts.demo_launcher ads
 ```
 
-如果瀏覽器分頁沒有自動開啟，請保持啟動器運行，並在 Windows 瀏覽器中開啟列印出的 `guide=` URL。
+如果瀏覽器分頁沒有自動開啟，請保持啟動器執行，並在 Windows 瀏覽器中開啟列印出的 `guide=` URL。
 
 ## 初步 Pulser 檢查
 
@@ -80,13 +80,13 @@ py -3 -m venv .venv
 
 其他的 pulser 範例大多直接從即時供應商或本地儲存後端讀取。
 
-`ADSPulser` 則是從 ADS 流水線寫入的正規化表中讀取：
+`ADSPulser` 則是從 ADS 管線寫入的正規化表中讀取：
 
-- workers 收集或轉換來源數據
+- workers 收集或轉換來源資料
 - dispatcher 持久化正規化行
 - `ADSPulser` 將這些行作為可查詢的 pulses 進行公開
 
-這使其成為解釋如何添加您自己的來源適配器的理想範例。
+這使其成為解釋如何新增您自己的來源適配器的理想範例。
 
 ## 新增您自己的來源
 
@@ -94,7 +94,7 @@ py -3 -m venv .venv
 
 - [`../../data-pipeline/README.md`](../../data-pipeline/README.md)
 
-請參考此處的自定義範例：
+請參考此處的自訂範例：
 
 - [`../../../ads/examples/custom_sources.py`](../../../ads/examples/custom_sources.py)
 

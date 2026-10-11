@@ -31,13 +31,13 @@
 
 ### Windows
 
-請為配對的 demo 啟動器使用原生 Windows Python 環境，例如 `py -3 -m scripts.demo_launcher analyst-insights` 與 `py -3 -m scripts.demo_launcher finance-briefings`。在堆疊運行後，如果分頁沒有自動開啟，請在 Windows 瀏覽器中開啟列印出的 `guide=` URL。
+請為配對的 demo 啟動器使用原生 Windows Python 環境，例如 `py -3 -m scripts.demo_launcher analyst-insights` 與 `py -3 -m scripts.demo_launcher finance-briefings`。在堆疊執行後，如果分頁沒有自動開啟，請在 Windows 瀏覽器中開啟列印出的 `guide=` URL。
 
 ## 此資料夾包含什麼
 
 這裡有兩組範例：
 
-- 技術分析圖表：將 OHLC 市場數據轉換為指標序列
+- 技術分析圖表：將 OHLC 市場資料轉換為指標序列
 - 以 LLM 為導向的分析師圖表：將原始市場新聞轉換為結構化研究筆記
 - 金融工作流圖表：將標準化的研究輸入轉換為簡報、出版物及 NotebookLM 匯出套件
 
@@ -68,7 +68,7 @@
 
 ## 執行時假設
 
-這些圖表保存了具體的本地位址，因此在預期的 demo stack 可用時，無需額外編輯即可運行。
+這些圖表保存了具體的本地位址，因此在預期的 demo stack 可用時，無需額外編輯即可執行。
 
 ### 技術分析圖表
 
@@ -78,7 +78,7 @@
 - `YFinancePulser` 位址為 `http://127.0.0.1:8243`
 - `TechnicalAnalysisPulser` 位址為 `http://127.0.0.1:8244`
 
-這些圖表所引用的 pulser 配置位於：
+這些圖表所引用的 pulser 設定位於：
 
 - `attas/configs/yfinance.pulser`
 - `attas/configs/ta.hyper`
@@ -137,7 +137,7 @@
 
 ### 技術分析圖表
 
-使用如下負載：
+使用如下承載：
 ```json
 {
   "symbol": "AAPL",
@@ -166,9 +166,9 @@
 
 預期結果：
 
-- 由 prompt 驅動的 analyst pulser 獲取原始新聞
-- prompt pack 將該新聞轉換為結構化的 analyst 視圖
-- 輸出返回可直接用於研究的欄位，例如 `desk_note`、`monitor_now` 或 `client_note`
+- 由 prompt 驅動的 analyst pulser 取得原始新聞
+- prompt pack 將該新聞轉換為結構化的 analyst 檢視
+- 輸出回傳可直接用於研究的欄位，例如 `desk_note`、`monitor_now` 或 `client_note`
 
 ### 金融工作流圖表
 
@@ -191,10 +191,10 @@
 預期結果：
 
 - 工作流上下文節點種子選定的金融工作流
-- 中間金融節點構建來源、引用、事實、風險、催化劑、衝突、要點、問題和摘要區塊
-- 組裝節點構建 `attas.finance_briefing` 負載
-- 報告節點將該負載轉換為靜態 Phema
-- NotebookLM 節點從相同的負載生成導出構件
+- 中間金融節點建構來源、引用、事實、風險、催化劑、衝突、要點、問題和摘要區塊
+- 組裝節點建構 `attas.finance_briefing` 承載
+- 報告節點將該承載轉換為靜態 Phema
+- NotebookLM 節點從相同的承載生成匯出構件
 - 最終輸出合併所有三個結果，以便在 MapPhemar 或 Personal Agent 中進行檢查
 
 ## 目前編輯器限制
@@ -206,15 +206,15 @@
 - `Input` 必須恰好連接到一個下游形狀
 - 每個可執行的非分支節點必須引用一個 pulse 以及一個可達到的 pulser
 
-這意味著工作流的分叉（fan-out）必須發生在第一個可執行節點之後，且如果您希望圖表能夠端到端地運行，工作流步驟仍需要作為由 pulser 託管的 pulse 來公開。
+這意味著工作流的分叉（fan-out）必須發生在第一個可執行節點之後，且如果您希望圖表能夠端到端地執行，工作流步驟仍需要作為由 pulser 託管的 pulse 來公開。
 
-## 相關演示
+## 相關示範
 
-如果您想要運行支援服務，而不僅僅是查看圖表：
+如果您想要執行支援服務，而不僅僅是查看圖表：
 
 - `demos/personal-research-workbench/README.md`: 包含種子 RSI 範例的可視化圖表工作流
 - `demos/pulsers/analyst-insights/README.md`: LLM 導向圖表所使用的提示分析師新聞堆疊
-- `demos/pulsers/llm/README.md`: 用於 OpenAI 和 Ollama 的獨立 `llm_chat` pulser 演示
+- `demos/pulsers/llm/README.md`: 用於 OpenAI 和 Ollama 的獨立 `llm_chat` pulser 示範
 
 ## 驗證
 

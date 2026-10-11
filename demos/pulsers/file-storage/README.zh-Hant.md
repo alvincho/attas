@@ -1,4 +1,4 @@
-# System Pulser 演示
+# System Pulser 示範
 
 ## 翻譯版本
 
@@ -14,11 +14,11 @@
 
 ## 此資料夾中的檔案
 
-- `plaza.agent`: 此 pulser 演示的本地 Plaza
+- `plaza.agent`: 此 pulser 示範的本地 Plaza
 - `file-storage.pulser`: 以本地檔案系統為後端的儲存 pulser
 - `start-plaza.sh`: 啟動 Plaza
 - `start-pulser.sh`: 啟動 pulser
-- `run-demo.sh`: 從一個終端機啟動完整演示，並打開瀏覽器指南以及 pulser UI
+- `run-demo.sh`: 從一個終端機啟動完整示範，並打開瀏覽器指南以及 pulser UI
 
 ## 單一指令啟動
 
@@ -29,7 +29,7 @@
 
 這會從單個終端機啟動 Plaza 和 `SystemPulser`，開啟瀏覽器指南頁面，並自動開啟 pulser UI。
 
-如果您希望啟動器僅保留在終端機中，請設置 `DEMO_OPEN_BROWSER=0`。
+如果您希望啟動器僅保留在終端機中，請設定 `DEMO_OPEN_BROWSER=0`。
 
 ## 平台快速入門
 
@@ -54,7 +54,7 @@ py -3 -m venv .venv
 .venv\Scripts\python.exe -m scripts.demo_launcher file-storage
 ```
 
-如果瀏覽器分頁沒有自動開啟，請保持啟動器正在運行，並在 Windows 瀏覽器中開啟列印出的 `guide=` URL。
+如果瀏覽器分頁沒有自動開啟，請保持啟動器正在執行，並在 Windows 瀏覽器中開啟列印出的 `guide=` URL。
 
 ## 快速入門
 
@@ -142,13 +142,13 @@ curl -sS http://127.0.0.1:8257/api/test-pulse \
 
 ## 重點說明
 
-- 此 pulser 完全在本地運行，不需要雲端憑證
-- 負載內容（payloads）非常簡單，無需額外工具即可理解
+- 此 pulser 完全在本地執行，不需要雲端憑證
+- 承載內容（payloads）非常簡單，無需額外工具即可理解
 - 儲存後端稍後可以從檔案系統切換到其他供應商，同時保持 pulse 介面穩定
 
 ## 自行建置
 
-如果您想要進行自定義：
+如果您想要進行自訂：
 
 1. 複製 `file-storage.pulser`
 2. 修改連接埠與儲存的 `root_path`

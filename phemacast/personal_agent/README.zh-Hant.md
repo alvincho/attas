@@ -14,7 +14,7 @@
 
 ## 文件說明
 
-- [詳細用戶指南](./docs/user_guide.md)
+- [詳細使用者指南](./docs/user_guide.md)
 - [目前功能清單](./docs/current_features.md)
 
 此套件保持相同的本地優先（local-first）結構：
@@ -22,8 +22,8 @@
 - FastAPI 用於提供 HTML 外殼與 JSON APIs。
 - React 負責互動式用戶端 UI。
 - Plaza 目錄與 Pulser 執行仍透過後端代理路由進行。
-- 模擬儀表板數據仍可用於早期產品開發。
-- 目前的運行時從 `static/personal_agent.jsx` 提供服務，因此在早期開發中，無需等待前端打包即可立即完成重新構建。
+- 模擬儀表板資料仍可用於早期產品開發。
+- 目前的執行時從 `static/personal_agent.jsx` 提供服務，因此在早期開發中，無需等待前端打包即可立即完成重新建置。
 
 ## 套件佈局
 
@@ -44,7 +44,7 @@ uvicorn phemacast.personal_agent.app:app --reload --port 8041
 
 Live 應用程式直接從 `static/personal_agent.jsx` 執行。
 
-`ui/` 目錄刻意保留，以便稍後升級為打包後的構建版本。如果您想在不影響 live runtime 的情況下嘗試該腳手架，可以在 `phem0cast/personal_agent/ui` 目錄內執行：
+`ui/` 目錄刻意保留，以便稍後升級為打包後的建置版本。如果您想在不影響 live runtime 的情況下嘗試該腳手架，可以在 `phem0cast/personal_agent/ui` 目錄內執行：
 ```bash
 npm install
 npm run build

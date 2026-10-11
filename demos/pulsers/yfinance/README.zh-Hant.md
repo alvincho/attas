@@ -1,4 +1,4 @@
-# YFinance Pulser 演示
+# YFinance Pulser 示範
 
 ## 翻譯版本
 
@@ -15,7 +15,7 @@
 ## 此資料夾中的檔案
 
 - `plaza.agent`: 此示範使用的本地 Plaza
-- `yfinance.pulser`: `YFinancePulser` 的本地示範配置
+- `yfinance.pulser`: `YFinancePulser` 的本地示範設定
 - `start-plaza.sh`: 啟動 Plaza
 - `start-pulser.sh`: 啟動 pulser
 - `run-demo.sh`: 從單一終端機啟動完整示範，並開啟瀏覽器指南及 pulser UI
@@ -29,7 +29,7 @@
 
 這會從單個終端機啟動 Plaza 和 `YFinancePulser`，開啟瀏覽器指南頁面，並自動開啟 pulser UI。
 
-如果您希望啟動器僅保留在終端機中，請設置 `DEMO_OPEN_BROWSER=0`。
+如果您希望啟動器僅保留在終端機中，請設定 `DEMO_OPEN_BROWSER=0`。
 
 ## 平台快速入門
 
@@ -54,7 +54,7 @@ py -3 -m venv .venv
 .venv\Scripts\python.exe -m scripts.demo_launcher yfinance
 ```
 
-如果瀏覽器分頁沒有自動開啟，請保持啟動器運行，並在 Windows 瀏覽器中開啟列印出的 `guide=` URL。
+如果瀏覽器分頁沒有自動開啟，請保持啟動器執行，並在 Windows 瀏覽器中開啟列印出的 `guide=` URL。
 
 ## 快速入門
 
@@ -81,7 +81,7 @@ py -3 -m venv .venv
 
 注意：
 
-- 此示範需要外部網路存取權限，因為 pulser 會透過 `yfinance` 獲取即時數據
+- 此示範需要外部網路存取權限，因為 pulser 會透過 `yfinance` 取得即時資料
 - Yahoo Finance 可能會對請求進行速率限制或間歇性拒絕
 
 ## 在瀏覽器中嘗試
@@ -137,7 +137,7 @@ curl -sS http://127.0.0.1:8252/api/test-pulse \
 
 ## 打造您自己的版本
 
-如果您想要擴展此範例：
+如果您想要擴充此範例：
 
 1. 複製 `yfinance.pulser`
 2. 調整連接埠與儲存路徑

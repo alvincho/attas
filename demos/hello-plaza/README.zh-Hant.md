@@ -14,10 +14,10 @@
 
 ## 此示範展示了什麼
 
-- 在本地運行的 Plaza 註冊表
+- 在本地執行的 Plaza 註冊表
 - 自動向 Plaza 註冊的代理程式
 - 連接到該 Plaza 的瀏覽器端使用者介面
-- 開發者可以複製到自己專案中的最小化配置集
+- 開發者可以複製到自己專案中的最小化設定集
 
 ## 此資料夾中的檔案
 
@@ -49,7 +49,7 @@ pip install -r requirements.txt
 
 這會從單一終端機啟動 Plaza、工作器（worker）和使用者 UI，開啟瀏覽器指南頁面，並自動開啟使用者 UI。
 
-如果您希望啟動器僅保留在終端機中，請設置 `DEMO_OPEN_BROWSER=0`。
+如果您希望啟動器僅保留在終端機中，請設定 `DEMO_OPEN_BROWSER=0`。
 
 ## 平台快速入門
 
@@ -74,7 +74,7 @@ py -3 -m venv .venv
 .venv\Scripts\python.exe -m scripts.demo_launcher hello-plaza
 ```
 
-如果瀏覽器分頁沒有自動開啟，請保持啟動器運行，並在 Windows 瀏覽器中開啟列印出的 `guide=` URL。
+如果瀏覽器分頁沒有自動開啟，請保持啟動器執行，並在 Windows 瀏覽器中開啟列印出的 `guide=` URL。
 
 ## 快速入門
 
@@ -127,7 +127,7 @@ curl http://127.0.0.1:8214/api/plazas_status
 
 - `http://127.0.0.1:8214/`
 
-這是用於在本地演示或螢幕錄製中分享的公開演示 URL。
+這是用於在本地示範或螢幕錄製中分享的公開示範 URL。
 
 ## 在 Demo 展示中應重點說明的内容
 
@@ -145,13 +145,13 @@ curl http://127.0.0.1:8214/api/plazas_status
 4. 將每個 `root_path` 指向您自己的儲存位置。
 5. 如果您更改了 Plaza 的 URL 或連接埠，請更新 `worker.agent` 和 `user.agent` 中的 `plaza_url`。
 
-最需要自定義的三個重要欄位是：
+最需要自訂的三個重要欄位是：
 
 - `name`：agent 作為其身份進行廣告的名稱
 - `port`：HTTP 服務監聽的位置
 - `root_path`：本地狀態儲存的位置
 
-當檔案配置正確後，請執行：
+當檔案設定正確後，請執行：
 ```bash
 python3 prompits/create_agent.py --config path/to/your/plaza.agent
 python3 prompits/create_agent.py --config path/to/your/worker.agent
@@ -169,7 +169,7 @@ python3 prompits/create_agent.py --config path/to/your/user.agent
 請檢查以下三點：
 
 - Plaza 正在 `http://127.0.0.1:8211` 上執行
-- worker 終端機仍在運行中
+- worker 終端機仍在執行中
 - `worker.agent` 仍指向 `http://127.0.0.1:8211`
 
 ### 您想要一個全新的 Demo 狀態

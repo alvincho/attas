@@ -1,4 +1,4 @@
-# 分析師洞察 Pulser 演示
+# 分析師洞察 Pulser 示範
 
 ## 翻譯版本
 
@@ -16,19 +16,19 @@
 
 - 一個由分析師擁有的 pulser，包含多個結構化洞察 pulses
 - 第二個由分析師擁有的 pulser，其建立在獨立的新聞代理與本地 Ollama 代理之上
-- 一種將原始來源數據與分析師撰寫的 Prompits 及最終面向消費者的輸出進行分離的清晰方法
+- 一種將原始來源資料與分析師撰寫的 Prompits 及最終面向消費者的輸出進行分離的清晰方法
 - 一個個人代理導覽，從另一個使用者的視角展示相同的技術棧
 - 分析師或 PM 若要發布自己的觀點，需要編輯的確切檔案
 
 ## 此資料夾中的檔案
 
-- `plaza.agent`: 用於分析師 pulser 演示的本地 Plaza
-- `analyst-insights.pulser`: 定義公開 pulse 目錄的 `PathPulser` 配置
-- `analyst_insight_step.py`: 共享轉換邏輯以及預設的分析師覆蓋數據包
-- `news-wire.pulser`: 發布預設 `news_article` 數據包的本地上游新聞代理
-- `news_wire_step.py`: 由上游新聞代理返回的預設原始新聞數據包
-- `ollama.pulser`: 用於分析師提示詞演示的本地 Ollama 驅動 `llm_chat` pulser
-- `analyst-news-ollama.pulser`: 組合式分析師 pulser，負責獲取新聞、應用分析師專屬提示詞、調用 Ollima 並將結果正規化為多個 pulses
+- `plaza.agent`: 用於分析師 pulser 示範的本地 Plaza
+- `analyst-insights.pulser`: 定義公開 pulse 目錄的 `PathPulser` 設定
+- `analyst_insight_step.py`: 共享轉換邏輯以及預設的分析師覆蓋資料包
+- `news-wire.pulser`: 發布預設 `news_article` 資料包的本地上游新聞代理
+- `news_wire_step.py`: 由上游新聞代理回傳的預設原始新聞資料包
+- `ollama.pulser`: 用於分析師提示詞示範的本地 Ollama 驅動 `llm_chat` pulser
+- `analyst-news-ollama.pulser`: 組合式分析師 pulser，負責取得新聞、應用分析師專屬提示詞、呼叫 Ollima 並將結果正規化為多個 pulses
 - `analyst_news_ollama_step.py`: 分析師專屬提示詞包加上 JSON 正規化邏輯
 - `start-plaza.sh`: 啟動 Plaza
 - `start-pulser.sh`: 啟動固定的結構化分析師 pulser
@@ -36,7 +36,7 @@
 - `start-ollama-pulser.sh`: 啟動本地 Ollama pulser
 - `start-analyst-news-pulser.sh`: 啟動帶有提示詞的分析師 pulser
 - `start-personal-agent.sh`: 啟動用於消費者視角演練的個人代理 UI
-- `run-demo.sh`: 從一個終端啟動演示，並打開瀏覽器指南及主要 UI 頁面
+- `run-demo.sh`: 從一個終端機啟動示範，並打開瀏覽器指南及主要 UI 頁面
 
 ## 單一指令啟動
 
@@ -52,7 +52,7 @@
 DEMO_ANALYST_MODE=advanced ./demos/pulsers/analyst-insights/run-demo.sh
 ```
 
-如果您希望啟動器僅保留在終端機中，請設置 `DEMO_OPEN_BROWSER=0`。
+如果您希望啟動器僅保留在終端機中，請設定 `DEMO_OPEN_BROWSER=0`。
 
 ## 平台快速入門
 
@@ -88,9 +88,9 @@ $env:DEMO_ANALYST_MODE = "advanced"
 .venv\Scripts\python.exe -m scripts.demo_launcher analyst-insights
 ```
 
-如果瀏覽器分頁沒有自動打開，請保持啟動器運行，並在 Windows 瀏覽器中打開列印出的 `guide=` URL。
+如果瀏覽器分頁沒有自動打開，請保持啟動器執行，並在 Windows 瀏覽器中打開列印出的 `guide=` URL。
 
-## 演示 1：結構化分析師觀點
+## 示範 1：結構化分析師觀點
 
 這是僅限本地、不使用 LLM 的路徑。
 
@@ -140,7 +140,7 @@ $env:DEMO_ANALYST_MODE = "advanced"
 - `rating_summary` 回傳標題判斷、目標、信心度及簡短摘要
 - `thesis_bullets` 以清單形式回傳正面論點
 - `risk_watch` 回傳主要風險以及需要監控的指標
-- `scenario_grid` 在單一結構化負載中回傳牛市、基準及熊市情境
+- `scenario_grid` 在單一結構化承載中回傳牛市、基準及熊市情境
 
 ## 使用 Curl 進行測試
 
@@ -165,17 +165,17 @@ curl -sS http://127.0.0.1:8267/api/test-pulse \
   -d '{"pulse_name":"risk_watch","params":{"symbol":"NVDA"}}'
 ```
 
-## 分析師如何自定義此演示
+## 分析師如何自訂此示範
 
 主要有兩個編輯點。
 
-### 1. 更改實際的研究視圖
+### 1. 更改實際的研究檢視
 
 編輯：
 
 - `demos/pulsers/analyst-insights/analyst_insight_step.py`
 
-此文件包含種植好的 `ANALYST_COVERAGE` 封包。您可以在此處更改：
+此檔案包含種植好的 `ANALYST_COVERAGE` 封包。您可以在此處更改：
 
 - 涵蓋的股票代碼
 - 分析師姓名
@@ -191,14 +191,14 @@ curl -sS http://127.0.0.1:8267/api/test-pulse \
 
 - `demos/pulsers/analyst-insights/analyst-insights.pulser`
 
-該文件控制：
+該檔案控制：
 
 - 存在哪些 pulses
 - 每個 pulse 的名稱和描述
 - 輸入和輸出架構
-- 標籤和地址
+- 標籤和位址
 
-如果您想添加新的洞察 pulse，請複製現有的條目之一，並將其指向新的 `insight_view`。
+如果您想新增新的洞察 pulse，請複製現有的條目之一，並將其指向新的 `insight_view`。
 
 ## 為什麼此模式非常有用
 
@@ -207,28 +207,28 @@ curl -sS http://127.0.0.1:8267/api/test-pulse \
 - 風險儀表板可以請求 `risk_watch`
 - 估值工具可以請求 `scenario_grid`
 
-這意味著分析師只需發布一個服務，但不同的消費者可以精確地提取他們所需的數據切片。
+這意味著分析師只需發布一個服務，但不同的消費者可以精確地提取他們所需的資料切片。
 
 ## 下一步該往哪裡走
 
 一旦這個本地 pulser 形狀變得合理，接下來的步驟是：
 
-1. 向分析師覆蓋數據包中添加更多涵蓋的符號
-2. 如果您想將自己的觀點與 YFinance、ADS 或 LLM 的輸出相結合，請在最後的 Python 步驟之前添加來源步驟
+1. 向分析師覆蓋資料包中新增更多涵蓋的符號
+2. 如果您想將自己的觀點與 YFinance、ADS 或 LLM 的輸出相結合，請在最後的 Python 步驟之前新增來源步驟
 3. 透過共享的 Plaza 來公開 pulser，而不僅僅是透過本地的 demo Plaza
 
-## 演示 2：分析師 Prompt Pack + Ollama + 個人代理
+## 示範 2：分析師 Prompt Pack + Ollama + 個人代理
 
-這個第二個流程展示了一個更符合現實的分析師設置：
+這個第二個流程展示了一個更符合現實的分析師設定：
 
-- 一個代理發佈原始 `news_article` 數據
+- 一個代理發佈原始 `news_article` 資料
 - 第二個代理透過 Ollama 暴露 `llm_chat`
 - 分析師擁有的 pulser 使用其專屬的 prompt pack 將原始新聞轉換為多個可重複使用的 pulses
 - 個人代理從不同使用者的視角來消耗完成的 pulses
 
 ### 提示流程的前置條件
 
-請確保 Ollama 正在本地運行且模型已存在：
+請確保 Ollama 正在本地執行且模型已存在：
 
 ```bash
 ollama serve
@@ -270,7 +270,7 @@ ollama pull qwen3:8b
 
 ### 終端機 4：啟動 prompted analyst pulser
 
-請在新聞與 Ollama agents 已經運行後再啟動此項，因為 pulser 會在啟動期間驗證其樣本鏈。
+請在新聞與 Ollama agents 已經執行後再啟動此項，因為 pulser 會在啟動期間驗證其樣本鏈。
 ```bash
 ./demos/pulsers/analyst-insights/start-analyst-news-pulser.sh
 ```
@@ -316,7 +316,7 @@ ollama pull qwen3:8b
 - `news_monitoring_points` 將相同的原始文章轉換為觀察項目與風險標記
 - `news_client_note` 將相同的原始文章轉換為更整潔的面向客戶的筆記
 
-重點在於分析師在單一文件中控制 Prompits，而下游使用者僅會看到穩定的 pulse 介面。
+重點在於分析師在單一檔案中控制 Prompits，而下游使用者僅會看到穩定的 pulse 介面。
 
 ### 從另一個使用者的視角使用個人代理
 
@@ -349,12 +349,12 @@ ollama pull qwen3:8b
 您應該會看到：
 
 - 一個窗格顯示來自另一個代理程式的原始上游新聞
-- 下一個窗格顯示分析師處理後的視圖
+- 下一個窗格顯示分析師處理後的檢視
 - 第三個窗格顯示相同的分析師提示包如何為不同的受眾發布不同的介面
 
 這就是關鍵的消費者故事：另一個使用者不需要了解內部的鏈路。他們只需瀏覽 Plaza，選擇一個 pulse，然後消費完成後的分析輸出。
 
-## 分析師如何自定義提示流
+## 分析師如何自訂提示流
 
 在 Demo 2 中有三個主要的編輯點。
 
@@ -372,7 +372,7 @@ ollama pull qwen3:8b
 
 - `demos/pulsers/analyst-insights/analyst_news_ollama_step.py`
 
-該文件包含分析師擁有的提示包，包括：
+該檔案包含分析師擁有的提示包，包括：
 
 - 提示設定檔名稱
 - 受眾與目標
@@ -387,12 +387,12 @@ ollama pull qwen3:8b
 
 - `demos/pulsers/analyst-insights/analyst-news-ollama.pulser`
 
-該文件控制：
+該檔案控制：
 
 - 存在哪些提示的 pulses
 - 每個 pulse 使用哪個提示設定檔
-- 它調用了哪些上游代理
-- 向下游用戶展示的輸入與輸出架構
+- 它呼叫了哪些上游代理
+- 向下游使用者展示的輸入與輸出架構
 
 ## 為什麼此進階模式非常有用
 
